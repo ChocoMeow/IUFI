@@ -7,7 +7,8 @@ DROP_RATES = {
     'common': 0.9,
     'rare': 0.08,
     'epic': 0.007,
-    'legendary': 0.003
+    'legendary': 0.003,
+    'mystic':.001
 }
 
 class CardPool:
@@ -29,7 +30,7 @@ class CardPool:
     def add_card(cls, _id: str, tier: str, **kwargs) -> Card:
         card = Card(_id, tier, **kwargs)
         if card.id in cls._cards:
-            raise DuplicatedCardError(f"Card {card.id} already added into the pool.")
+            raise DuplicatedCardError(f"Card {card.id} in {tier} already added into the pool.")
         
         cls._cards[card.id] = card
         if not card.owner_id:

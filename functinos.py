@@ -2,6 +2,7 @@ import os, time, copy
 
 from pymongo import MongoClient
 from dotenv import load_dotenv
+from typing import Any
 
 ROOT_DIR = os.path.dirname(os.path.abspath(__file__))
 
@@ -31,11 +32,20 @@ except Exception as e:
 USERS_DB = mongodb[tokens.mongodb_name]['users']
 CARDS_DB = mongodb[tokens.mongodb_name]['cards'] 
 
-USERS_BUFFER: dict[int, dict[str, object]] = {}
+USERS_LOCK = []
+USERS_BUFFER: dict[int, dict[str, Any]] = {}
 COOLDOWN: dict[int, dict[str, float]] = {}
+MAX_CARDS: int = 100
 
-USER_BASE: dict[str, object] = {
+USER_BASE: dict[str, Any] = {
+    "candies": 0,
+    "exp": 0,
     "cards": [],
+    "roll": {
+        "rare": 0,
+        "epic": 0,
+        "legendary": 0
+    },
     "cooldown": {
         "roll": (now := int(time.time())),
         "claim": now,
@@ -49,7 +59,7 @@ COOLDOWN_BASE = {
     "daily": 86400
 }
 
-def get_user(user_id: int) -> dict[str, object]:
+def get_user(user_id: int) -> dict[str, Any]:
     user = USERS_BUFFER.get(user_id)
     if not user:
         user = USERS_DB.find_one({"_id": user_id})
@@ -80,6 +90,9 @@ def update_user(user_id: int, data: dict, mode: str = "set") -> None:
             case "pull":
                 user[cursors[-1]].remove(values)
 
+            case "inc":
+                user[cursors[-1]] += values
+                
             case _:
                 return ValueError(f"Invalid mode: {mode}")
             
@@ -91,6 +104,17 @@ def update_card(card_id: int, data: dict, mode: str = "set", insert: bool = Fals
         
     CARDS_DB.update_one({"_id": card_id}, {f"${mode}": data})
 
+def cal_retry_time(end_time: float, default: str=None) -> str | None:
+    if end_time <= (current_time := time.time()):
+        return default
+    
+    retry: float = int(end_time - current_time)
+
+    minutes, seconds = divmod(retry, 60)
+    hours, minutes = divmod(minutes, 60)
+
+    return (f"{hours}h" if hours > 0 else "") + f"{minutes}m {seconds}s"
+
 def check_user_cooldown(user_id: int, type: str = "roll") -> str | None:
     user = get_user(user_id)
     if user:
@@ -99,12 +123,4 @@ def check_user_cooldown(user_id: int, type: str = "roll") -> str | None:
         if not end_time:
             return ValueError(f"Invalid type: {type}")
         
-        if end_time <= (current_time := time.time()):
-            return
-        
-        retry: float = int(end_time - current_time)
-
-        minutes, seconds = divmod(retry, 60)
-        hours, minutes = divmod(minutes, 60)
-
-        return (f"{hours}h" if hours > 0 else "") + f"{minutes}m {seconds}s"
+        return cal_retry_time(end_time)

@@ -15,7 +15,7 @@ class RollButton(discord.ui.Button):
     
     async def callback(self, interaction: discord.Interaction) -> None:
         self.view: RollView
-
+        
         if (owner_id := self.card.owner_id):
             if owner_id != interaction.user.id:
                 return await interaction.response.send_message(f"This card has been claimed by <@{owner_id}>")
@@ -24,6 +24,7 @@ class RollButton(discord.ui.Button):
             
         func.update_user(interaction.user.id, {"cards": self.card.id}, mode="push")
         func.update_user(interaction.user.id, {"cooldown.claim": time.time() + func.COOLDOWN_BASE["claim"]}, mode="set")
+        func.update_user(interaction.user.id, {"exp": 10}, mode="inc")
         self.card.change_owner(interaction.user.id)
         CardPool.remove_available_card(self.card)
         
@@ -33,7 +34,7 @@ class RollButton(discord.ui.Button):
             self.view.author_claimed()
 
         await self.view.message.edit(view=self.view)
-        await interaction.response.send_message(f"{interaction.user.mention} has claimed `{self.custom_id} | 🆔 {self.card.id.zfill(5)} | {self.card.tier[0]} | ⭐ {self.card.stars}`")
+        await interaction.response.send_message(f"{interaction.user.mention} has claimed ` {self.custom_id} | 🆔 {self.card.id.zfill(5)} | {self.card.tier[0]} | ⭐ {self.card.stars} `")
         
 class RollView(discord.ui.View):
     def __init__(self, author: discord.Member, cards: list[Card], *, timeout: float | None = None):
@@ -62,7 +63,7 @@ class RollView(discord.ui.View):
         await asyncio.sleep(40)
         for child in self.children:
             child.disabled = True
-        await self.message.edit(view=self)
+        await self.message.edit(content="*🕟 This roll has expired.*", view=self)
         self.stop()
 
     async def interaction_check(self, interaction: discord.Interaction) -> bool:
@@ -76,7 +77,7 @@ class RollView(discord.ui.View):
 
         retry = func.check_user_cooldown(interaction.user.id, "claim")
         if retry and self.author != interaction.user:
-            await interaction.response.send_message(f"You are now in cooldown! Please try again in {retry}")
+            await interaction.response.send_message(f"**{interaction.user.mention} your next roll is in {retry}**", delete_after=5)
             return False
     
         return True

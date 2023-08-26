@@ -4,7 +4,9 @@ import functinos as func
 from discord.ext import commands
 from PIL import Image
 from io import BytesIO
-from views import RollView
+from views import RollView, PhotoCardView
+
+MAX_CARDS = 100
 
 class Basic(commands.Cog):
     def __init__(self, bot: commands.Bot) -> None:
@@ -14,14 +16,18 @@ class Basic(commands.Cog):
     async def roll(self, ctx: commands.Context):
         retry = func.check_user_cooldown(ctx.author.id)
         if retry:
-            return await ctx.reply(f"You are on cooldown, Please try again in {retry}")
+            return await ctx.reply(f"{ctx.author.mention} your next roll is in {retry}", delete_after=5)
         
+        if ctx.author.id in func.USERS_LOCK:
+            return
+        func.USERS_LOCK.append(ctx.author.id)
+
         cards = iufi.CardPool.roll()
 
         # Create a new image for output
         padding = 20
         card_width = cards[0].image.width
-        output_image = Image.new('RGBA', (card_width * len(cards) + padding * (len(cards) - 1), cards[0].image.height), (0, 0, 0, 0))
+        output_image = Image.new('RGBA', ((card_width * len(cards)) + (padding * (len(cards) - 1)), cards[0].image.height), (0, 0, 0, 0))
 
         # # Paste images into the output image with 10 pixels padding
         space = 0
@@ -34,10 +40,141 @@ class Basic(commands.Cog):
         resized_image_bytes.seek(0)
 
         view = RollView(ctx.author, cards)
-        message = await ctx.send(file=discord.File(resized_image_bytes, filename='resized_image.png'), view=view)
-        view.message = message
+        view.message = await ctx.send(
+            content=f"**{ctx.author.mention} This is your roll!**",
+            file=discord.File(resized_image_bytes, filename='image.png'),
+            view=view
+        )
         func.update_user(ctx.author.id, {"cooldown.roll": time.time() + func.COOLDOWN_BASE["roll"]}, "set")
         await view.timeout_count()
+        await view.wait()
+
+        if ctx.author.id in func.USERS_LOCK:
+            func.USERS_LOCK.remove(ctx.author.id)
+
+    @commands.command(aliases=["v"])
+    async def view(self, ctx: commands.Context):
+        user = func.get_user(ctx.author.id)
+
+        if not user["cards"]:
+            return await ctx.reply(f"**{ctx.author.mention} you have no photocards.**", delete_after=5)
+
+        view = PhotoCardView(ctx.author, user['cards'])
+        view.message = await ctx.reply(content="", embed=view.build_embed(), view=view)
+
+    @commands.command(aliases=["in"])
+    async def inventory(self, ctx: commands.Context):
+        user = func.get_user(ctx.author.id)
+
+        embed = discord.Embed(title=f"🎒 {ctx.author.display_name}'s Inventory", color=0x5cb045)
+        embed.description = f"```🍬 Starcandies        x{user['candies']}\n" \
+                            f"🌸 Rare rolls         x{user['roll']['rare']}\n" \
+                            f"💎 Epic rolls         x{user['roll']['epic']}\n" \
+                            f"👑 Legend rolls       x{user['roll']['legendary']}\n" \
+                            f"🛠️ Upgrades           Coming Soon\n\n" \
+                            f"🖼️ Frames\nComing Soon```"
+        embed.set_thumbnail(url=ctx.author.avatar.url)
+        await ctx.reply(content="", embed=embed)
+
+    @commands.command(aliases=["cd"])
+    async def cooldown(self, ctx: commands.Context):
+        user = func.get_user(ctx.author.id)
+
+        embed = discord.Embed(title=f"⏰ {ctx.author.display_name}'s Cooldowns", color=0x59b0c0)
+        embed.description = f"```🎲 Roll : {func.cal_retry_time(user['cooldown']['roll'], 'Ready')}\n" \
+                            f"🎮 Claim: {func.cal_retry_time(user['cooldown']['claim'], 'Ready')}\n" \
+                            f"📅 Daily: {func.cal_retry_time(user['cooldown']['daily'], 'Ready')}```"
+        
+        embed.set_thumbnail(url=ctx.author.avatar.url)
+        await ctx.reply(content="", embed=embed)
+
+    @commands.command(aliases=["i"])
+    async def info(self, ctx: commands.Context, card_id: int):
+        card: iufi.Card = iufi.CardPool.get_card(str(card_id))
+        if not card:
+            return await ctx.reply("Card not found! Please try again.")
+        
+        embed = discord.Embed(title=f"ℹ️ Card Info", color=0x949fb8)
+        embed.description = f"```🆔 {card.id.zfill(5)}\n" \
+                            f"{card.tier[0]} {card.tier[1].capitalize()}\n" \
+                            f"⭐ {card.stars}```\n" \
+                            "Owned by: " + (f"<@{card.owner_id}>" if card.owner_id else "None")
+        
+        resized_image_bytes = BytesIO()
+        card.image.save(resized_image_bytes, format='PNG')
+        resized_image_bytes.seek(0)
+
+        embed.set_image(url="attachment://image.png")
+        await ctx.reply(content="", file=discord.File(resized_image_bytes, filename="image.png"), embed=embed)
+
+    @commands.command(aliases=["il"])
+    async def info_last(self, ctx: commands.Context):
+        user = func.get_user(ctx.author.id)
+
+        if not user["cards"]:
+            return await ctx.reply(f"**{ctx.author.mention} you have no photocards.**", delete_after=5)
+        
+        card_id = user["cards"][-1]
+        card = iufi.CardPool.get_card(card_id)
+        if not card:
+            return await ctx.reply("Card not found! Please try again.")
+        
+        embed = discord.Embed(title=f"ℹ️ Card Info", color=0x949fb8)
+        embed.description = f"```🆔 {card.id.zfill(5)}\n" \
+                            f"{card.tier[0]} {card.tier[1].capitalize()}\n" \
+                            f"⭐ {card.stars}```\n" \
+                            "Owned by: " + (f"<@{card.owner_id}>" if card.owner_id else "None")
+        
+        resized_image_bytes = BytesIO()
+        card.image.save(resized_image_bytes, format='PNG')
+        resized_image_bytes.seek(0)
+
+        embed.set_image(url="attachment://image.png")
+        await ctx.reply(content="", file=discord.File(resized_image_bytes, filename="image.png"), embed=embed)
+
+
+    @commands.command(aliases=["c"])
+    async def convert(self, ctx: commands.Context, *, card_ids: str):
+        user = func.get_user(ctx.author.id)
+
+        converted_cards: list[iufi.Card] = []
+
+        card_ids = card_ids.split(" ")
+        for card_id in card_ids:
+            if (card_id := card_id.lstrip("0")) in user.get("cards"):
+                card = iufi.CardPool.get_card(card_id)
+                if card:
+                    card.change_owner()
+                    iufi.CardPool.add_available_card(card)
+                    converted_cards.append(card)
+                    func.update_user(ctx.author.id, {"cards": card.id}, mode="pull")
+
+        candies = sum([card.cost for card in converted_cards])
+        embed = discord.Embed(title="✨ Convert", description=f"**🆔 Converted ` {', '.join([card.id for card in converted_cards])} `\n🍬 Gained ` {candies} `**", color=discord.Color.random())
+        func.update_user(ctx.author.id, {"candies": candies}, mode="inc")
+        await ctx.reply(content="", embed=embed)
+
+    @commands.command(aliases=["cl"])
+    async def convert_last(self, ctx: commands.Context):
+        user = func.get_user(ctx.author.id)
+
+        if not user["cards"]:
+            return await ctx.reply(f"**{ctx.author.mention} you have no photocards.**", delete_after=5)
+        
+        card_id = user["cards"][-1]
+        card = iufi.CardPool.get_card(card_id)
+        if card:
+            card.change_owner()
+            iufi.CardPool.add_available_card(card)
+
+        func.update_user(ctx.author.id, {"cards": card.id}, mode="pull")
+        func.update_user(ctx.author.id, {"candies": card.cost}, mode="inc")
+        embed = discord.Embed(title="✨ Convert", description=f"**🆔 Converted ` {card_id} `\n🍬 Gained ` {card.cost} `**", color=discord.Color.random())
+        await ctx.reply(content="", embed=embed)
+
+    @commands.command(aliases=["p"])
+    async def profile(self, ctx: commands.Context):
+        user = func.get_user(ctx.author.id)
 
 async def setup(bot: commands.Bot) -> None:
     await bot.add_cog(Basic(bot))

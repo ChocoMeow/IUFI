@@ -6,9 +6,18 @@ from .exceptions import ImageLoadError
 
 TIER_EMOJI = {
     "common": "🥬",
-    "rare": "💮",
+    "rare": "🌸",
     "epic": "💎",
-    "legendary": "👑"
+    "legendary": "👑",
+    "mystic": "🦄"
+}
+
+PRICE_BASE = {
+    'common': 1,
+    'rare': 10,
+    'epic': 40,
+    'legendary': 100,
+    'mystic': 500
 }
 
 class Card:
@@ -18,37 +27,35 @@ class Card:
         tier: str,
         owner_id: int = None,
         stars: int = None,
+        tag: str = None
     ):  
         self.id: str = id
         self._tier: str = tier
 
         self.owner_id: int = owner_id
         self.stars: int = stars
+        self.tag: str = tag
 
         self._image: Image.Image = None
         self._emoji: str = TIER_EMOJI.get(self._tier)
 
-    def _add_border(self, img: Image.Image, border: int = 15, color: int = 0) -> Image.Image:
-        """Creates a new image with border"""
-        if not color:
-            color = img.getpixel((0,0))
-        return ImageOps.expand(img, border=border, fill=color)
-    
-    def _round_corners(self, image: Image.Image, radius: int = 20) -> Image.Image:
+    def _round_corners(self, image: Image.Image, radius: int = 30) -> Image.Image:
         """Creates a rounded corner image"""
-        circle = Image.new('L', (radius * 2, radius * 2), 0)
-        draw = ImageDraw.Draw(circle)
-        draw.ellipse((0, 0, radius * 2, radius * 2), fill=255)
-        
-        alpha = Image.new('L', image.size, 255)
-        w, h = image.size
-        alpha.paste(circle.crop((0, 0, radius, radius)), (0, 0))
-        alpha.paste(circle.crop((0, radius, radius, radius * 2)), (0, h - radius))
-        alpha.paste(circle.crop((radius, 0, radius * 2, radius)), (w - radius, 0))
-        alpha.paste(circle.crop((radius, radius, radius * 2, radius * 2)), (w - radius, h - radius))
-        image.putalpha(alpha)
+        mask = Image.new('L', image.size, 0)
+        draw = ImageDraw.Draw(mask)
+        draw.pieslice([(0, 0), (radius * 2, radius * 2)], 180, 270, fill=255)
+        draw.rectangle([(radius, 0), (image.size[0] - radius, image.size[1])], fill=255)
+        draw.rectangle([(0, radius), (image.size[0], image.size[1] - radius)], fill=255)
+        draw.pieslice([(image.size[0] - radius * 2, 0), (image.size[0], radius * 2)], 270, 360, fill=255)
+        draw.pieslice([(0, image.size[1] - radius * 2), (radius * 2, image.size[1])], 90, 180, fill=255)
+        draw.pieslice([(image.size[0] - radius * 2, image.size[1] - radius * 2), (image.size[0], image.size[1])], 0, 90, fill=255)
 
-        return image
+        # Apply the mask to the image
+        output = Image.new('RGBA', image.size)
+        output.putalpha(mask)
+        output.paste(image, (0, 0), mask)
+
+        return output
 
     def _load_image(self):
         """Load and process the image"""
@@ -58,17 +65,20 @@ class Card:
 
         try:
             with Image.open(os.path.join(func.ROOT_DIR, "images", self._tier, f"{self.id}.jpg")) as img:
-                img = self._add_border(img)
-                img = self._round_corners(img)
-                img = img.resize((300, 533))
-                self._image = img
+                image = self._round_corners(img)
+                self._image = image.resize((300, 533), Image.LANCZOS)
+
         except Exception as e:
             raise ImageLoadError(f"Unable to load the image. Reason: {e}")
 
-    def change_owner(self, owner_id: int) -> None:
+    def change_owner(self, owner_id: int | None = None) -> None:
         self.owner_id = owner_id
         func.update_card(self.id, {"owner_id": owner_id}, mode="set")
 
+    @property
+    def cost(self) -> int:
+        return PRICE_BASE.get(self._tier)
+    
     @property
     def tier(self) -> tuple[str, str]:
         """Return a tuple (emoji, name)"""
@@ -80,5 +90,3 @@ class Card:
         if self._image is None:
             self._load_image()
         return self._image
-
-   
