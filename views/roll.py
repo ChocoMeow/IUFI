@@ -29,9 +29,10 @@ class RollButton(discord.ui.Button):
         CardPool.remove_available_card(self.card)
         
         self.view.claimed_users.add(interaction.user)
-        self.disabled = True
         if self.view.author == interaction.user:
             self.view.author_claimed()
+        self.disabled = True
+        self.style = discord.ButtonStyle.gray
 
         await self.view.message.edit(view=self.view)
         await interaction.response.send_message(f"{interaction.user.mention} has claimed ` {self.custom_id} | 🆔 {self.card.id.zfill(5)} | {self.card.tier[0]} | ⭐ {self.card.stars} `")
@@ -53,7 +54,7 @@ class RollView(discord.ui.View):
         self.is_expiry = True
 
         for child in self.children:
-            child.style = discord.ButtonStyle.gray
+            child.style = discord.ButtonStyle.blurple
 
     async def timeout_count(self):
         await asyncio.sleep(30)
@@ -62,6 +63,7 @@ class RollView(discord.ui.View):
             await self.message.edit(view=self)
         await asyncio.sleep(40)
         for child in self.children:
+            child.style = discord.ButtonStyle.gray
             child.disabled = True
         await self.message.edit(content="*🕟 This roll has expired.*", view=self)
         self.stop()
