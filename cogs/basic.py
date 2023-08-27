@@ -92,10 +92,11 @@ class Basic(commands.Cog):
     async def info(self, ctx: commands.Context, card_id: int):
         card: iufi.Card = iufi.CardPool.get_card(str(card_id))
         if not card:
-            return await ctx.reply("Card not found! Please try again.")
+            return await ctx.reply("The card was not found. Please try again.")
         
         embed = discord.Embed(title=f"ℹ️ Card Info", color=0x949fb8)
         embed.description = f"```🆔 {card.id.zfill(5)}\n" \
+                            f"🏷️ {card.tag}\n" \
                             f"{card.tier[0]} {card.tier[1].capitalize()}\n" \
                             f"⭐ {card.stars}```\n" \
                             "Owned by: " + (f"<@{card.owner_id}>" if card.owner_id else "None")
@@ -121,6 +122,7 @@ class Basic(commands.Cog):
         
         embed = discord.Embed(title=f"ℹ️ Card Info", color=0x949fb8)
         embed.description = f"```🆔 {card.id.zfill(5)}\n" \
+                            f"🏷️ {card.tag}\n" \
                             f"{card.tier[0]} {card.tier[1].capitalize()}\n" \
                             f"⭐ {card.stars}```\n" \
                             "Owned by: " + (f"<@{card.owner_id}>" if card.owner_id else "None")
@@ -131,7 +133,6 @@ class Basic(commands.Cog):
 
         embed.set_image(url="attachment://image.png")
         await ctx.reply(content="", file=discord.File(resized_image_bytes, filename="image.png"), embed=embed)
-
 
     @commands.command(aliases=["c"])
     async def convert(self, ctx: commands.Context, *, card_ids: str):
@@ -147,15 +148,16 @@ class Basic(commands.Cog):
                     card.change_owner()
                     iufi.CardPool.add_available_card(card)
                     converted_cards.append(card)
-                    func.update_user(ctx.author.id, {"cards": card.id}, mode="pull")
-
-        candies = sum([card.cost for card in converted_cards])
-        embed = discord.Embed(title="✨ Convert", description=f"**🆔 Converted ` {', '.join([card.id for card in converted_cards])} `\n🍬 Gained ` {candies} `**", color=discord.Color.random())
-        func.update_user(ctx.author.id, {"candies": candies}, mode="inc")
+        
+        func.update_user(ctx.author.id, {"cards": {"$in": (card_ids := [card.id for card in converted_cards])}}, mode="pull")
+        func.update_user(ctx.author.id, {"candies": (candies := sum([card.cost for card in converted_cards]))}, mode="inc")
+        
+        embed = discord.Embed(title="✨ Convert", color=discord.Color.random())
+        embed.description = f"```🆔 {', '.join(card_ids)} \n🍬 + {candies}```"
         await ctx.reply(content="", embed=embed)
 
     @commands.command(aliases=["cl"])
-    async def convert_last(self, ctx: commands.Context):
+    async def convertlast(self, ctx: commands.Context):
         user = func.get_user(ctx.author.id)
 
         if not user["cards"]:
@@ -169,7 +171,88 @@ class Basic(commands.Cog):
 
         func.update_user(ctx.author.id, {"cards": card.id}, mode="pull")
         func.update_user(ctx.author.id, {"candies": card.cost}, mode="inc")
-        embed = discord.Embed(title="✨ Convert", description=f"**🆔 Converted ` {card_id} `\n🍬 Gained ` {card.cost} `**", color=discord.Color.random())
+        embed = discord.Embed(title="✨ Convert", color=discord.Color.random())
+        embed.description = f"```🆔 {card.id} \n🍬 + {card.cost}```"
+        await ctx.reply(content="", embed=embed)
+
+    @commands.command(aliases=["ca"])
+    async def convertall(self, ctx: commands.Context):
+        user = func.get_user(ctx.author.id)
+
+        if not user["cards"]:
+            return await ctx.reply(f"**{ctx.author.mention} you have no photocards.**", delete_after=5)
+        
+        converted_cards: list[iufi.Card] = []
+
+        for card_id in user["cards"]:
+            card = iufi.CardPool.get_card(card_id)
+            if card:
+                card.change_owner()
+                iufi.CardPool.add_available_card(card)
+                converted_cards.append(card)
+
+        func.update_user(ctx.author.id, {"cards": {"$in": ( card_ids := [card.id for card in converted_cards])}},  mode="pull")
+        func.update_user(ctx.author.id, {"candies": ( candies := sum([card.cost for card in converted_cards]))}, mode="inc")
+
+        embed = discord.Embed(title="✨ Convert", color=discord.Color.random())
+        embed.description = f"```🆔 {', '.join(card_ids)} \n🍬 + {candies}```"
+        await ctx.reply(content="", embed=embed)
+    
+    @commands.command(aliases=["st"])
+    async def settag(self, ctx: commands.Context, card_id: int, tag: str):
+        if tag and len(tag) >= 10:
+            return await ctx.reply(content="Please shorten the tag name as it is too long.")
+
+        card = iufi.CardPool.get_card(str(card_id))
+        if not card:
+            return await ctx.reply("The card was not found. Please try again.")
+
+        if card.owner_id != ctx.author.id:
+            return await ctx.reply("You are not the owner of this card.")
+        
+        if card.tag:
+            iufi.CardPool.change_tag(card, tag)
+        else:
+            iufi.CardPool.add_tag(card, tag)
+        
+        embed = discord.Embed(title="🏷️ Set Tag", color=discord.Color.random())
+        embed.description = f"```🆔 {card.id}\n🏷️ {tag}```"
+        await ctx.reply(content="", embed=embed)
+
+    @commands.command(aliases=["stl"])
+    async def settaglast(self, ctx: commands.Context, tag: str):
+        if tag and len(tag) >= 10:
+            return await ctx.reply(content="Please shorten the tag name as it is too long.")
+        
+        user = func.get_user(ctx.author.id)
+        if not user["cards"]:
+            return await ctx.reply(f"**{ctx.author.mention} you have no photocards.**", delete_after=5)
+        
+        card_id = user["cards"][-1]
+        card = iufi.CardPool.get_card(card_id)
+        if card:
+            if card.tag:
+                iufi.CardPool.change_tag(card, tag)
+            else:
+                iufi.CardPool.add_tag(card, tag)
+        
+            embed = discord.Embed(title="🏷️ Set Tag", color=discord.Color.random())
+            embed.description = f"```🆔 {card.id}\n🏷️ {tag}```"
+            await ctx.reply(content="", embed=embed)
+
+    @commands.command(aliases=["rt"])
+    async def removetag(self, ctx: commands.Context, card_id: int):
+        card = iufi.CardPool.get_card(str(card_id))
+        if not card:
+            return await ctx.reply("The card was not found. Please try again.")
+
+        if card.owner_id != ctx.author.id:
+            return await ctx.reply("You are not the owner of this card.")
+        
+        iufi.CardPool.remove_tag(card)
+
+        embed = discord.Embed(title="🏷️ Set Tag", color=discord.Color.random())
+        embed.description = f"```🆔 {card.id}\n🏷️ {card.tag}```"
         await ctx.reply(content="", embed=embed)
 
     @commands.command(aliases=["p"])

@@ -1,7 +1,7 @@
 import random, os
 import functinos as func
 
-from PIL import Image, ImageOps, ImageDraw
+from PIL import Image, ImageDraw
 from .exceptions import ImageLoadError
 
 TIER_EMOJI = {
@@ -23,6 +23,7 @@ PRICE_BASE = {
 class Card:
     def __init__(
         self,
+        pool,
         id: str,
         tier: str,
         owner_id: int = None,
@@ -31,6 +32,7 @@ class Card:
     ):  
         self.id: str = id
         self._tier: str = tier
+        self._pool = pool
 
         self.owner_id: int = owner_id
         self.stars: int = stars
@@ -64,16 +66,29 @@ class Card:
             func.update_card(self.id, {"stars": self.stars}, mode="set", insert=True)
 
         try:
-            with Image.open(os.path.join(func.ROOT_DIR, "images", self._tier, f"{self.id}.jpg")) as img:
+            with Image.open(os.path.join(func.ROOT_DIR, "images", self._tier, f"{self.id}.jpg")).convert('RGBA') as img:
                 image = self._round_corners(img)
                 self._image = image.resize((300, 533), Image.LANCZOS)
 
         except Exception as e:
             raise ImageLoadError(f"Unable to load the image. Reason: {e}")
 
-    def change_owner(self, owner_id: int | None = None) -> None:
-        self.owner_id = owner_id
-        func.update_card(self.id, {"owner_id": owner_id}, mode="set")
+    def change_owner(self, owner_id: int | None = None, *, remove_tag: bool = True) -> None:
+        if self.owner_id != owner_id:
+            self.owner_id = owner_id
+            payload = {"owner_id": owner_id}
+            if remove_tag:
+                payload["tag"] = None
+                if self.tag and self.tag.lower() in self._pool._tag_cards:
+                    self._pool._tag_cards.pop(self.tag.lower())
+                self.tag = None
+
+            func.update_card(self.id, payload, mode="set")
+
+    def change_tag(self, tag: str | None) -> None:
+        if self.tag != tag:
+            self.tag = tag
+            func.update_card(self.id, {"tag": tag}, mode="set")
 
     @property
     def cost(self) -> int:

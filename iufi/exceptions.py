@@ -6,3 +6,6 @@ class ImageLoadError(IUFIException):
 
 class DuplicatedCardError(IUFIException):
     """There was a duplicated id in the pool."""
+
+class DuplicatedTagError(IUFIException):
+    """There was a duplicated tag in the pool."""
