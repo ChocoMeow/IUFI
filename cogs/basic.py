@@ -25,7 +25,7 @@ class Basic(commands.Cog):
         cards = iufi.CardPool.roll()
 
         # Create a new image for output
-        padding = 20
+        padding = 10
         card_width = cards[0].image.width
         output_image = Image.new('RGBA', ((card_width * len(cards)) + (padding * (len(cards) - 1)), cards[0].image.height), (0, 0, 0, 0))
 
@@ -136,18 +136,15 @@ class Basic(commands.Cog):
 
     @commands.command(aliases=["c"])
     async def convert(self, ctx: commands.Context, *, card_ids: str):
-        user = func.get_user(ctx.author.id)
-
         converted_cards: list[iufi.Card] = []
 
         card_ids = card_ids.split(" ")
         for card_id in card_ids:
-            if (card_id := card_id.lstrip("0")) in user.get("cards"):
-                card = iufi.CardPool.get_card(card_id)
-                if card:
-                    card.change_owner()
-                    iufi.CardPool.add_available_card(card)
-                    converted_cards.append(card)
+            card = iufi.CardPool.get_card(card_id)
+            if card and card.owner_id == ctx.author.id:
+                card.change_owner()
+                iufi.CardPool.add_available_card(card)
+                converted_cards.append(card)
         
         func.update_user(ctx.author.id, {"cards": {"$in": (card_ids := [card.id for card in converted_cards])}}, mode="pull")
         func.update_user(ctx.author.id, {"candies": (candies := sum([card.cost for card in converted_cards]))}, mode="inc")
@@ -258,6 +255,19 @@ class Basic(commands.Cog):
     @commands.command(aliases=["p"])
     async def profile(self, ctx: commands.Context):
         user = func.get_user(ctx.author.id)
+
+        level = 0
+        exp = user.get("exp", 0)
+        default_exp = 100
+
+        while exp >= default_exp:
+            exp -= default_exp
+            level += 1
+
+        embed = discord.Embed(title=f"👤 {ctx.author.display_name}'s Profile", color=discord.Color.random())
+        embed.description = f"```📙 Photocards: {len(user.get('cards', []))}/{func.MAX_CARDS}\n⚔️ Level: {level} ({(exp/default_exp)*100:.1f}%)```"
+
+        await ctx.reply(content="", embed=embed)
 
 async def setup(bot: commands.Bot) -> None:
     await bot.add_cog(Basic(bot))

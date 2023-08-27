@@ -41,7 +41,7 @@ class Card:
         self._image: Image.Image = None
         self._emoji: str = TIER_EMOJI.get(self._tier)
 
-    def _round_corners(self, image: Image.Image, radius: int = 30) -> Image.Image:
+    def _round_corners(self, image: Image.Image, radius: int = 20) -> Image.Image:
         """Creates a rounded corner image"""
         mask = Image.new('L', image.size, 0)
         draw = ImageDraw.Draw(mask)
@@ -67,8 +67,8 @@ class Card:
 
         try:
             with Image.open(os.path.join(func.ROOT_DIR, "images", self._tier, f"{self.id}.jpg")).convert('RGBA') as img:
-                image = self._round_corners(img)
-                self._image = image.resize((300, 533), Image.LANCZOS)
+                image = img.resize((200, 355), Image.LANCZOS)
+                self._image = self._round_corners(image)
 
         except Exception as e:
             raise ImageLoadError(f"Unable to load the image. Reason: {e}")
