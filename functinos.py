@@ -85,10 +85,20 @@ def update_user(user_id: int, data: dict, mode: str = "set") -> None:
                 user.pop(cursors[-1])
 
             case "push":
-                user[cursors[-1]].append(values)
+                if isinstance(values, dict):
+                    for items in values.values():
+                        for item in items:
+                            user[cursors[-1]].append(item)
+                else:
+                    user[cursors[-1]].append(values)
 
             case "pull":
-                user[cursors[-1]].remove(values)
+                if isinstance(values, dict):
+                    for items in values.values():
+                        for item in items:
+                            user[cursors[-1]].remove(item)
+                else:
+                    user[cursors[-1]].remove(values)
 
             case "inc":
                 user[cursors[-1]] += values
