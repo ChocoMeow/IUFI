@@ -39,7 +39,7 @@ class PhotoCardView(discord.ui.View):
         self.author: discord.Member = author
         self.cards: dict[str, Card | None] = {card: None for card in cards}
 
-        self.page: int = ceil(len(self.cards) / 10)
+        self.page: int = ceil(len(self.cards) / 7)
         self.current_page: int = 1
 
         self._dropdown_view: Dropdown = Dropdown(self.cards)
@@ -48,17 +48,19 @@ class PhotoCardView(discord.ui.View):
         self.message: discord.Message = None
 
     def build_embed(self) -> discord.Embed:
-        offset = self.current_page * 10
-        cards = list(self.cards.keys())[(offset-10):offset]
+        offset = self.current_page * 7
+        cards = list(self.cards.keys())[(offset-7):offset]
 
         desc = f"\n**📙 Collection size: `{len(self.cards)}/{func.MAX_CARDS}`**\n```"
+        self._dropdown_view.options.clear()
+
         for card_id in cards:
             card = self.cards.get(card_id)
             if not card:
                 card = self.cards[card_id] = CardPool.get_card(card_id)
 
             desc += f"🆔{card.id.zfill(5)} 🏷️{card.tag if card.tag else '-':<12} ⭐{card.stars} {card.tier[0]}\n" if card else f"🆔 {card_id.zfill(5)} {'-' * 20}"
-            self._dropdown_view.options.append(discord.SelectOption(label=f"{card.id}", emoji=card.tier[0]))
+            self._dropdown_view.options.append(discord.SelectOption(label=f"{card.id}", description=f"🏷️ {card.tag if card.tag else '-':<12}", emoji=card.tier[0]))
         embed = discord.Embed(title=f"📖 {self.author.display_name}'s Photocards", description=desc + "```", color=discord.Color.random())
         embed.set_thumbnail(url=self.author.avatar.url)
         embed.set_footer(text="Pages: {}/{}".format(self.current_page, self.page))
