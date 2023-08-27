@@ -70,8 +70,12 @@ class CardPool:
         return card
     
     @classmethod
-    def get_card(cls, id: str) -> Card | None:
-        return cls._cards.get(id)
+    def get_card(cls, card_id: str) -> Card | None:
+        card_id = card_id.lstrip("0")
+        card = cls._cards.get(card_id)
+        if not card:
+            card = cls._tag_cards.get(card_id.lower())
+        return card
     
     @classmethod
     def roll(cls, amount: int = 3) -> list[Card]:

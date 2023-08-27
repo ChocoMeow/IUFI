@@ -89,8 +89,8 @@ class Basic(commands.Cog):
         await ctx.reply(content="", embed=embed)
 
     @commands.command(aliases=["i"])
-    async def info(self, ctx: commands.Context, card_id: int):
-        card: iufi.Card = iufi.CardPool.get_card(str(card_id))
+    async def info(self, ctx: commands.Context, card_id: str):
+        card: iufi.Card = iufi.CardPool.get_card(card_id)
         if not card:
             return await ctx.reply("The card was not found. Please try again.")
         
@@ -199,11 +199,11 @@ class Basic(commands.Cog):
         await ctx.reply(content="", embed=embed)
     
     @commands.command(aliases=["st"])
-    async def settag(self, ctx: commands.Context, card_id: int, tag: str):
+    async def settag(self, ctx: commands.Context, card_id: str, tag: str):
         if tag and len(tag) >= 10:
             return await ctx.reply(content="Please shorten the tag name as it is too long.")
 
-        card = iufi.CardPool.get_card(str(card_id))
+        card = iufi.CardPool.get_card(card_id)
         if not card:
             return await ctx.reply("The card was not found. Please try again.")
 
@@ -241,8 +241,8 @@ class Basic(commands.Cog):
             await ctx.reply(content="", embed=embed)
 
     @commands.command(aliases=["rt"])
-    async def removetag(self, ctx: commands.Context, card_id: int):
-        card = iufi.CardPool.get_card(str(card_id))
+    async def removetag(self, ctx: commands.Context, card_id: str):
+        card = iufi.CardPool.get_card(card_id)
         if not card:
             return await ctx.reply("The card was not found. Please try again.")
 
