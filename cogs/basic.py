@@ -4,7 +4,7 @@ import functions as func
 from discord.ext import commands
 from PIL import Image
 from io import BytesIO
-from views import RollView, PhotoCardView, ShopView
+from views import RollView, PhotoCardView, ShopView, TradeView
 
 MAX_CARDS = 100
 
@@ -366,6 +366,33 @@ class Basic(commands.Cog):
     async def shop(self, ctx: commands.Context):
         view = ShopView(ctx.author)
         view.message = await ctx.reply(content="", embed=view.build_embed(), view=view)
+
+    @commands.command(aliases=["t"])
+    async def trade(self, ctx: commands.Context, member: discord.Member, card_id: str, candies: int):
+        card = iufi.CardPool.get_card(card_id)
+        if not card:
+            return await ctx.reply("The card was not found. Please try again.")
+
+        if card.owner_id != ctx.author.id:
+            return await ctx.reply("You are not the owner of this card.")
+        
+        embed = discord.Embed(title="⤵️ Trade", color=discord.Color.random())
+        embed.description = f"```Seller: {ctx.author.display_name}\n" \
+                            f"Buyer: {member.display_name}\n" \
+                            f"Candies: 🍬 {candies}\n\n" \
+                            f"🆔 {card.id.zfill(5)}\n" \
+                            f"🏷️ {card.tag}\n" \
+                            f"{card.tier[0]} {card.tier[1].title()}\n" \
+                            f"⭐ {card.stars}```\n" \
+        
+        embed.set_image(url="attachment://image.png")
+
+        resized_image_bytes = BytesIO()
+        card.image.save(resized_image_bytes, format='PNG')
+        resized_image_bytes.seek(0)
+
+        view = TradeView(ctx.author, member, card, candies)
+        view.message = await ctx.reply(content=f"{member.mention}, {ctx.author.mention} want to trade with you.", file=discord.File(resized_image_bytes, filename="image.png"), embed=embed, view=view)
 
 async def setup(bot: commands.Bot) -> None:
     await bot.add_cog(Basic(bot))
