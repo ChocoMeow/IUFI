@@ -288,6 +288,38 @@ class Basic(commands.Cog):
         embed.description = f"```🆔 {', '.join(card_ids)} \n🍬 + {candies}```"
         await ctx.reply(content="", embed=embed)
     
+    @commands.command(aliases=["cm"])
+    async def convertmass(self, ctx: commands.Context, category: str):
+        user = func.get_user(ctx.author.id)
+        category = category.lower()
+
+        if not user["cards"]:
+            return await ctx.reply(f"**{ctx.author.mention} you have no photocards.**", delete_after=5)
+        
+        converted_cards: list[iufi.Card] = []
+
+        for card_id in user["cards"]:
+            card = iufi.CardPool.get_card(card_id)
+            if card:
+                if category == "notag" and card.tag:
+                    continue
+                elif category != card.tier[1]:
+                    continue
+
+                card.change_owner()
+                iufi.CardPool.add_available_card(card)
+                converted_cards.append(card)
+
+        func.update_user(ctx.author.id, {
+            "$pull": {"cards": {"$in": ( card_ids := [card.id for card in converted_cards])}},
+            "$inc": {"candies": ( candies := sum([card.cost for card in converted_cards]))}
+        })
+        func.update_card(card_ids, {"$set": {"owner_id": None, "tag": None}})
+
+        embed = discord.Embed(title="✨ Convert", color=discord.Color.random())
+        embed.description = f"```🆔 {', '.join(card_ids)} \n🍬 + {candies}```"
+        await ctx.reply(content="", embed=embed)
+
     @commands.command(aliases=["st"])
     async def settag(self, ctx: commands.Context, card_id: str, tag: str):
         if tag and len(tag) >= 10:
