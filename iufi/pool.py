@@ -78,9 +78,11 @@ class CardPool:
         return card
     
     @classmethod
-    def roll(cls, amount: int = 3) -> list[Card]:
+    def roll(cls, amount: int = 3, *, included: str = None) -> list[Card]:
         categories = list(DROP_RATES.keys())
         results = cls._rand.choices(categories, weights=DROP_RATES.values(), k=amount)
+        if included:
+            results[amount - 1] = included
 
-        return [cls._rand.sample(cls._available_cards[result], k=1)[0] for result in results]
+        return [cls._rand.choice(cls._available_cards[result]) for result in results]
 

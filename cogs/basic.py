@@ -1,12 +1,30 @@
 import discord, iufi, time
-import functinos as func
+import functions as func
 
 from discord.ext import commands
 from PIL import Image
 from io import BytesIO
-from views import RollView, PhotoCardView
+from views import RollView, PhotoCardView, ShopView
 
 MAX_CARDS = 100
+
+def gen_cards_view(cards: list[iufi.Card]) -> BytesIO:
+    # Create a new image for output
+    padding = 10
+    card_width = cards[0].image.width
+    output_image = Image.new('RGBA', ((card_width * len(cards)) + (padding * (len(cards) - 1)), cards[0].image.height), (0, 0, 0, 0))
+
+    # # Paste images into the output image with 10 pixels padding
+    space = 0
+    for card in cards:
+        output_image.paste(card.image, (space, 0))
+        space += card.image.width + padding
+
+    resized_image_bytes = BytesIO()
+    output_image.save(resized_image_bytes, format='PNG')
+    resized_image_bytes.seek(0)
+
+    return resized_image_bytes
 
 class Basic(commands.Cog):
     def __init__(self, bot: commands.Bot) -> None:
@@ -23,21 +41,7 @@ class Basic(commands.Cog):
         func.USERS_LOCK.append(ctx.author.id)
 
         cards = iufi.CardPool.roll()
-
-        # Create a new image for output
-        padding = 10
-        card_width = cards[0].image.width
-        output_image = Image.new('RGBA', ((card_width * len(cards)) + (padding * (len(cards) - 1)), cards[0].image.height), (0, 0, 0, 0))
-
-        # # Paste images into the output image with 10 pixels padding
-        space = 0
-        for card in cards:
-            output_image.paste(card.image, (space, 0))
-            space += card.image.width + padding
-
-        resized_image_bytes = BytesIO()
-        output_image.save(resized_image_bytes, format='PNG')
-        resized_image_bytes.seek(0)
+        resized_image_bytes = gen_cards_view(cards)
 
         view = RollView(ctx.author, cards)
         view.message = await ctx.send(
@@ -45,7 +49,86 @@ class Basic(commands.Cog):
             file=discord.File(resized_image_bytes, filename='image.png'),
             view=view
         )
-        func.update_user(ctx.author.id, {"cooldown.roll": time.time() + func.COOLDOWN_BASE["roll"]}, "set")
+        func.update_user(ctx.author.id, {"$set": {"cooldown.roll": time.time() + func.COOLDOWN_BASE["roll"]}})
+        await view.timeout_count()
+        await view.wait()
+
+        if ctx.author.id in func.USERS_LOCK:
+            func.USERS_LOCK.remove(ctx.author.id)
+
+    @commands.command(aliases=["rr"])
+    async def rareroll(self, ctx: commands.Context):
+        if ctx.author.id in func.USERS_LOCK:
+            return
+        func.USERS_LOCK.append(ctx.author.id)
+        
+        user = func.get_user(ctx.author.id)
+        if user["roll"]["rare"] <= 0:
+            return await ctx.reply("You’ve used up all your rare rolls for now.")
+
+        cards = iufi.CardPool.roll(included="rare")
+        resized_image_bytes = gen_cards_view(cards)
+
+        view = RollView(ctx.author, cards)
+        view.message = await ctx.send(
+            content=f"**{ctx.author.mention} This is your roll!**",
+            file=discord.File(resized_image_bytes, filename='image.png'),
+            view=view
+        )
+
+        func.update_user(ctx.author.id, {"$inc": {"roll.rare": -1}})
+        await view.timeout_count()
+        await view.wait()
+
+        if ctx.author.id in func.USERS_LOCK:
+            func.USERS_LOCK.remove(ctx.author.id)
+
+    @commands.command(aliases=["er"])
+    async def epicroll(self, ctx: commands.Context):
+        if ctx.author.id in func.USERS_LOCK:
+            return
+        func.USERS_LOCK.append(ctx.author.id)
+        
+        user = func.get_user(ctx.author.id)
+        if user["roll"]["epic"] <= 0:
+            return await ctx.reply("You’ve used up all your epic rolls for now.")
+
+        cards = iufi.CardPool.roll(included="epic")
+        resized_image_bytes = gen_cards_view(cards)
+
+        view = RollView(ctx.author, cards)
+        view.message = await ctx.send(
+            content=f"**{ctx.author.mention} This is your roll!**",
+            file=discord.File(resized_image_bytes, filename='image.png'),
+            view=view
+        )
+        func.update_user(ctx.author.id, {"$inc": {"roll.epic": -1}})
+        await view.timeout_count()
+        await view.wait()
+
+        if ctx.author.id in func.USERS_LOCK:
+            func.USERS_LOCK.remove(ctx.author.id)
+        
+    @commands.command(aliases=["lr"])
+    async def legendroll(self, ctx: commands.Context):
+        if ctx.author.id in func.USERS_LOCK:
+            return
+        func.USERS_LOCK.append(ctx.author.id)
+        
+        user = func.get_user(ctx.author.id)
+        if user["roll"]["legendary"] <= 0:
+            return await ctx.reply("You’ve used up all your epic rolls for now.")
+
+        cards = iufi.CardPool.roll(included="legendary")
+        resized_image_bytes = gen_cards_view(cards)
+
+        view = RollView(ctx.author, cards)
+        view.message = await ctx.send(
+            content=f"**{ctx.author.mention} This is your roll!**",
+            file=discord.File(resized_image_bytes, filename='image.png'),
+            view=view
+        )
+        func.update_user(ctx.author.id, {"$inc": {"roll.legendary": -1}})
         await view.timeout_count()
         await view.wait()
 
@@ -146,9 +229,12 @@ class Basic(commands.Cog):
                 iufi.CardPool.add_available_card(card)
                 converted_cards.append(card)
         
-        func.update_user(ctx.author.id, {"cards": {"$in": (card_ids := [card.id for card in converted_cards])}}, mode="pull")
-        func.update_user(ctx.author.id, {"candies": (candies := sum([card.cost for card in converted_cards]))}, mode="inc")
-        
+        func.update_user(ctx.author.id, {
+            "$pull": {"cards": {"$in": (card_ids := [card.id for card in converted_cards])}},
+            "$inc": {"candies": (candies := sum([card.cost for card in converted_cards]))}
+        })
+        func.update_card(card.id, {"$set": {"owner_id": None, "tag": None}})
+
         embed = discord.Embed(title="✨ Convert", color=discord.Color.random())
         embed.description = f"```🆔 {', '.join(card_ids)} \n🍬 + {candies}```"
         await ctx.reply(content="", embed=embed)
@@ -166,8 +252,12 @@ class Basic(commands.Cog):
             card.change_owner()
             iufi.CardPool.add_available_card(card)
 
-        func.update_user(ctx.author.id, {"cards": card.id}, mode="pull")
-        func.update_user(ctx.author.id, {"candies": card.cost}, mode="inc")
+        func.update_user(ctx.author.id, {
+            "$pull": {"cards": card.id},
+            "$inc": {"candies": card.cost}
+        })
+        func.update_card(card.id, {"$set": {"owner_id": None, "tag": None}})
+
         embed = discord.Embed(title="✨ Convert", color=discord.Color.random())
         embed.description = f"```🆔 {card.id} \n🍬 + {card.cost}```"
         await ctx.reply(content="", embed=embed)
@@ -188,8 +278,11 @@ class Basic(commands.Cog):
                 iufi.CardPool.add_available_card(card)
                 converted_cards.append(card)
 
-        func.update_user(ctx.author.id, {"cards": {"$in": ( card_ids := [card.id for card in converted_cards])}},  mode="pull")
-        func.update_user(ctx.author.id, {"candies": ( candies := sum([card.cost for card in converted_cards]))}, mode="inc")
+        func.update_user(ctx.author.id, {
+            "$pull": {"cards": {"$in": ( card_ids := [card.id for card in converted_cards])}},
+            "$inc": {"candies": ( candies := sum([card.cost for card in converted_cards]))}
+        })
+        func.update_card(card_ids, {"$set": {"owner_id": None, "tag": None}})
 
         embed = discord.Embed(title="✨ Convert", color=discord.Color.random())
         embed.description = f"```🆔 {', '.join(card_ids)} \n🍬 + {candies}```"
@@ -268,6 +361,11 @@ class Basic(commands.Cog):
         embed.description = f"```📙 Photocards: {len(user.get('cards', []))}/{func.MAX_CARDS}\n⚔️ Level: {level} ({(exp/default_exp)*100:.1f}%)```"
 
         await ctx.reply(content="", embed=embed)
+
+    @commands.command()
+    async def shop(self, ctx: commands.Context):
+        view = ShopView(ctx.author)
+        view.message = await ctx.reply(content="", embed=view.build_embed(), view=view)
 
 async def setup(bot: commands.Bot) -> None:
     await bot.add_cog(Basic(bot))
