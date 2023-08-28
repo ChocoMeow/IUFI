@@ -1,5 +1,5 @@
 import discord
-import functinos as func
+import functions as func
 
 from iufi import CardPool, Card
 from math import ceil

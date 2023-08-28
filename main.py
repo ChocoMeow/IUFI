@@ -1,5 +1,5 @@
 import discord, os, iufi, traceback
-import functinos as func
+import functions as func
 
 from discord.ext import commands
 
@@ -52,11 +52,9 @@ class IUFI(commands.Bot):
             command = f" Correct Usage: {ctx.prefix}" + (f"{ctx.command.parent.qualified_name} " if ctx.command.parent else "") + f"{ctx.command.name} {ctx.command.signature}"
             position = command.find(f"<{ctx.current_parameter.name}>") + 1
             error = f"```css\n[You are missing argument!]\n{command}\n" + " " * position + "^" * len(ctx.current_parameter.name) + "```"
-
-        else:
-            print(traceback.print_exc())
             
         try:
+            print(traceback.print_exception())
             return await ctx.reply(error)
         except:
             pass

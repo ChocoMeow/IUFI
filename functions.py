@@ -69,50 +69,50 @@ def get_user(user_id: int) -> dict[str, Any]:
         user = USERS_BUFFER[user_id] = user if user else copy.deepcopy(USER_BASE)
     return user
 
-def update_user(user_id: int, data: dict, mode: str = "set") -> None:
+def update_user(user_id: int, data: dict) -> None:
     user = get_user(user_id)
 
-    for keys, values in data.items():
-        cursors: str = keys.split(".")
-        for c in cursors[:-1]:
-            user = user[c]
-    
-        match mode:
-            case "set":
-                user[cursors[-1]] = values
+    for mode, action in data.items():
+        for key, value in action.items():
+            cursors = key.split(".")
 
-            case "unset":
-                user.pop(cursors[-1])
+            nested_user = user
+            for c in cursors[:-1]:
+                nested_user = nested_user[c]
 
-            case "push":
-                if isinstance(values, dict):
-                    for items in values.values():
+            if mode == "$set":
+                nested_user[cursors[-1]] = value
+            elif mode == "$unset":
+                del nested_user[cursors[-1]]
+            elif mode == "$inc":
+                nested_user[cursors[-1]] += value
+            elif mode == "$push":
+                if isinstance(value, dict):
+                    for items in value.values():
                         for item in items:
-                            user[cursors[-1]].append(item)
+                            nested_user[cursors[-1]].append(item)
                 else:
-                    user[cursors[-1]].append(values)
-
-            case "pull":
-                if isinstance(values, dict):
-                    for items in values.values():
+                    nested_user[cursors[-1]].append(value)
+            elif mode == "$pull":
+                if isinstance(value, dict):
+                    for items in value.values():
                         for item in items:
-                            user[cursors[-1]].remove(item)
+                            nested_user[cursors[-1]].remove(item)
                 else:
-                    user[cursors[-1]].remove(values)
-
-            case "inc":
-                user[cursors[-1]] += values
+                    nested_user[cursors[-1]].remove(value)
+            else:
+                raise ValueError(f"Invalid mode: {mode}")
                 
-            case _:
-                return ValueError(f"Invalid mode: {mode}")
-            
-    USERS_DB.update_one({"_id": user_id}, {f"${mode}": data})
+    USERS_DB.update_one({"_id": user_id}, data)
 
-def update_card(card_id: int, data: dict, mode: str = "set", insert: bool = False) -> None:
+def update_card(card_id: list[str] | str, data: dict, insert: bool = False) -> None:
     if insert:
         CARDS_DB.insert_one({"_id": card_id})
-        
-    CARDS_DB.update_one({"_id": card_id}, {f"${mode}": data})
+    
+    if isinstance(card_id, list):
+        return CARDS_DB.update_many({"_id": {"$in": card_id}}, data)
+    
+    CARDS_DB.update_one({"_id": card_id}, data)
 
 def cal_retry_time(end_time: float, default: str=None) -> str | None:
     if end_time <= (current_time := time.time()):

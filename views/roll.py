@@ -1,5 +1,5 @@
 import discord, time, asyncio
-import functinos as func
+import functions as func
 
 from iufi import CardPool, Card
 
@@ -21,10 +21,13 @@ class RollButton(discord.ui.Button):
                 return await interaction.response.send_message(f"This card has been claimed by <@{owner_id}>")
             else:
                 return await interaction.response.send_message("This card has claimed by you already!")
-            
-        func.update_user(interaction.user.id, {"cards": self.card.id}, mode="push")
-        func.update_user(interaction.user.id, {"cooldown.claim": time.time() + func.COOLDOWN_BASE["claim"]}, mode="set")
-        func.update_user(interaction.user.id, {"exp": 10}, mode="inc")
+        
+        func.update_user(interaction.user.id, {
+            "$push": {"cards": self.card.id},
+            "$set": {"cooldown.claim": time.time() + func.COOLDOWN_BASE["claim"]},
+            "$inc": {"exp": 10}
+        })
+
         self.card.change_owner(interaction.user.id)
         CardPool.remove_available_card(self.card)
         

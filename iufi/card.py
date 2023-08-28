@@ -1,5 +1,5 @@
 import random, os
-import functinos as func
+import functions as func
 
 from PIL import Image, ImageDraw
 from .exceptions import ImageLoadError
@@ -41,7 +41,7 @@ class Card:
         self._image: Image.Image = None
         self._emoji: str = TIER_EMOJI.get(self._tier)
 
-    def _round_corners(self, image: Image.Image, radius: int = 20) -> Image.Image:
+    def _round_corners(self, image: Image.Image, radius: int = 10) -> Image.Image:
         """Creates a rounded corner image"""
         mask = Image.new('L', image.size, 0)
         draw = ImageDraw.Draw(mask)
@@ -63,7 +63,7 @@ class Card:
         """Load and process the image"""
         if not self.stars:
             self.stars = random.randint(1, 5)
-            func.update_card(self.id, {"stars": self.stars}, mode="set", insert=True)
+            func.update_card(self.id, {"$set": {"stars": self.stars}}, insert=True)
 
         try:
             with Image.open(os.path.join(func.ROOT_DIR, "images", self._tier, f"{self.id}.jpg")).convert('RGBA') as img:
@@ -76,19 +76,15 @@ class Card:
     def change_owner(self, owner_id: int | None = None, *, remove_tag: bool = True) -> None:
         if self.owner_id != owner_id:
             self.owner_id = owner_id
-            payload = {"owner_id": owner_id}
             if remove_tag:
-                payload["tag"] = None
                 if self.tag and self.tag.lower() in self._pool._tag_cards:
                     self._pool._tag_cards.pop(self.tag.lower())
                 self.tag = None
 
-            func.update_card(self.id, payload, mode="set")
-
     def change_tag(self, tag: str | None) -> None:
         if self.tag != tag:
             self.tag = tag
-            func.update_card(self.id, {"tag": tag}, mode="set")
+            func.update_card(self.id, {"$set": {"tag": tag}})
 
     @property
     def cost(self) -> int:
