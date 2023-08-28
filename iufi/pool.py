@@ -4,10 +4,10 @@ from .card import Card
 from .exceptions import DuplicatedCardError, DuplicatedTagError
 
 DROP_RATES = {
-    'common': 0.9,
-    'rare': 0.08,
-    'epic': 0.007,
-    'legendary': 0.003,
+    'common': .9,
+    'rare': .08,
+    'epic': .007,
+    'legendary': .003,
     'mystic':.001
 }
 

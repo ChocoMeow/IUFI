@@ -54,7 +54,6 @@ class IUFI(commands.Bot):
             error = f"```css\n[You are missing argument!]\n{command}\n" + " " * position + "^" * len(ctx.current_parameter.name) + "```"
             
         try:
-            print(traceback.print_exception())
             return await ctx.reply(error)
         except:
             pass

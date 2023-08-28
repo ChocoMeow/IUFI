@@ -58,13 +58,13 @@ class Basic(commands.Cog):
 
     @commands.command(aliases=["rr"])
     async def rareroll(self, ctx: commands.Context):
-        if ctx.author.id in func.USERS_LOCK:
-            return
-        func.USERS_LOCK.append(ctx.author.id)
-        
         user = func.get_user(ctx.author.id)
         if user["roll"]["rare"] <= 0:
             return await ctx.reply("You’ve used up all your rare rolls for now.")
+
+        if ctx.author.id in func.USERS_LOCK:
+            return
+        func.USERS_LOCK.append(ctx.author.id)
 
         cards = iufi.CardPool.roll(included="rare")
         resized_image_bytes = gen_cards_view(cards)
@@ -84,14 +84,14 @@ class Basic(commands.Cog):
             func.USERS_LOCK.remove(ctx.author.id)
 
     @commands.command(aliases=["er"])
-    async def epicroll(self, ctx: commands.Context):
-        if ctx.author.id in func.USERS_LOCK:
-            return
-        func.USERS_LOCK.append(ctx.author.id)
-        
+    async def epicroll(self, ctx: commands.Context):       
         user = func.get_user(ctx.author.id)
         if user["roll"]["epic"] <= 0:
             return await ctx.reply("You’ve used up all your epic rolls for now.")
+
+        if ctx.author.id in func.USERS_LOCK:
+            return
+        func.USERS_LOCK.append(ctx.author.id)
 
         cards = iufi.CardPool.roll(included="epic")
         resized_image_bytes = gen_cards_view(cards)
@@ -111,13 +111,13 @@ class Basic(commands.Cog):
         
     @commands.command(aliases=["lr"])
     async def legendroll(self, ctx: commands.Context):
-        if ctx.author.id in func.USERS_LOCK:
-            return
-        func.USERS_LOCK.append(ctx.author.id)
-        
         user = func.get_user(ctx.author.id)
         if user["roll"]["legendary"] <= 0:
             return await ctx.reply("You’ve used up all your epic rolls for now.")
+
+        if ctx.author.id in func.USERS_LOCK:
+            return
+        func.USERS_LOCK.append(ctx.author.id)
 
         cards = iufi.CardPool.roll(included="legendary")
         resized_image_bytes = gen_cards_view(cards)
@@ -233,7 +233,7 @@ class Basic(commands.Cog):
             "$pull": {"cards": {"$in": (card_ids := [card.id for card in converted_cards])}},
             "$inc": {"candies": (candies := sum([card.cost for card in converted_cards]))}
         })
-        func.update_card(card.id, {"$set": {"owner_id": None, "tag": None}})
+        func.update_card(card_ids, {"$set": {"owner_id": None, "tag": None}})
 
         embed = discord.Embed(title="✨ Convert", color=discord.Color.random())
         embed.description = f"```🆔 {', '.join(card_ids)} \n🍬 + {candies}```"
@@ -394,7 +394,7 @@ class Basic(commands.Cog):
 
         await ctx.reply(content="", embed=embed)
 
-    @commands.command()
+    @commands.command(aliases=["s"])
     async def shop(self, ctx: commands.Context):
         view = ShopView(ctx.author)
         view.message = await ctx.reply(content="", embed=view.build_embed(), view=view)

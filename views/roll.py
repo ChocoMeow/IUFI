@@ -27,6 +27,7 @@ class RollButton(discord.ui.Button):
             "$set": {"cooldown.claim": time.time() + func.COOLDOWN_BASE["claim"]},
             "$inc": {"exp": 10}
         })
+        func.update_card(self.card.id, {"$set": {"owner_id": interaction.user.id}})
 
         self.card.change_owner(interaction.user.id)
         CardPool.remove_available_card(self.card)
