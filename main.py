@@ -61,16 +61,11 @@ class IUFI(commands.Bot):
 intents = discord.Intents.default()
 intents.members = True
 intents.message_content = True
-member_cache = discord.MemberCacheFlags(
-    voice=True,
-    joined=False
-)
 
 bot = IUFI(
     command_prefix=["q", "Q"],
     help_command=None,
-    chunk_guilds_at_startup=False,
-    member_cache_flags=member_cache,
+    chunk_guilds_at_startup=True,
     activity=discord.Activity(type=discord.ActivityType.playing, name="IU Card Game"),
     case_insensitive=True,
     intents=intents

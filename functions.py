@@ -36,6 +36,7 @@ USERS_LOCK = []
 USERS_BUFFER: dict[int, dict[str, Any]] = {}
 COOLDOWN: dict[int, dict[str, float]] = {}
 MAX_CARDS: int = 100
+DEAFAULT_EXP = 100
 
 USER_BASE: dict[str, Any] = {
     "candies": 0,
@@ -134,3 +135,12 @@ def check_user_cooldown(user_id: int, type: str = "roll") -> str | None:
             return ValueError(f"Invalid type: {type}")
         
         return cal_retry_time(end_time)
+
+def calculate_level(exp: int) -> tuple[int, int]:
+    level = 0
+
+    while exp >= DEAFAULT_EXP:
+        exp -= DEAFAULT_EXP
+        level += 1
+    
+    return level, exp

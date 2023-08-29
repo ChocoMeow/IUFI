@@ -7,6 +7,7 @@ from io import BytesIO
 from views import RollView, PhotoCardView, ShopView, TradeView
 
 MAX_CARDS = 100
+LEADERBOARD_EMOJIS: list[str] = ["🥇", "🥈", "🥉", "🏅"]
 
 def gen_cards_view(cards: list[iufi.Card]) -> BytesIO:
     # Create a new image for output
@@ -425,6 +426,24 @@ class Basic(commands.Cog):
 
         view = TradeView(ctx.author, member, card, candies)
         view.message = await ctx.reply(content=f"{member.mention}, {ctx.author.mention} want to trade with you.", file=discord.File(resized_image_bytes, filename="image.png"), embed=embed, view=view)
+
+    @commands.command(aliases=["l"])
+    async def leaderboard(self, ctx: commands.Context):
+        users = func.USERS_DB.find().sort("exp", -1).limit(10)
+
+        embed = discord.Embed(title="🏆   IUFI Leaderboard", color=discord.Color.random())
+        embed.description = "```"
+
+        for index, user in enumerate(users):
+            level, exp = func.calculate_level(user["exp"])
+            member = self.bot.get_user(user['_id'])
+
+            if member:
+                embed.description += f"{LEADERBOARD_EMOJIS[index if index <= 2 else 3]} {member.display_name:<20} {level:>4} ⚔️\n"
+        embed.description += "```"
+        embed.set_thumbnail(url=icon.url if (icon := ctx.guild.icon) else None)
+
+        await ctx.reply(content="", embed=embed)
 
 async def setup(bot: commands.Bot) -> None:
     await bot.add_cog(Basic(bot))
