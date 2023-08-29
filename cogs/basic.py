@@ -458,5 +458,27 @@ class Basic(commands.Cog):
         embed.add_field(name="Streak Rewards", value=value + "```")
         await ctx.reply(embed=embed)
 
+    @commands.command(aliases=["sb"])
+    async def setbio(self, ctx: commands.Context, *, bio: str = None):
+        if bio and len(bio) > 20:
+            return await ctx.reply(content="Please shorten the bio as it is too long. (No more than 20 chars)")
+
+        func.update_user(ctx.author.id, {"$set": {"profile.bio": bio}})
+        embed = discord.Embed(description=f"Bio has been set to\n```{bio}```", color=discord.Color.random())
+        await ctx.reply(content="", embed=embed)
+    
+    @commands.command(aliases=["m"])
+    async def main(self, ctx: commands.Context, card_id: str = None):
+        card = iufi.CardPool.get_card(card_id)
+        if not card:
+            return await ctx.reply("The card was not found. Please try again.")
+
+        if card.owner_id != ctx.author.id:
+            return await ctx.reply("You are not the owner of this card.")
+
+        func.update_user(ctx.author.id, {"$set": {"profile.main": card_id}})
+        embed = discord.Embed(title="👤 Set Main", description=f"```{card.tier[0]} {card.id} has been set as profile card.```", color=discord.Color.random())
+        await ctx.reply(content="", embed=embed)
+
 async def setup(bot: commands.Bot) -> None:
     await bot.add_cog(Basic(bot))
