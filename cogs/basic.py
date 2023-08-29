@@ -58,7 +58,6 @@ class Basic(commands.Cog):
         )
         func.update_user(ctx.author.id, {"$set": {"cooldown.roll": time.time() + func.COOLDOWN_BASE["roll"]}})
         await view.timeout_count()
-        await view.wait()
 
     @commands.command(aliases=["rr"])
     @commands.cooldown(1, 5, commands.BucketType.user) 
@@ -79,7 +78,6 @@ class Basic(commands.Cog):
 
         func.update_user(ctx.author.id, {"$inc": {"roll.rare": -1}})
         await view.timeout_count()
-        await view.wait()
 
     @commands.command(aliases=["er"])
     @commands.cooldown(1, 5, commands.BucketType.user) 
@@ -99,7 +97,6 @@ class Basic(commands.Cog):
         )
         func.update_user(ctx.author.id, {"$inc": {"roll.epic": -1}})
         await view.timeout_count()
-        await view.wait()
         
     @commands.command(aliases=["lr"])
     @commands.cooldown(1, 5, commands.BucketType.user) 
@@ -119,7 +116,6 @@ class Basic(commands.Cog):
         )
         func.update_user(ctx.author.id, {"$inc": {"roll.legendary": -1}})
         await view.timeout_count()
-        await view.wait()
 
     @commands.command(aliases=["v"])
     async def view(self, ctx: commands.Context):
@@ -287,8 +283,8 @@ class Basic(commands.Cog):
         for card_id in user["cards"]:
             card = iufi.CardPool.get_card(card_id)
             if card:
-                if category == "notag" and card.tag:
-                    continue
+                if category == "notag" and not card.tag:
+                    pass
                 elif category != card.tier[1]:
                     continue
 
