@@ -51,6 +51,10 @@ USER_BASE: dict[str, Any] = {
         "roll": (now := int(time.time())),
         "claim": now,
         "daily": now
+    },
+    "profile": {
+        "bio": "",
+        "main": ""
     }
 }
 
@@ -125,16 +129,6 @@ def cal_retry_time(end_time: float, default: str=None) -> str | None:
     hours, minutes = divmod(minutes, 60)
 
     return (f"{hours}h " if hours > 0 else "") + f"{minutes}m {seconds}s"
-
-def check_user_cooldown(user_id: int, type: str = "roll") -> str | None:
-    user = get_user(user_id)
-    if user:
-        end_time: float = user.get("cooldown", {}).get(type, None)
-
-        if not end_time:
-            return ValueError(f"Invalid type: {type}")
-        
-        return cal_retry_time(end_time)
 
 def calculate_level(exp: int) -> tuple[int, int]:
     level = 0

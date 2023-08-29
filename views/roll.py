@@ -78,12 +78,12 @@ class RollView(discord.ui.View):
             return False
         
         if interaction.user in self.claimed_users:
-            await interaction.response.send_message("You have already take this roll!")
+            await interaction.response.send_message("You have already take this roll!", ephemeral=True)
             return False
 
-        retry = func.check_user_cooldown(interaction.user.id, "claim")
-        if retry and self.author != interaction.user:
-            await interaction.response.send_message(f"**{interaction.user.mention} your next roll is in {retry}**", delete_after=5)
+        user = func.get_user(interaction.user.id)
+        if (retry := user["cooldown"]["claim"]) > time.time() and self.author != interaction.user:
+            await interaction.response.send_message(f"{interaction.user.mention} your next roll is in <t:{round(retry)}:R>", ephemeral=True)
             return False
-    
+        
         return True
