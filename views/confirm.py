@@ -17,5 +17,5 @@ class ConfirmView(discord.ui.View):
     async def confirm(self, interaction: discord.Interaction, button: discord.ui.Button):
         await interaction.response.defer()
         self.is_confirm = True
-        button.disabled = True
+        await self.on_timeout()
         self.stop()

@@ -4,7 +4,7 @@ import functions as func
 from discord.ext import commands
 from PIL import Image
 from io import BytesIO
-from views import RollView, PhotoCardView, ShopView, TradeView
+from views import RollView, PhotoCardView, ShopView, TradeView, ConfirmView
 
 MAX_CARDS: int = 100
 LEADERBOARD_EMOJIS: list[str] = ["🥇", "🥈", "🥉", "🏅"]
@@ -45,14 +45,14 @@ class Basic(commands.Cog):
     async def roll(self, ctx: commands.Context):
         user = func.get_user(ctx.author.id)
         if (retry := user["cooldown"]["roll"]) > time.time():
-            return await ctx.reply(f"{ctx.author.mention} your next roll is in <t:{round(retry)}:R>", delete_after=10)
+            return await ctx.reply(f"{ctx.author.mention} your next roll is <t:{round(retry)}:R>", delete_after=10)
 
         cards = iufi.CardPool.roll()
         resized_image_bytes = gen_cards_view(cards)
 
         view = RollView(ctx.author, cards)
         view.message = await ctx.send(
-            content=f"**{ctx.author.mention} This is your roll!** (Ends In: <t:{round(time.time()) + 71}:R>)",
+            content=f"**{ctx.author.mention} This is your roll!** (Ends: <t:{round(time.time()) + 71}:R>)",
             file=discord.File(resized_image_bytes, filename='image.png'),
             view=view
         )
@@ -74,7 +74,7 @@ class Basic(commands.Cog):
 
         view = RollView(ctx.author, cards)
         view.message = await ctx.send(
-            content=f"**{ctx.author.mention} This is your roll!** (Ends In: <t:{round(time.time()) + 71}:R>)",
+            content=f"**{ctx.author.mention} This is your roll!** (Ends: <t:{round(time.time()) + 71}:R>)",
             file=discord.File(resized_image_bytes, filename='image.png'),
             view=view
         )
@@ -97,7 +97,7 @@ class Basic(commands.Cog):
 
         view = RollView(ctx.author, cards)
         view.message = await ctx.send(
-            content=f"**{ctx.author.mention} This is your roll!** (Ends In: <t:{round(time.time()) + 71}:R>)",
+            content=f"**{ctx.author.mention} This is your roll!** (Ends: <t:{round(time.time()) + 71}:R>)",
             file=discord.File(resized_image_bytes, filename='image.png'),
             view=view
         )
@@ -119,7 +119,7 @@ class Basic(commands.Cog):
 
         view = RollView(ctx.author, cards)
         view.message = await ctx.send(
-            content=f"**{ctx.author.mention} This is your roll!** (Ends In: <t:{round(time.time()) + 71}:R>)",
+            content=f"**{ctx.author.mention} This is your roll!** (Ends: <t:{round(time.time()) + 71}:R>)",
             file=discord.File(resized_image_bytes, filename='image.png'),
             view=view
         )
@@ -220,14 +220,14 @@ class Basic(commands.Cog):
                 iufi.CardPool.add_available_card(card)
                 converted_cards.append(card)
         
+        embed = discord.Embed(title="✨ Convert", color=discord.Color.random())
+        embed.description = f"```🆔 {', '.join([f'{card.tier[0]} {card.id}' for card in converted_cards])} \n🍬 + {candies}```"
+                
         func.update_user(ctx.author.id, {
             "$pull": {"cards": {"$in": (card_ids := [card.id for card in converted_cards])}},
             "$inc": {"candies": (candies := sum([card.cost for card in converted_cards]))}
         })
         func.update_card(card_ids, {"$set": {"owner_id": None, "tag": None}})
-
-        embed = discord.Embed(title="✨ Convert", color=discord.Color.random())
-        embed.description = f"```🆔 {', '.join(card_ids)} \n🍬 + {candies}```"
         await ctx.reply(content="", embed=embed)
 
     @commands.command(aliases=["cl"])
@@ -245,11 +245,6 @@ class Basic(commands.Cog):
         embed = discord.Embed(title="✨ Convert", color=discord.Color.random())
         embed.description = f"```🆔 {card.tier[0]} {card.id} \n🍬 + {card.cost}```"
 
-        # view = ConfirmView()
-        # view.message = await ctx.reply(embed=embed, view=view)
-        # await view.wait()
-
-        # if view.is_confirm:
         card.change_owner()
         iufi.CardPool.add_available_card(card)
 
@@ -273,19 +268,35 @@ class Basic(commands.Cog):
         for card_id in user["cards"]:
             card = iufi.CardPool.get_card(card_id)
             if card:
-                card.change_owner()
-                iufi.CardPool.add_available_card(card)
                 converted_cards.append(card)
 
-        func.update_user(ctx.author.id, {
-            "$pull": {"cards": {"$in": ( card_ids := [card.id for card in converted_cards])}},
-            "$inc": {"candies": ( candies := sum([card.cost for card in converted_cards]))}
-        })
-        func.update_card(card_ids, {"$set": {"owner_id": None, "tag": None}})
-
-        embed = discord.Embed(title="✨ Convert", color=discord.Color.random())
+        card_ids = [card.id for card in converted_cards]
+        candies = sum([card.cost for card in converted_cards])
+                       
+        embed = discord.Embed(title="✨ Confirm to convert?", color=discord.Color.random())
         embed.description = f"```🆔 {', '.join([f'{card.tier[0]} {card.id}' for card in converted_cards])} \n🍬 + {candies}```"
-        await ctx.reply(content="", embed=embed)
+
+        view = ConfirmView()
+        view.message = await ctx.reply(content="", embed=embed, view=view)
+        await view.wait()
+
+        if view.is_confirm:
+            user = func.get_user(ctx.author.id)
+            if user["cards"] != card_ids:
+                return await ctx.reply(content="Your cards cannot be converted because there has been a change in your inventory.", ephemeral=True)
+            
+            for card in converted_cards:
+                card.change_owner()
+                iufi.CardPool.add_available_card(card)
+
+            func.update_user(ctx.author.id, {
+                "$pull": {"cards": {"$in": card_ids}},
+                "$inc": {"candies": candies}
+            })
+            func.update_card(card_ids, {"$set": {"owner_id": None, "tag": None}})
+
+            embed.title = "✨ Converted"
+            await view.message.edit(content="", embed=embed, view=None)
     
     @commands.command(aliases=["cm"])
     async def convertmass(self, ctx: commands.Context, category: str):

@@ -34,8 +34,11 @@ class TradeView(discord.ui.View):
         
         user = func.get_user(self.buyer.id)
         if user["candies"] < self.candies:
-            return await interaction.followup.send(f"You don't have enough candies! You only have `{user['candies']}` candies", ephemeral=True)
+            return await interaction.response.send_message(f"You don't have enough candies! You only have `{user['candies']}` candies", ephemeral=True)
 
+        if self.card.owner_id != self.seller.id:
+            return await interaction.response.send_message(f"This card is ineligible for trading because its owner has already converted it!", ephemeral=True)
+        
         await interaction.response.defer()
         self.card.change_owner(self.buyer.id, remove_tag=False)
         func.update_user(self.seller.id, {"$pull": {"cards": self.card.id}, "$inc": {"candies": self.candies}})

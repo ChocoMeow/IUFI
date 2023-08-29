@@ -83,7 +83,7 @@ class RollView(discord.ui.View):
 
         user = func.get_user(interaction.user.id)
         if (retry := user["cooldown"]["claim"]) > time.time() and self.author != interaction.user:
-            await interaction.response.send_message(f"{interaction.user.mention} your next roll is in <t:{round(retry)}:R>", ephemeral=True)
+            await interaction.response.send_message(f"{interaction.user.mention} your next roll is <t:{round(retry)}:R>", ephemeral=True)
             return False
         
         return True
