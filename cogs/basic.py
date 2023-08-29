@@ -8,6 +8,15 @@ from views import RollView, PhotoCardView, ShopView, TradeView
 
 MAX_CARDS = 100
 LEADERBOARD_EMOJIS: list[str] = ["🥇", "🥈", "🥉", "🏅"]
+DAILY_ROWS: list[str] = ["🟥", "🟧", "🟨", "🟩", "🟦", "🟪"]
+WEEKLY_REWARDS: list[tuple[str, str, int]] = [
+    ("🍬", "candies", 50),
+    (iufi.TIER_EMOJI.get("rare"), "roll.rare", 1),
+    ("🍬", "candies", 100),
+    (iufi.TIER_EMOJI.get("epic"), "roll.epic", 1),
+    ("🍬", "candies", 500),
+    (iufi.TIER_EMOJI.get("legendary"), "roll.legendary", 1),
+]
 
 def gen_cards_view(cards: list[iufi.Card]) -> BytesIO:
     # Create a new image for output
@@ -444,6 +453,42 @@ class Basic(commands.Cog):
         embed.set_thumbnail(url=icon.url if (icon := ctx.guild.icon) else None)
 
         await ctx.reply(content="", embed=embed)
+
+    @commands.command(aliases=["d"])
+    @commands.cooldown(1, 5, commands.BucketType.user)
+    async def daily(self, ctx: commands.Context):
+        user = func.get_user(ctx.author.id)
+
+        end_time: float = user.get("cooldown", {}).get("daily", None)
+        retry = func.cal_retry_time(end_time)
+        if retry:
+            return await ctx.reply(f"{ctx.author.mention} your next daily is in {retry}", delete_after=5)
+
+        claimed = user.get("claimed", 0) + 1
+        if (time.time() - end_time) >= 43200 or claimed > 30:
+            claimed = 1
+        
+        reward = {"candies": 5} if claimed % 5 else {WEEKLY_REWARDS[(claimed/5) - 1][1]: WEEKLY_REWARDS[(claimed/5) - 1][2]}
+        func.update_user(ctx.author.id, {
+            "$set": {"claimed": claimed, "cooldown.daily": time.time() + func.COOLDOWN_BASE["daily"]},
+            "$inc": reward
+        })
+
+        embed = discord.Embed(title="📅   Daily Reward", color=discord.Color.random())
+        embed.description = f"Daily reward claimed! + {'🍬 5' if claimed % 5 else f'{WEEKLY_REWARDS[(claimed/5) - 1][0]} {WEEKLY_REWARDS[(claimed/5) - 1][2]}'}"
+        embed.set_thumbnail(url=ctx.author.avatar.url)
+
+        value = "```"
+        for index, reward in enumerate(WEEKLY_REWARDS):
+            for _ in range(5):
+                if claimed > 0:
+                    value += DAILY_ROWS[index]
+                else:
+                    value += "⬜"
+                claimed -= 1
+            value += f"  {reward[2]:>4} {reward[0]} " + ("✅" if claimed >= 0 else "⬛") + "\n"
+        embed.add_field(name="Streak Rewards", value=value + "```")
+        await ctx.reply(embed=embed)
 
 async def setup(bot: commands.Bot) -> None:
     await bot.add_cog(Basic(bot))

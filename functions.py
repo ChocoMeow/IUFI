@@ -41,6 +41,7 @@ DEAFAULT_EXP = 100
 USER_BASE: dict[str, Any] = {
     "candies": 0,
     "exp": 0,
+    "claimed": 0,
     "cards": [],
     "roll": {
         "rare": 0,
@@ -124,7 +125,7 @@ def cal_retry_time(end_time: float, default: str=None) -> str | None:
     minutes, seconds = divmod(retry, 60)
     hours, minutes = divmod(minutes, 60)
 
-    return (f"{hours}h" if hours > 0 else "") + f"{minutes}m {seconds}s"
+    return (f"{hours}h " if hours > 0 else "") + f"{minutes}m {seconds}s"
 
 def check_user_cooldown(user_id: int, type: str = "roll") -> str | None:
     user = get_user(user_id)
