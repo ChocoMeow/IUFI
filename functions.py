@@ -32,7 +32,6 @@ except Exception as e:
 USERS_DB = mongodb[tokens.mongodb_name]['users']
 CARDS_DB = mongodb[tokens.mongodb_name]['cards'] 
 
-USERS_LOCK = []
 USERS_BUFFER: dict[int, dict[str, Any]] = {}
 COOLDOWN: dict[int, dict[str, float]] = {}
 MAX_CARDS: int = 100
@@ -55,9 +54,9 @@ USER_BASE: dict[str, Any] = {
     }
 }
 
-COOLDOWN_BASE = {
-    "roll": 600,
-    "claim": 180,
+COOLDOWN_BASE: dict[str, int] = {
+    "roll": 120,
+    "claim": 60,
     "daily": 86400
 }
 

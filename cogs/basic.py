@@ -6,7 +6,7 @@ from PIL import Image
 from io import BytesIO
 from views import RollView, PhotoCardView, ShopView, TradeView
 
-MAX_CARDS = 100
+MAX_CARDS: int = 100
 LEADERBOARD_EMOJIS: list[str] = ["🥇", "🥈", "🥉", "🏅"]
 DAILY_ROWS: list[str] = ["🟥", "🟧", "🟨", "🟩", "🟦", "🟪"]
 WEEKLY_REWARDS: list[tuple[str, str, int]] = [
@@ -41,14 +41,11 @@ class Basic(commands.Cog):
         self.bot = bot
 
     @commands.command(aliases=["r"])
+    @commands.cooldown(1, 5, commands.BucketType.user) 
     async def roll(self, ctx: commands.Context):
         retry = func.check_user_cooldown(ctx.author.id)
         if retry:
             return await ctx.reply(f"{ctx.author.mention} your next roll is in {retry}", delete_after=5)
-        
-        if ctx.author.id in func.USERS_LOCK:
-            return
-        func.USERS_LOCK.append(ctx.author.id)
 
         cards = iufi.CardPool.roll()
         resized_image_bytes = gen_cards_view(cards)
@@ -63,18 +60,12 @@ class Basic(commands.Cog):
         await view.timeout_count()
         await view.wait()
 
-        if ctx.author.id in func.USERS_LOCK:
-            func.USERS_LOCK.remove(ctx.author.id)
-
     @commands.command(aliases=["rr"])
+    @commands.cooldown(1, 5, commands.BucketType.user) 
     async def rareroll(self, ctx: commands.Context):
         user = func.get_user(ctx.author.id)
         if user["roll"]["rare"] <= 0:
             return await ctx.reply("You’ve used up all your rare rolls for now.")
-
-        if ctx.author.id in func.USERS_LOCK:
-            return
-        func.USERS_LOCK.append(ctx.author.id)
 
         cards = iufi.CardPool.roll(included="rare")
         resized_image_bytes = gen_cards_view(cards)
@@ -90,19 +81,13 @@ class Basic(commands.Cog):
         await view.timeout_count()
         await view.wait()
 
-        if ctx.author.id in func.USERS_LOCK:
-            func.USERS_LOCK.remove(ctx.author.id)
-
     @commands.command(aliases=["er"])
+    @commands.cooldown(1, 5, commands.BucketType.user) 
     async def epicroll(self, ctx: commands.Context):       
         user = func.get_user(ctx.author.id)
         if user["roll"]["epic"] <= 0:
             return await ctx.reply("You’ve used up all your epic rolls for now.")
-
-        if ctx.author.id in func.USERS_LOCK:
-            return
-        func.USERS_LOCK.append(ctx.author.id)
-
+        
         cards = iufi.CardPool.roll(included="epic")
         resized_image_bytes = gen_cards_view(cards)
 
@@ -115,20 +100,14 @@ class Basic(commands.Cog):
         func.update_user(ctx.author.id, {"$inc": {"roll.epic": -1}})
         await view.timeout_count()
         await view.wait()
-
-        if ctx.author.id in func.USERS_LOCK:
-            func.USERS_LOCK.remove(ctx.author.id)
         
     @commands.command(aliases=["lr"])
+    @commands.cooldown(1, 5, commands.BucketType.user) 
     async def legendroll(self, ctx: commands.Context):
         user = func.get_user(ctx.author.id)
         if user["roll"]["legendary"] <= 0:
             return await ctx.reply("You’ve used up all your epic rolls for now.")
-
-        if ctx.author.id in func.USERS_LOCK:
-            return
-        func.USERS_LOCK.append(ctx.author.id)
-
+        
         cards = iufi.CardPool.roll(included="legendary")
         resized_image_bytes = gen_cards_view(cards)
 
@@ -141,9 +120,6 @@ class Basic(commands.Cog):
         func.update_user(ctx.author.id, {"$inc": {"roll.legendary": -1}})
         await view.timeout_count()
         await view.wait()
-
-        if ctx.author.id in func.USERS_LOCK:
-            func.USERS_LOCK.remove(ctx.author.id)
 
     @commands.command(aliases=["v"])
     async def view(self, ctx: commands.Context):
@@ -388,19 +364,15 @@ class Basic(commands.Cog):
         await ctx.reply(content="", embed=embed)
 
     @commands.command(aliases=["p"])
-    async def profile(self, ctx: commands.Context):
-        user = func.get_user(ctx.author.id)
+    async def profile(self, ctx: commands.Context, member: discord.Member = None):
+        if not member:
+            member = ctx.author
 
-        level = 0
-        exp = user.get("exp", 0)
-        default_exp = 100
+        user = func.get_user(member.id)
+        level, exp = func.calculate_level(user['exp'])
 
-        while exp >= default_exp:
-            exp -= default_exp
-            level += 1
-
-        embed = discord.Embed(title=f"👤 {ctx.author.display_name}'s Profile", color=discord.Color.random())
-        embed.description = f"```📙 Photocards: {len(user.get('cards', []))}/{func.MAX_CARDS}\n⚔️ Level: {level} ({(exp/default_exp)*100:.1f}%)```"
+        embed = discord.Embed(title=f"👤 {member.display_name}'s Profile", color=discord.Color.random())
+        embed.description = f"```📙 Photocards: {len(user.get('cards', []))}/{func.MAX_CARDS}\n⚔️ Level: {level} ({(exp/func.DEAFAULT_EXP)*100:.1f}%)```"
 
         await ctx.reply(content="", embed=embed)
 

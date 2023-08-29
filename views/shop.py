@@ -1,10 +1,12 @@
 import discord
 import functions as func
 
+from iufi import TIER_EMOJI
+
 SHOP_BASE: list[tuple[str, str, int]] = [
-    ("🌸", "rare", 30),
-    ("💎", "epic", 100),
-    ("👑", "legendary", 250)
+    (TIER_EMOJI.get("rare"), "rare", 30),
+    (TIER_EMOJI.get("epic"), "epic", 100),
+    (TIER_EMOJI.get("legendary"), "legendary", 250)
 ]
 
 class QuantityModal(discord.ui.Modal):

@@ -46,12 +46,11 @@ class TradeView(discord.ui.View):
         embed.description = f"```🆔 {self.card.id}\n🍬 - {self.candies}```"
 
         await self.on_timeout()
-        await interaction.followup.send(embed=embed)
+        await interaction.followup.send(content=f"{self.seller.mention}, {self.buyer.mention} has made a trade with you for the card!", embed=embed)
 
     @discord.ui.button(label="Cancel", style=discord.ButtonStyle.red)
     async def cancel(self, interaction: discord.Interaction, button: discord.ui.Button):
+        await interaction.response.defer()
         if interaction.user == self.seller:
             await self.on_timeout()
             self.stop()
-        else:
-            await interaction.response.defer()
