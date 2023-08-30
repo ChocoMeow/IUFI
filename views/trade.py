@@ -32,12 +32,15 @@ class TradeView(discord.ui.View):
         if interaction.user != self.buyer:
             return await interaction.response.send_message(f"This card is being traded to {self.buyer.mention}", ephemeral=True)
         
+        if self.card.owner_id != self.seller.id:
+            return await interaction.response.send_message(f"This card is ineligible for trading because its owner has already converted it!", ephemeral=True)
+        
         user = func.get_user(self.buyer.id)
         if user["candies"] < self.candies:
             return await interaction.response.send_message(f"You don't have enough candies! You only have `{user['candies']}` candies", ephemeral=True)
 
-        if self.card.owner_id != self.seller.id:
-            return await interaction.response.send_message(f"This card is ineligible for trading because its owner has already converted it!", ephemeral=True)
+        if len(user["cards"]) >= func.MAX_CARDS:
+            return await interaction.response.send_message(f"**Your inventory is full.**", ephemeral=True)
         
         await interaction.response.defer()
         self.card.change_owner(self.buyer.id, remove_tag=False)

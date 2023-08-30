@@ -42,6 +42,7 @@ USER_BASE: dict[str, Any] = {
     "exp": 0,
     "claimed": 0,
     "cards": [],
+    "collections": {},
     "roll": {
         "rare": 0,
         "epic": 0,
@@ -86,7 +87,10 @@ def update_user(user_id: int, data: dict) -> None:
                 nested_user = nested_user[c]
 
             if mode == "$set":
-                nested_user[cursors[-1]] = value
+                try:
+                    nested_user[cursors[-1]] = value
+                except TypeError:
+                    nested_user[int(cursors[-1])] = value
             elif mode == "$unset":
                 del nested_user[cursors[-1]]
             elif mode == "$inc":
