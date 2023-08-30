@@ -56,15 +56,17 @@ class CollectionView(discord.ui.View):
                 card = iufi.CardPool.get_card(card_id)
                 if card and card.owner_id == self.member.id:
                     embed.description += f"🆔{card.id.zfill(5)} 🏷️{card.tag if card.tag else '-':<12} ⭐{card.stars} {card.tier[0]}\n"
-            else:
-                embed.description += "\n"
-            cards.append(card)
+                    cards.append(card)
+                    continue
 
+            embed.description += "\u200b\n"
+            cards.append(None)
+            
         embed.description += "```"
         resized_image_bytes = iufi.gen_cards_view(cards)
         embed.set_image(url="attachment://image.png")
         file = discord.File(resized_image_bytes, filename="image.png")
 
         if self.message:
-            return self.message.edit(file=file, embed=embed, view=self)
+            return await self.message.edit(attachments=[file], embed=embed, view=self)
         self.message = await self.ctx.reply(file=file, embed=embed, view=self)

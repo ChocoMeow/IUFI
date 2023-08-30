@@ -208,14 +208,14 @@ class Basic(commands.Cog):
                 iufi.CardPool.add_available_card(card)
                 converted_cards.append(card)
         
-        embed = discord.Embed(title="✨ Convert", color=discord.Color.random())
-        embed.description = f"```🆔 {', '.join([f'{card.tier[0]} {card.id}' for card in converted_cards])} \n🍬 + {candies}```"
-                
         func.update_user(ctx.author.id, {
             "$pull": {"cards": {"$in": (card_ids := [card.id for card in converted_cards])}},
             "$inc": {"candies": (candies := sum([card.cost for card in converted_cards]))}
         })
         func.update_card(card_ids, {"$set": {"owner_id": None, "tag": None}})
+
+        embed = discord.Embed(title="✨ Convert", color=discord.Color.random())
+        embed.description = f"```🆔 {', '.join([f'{card.tier[0]} {card.id}' for card in converted_cards])} \n🍬 + {candies}```"
         await ctx.reply(embed=embed)
 
     @commands.command(aliases=["cl"])
@@ -572,6 +572,17 @@ class Basic(commands.Cog):
         embed = discord.Embed(title="💕 Collection Set", color=discord.Color.random())
         embed.description = f"```📮 {name.title()}\n🆔 {card.id.zfill(5) if card_id else None}\n🎰 {slot}\n```"
         await ctx.reply(embed=embed)
+
+    @commands.command(aliases=["rc"])
+    async def removecollection(self, ctx: commands.Context, name: str):
+        user = func.get_user(ctx.author.id)
+
+        name = name.lower()
+        if not user.get("collections", {}).get(name):
+            return await ctx.reply(content=f"{ctx.author.mention} no collection with the name `{name}` was found.")
+        
+        func.update_user(ctx.author.id, {"$unset": {f"collections.{name}": ""}})
+        await ctx.reply(content=f"{ctx.author.mention}, the collection with the name `{name}` has been successfully removed.")
 
     @commands.command(aliases=["f"])
     async def showcollection(self, ctx: commands.Context, member: discord.Member = None):
