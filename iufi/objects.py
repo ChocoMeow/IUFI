@@ -65,7 +65,7 @@ class Card:
         with Image.open(os.path.join(func.ROOT_DIR, "frames", f"{self.frame}.png")).convert("RGBA").resize((200, 355)) as frame:
             image = self._round_corners(image)
             output = Image.new("RGBA", frame.size)
-            output.paste(image, (6, 7))
+            output.paste(image, (6, 8))
             output.paste(frame, (0, 0), mask=frame)
 
             return output

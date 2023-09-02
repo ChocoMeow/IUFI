@@ -605,7 +605,7 @@ class Basic(commands.Cog):
         view = CollectionView(ctx, member, user.get("collections"))
         await view.send_msg()
 
-    @commands.command()
+    @commands.command(aliases=["sf"])
     async def setframe(self, ctx: commands.Context, card_id: str, frame: str = None):
         user = func.get_user(ctx.author.id)
 
@@ -621,11 +621,17 @@ class Basic(commands.Cog):
         if card.owner_id != ctx.author.id:
             return await ctx.reply("You are not the owner of this card.")
         
+        func.update_user(ctx.author.id, {"$inc": {f"frame.{frame}": -1}})
         card.change_frame(frame)
-        embed = discord.Embed(title="🖼️  Set Frame")
+        embed = discord.Embed(title="🖼️  Set Frame", color=discord.Color.random())
         embed.description = f"```🆔 {card.tier[0]} {card.id}\n🖼️ {frame.title()}```"
 
-        await ctx.reply(embed=embed)
+        resized_image_bytes = BytesIO()
+        card.image.save(resized_image_bytes, format='PNG')
+        resized_image_bytes.seek(0)
+
+        embed.set_image(url="attachment://image.png")
+        await ctx.reply(file=discord.File(resized_image_bytes, filename="image.png"), embed=embed)
 
 async def setup(bot: commands.Bot) -> None:
     await bot.add_cog(Basic(bot))
