@@ -98,15 +98,14 @@ class Card:
                 self.frame = None
                 self._image = None
 
-    def change_tag(self, tag: str | None) -> None:
+    def change_tag(self, tag: str | None = None) -> None:
         if self.tag != tag:
             self.tag = tag
             func.update_card(self.id, {"$set": {"tag": tag}})
     
-    def change_frame(self, frame: str | None) -> None:
+    def change_frame(self, frame: str | None = None) -> None:
         if self.frame != frame:
-            self.frame = frame.lower()
-            func.update_card(self.id, {"$set": {"frame": frame.lower()}})
+            self.frame = frame.lower() if frame else None
 
             if self.image:
                 self._load_image()

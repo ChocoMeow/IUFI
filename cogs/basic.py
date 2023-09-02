@@ -1,4 +1,4 @@
-import discord, iufi, time
+import discord, iufi, time, traceback
 import functions as func
 
 from discord.ext import commands
@@ -497,14 +497,14 @@ class Basic(commands.Cog):
         if (time.time() - end_time) >= 43200 or claimed > 30:
             claimed = 1
         
-        reward = {"candies": 5} if claimed % 5 else {WEEKLY_REWARDS[(claimed/5) - 1][1]: WEEKLY_REWARDS[(claimed/5) - 1][2]}
+        reward = {"candies": 5} if claimed % 5 else {WEEKLY_REWARDS[(claimed//5) - 1][1]: WEEKLY_REWARDS[(claimed//5) - 1][2]}
         func.update_user(ctx.author.id, {
             "$set": {"claimed": claimed, "cooldown.daily": time.time() + func.COOLDOWN_BASE["daily"]},
             "$inc": reward
         })
 
         embed = discord.Embed(title="📅   Daily Reward", color=discord.Color.random())
-        embed.description = f"Daily reward claimed! + {'🍬 5' if claimed % 5 else f'{WEEKLY_REWARDS[(claimed/5) - 1][0]} {WEEKLY_REWARDS[(claimed/5) - 1][2]}'}"
+        embed.description = f"Daily reward claimed! + {'🍬 5' if claimed % 5 else f'{WEEKLY_REWARDS[(claimed//5) - 1][0]} {WEEKLY_REWARDS[(claimed//5) - 1][2]}'}"
         embed.set_thumbnail(url=ctx.author.avatar.url)
 
         value = "```"
@@ -606,8 +606,9 @@ class Basic(commands.Cog):
         await view.send_msg()
 
     @commands.command(aliases=["sf"])
-    async def setframe(self, ctx: commands.Context, card_id: str, frame: str = None):
+    async def setframe(self, ctx: commands.Context, card_id: str, frame: str):
         user = func.get_user(ctx.author.id)
+        frame = frame.lower()
 
         if frame:
             frame_card = user.get("frame", {}).get(frame, 0)
@@ -622,6 +623,7 @@ class Basic(commands.Cog):
             return await ctx.reply("You are not the owner of this card.")
         
         func.update_user(ctx.author.id, {"$inc": {f"frame.{frame}": -1}})
+        func.update_card(card.id, {"$set": {"frame": frame}})
         card.change_frame(frame)
         embed = discord.Embed(title="🖼️  Set Frame", color=discord.Color.random())
         embed.description = f"```🆔 {card.tier[0]} {card.id}\n🖼️ {frame.title()}```"
@@ -632,6 +634,21 @@ class Basic(commands.Cog):
 
         embed.set_image(url="attachment://image.png")
         await ctx.reply(file=discord.File(resized_image_bytes, filename="image.png"), embed=embed)
+
+    @commands.command(aliases=["rf"])
+    async def removeframe(self, ctx: commands.Context, card_id: str):
+        card = iufi.CardPool.get_card(card_id)
+        if not card:
+            return await ctx.reply("The card was not found. Please try again.")
+
+        if card.owner_id != ctx.author.id:
+            return await ctx.reply("You are not the owner of this card.")
+        
+        card.change_frame()
+        func.update_card(card.id, {"$set": {"frame": None}})
+        embed = discord.Embed(title="🖼️  Set Frame", color=discord.Color.random())
+        embed.description = f"```🆔 {card.tier[0]} {card.id}\n🖼️  None```"
+        await ctx.reply(embed=embed)
 
 async def setup(bot: commands.Bot) -> None:
     await bot.add_cog(Basic(bot))
