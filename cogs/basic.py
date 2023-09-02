@@ -134,7 +134,15 @@ class Basic(commands.Cog):
                             f"💎 Epic rolls         x{user['roll']['epic']}\n" \
                             f"👑 Legend rolls       x{user['roll']['legendary']}\n" \
                             f"🛠️ Upgrades           Coming Soon\n\n" \
-                            f"🖼️ Frames\nComing Soon```"
+                            f"🖼️ Frames:\n"
+
+        frames = ""
+        for frame, amount in user["frame"].items():
+            if amount != 0:
+                frames += f"{frame.title() + ' Frame':<21} x{amount}\n"
+        
+        embed.description += (frames if frames else "Frames not found!") + "```"
+
         embed.set_thumbnail(url=ctx.author.avatar.url)
         await ctx.reply(embed=embed)
 
@@ -159,6 +167,7 @@ class Basic(commands.Cog):
         embed = discord.Embed(title=f"ℹ️ Card Info", color=0x949fb8)
         embed.description = f"```🆔 {card.id.zfill(5)}\n" \
                             f"🏷️ {card.tag}\n" \
+                            f"🖼️ {card.frame}\n" \
                             f"{card.tier[0]} {card.tier[1].capitalize()}\n" \
                             f"⭐ {card.stars}```\n" \
                             "Owned by: " + (f"<@{card.owner_id}>" if card.owner_id else "None")
@@ -185,6 +194,7 @@ class Basic(commands.Cog):
         embed = discord.Embed(title=f"ℹ️ Card Info", color=0x949fb8)
         embed.description = f"```🆔 {card.id.zfill(5)}\n" \
                             f"🏷️ {card.tag}\n" \
+                            f"🖼️ {card.frame}\n" \
                             f"{card.tier[0]} {card.tier[1].capitalize()}\n" \
                             f"⭐ {card.stars}```\n" \
                             "Owned by: " + (f"<@{card.owner_id}>" if card.owner_id else "None")
@@ -212,7 +222,7 @@ class Basic(commands.Cog):
             "$pull": {"cards": {"$in": (card_ids := [card.id for card in converted_cards])}},
             "$inc": {"candies": (candies := sum([card.cost for card in converted_cards]))}
         })
-        func.update_card(card_ids, {"$set": {"owner_id": None, "tag": None}})
+        func.update_card(card_ids, {"$set": {"owner_id": None, "tag": None, "frame": None}})
 
         embed = discord.Embed(title="✨ Convert", color=discord.Color.random())
         embed.description = f"```🆔 {', '.join([f'{card.tier[0]} {card.id}' for card in converted_cards])} \n🍬 + {candies}```"
@@ -252,7 +262,7 @@ class Basic(commands.Cog):
             "$pull": {"cards": card.id},
             "$inc": {"candies": card.cost}
         })
-        func.update_card(card.id, {"$set": {"owner_id": None, "tag": None}})
+        func.update_card(card.id, {"$set": {"owner_id": None, "tag": None, "frame": None}})
         embed.title="✨ Converted"
         await message.edit(embed=embed, view=None) if message else await ctx.reply(embed=embed)
         
@@ -292,7 +302,7 @@ class Basic(commands.Cog):
                 "$pull": {"cards": {"$in": card_ids}},
                 "$inc": {"candies": candies}
             })
-            func.update_card(card_ids, {"$set": {"owner_id": None, "tag": None}})
+            func.update_card(card_ids, {"$set": {"owner_id": None, "tag": None, "frame": None}})
 
             embed.title = "✨ Converted"
             await view.message.edit(embed=embed, view=None)
@@ -337,7 +347,7 @@ class Basic(commands.Cog):
                 "$pull": {"cards": {"$in": card_ids}},
                 "$inc": {"candies": candies}
             })
-            func.update_card(card_ids, {"$set": {"owner_id": None, "tag": None}})
+            func.update_card(card_ids, {"$set": {"owner_id": None, "tag": None, "frame": None}})
 
             embed.title = "✨ Converted"
             await view.message.edit(embed=embed, view=None)
@@ -360,7 +370,7 @@ class Basic(commands.Cog):
             iufi.CardPool.add_tag(card, tag)
         
         embed = discord.Embed(title="🏷️ Set Tag", color=discord.Color.random())
-        embed.description = f"```🆔 {card.id}\n🏷️ {tag}```"
+        embed.description = f"```🆔 {card.tier[0]} {card.id}\n🏷️ {tag}```"
         await ctx.reply(embed=embed)
 
     @commands.command(aliases=["stl"])
@@ -381,7 +391,7 @@ class Basic(commands.Cog):
                 iufi.CardPool.add_tag(card, tag)
         
             embed = discord.Embed(title="🏷️ Set Tag", color=discord.Color.random())
-            embed.description = f"```🆔 {card.id}\n🏷️ {tag}```"
+            embed.description = f"```🆔 {card.tier[0]} {card.id}\n🏷️ {tag}```"
             await ctx.reply(embed=embed)
 
     @commands.command(aliases=["rt"])
@@ -442,6 +452,7 @@ class Basic(commands.Cog):
                             f"Candies: 🍬 {candies}\n\n" \
                             f"🆔 {card.id.zfill(5)}\n" \
                             f"🏷️ {card.tag}\n" \
+                            f"🖼️ {card.frame}\n" \
                             f"{card.tier[0]} {card.tier[1].title()}\n" \
                             f"⭐ {card.stars}```\n" \
         
@@ -466,7 +477,7 @@ class Basic(commands.Cog):
             member = self.bot.get_user(user['_id'])
 
             if member:
-                embed.description += f"{LEADERBOARD_EMOJIS[index if index <= 2 else 3]} {member.display_name:<20} {level:>4} ⚔️\n"
+                embed.description += f"{LEADERBOARD_EMOJIS[index if index <= 2 else 3]} {member.display_name:<15} {level:>4} ⚔️\n"
         embed.description += "```"
         embed.set_thumbnail(url=icon.url if (icon := ctx.guild.icon) else None)
 
@@ -519,13 +530,12 @@ class Basic(commands.Cog):
     
     @commands.command(aliases=["m"])
     async def main(self, ctx: commands.Context, card_id: str = None):
-        if card_id:
-            card = iufi.CardPool.get_card(card_id)
-            if not card:
-                return await ctx.reply("The card was not found. Please try again.")
+        card = iufi.CardPool.get_card(card_id)
+        if not card:
+            return await ctx.reply("The card was not found. Please try again.")
 
-            if card.owner_id != ctx.author.id:
-                return await ctx.reply("You are not the owner of this card.")
+        if card.owner_id != ctx.author.id:
+            return await ctx.reply("You are not the owner of this card.")
 
         func.update_user(ctx.author.id, {"$set": {"profile.main": card_id}})
         embed = discord.Embed(title="👤 Set Main", color=discord.Color.random())
@@ -559,13 +569,12 @@ class Basic(commands.Cog):
         if not user.get("collections", {}).get(name):
             return await ctx.reply(content=f"{ctx.author.mention} no collection with the name `{name}` was found.")
         
-        if card_id:
-            card = iufi.CardPool.get_card(card_id)
-            if not card:
-                return await ctx.reply("The card was not found. Please try again.")
+        card = iufi.CardPool.get_card(card_id)
+        if not card:
+            return await ctx.reply("The card was not found. Please try again.")
 
-            if card.owner_id != ctx.author.id:
-                return await ctx.reply("You are not the owner of this card.")
+        if card.owner_id != ctx.author.id:
+            return await ctx.reply("You are not the owner of this card.")
 
         func.update_user(ctx.author.id, {"$set": {f"collections.{name}.{slot - 1}": card.id if card_id else None}})
 
@@ -595,6 +604,28 @@ class Basic(commands.Cog):
 
         view = CollectionView(ctx, member, user.get("collections"))
         await view.send_msg()
+
+    @commands.command()
+    async def setframe(self, ctx: commands.Context, card_id: str, frame: str = None):
+        user = func.get_user(ctx.author.id)
+
+        if frame:
+            frame_card = user.get("frame", {}).get(frame, 0)
+            if not frame_card:
+                return await ctx.reply(content=f"You’ve used up all your {frame} frame for now.")
+            
+        card = iufi.CardPool.get_card(card_id)
+        if not card:
+            return await ctx.reply("The card was not found. Please try again.")
+
+        if card.owner_id != ctx.author.id:
+            return await ctx.reply("You are not the owner of this card.")
+        
+        card.change_frame(frame)
+        embed = discord.Embed(title="🖼️  Set Frame")
+        embed.description = f"```🆔 {card.tier[0]} {card.id}\n🖼️ {frame.title()}```"
+
+        await ctx.reply(embed=embed)
 
 async def setup(bot: commands.Bot) -> None:
     await bot.add_cog(Basic(bot))

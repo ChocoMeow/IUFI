@@ -52,12 +52,11 @@ class CollectionView(discord.ui.View):
         embed.description = "```"
 
         for card_id in self.collections[self.sel_collection]:
-            if card_id:
-                card = iufi.CardPool.get_card(card_id)
-                if card and card.owner_id == self.member.id:
-                    embed.description += f"🆔{card.id.zfill(5)} 🏷️{card.tag if card.tag else '-':<12} ⭐{card.stars} {card.tier[0]}\n"
-                    cards.append(card)
-                    continue
+            card = iufi.CardPool.get_card(card_id)
+            if card and card.owner_id == self.member.id:
+                embed.description += f"🆔{card.id.zfill(5)} 🏷️{card.tag if card.tag else '-':<12} 🖼️ {card.frame if card.frame else '-':<5} ⭐{card.stars} {card.tier[0]}\n"
+                cards.append(card)
+                continue
 
             embed.description += "\u200b\n"
             cards.append(None)

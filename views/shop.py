@@ -4,9 +4,18 @@ import functions as func
 from iufi import TIER_EMOJI
 
 SHOP_BASE: list[tuple[str, str, int]] = [
-    (TIER_EMOJI.get("rare"), "rare", 30),
-    (TIER_EMOJI.get("epic"), "epic", 100),
-    (TIER_EMOJI.get("legendary"), "legendary", 250)
+    (TIER_EMOJI.get("rare"), "roll.rare", 30),
+    (TIER_EMOJI.get("epic"), "roll.epic", 100),
+    (TIER_EMOJI.get("legendary"), "roll.legendary", 250),
+    ("💕", "frame.hearts", 10),
+    ("🌟", "frame.celebrity", 20),
+    ("💌", "frame.uaena", 30),
+    ("🌷", "frame.dandelions", 40),
+    ("✨", "frame.shine", 50),
+    ("💠", "frame.lovepoem", 60),
+    ("🎤", "frame.cheer", 70),
+    ("🍓", "frame.smoon", 80),
+    ("✍️", "frame.signed", 90),
 ]
 
 class QuantityModal(discord.ui.Modal):
@@ -35,7 +44,7 @@ class QuantityModal(discord.ui.Modal):
 class Dropdown(discord.ui.Select):
     def __init__(self) -> None:
         options = [
-            discord.SelectOption(label=item[1].title(), emoji=item[0])
+            discord.SelectOption(label=f"{item[1].split('.')[1].title()} {item[1].split('.')[0].title()}", emoji=item[0])
             for item in SHOP_BASE
         ]
 
@@ -46,9 +55,9 @@ class Dropdown(discord.ui.Select):
         )
 
     async def callback(self, interaction: discord.Interaction) -> None:
-        selected_item = self.values[0]
+        selected_item = self.values[0].split(" ")[0]
         for item in SHOP_BASE:
-            if item[1] == selected_item.lower():
+            if item[1].split(".")[1] == selected_item.lower():
                 modal = QuantityModal()
                 await interaction.response.send_modal(modal)
                 await modal.wait()
@@ -60,7 +69,7 @@ class Dropdown(discord.ui.Select):
                         return await interaction.followup.send(f"You don't have enough candies! You only have `{user['candies']}` candies", ephemeral=True)
                     
                     func.update_user(interaction.user.id, {
-                        "$inc": {"candies": -price, f"roll.{item[1]}": modal.quantity},
+                        "$inc": {"candies": -price, item[1]: modal.quantity},
                     })
 
                     embed = discord.Embed(title="🛒 Shop Purchase", color=discord.Color.random())
@@ -91,7 +100,7 @@ class ShopView(discord.ui.View):
         embed.description = f"🍬 Starcandies: `{user.get('candies', 0)}`\n```"
         
         for item in SHOP_BASE:
-            embed.description += f"{item[0]} {(item[1] + ' Roll').upper():<20} {item[2]:>3} 🍬\n"
+            embed.description += f"{item[0]} {(item[1].split('.')[1].title() + ' ' + item[1].split('.')[0].title()).upper():<20} {item[2]:>3} 🍬\n"
         embed.description += "```"
         
         embed.set_thumbnail(url=self.author.avatar.url)

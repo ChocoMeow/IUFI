@@ -21,6 +21,7 @@ class Dropdown(discord.ui.Select):
         embed = discord.Embed(title=f"ℹ️ Card Info", color=0x949fb8)
         embed.description = f"```🆔 {card.id.zfill(5)}\n" \
                             f"🏷️ {card.tag}\n" \
+                            f"🖼️ {card.frame}\n" \
                             f"{card.tier[0]} {card.tier[1].capitalize()}\n" \
                             f"⭐ {card.stars}```\n" \
                             "Owned by: " + (f"<@{card.owner_id}>" if card.owner_id else "None")
@@ -59,7 +60,7 @@ class PhotoCardView(discord.ui.View):
             if not card:
                 card = self.cards[card_id] = CardPool.get_card(card_id)
 
-            desc += f"🆔{card.id.zfill(5)} 🏷️{card.tag if card.tag else '-':<12} ⭐{card.stars} {card.tier[0]}\n" if card else f"🆔 {card_id.zfill(5)} {'-' * 20}"
+            desc += f"🆔{card.id.zfill(5)} 🏷️{card.tag if card.tag else '-':<12} 🖼️ {card.frame if card.frame else '-':<5} ⭐{card.stars} {card.tier[0]}\n" if card else f"🆔 {card_id.zfill(5)} {'-' * 20}"
             self._dropdown_view.options.append(discord.SelectOption(label=f"{card.id}", description=f"🏷️ {card.tag if card.tag else '-':<12}", emoji=card.tier[0]))
         embed = discord.Embed(title=f"📖 {self.author.display_name}'s Photocards", description=desc + "```", color=discord.Color.random())
         embed.set_thumbnail(url=self.author.avatar.url)

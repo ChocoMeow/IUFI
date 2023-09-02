@@ -1,6 +1,6 @@
 from random import Random
 
-from .card import Card
+from .objects import Card
 from .exceptions import DuplicatedCardError, DuplicatedTagError
 
 DROP_RATES = {
@@ -71,6 +71,8 @@ class CardPool:
     
     @classmethod
     def get_card(cls, card_id: str) -> Card | None:
+        if not card_id:
+            return
         card_id = card_id.lstrip("0")
         card = cls._cards.get(card_id)
         if not card:

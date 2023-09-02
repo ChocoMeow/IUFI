@@ -1,4 +1,4 @@
-from .card import Card
+from .objects import Card
 from io import BytesIO
 from PIL import Image
 
