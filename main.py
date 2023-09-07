@@ -24,15 +24,16 @@ class IUFI(commands.Bot):
                 card_data = all_card_data.get(card_id, {"_id": card_id})
                 self.iufi.add_card(tier=category, **card_data)
 
-        available_ids = [str(index) for index in range(1, 10000) if str(index) not in self.iufi._cards]
-        for new_image in os.listdir(os.path.join(func.ROOT_DIR, "newImages")):
-            for category in os.listdir(image_folder):
-                if new_image.startswith(category):
-                    card_id = available_ids.pop(0)
-                    os.rename(os.path.join(func.ROOT_DIR, "newImages", new_image), os.path.join(image_folder, category, f"{card_id}.jpg"))
-                    self.iufi.add_card(_id=card_id, tier=category)
+        if len(NEW_IMAGES_DIR := os.listdir(os.path.join(func.ROOT_DIR, "newImages"))):
+            available_ids = [str(index) for index in range(1, 10000) if str(index) not in self.iufi._cards]
+            for new_image in NEW_IMAGES_DIR:
+                for category in os.listdir(image_folder):
+                    if new_image.startswith(category):
+                        card_id = available_ids.pop(0)
+                        os.rename(os.path.join(func.ROOT_DIR, "newImages", new_image), os.path.join(image_folder, category, f"{card_id}.{'gif' if category == 'celestial' else 'jpg'}"))
+                        self.iufi.add_card(_id=card_id, tier=category)
 
-                    print(f"Added New Image {new_image}({category}) -> ID: {card_id}")
+                        print(f"Added New Image {new_image}({category}) -> ID: {card_id}")
 
         for module in os.listdir(os.path.join(func.ROOT_DIR, 'cogs')):
             if module.endswith(".py"):

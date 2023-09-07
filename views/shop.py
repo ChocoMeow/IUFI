@@ -1,12 +1,12 @@
 import discord
 import functions as func
 
-from iufi import TIER_EMOJI
+from iufi import TIERS_BASE
 
 SHOP_BASE: list[tuple[str, str, int]] = [
-    (TIER_EMOJI.get("rare"), "roll.rare", 30),
-    (TIER_EMOJI.get("epic"), "roll.epic", 100),
-    (TIER_EMOJI.get("legendary"), "roll.legendary", 250),
+    (TIERS_BASE.get("rare")[0], "roll.rare", 30),
+    (TIERS_BASE.get("epic")[0], "roll.epic", 100),
+    (TIERS_BASE.get("legendary")[0], "roll.legendary", 250),
     ("💕", "frame.hearts", 10),
     ("🌟", "frame.celebrity", 20),
     ("💌", "frame.uaena", 30),
