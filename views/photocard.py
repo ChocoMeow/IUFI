@@ -3,7 +3,6 @@ import functions as func
 
 from iufi import CardPool, Card
 from math import ceil
-from io import BytesIO
 
 class Dropdown(discord.ui.Select):
     def __init__(self, cards: dict[str, Card]):
@@ -25,13 +24,9 @@ class Dropdown(discord.ui.Select):
                             f"{card.tier[0]} {card.tier[1].capitalize()}\n" \
                             f"⭐ {card.stars}```\n" \
                             "Owned by: " + (f"<@{card.owner_id}>" if card.owner_id else "None")
-        embed.set_image(url="attachment://image.png")
-
-        resized_image_bytes = BytesIO()
-        card.image.save(resized_image_bytes, format='PNG')
-        resized_image_bytes.seek(0)
-
-        await interaction.response.send_message(file=discord.File(resized_image_bytes, filename="image.png"), embed=embed)
+        
+        embed.set_image(url=f"attachment://image.{card.format}")
+        await interaction.response.send_message(file=discord.File(card.image_bytes, filename=f"image.{card.format}"), embed=embed)
 
 class PhotoCardView(discord.ui.View):
     def __init__(self, author: discord.Member, cards: list[int], *, timeout: float | None = 100):

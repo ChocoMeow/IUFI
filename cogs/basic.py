@@ -1,25 +1,20 @@
-import discord, iufi, time, traceback
+import discord, iufi, time
 import functions as func
 
 from discord.ext import commands
 
-from io import BytesIO
 from views import RollView, PhotoCardView, ShopView, TradeView, ConfirmView, CollectionView
 
 LEADERBOARD_EMOJIS: list[str] = ["🥇", "🥈", "🥉", "🏅"]
 DAILY_ROWS: list[str] = ["🟥", "🟧", "🟨", "🟩", "🟦", "🟪"]
 WEEKLY_REWARDS: list[tuple[str, str, int]] = [
     ("🍬", "candies", 50),
-    (iufi.TIER_EMOJI.get("rare"), "roll.rare", 1),
+    (iufi.TIERS_BASE.get("rare"), "roll.rare", 1),
     ("🍬", "candies", 100),
-    (iufi.TIER_EMOJI.get("epic"), "roll.epic", 1),
+    (iufi.TIERS_BASE.get("epic"), "roll.epic", 1),
     ("🍬", "candies", 500),
-    (iufi.TIER_EMOJI.get("legendary"), "roll.legendary", 1),
+    (iufi.TIERS_BASE.get("legendary"), "roll.legendary", 1),
 ]
-
-from typing import List, Optional
-from PIL import Image
-from io import BytesIO
 
 class Basic(commands.Cog):
     def __init__(self, bot: commands.Bot) -> None:
@@ -36,12 +31,12 @@ class Basic(commands.Cog):
             return await ctx.reply(f"**{ctx.author.mention} your inventory is full.**", delete_after=5)
         
         cards = iufi.CardPool.roll()
-        resized_image_bytes = iufi.gen_cards_view(cards)
+        image_bytes, is_gif = iufi.gen_cards_view(cards)
 
         view = RollView(ctx.author, cards)
         view.message = await ctx.send(
             content=f"**{ctx.author.mention} This is your roll!** (Ends: <t:{round(time.time()) + 71}:R>)",
-            file=discord.File(resized_image_bytes, filename='image.png'),
+            file=discord.File(image_bytes, filename=f'image.{"gif" if is_gif else "png"}'),
             view=view
         )
         func.update_user(ctx.author.id, {"$set": {"cooldown.roll": time.time() + func.COOLDOWN_BASE["roll"]}})
@@ -58,12 +53,12 @@ class Basic(commands.Cog):
             return await ctx.reply(f"**{ctx.author.mention} your inventory is full.**", delete_after=5)
         
         cards = iufi.CardPool.roll(included="rare")
-        resized_image_bytes = iufi.gen_cards_view(cards)
+        image_bytes, is_gif = iufi.gen_cards_view(cards)
 
         view = RollView(ctx.author, cards)
         view.message = await ctx.send(
             content=f"**{ctx.author.mention} This is your roll!** (Ends: <t:{round(time.time()) + 71}:R>)",
-            file=discord.File(resized_image_bytes, filename='image.png'),
+            file=discord.File(image_bytes, filename=f'image.{"gif" if is_gif else "png"}'),
             view=view
         )
 
@@ -81,12 +76,12 @@ class Basic(commands.Cog):
             return await ctx.reply(f"**{ctx.author.mention} your inventory is full.**", delete_after=5)
         
         cards = iufi.CardPool.roll(included="epic")
-        resized_image_bytes = iufi.gen_cards_view(cards)
+        image_bytes, is_gif = iufi.gen_cards_view(cards)
 
         view = RollView(ctx.author, cards)
         view.message = await ctx.send(
             content=f"**{ctx.author.mention} This is your roll!** (Ends: <t:{round(time.time()) + 71}:R>)",
-            file=discord.File(resized_image_bytes, filename='image.png'),
+            file=discord.File(image_bytes, filename=f'image.{"gif" if is_gif else "png"}'),
             view=view
         )
         func.update_user(ctx.author.id, {"$inc": {"roll.epic": -1}})
@@ -103,12 +98,12 @@ class Basic(commands.Cog):
             return await ctx.reply(f"**{ctx.author.mention} your inventory is full.**", delete_after=5)
 
         cards = iufi.CardPool.roll(included="legendary")
-        resized_image_bytes = iufi.gen_cards_view(cards)
+        image_bytes, is_gif = iufi.gen_cards_view(cards)
 
         view = RollView(ctx.author, cards)
         view.message = await ctx.send(
             content=f"**{ctx.author.mention} This is your roll!** (Ends: <t:{round(time.time()) + 71}:R>)",
-            file=discord.File(resized_image_bytes, filename='image.png'),
+            file=discord.File(image_bytes, filename=f'image.{"gif" if is_gif else "png"}'),
             view=view
         )
         func.update_user(ctx.author.id, {"$inc": {"roll.legendary": -1}})
@@ -172,12 +167,8 @@ class Basic(commands.Cog):
                             f"⭐ {card.stars}```\n" \
                             "Owned by: " + (f"<@{card.owner_id}>" if card.owner_id else "None")
         
-        resized_image_bytes = BytesIO()
-        card.image.save(resized_image_bytes, format='PNG')
-        resized_image_bytes.seek(0)
-
-        embed.set_image(url="attachment://image.png")
-        await ctx.reply(file=discord.File(resized_image_bytes, filename="image.png"), embed=embed)
+        embed.set_image(url=f"attachment://image.{card.format}")
+        await ctx.reply(file=discord.File(card.image_bytes, filename=f"image.{card.format}"), embed=embed)
 
     @commands.command(aliases=["il"])
     async def info_last(self, ctx: commands.Context):
@@ -199,12 +190,8 @@ class Basic(commands.Cog):
                             f"⭐ {card.stars}```\n" \
                             "Owned by: " + (f"<@{card.owner_id}>" if card.owner_id else "None")
         
-        resized_image_bytes = BytesIO()
-        card.image.save(resized_image_bytes, format='PNG')
-        resized_image_bytes.seek(0)
-
-        embed.set_image(url="attachment://image.png")
-        await ctx.reply(file=discord.File(resized_image_bytes, filename="image.png"), embed=embed)
+        embed.set_image(url=f"attachment://image.{card.format}")
+        await ctx.reply(file=discord.File(card.image_bytes, filename=f"image.{card.format}"), embed=embed)
 
     @commands.command(aliases=["c"])
     async def convert(self, ctx: commands.Context, *, card_ids: str):
@@ -424,11 +411,8 @@ class Basic(commands.Cog):
         
         card = iufi.CardPool.get_card(user["profile"]["main"])
         if card and card.owner_id == user["_id"]:
-            resized_image_bytes = BytesIO()
-            card.image.save(resized_image_bytes, format='PNG')
-            resized_image_bytes.seek(0)
-            embed.set_image(url="attachment://image.png")
-            return await ctx.reply(file=discord.File(resized_image_bytes, filename="image.png"), embed=embed)
+            embed.set_image(url=f"attachment://image.{card.format}")
+            return await ctx.reply(file=discord.File(card.image_bytes, filename=f"image.{card.format}"), embed=embed)
         
         await ctx.reply(embed=embed)
 
@@ -439,6 +423,9 @@ class Basic(commands.Cog):
 
     @commands.command(aliases=["t"])
     async def trade(self, ctx: commands.Context, member: discord.Member, card_id: str, candies: int):
+        if candies < 0:
+            return await ctx.reply("The candy count cannot be set to a negative value.")
+        
         card = iufi.CardPool.get_card(card_id)
         if not card:
             return await ctx.reply("The card was not found. Please try again.")
@@ -458,12 +445,8 @@ class Basic(commands.Cog):
         
         embed.set_image(url="attachment://image.png")
 
-        resized_image_bytes = BytesIO()
-        card.image.save(resized_image_bytes, format='PNG')
-        resized_image_bytes.seek(0)
-
         view = TradeView(ctx.author, member, card, candies)
-        view.message = await ctx.reply(content=f"{member.mention}, {ctx.author.mention} want to trade with you.", file=discord.File(resized_image_bytes, filename="image.png"), embed=embed, view=view)
+        view.message = await ctx.reply(content=f"{member.mention}, {ctx.author.mention} want to trade with you.", file=discord.File(card.image_bytes, filename=f"image.{card.format}"), embed=embed, view=view)
 
     @commands.command(aliases=["l"])
     async def leaderboard(self, ctx: commands.Context):
@@ -494,7 +477,7 @@ class Basic(commands.Cog):
             return await ctx.reply(f"{ctx.author.mention} your next daily is in {retry}", delete_after=5)
 
         claimed = user.get("claimed", 0) + 1
-        if (time.time() - end_time) >= 43200 or claimed > 30:
+        if (time.time() - end_time) >= 72000 or claimed > 30:
             claimed = 1
         
         reward = {"candies": 5} if claimed % 5 else {WEEKLY_REWARDS[(claimed//5) - 1][1]: WEEKLY_REWARDS[(claimed//5) - 1][2]}
@@ -628,12 +611,8 @@ class Basic(commands.Cog):
         embed = discord.Embed(title="🖼️  Set Frame", color=discord.Color.random())
         embed.description = f"```🆔 {card.tier[0]} {card.id}\n🖼️ {frame.title()}```"
 
-        resized_image_bytes = BytesIO()
-        card.image.save(resized_image_bytes, format='PNG')
-        resized_image_bytes.seek(0)
-
-        embed.set_image(url="attachment://image.png")
-        await ctx.reply(file=discord.File(resized_image_bytes, filename="image.png"), embed=embed)
+        embed.set_image(url=f"attachment://image.{card.format}")
+        await ctx.reply(file=discord.File(card.image_bytes, filename=f"image.{card.format}"), embed=embed)
 
     @commands.command(aliases=["rf"])
     async def removeframe(self, ctx: commands.Context, card_id: str):

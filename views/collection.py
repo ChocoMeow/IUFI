@@ -62,9 +62,9 @@ class CollectionView(discord.ui.View):
             cards.append(None)
             
         embed.description += "```"
-        resized_image_bytes = iufi.gen_cards_view(cards)
-        embed.set_image(url="attachment://image.png")
-        file = discord.File(resized_image_bytes, filename="image.png")
+        image_bytes, is_gif = iufi.gen_cards_view(cards)
+        embed.set_image(url=f"attachment://image.{'gif' if is_gif else 'png'}")
+        file=discord.File(image_bytes, filename=f'image.{"gif" if is_gif else "png"}')
 
         if self.message:
             return await self.message.edit(attachments=[file], embed=embed, view=self)

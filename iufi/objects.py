@@ -1,23 +1,18 @@
 import random, os
 import functions as func
 
-from PIL import Image, ImageDraw
+from PIL import Image, ImageDraw, ImageSequence
+from io import BytesIO
+
 from .exceptions import ImageLoadError
 
-TIER_EMOJI = {
-    "common": "🥬",
-    "rare": "🌸",
-    "epic": "💎",
-    "legendary": "👑",
-    "mystic": "🦄"
-}
-
-PRICE_BASE = {
-    'common': 1,
-    'rare': 10,
-    'epic': 40,
-    'legendary': 100,
-    'mystic': 500
+TIERS_BASE: dict[str, tuple[str, int]] = {
+    "common": ("🥬", 1),
+    "rare": ("🌸", 10),
+    "epic": ("💎", 40),
+    "legendary": ("👑", 100),
+    "mystic": ("🦄", 500),
+    "celestial": ("💫", 1500)
 }
 
 class Card:
@@ -40,8 +35,8 @@ class Card:
         self.tag: str = tag
         self.frame: str = frame
 
-        self._image: Image.Image = None
-        self._emoji: str = TIER_EMOJI.get(self._tier)
+        self._image: list[Image.Image] | Image.Image = None
+        self._emoji: str = TIERS_BASE.get(self._tier)[0]
 
     def _round_corners(self, image: Image.Image, radius: int = 10) -> Image.Image:
         """Creates a rounded corner image"""
@@ -77,12 +72,25 @@ class Card:
             func.update_card(self.id, {"$set": {"stars": self.stars}}, insert=True)
 
         try:
-            with Image.open(os.path.join(func.ROOT_DIR, "images", self._tier, f"{self.id}.jpg")).convert('RGBA') as img:
-                image = img.resize(((190, 338) if self.frame else (200, 355)), Image.LANCZOS)
-                if self.frame:
-                    self._image = self._load_frame(image)
-                else:
-                    self._image = self._round_corners(image)
+            if self._tier != "celestial":
+                with Image.open(os.path.join(func.ROOT_DIR, "images", self._tier, f"{self.id}.jpg")) as img:
+                    image = img.resize(((190, 338) if self.frame else (200, 355)), Image.LANCZOS)
+                    if self.frame:
+                        self._image = self._load_frame(image)
+                    else:
+                        self._image = self._round_corners(image)
+            else:
+                with Image.open(os.path.join(func.ROOT_DIR, "images", self._tier, f"{self.id}.gif")) as img:
+                    modified_frames = []
+                    for img_frame in ImageSequence.Iterator(img):
+                        frame = img_frame.resize((190, 338) if self.frame else (200, 355))
+                        if self.frame:
+                            frame = self._load_frame(frame)
+                        else:    
+                            frame = self._round_corners(frame)
+                        modified_frames.append(frame)
+                    
+                    self._image = modified_frames
 
         except Exception as e:
             raise ImageLoadError(f"Unable to load the image. Reason: {e}")
@@ -112,7 +120,7 @@ class Card:
 
     @property
     def cost(self) -> int:
-        return PRICE_BASE.get(self._tier)
+        return TIERS_BASE.get(self._tier)[1]
     
     @property
     def tier(self) -> tuple[str, str]:
@@ -120,8 +128,28 @@ class Card:
         return self._emoji, self._tier
 
     @property
-    def image(self) -> Image.Image:
+    def image(self) -> list[Image.Image] | Image.Image:
         """Return the image"""
         if self._image is None:
             self._load_image()
         return self._image
+
+    @property
+    def image_bytes(self) -> BytesIO:
+        image_bytes = BytesIO()
+
+        if self.is_gif:
+            self.image[0].save(image_bytes, format="GIF", save_all=True, append_images=self.image[1:], loop=0)
+        else:
+            self.image.save(image_bytes, format='PNG')
+        image_bytes.seek(0)
+
+        return image_bytes
+
+    @property
+    def is_gif(self) -> bool:
+        return isinstance(self.image, list)
+
+    @property
+    def format(self) -> str:
+        return "gif" if self.is_gif else "png"
