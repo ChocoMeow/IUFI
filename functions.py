@@ -43,6 +43,16 @@ USER_BASE: dict[str, Any] = {
     "claimed": 0,
     "cards": [],
     "collections": {},
+    "frame": {
+        "hearts": 0,
+        "celebrity": 0,
+        "uaena": 0,
+        "dandelions": 0,
+        "shine": 0,
+        "cheer": 0,
+        "smoon": 0,
+        "signed": 0,
+    },
     "roll": {
         "rare": 0,
         "epic": 0,
@@ -62,7 +72,7 @@ USER_BASE: dict[str, Any] = {
 COOLDOWN_BASE: dict[str, int] = {
     "roll": 300,
     "claim": 120,
-    "daily": 86400
+    "daily": 82800
 }
 
 def get_user(user_id: int) -> dict[str, Any]:
