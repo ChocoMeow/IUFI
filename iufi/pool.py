@@ -9,7 +9,7 @@ DROP_RATES = {
     'epic': .007,
     'legendary': .003,
     'mystic':.001,
-    "celestial": .0002
+    "celestial": .0005
 }
 
 class CardPool:

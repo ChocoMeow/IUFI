@@ -15,6 +15,18 @@ TIERS_BASE: dict[str, tuple[str, int]] = {
     "celestial": ("💫", 1500)
 }
 
+FRAMES_BASE: dict[str, str] = {
+    "hearts": "💕",
+    "celebrity": "🌟",
+    "uaena": "💌",
+    "dandelions": "🌷",
+    "shine": "✨",
+    "lovepoem": "💠",
+    "cheer": "🎤",
+    "smoon": "🍓",
+    "signed": "✍️",
+}
+
 class Card:
     def __init__(
         self,
@@ -31,9 +43,9 @@ class Card:
         self._pool = pool
 
         self.owner_id: int = owner_id
-        self.stars: int = stars
+        self.stars: int = stars if stars else 0
         self.tag: str = tag
-        self.frame: str = frame
+        self._frame: str = frame
 
         self._image: list[Image.Image] | Image.Image = None
         self._emoji: str = TIERS_BASE.get(self._tier)[0]
@@ -57,7 +69,7 @@ class Card:
         return output
 
     def _load_frame(self, image: Image.Image) -> Image.Image:
-        with Image.open(os.path.join(func.ROOT_DIR, "frames", f"{self.frame}.png")).convert("RGBA").resize((200, 355)) as frame:
+        with Image.open(os.path.join(func.ROOT_DIR, "frames", f"{self._frame}.png")).convert("RGBA").resize((200, 355)) as frame:
             image = self._round_corners(image)
             output = Image.new("RGBA", frame.size)
             output.paste(image, (6, 8))
@@ -74,8 +86,8 @@ class Card:
         try:
             if self._tier != "celestial":
                 with Image.open(os.path.join(func.ROOT_DIR, "images", self._tier, f"{self.id}.jpg")) as img:
-                    image = img.resize(((190, 338) if self.frame else (200, 355)), Image.LANCZOS)
-                    if self.frame:
+                    image = img.resize(((190, 338) if self._frame else (200, 355)), Image.LANCZOS)
+                    if self._frame:
                         self._image = self._load_frame(image)
                     else:
                         self._image = self._round_corners(image)
@@ -83,8 +95,8 @@ class Card:
                 with Image.open(os.path.join(func.ROOT_DIR, "images", self._tier, f"{self.id}.gif")) as img:
                     modified_frames = []
                     for img_frame in ImageSequence.Iterator(img):
-                        frame = img_frame.resize((190, 338) if self.frame else (200, 355))
-                        if self.frame:
+                        frame = img_frame.resize((190, 338) if self._frame else (200, 355))
+                        if self._frame:
                             frame = self._load_frame(frame)
                         else:    
                             frame = self._round_corners(frame)
@@ -103,7 +115,7 @@ class Card:
                     self._pool._tag_cards.pop(self.tag.lower())
                 self.tag = None
             if remove_frame:
-                self.frame = None
+                self._frame = None
                 self._image = None
 
     def change_tag(self, tag: str | None = None) -> None:
@@ -112,8 +124,8 @@ class Card:
             func.update_card(self.id, {"$set": {"tag": tag}})
     
     def change_frame(self, frame: str | None = None) -> None:
-        if self.frame != frame:
-            self.frame = frame.lower() if frame else None
+        if self._frame != frame:
+            self._frame = frame.lower() if frame else None
 
             if self.image:
                 self._load_image()
@@ -127,6 +139,9 @@ class Card:
         """Return a tuple (emoji, name)"""
         return self._emoji, self._tier
 
+    @property
+    def frame(self) -> tuple[str, str]:
+        return FRAMES_BASE.get(self._frame), self._frame
     @property
     def image(self) -> list[Image.Image] | Image.Image:
         """Return the image"""

@@ -54,7 +54,7 @@ class CollectionView(discord.ui.View):
         for card_id in self.collections[self.sel_collection]:
             card = iufi.CardPool.get_card(card_id)
             if card and card.owner_id == self.member.id:
-                embed.description += f"🆔{card.id.zfill(5)} 🏷️{card.tag if card.tag else '-':<12} 🖼️ {card.frame if card.frame else '-':<5} ⭐{card.stars} {card.tier[0]}\n"
+                embed.description += f"🆔{card.id.zfill(5)} 🏷️{card.tag if card.tag else '-':<12} 🖼️ {card.frame[0] if card.frame[1] else '-  '} ⭐{card.stars} {card.tier[0]}\n"
                 cards.append(card)
                 continue
 

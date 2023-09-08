@@ -9,11 +9,11 @@ LEADERBOARD_EMOJIS: list[str] = ["🥇", "🥈", "🥉", "🏅"]
 DAILY_ROWS: list[str] = ["🟥", "🟧", "🟨", "🟩", "🟦", "🟪"]
 WEEKLY_REWARDS: list[tuple[str, str, int]] = [
     ("🍬", "candies", 50),
-    (iufi.TIERS_BASE.get("rare"), "roll.rare", 1),
+    (iufi.TIERS_BASE.get("rare")[0], "roll.rare", 1),
     ("🍬", "candies", 100),
-    (iufi.TIERS_BASE.get("epic"), "roll.epic", 1),
+    (iufi.TIERS_BASE.get("epic")[0], "roll.epic", 1),
     ("🍬", "candies", 500),
-    (iufi.TIERS_BASE.get("legendary"), "roll.legendary", 1),
+    (iufi.TIERS_BASE.get("legendary")[0], "roll.legendary", 1),
 ]
 
 class Basic(commands.Cog):
@@ -47,7 +47,7 @@ class Basic(commands.Cog):
     async def rareroll(self, ctx: commands.Context):
         user = func.get_user(ctx.author.id)
         if user["roll"]["rare"] <= 0:
-            return await ctx.reply("You’ve used up all your rare rolls for now.")
+            return await ctx.reply("You’ve used up all your `rare` rolls for now.")
 
         if len(user["cards"]) >= func.MAX_CARDS:
             return await ctx.reply(f"**{ctx.author.mention} your inventory is full.**", delete_after=5)
@@ -70,7 +70,7 @@ class Basic(commands.Cog):
     async def epicroll(self, ctx: commands.Context):       
         user = func.get_user(ctx.author.id)
         if user["roll"]["epic"] <= 0:
-            return await ctx.reply("You’ve used up all your epic rolls for now.")
+            return await ctx.reply("You’ve used up all your `epic` rolls for now.")
         
         if len(user["cards"]) >= func.MAX_CARDS:
             return await ctx.reply(f"**{ctx.author.mention} your inventory is full.**", delete_after=5)
@@ -92,7 +92,7 @@ class Basic(commands.Cog):
     async def legendroll(self, ctx: commands.Context):
         user = func.get_user(ctx.author.id)
         if user["roll"]["legendary"] <= 0:
-            return await ctx.reply("You’ve used up all your epic rolls for now.")
+            return await ctx.reply("You’ve used up all your `legend` rolls for now.")
         
         if len(user["cards"]) >= func.MAX_CARDS:
             return await ctx.reply(f"**{ctx.author.mention} your inventory is full.**", delete_after=5)
@@ -154,21 +154,41 @@ class Basic(commands.Cog):
         await ctx.reply(embed=embed)
 
     @commands.command(aliases=["i"])
-    async def info(self, ctx: commands.Context, card_id: str):
-        card: iufi.Card = iufi.CardPool.get_card(card_id)
-        if not card:
+    async def info(self, ctx: commands.Context, *, card_ids: str):
+        cards: list[iufi.Card] = []
+
+        card_ids = card_ids.split(" ")
+        for card_id in card_ids:
+            card = iufi.CardPool.get_card(card_id)
+            if card:
+                cards.append(card)
+
+        if not cards:
             return await ctx.reply("The card was not found. Please try again.")
         
-        embed = discord.Embed(title=f"ℹ️ Card Info", color=0x949fb8)
-        embed.description = f"```🆔 {card.id.zfill(5)}\n" \
-                            f"🏷️ {card.tag}\n" \
-                            f"🖼️ {card.frame}\n" \
-                            f"{card.tier[0]} {card.tier[1].capitalize()}\n" \
-                            f"⭐ {card.stars}```\n" \
-                            "Owned by: " + (f"<@{card.owner_id}>" if card.owner_id else "None")
-        
-        embed.set_image(url=f"attachment://image.{card.format}")
-        await ctx.reply(file=discord.File(card.image_bytes, filename=f"image.{card.format}"), embed=embed)
+        if len(cards) > 1:
+            desc = "```"
+            for card in cards[:8]:
+                member = ctx.guild.get_member(card.owner_id)
+                desc += f"🆔{card.id.zfill(5)} 🏷️{card.tag if card.tag else '-':<12} 🖼️ {card.frame[0] if [1] else '-  '} ⭐{card.stars} {card.tier[0]} {member.display_name if member else 'None':5}\n"
+            desc += "```"
+
+            image_bytes, is_gif = iufi.gen_cards_view(cards, 4)
+            image_format = "gif" if is_gif else "png"
+
+        else:
+            desc = f"```🆔 {card.id.zfill(5)}\n" \
+                   f"🏷️ {card.tag}\n" \
+                   f"🖼️ {card.frame[0]}\n" \
+                   f"{card.tier[0]} {card.tier[1].capitalize()}\n" \
+                   f"⭐ {card.stars}```\n" \
+                   "**Owned by: **" + (f"<@{card.owner_id}>" if card.owner_id else "None")
+
+            image_bytes, image_format = card.image_bytes, card.format
+
+        embed = discord.Embed(title=f"ℹ️ Card Info", description=desc, color=0x949fb8)
+        embed.set_image(url=f"attachment://image.{image_format}")
+        await ctx.reply(file=discord.File(image_bytes, filename=f"image.{image_format}"), embed=embed)
 
     @commands.command(aliases=["il"])
     async def info_last(self, ctx: commands.Context):
@@ -185,10 +205,10 @@ class Basic(commands.Cog):
         embed = discord.Embed(title=f"ℹ️ Card Info", color=0x949fb8)
         embed.description = f"```🆔 {card.id.zfill(5)}\n" \
                             f"🏷️ {card.tag}\n" \
-                            f"🖼️ {card.frame}\n" \
+                            f"🖼️ {card.frame[0]}\n" \
                             f"{card.tier[0]} {card.tier[1].capitalize()}\n" \
                             f"⭐ {card.stars}```\n" \
-                            "Owned by: " + (f"<@{card.owner_id}>" if card.owner_id else "None")
+                            "**Owned by: **" + (f"<@{card.owner_id}>" if card.owner_id else "None")
         
         embed.set_image(url=f"attachment://image.{card.format}")
         await ctx.reply(file=discord.File(card.image_bytes, filename=f"image.{card.format}"), embed=embed)
@@ -439,7 +459,7 @@ class Basic(commands.Cog):
                             f"Candies: 🍬 {candies}\n\n" \
                             f"🆔 {card.id.zfill(5)}\n" \
                             f"🏷️ {card.tag}\n" \
-                            f"🖼️ {card.frame}\n" \
+                            f"🖼️ {card.frame[0]}\n" \
                             f"{card.tier[0]} {card.tier[1].title()}\n" \
                             f"⭐ {card.stars}```\n" \
         
@@ -593,10 +613,12 @@ class Basic(commands.Cog):
         user = func.get_user(ctx.author.id)
         frame = frame.lower()
 
-        if frame:
-            frame_card = user.get("frame", {}).get(frame, 0)
-            if not frame_card:
-                return await ctx.reply(content=f"You’ve used up all your {frame} frame for now.")
+        if frame not in iufi.FRAMES_BASE:
+            return await ctx.reply(content=f"Frame `{frame}` does not exist!")
+        
+        frame_card = user.get("frame", {}).get(frame, 0)
+        if not frame_card:
+            return await ctx.reply(content=f"You’ve used up all your `{frame}` frame for now.")
             
         card = iufi.CardPool.get_card(card_id)
         if not card:
