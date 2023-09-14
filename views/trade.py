@@ -10,7 +10,7 @@ class TradeView(discord.ui.View):
             buyer: discord.Member,
             card: Card, 
             candies: int,
-            timeout: float | None = 180
+            timeout: float | None = 43_200
         ) -> None:
         super().__init__(timeout=timeout)
 
@@ -33,6 +33,8 @@ class TradeView(discord.ui.View):
             return await interaction.response.send_message(f"This card is being traded to {self.buyer.mention}", ephemeral=True)
         
         if self.card.owner_id != self.seller.id:
+            await self.on_timeout()
+            self.stop()
             return await interaction.response.send_message(f"This card is ineligible for trading because its owner has already converted it!", ephemeral=True)
         
         user = func.get_user(self.buyer.id)

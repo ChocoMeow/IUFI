@@ -103,7 +103,7 @@ class ShopView(discord.ui.View):
             embed.description += f"{item[0]} {(item[1].split('.')[1].title() + ' ' + item[1].split('.')[0].title()).upper():<20} {item[2]:>3} 🍬\n"
         embed.description += "```"
         
-        embed.set_thumbnail(url=self.author.avatar.url)
+        embed.set_thumbnail(url=self.author.display_avatar.url)
 
         return embed
 

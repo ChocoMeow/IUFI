@@ -1,10 +1,15 @@
+from __future__ import annotations
+
 import random, os
 import functions as func
 
 from PIL import Image, ImageDraw, ImageSequence
 from io import BytesIO
+from typing import TYPE_CHECKING
 
 from .exceptions import ImageLoadError
+if TYPE_CHECKING:
+    from .pool import CardPool
 
 TIERS_BASE: dict[str, tuple[str, int]] = {
     "common": ("🥬", 1),
@@ -30,7 +35,7 @@ FRAMES_BASE: dict[str, str] = {
 class Card:
     def __init__(
         self,
-        pool,
+        pool: CardPool,
         id: str,
         tier: str,
         owner_id: int = None,
@@ -40,7 +45,7 @@ class Card:
     ):  
         self.id: str = id
         self._tier: str = tier
-        self._pool = pool
+        self._pool: CardPool = pool
 
         self.owner_id: int = owner_id
         self.stars: int = stars if stars else 0

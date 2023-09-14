@@ -5,6 +5,8 @@ from discord.ext import commands
 
 class CollectionDropdown(discord.ui.Select):
     def __init__(self, options: list[str]):
+        self.view: CollectionView
+        
         super().__init__(
             placeholder="Select a collection to view...",
             min_values=1, max_values=1,
