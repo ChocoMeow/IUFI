@@ -55,8 +55,8 @@ class PhotoCardView(discord.ui.View):
             if not card:
                 card = self.cards[card_id] = CardPool.get_card(card_id)
 
-            desc += f"🆔{card.id.zfill(5)} 🏷️{card.tag if card.tag else '-':<12} 🖼️ {card.frame[0] if card.frame[1] else '-  '} ⭐{card.stars} {card.tier[0]}\n" if card else f"🆔 {card_id.zfill(5)} {'-' * 20}"
-            self._dropdown_view.options.append(discord.SelectOption(label=f"{card.id}", description=f"🏷️ {card.tag if card.tag else '-':<12}", emoji=card.tier[0]))
+            desc += f"🆔{card.id.zfill(5)} 🏷️{card.tag if card.tag else '-':<11} 🖼️ {card.frame[0] if card.frame[1] else '- '} ⭐{card.stars} {card.tier[0]}\n" if card else f"🆔 {card_id.zfill(5)} {'-' * 20}"
+            self._dropdown_view.options.append(discord.SelectOption(label=f"{card.id}", description=f"🏷️ {card.tag if card.tag else '-':<11}", emoji=card.tier[0]))
         embed = discord.Embed(title=f"📖 {self.author.display_name}'s Photocards", description=desc + "```", color=discord.Color.random())
         embed.set_thumbnail(url=self.author.display_avatar.url)
         embed.set_footer(text="Pages: {}/{}".format(self.current_page, self.page))

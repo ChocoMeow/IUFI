@@ -91,7 +91,7 @@ class Profile(commands.Cog):
     @commands.command(aliases=["cc"])
     async def createcollection(self, ctx: commands.Context, name: str):
         """Creates a collection."""
-        if len(name) >= 10:
+        if len(name) > 10:
             return await ctx.reply(content="Please shorten the collection name as it is too long. (No more than 10 chars)")
         
         name = name.lower()

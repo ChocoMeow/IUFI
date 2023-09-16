@@ -30,7 +30,7 @@ class Card(commands.Cog):
             desc = "```"
             for card in cards:
                 member = ctx.guild.get_member(card.owner_id)
-                desc += f"🆔{card.id.zfill(5)} 🏷️{card.tag if card.tag else '-':<12} 🖼️ {card.frame[0] if [1] else '-  '} ⭐{card.stars} {card.tier[0]} {member.display_name if member else 'None':5}\n"
+                desc += f"🆔{card.id.zfill(5)} 🏷️{card.tag if card.tag else '-':<11} 🖼️{card.frame[0] if card.frame[1] else '- '} ⭐{card.stars} {card.tier[0]} 👤{member.display_name if member else 'None':5}\n"
             desc += "```"
 
             image_bytes, is_gif = iufi.gen_cards_view(cards, 4)
@@ -227,7 +227,7 @@ class Card(commands.Cog):
     @commands.command(aliases=["st"])
     async def settag(self, ctx: commands.Context, card_id: str, tag: str):
         """Sets the photocard's tag. Card can be identified by its ID or previous tag."""
-        if tag and len(tag) >= 10:
+        if tag and len(tag) > 10:
             return await ctx.reply(content="Please shorten the tag name as it is too long. (No more than 10 chars)")
 
         card = iufi.CardPool.get_card(card_id)

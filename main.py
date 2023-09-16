@@ -85,7 +85,7 @@ class IUFI(commands.Bot):
             description += f"**Description:**\n{ctx.command.help}\n\u200b"
 
             embed = discord.Embed(description=description, color=discord.Color.random())
-            embed.set_footer(icon_url=ctx.bot.user.display_avatar.url, text="More Help: Ask the staff!")
+            embed.set_footer(icon_url=ctx.me.display_avatar.url, text="More Help: Ask the staff!")
             return await ctx.reply(embed=embed)
 
         try:
