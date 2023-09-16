@@ -14,7 +14,7 @@ class Info(commands.Cog):
     @commands.command(aliases=["l"])
     async def leaderboard(self, ctx: commands.Context):
         """Shows the IUFI leaderboard."""
-        users = func.USERS_DB.find().sort("exp", -1).limit(10)
+        users = await func.USERS_DB.find().sort("exp", -1).limit(10).to_list(10)
 
         embed = discord.Embed(title="🏆   IUFI Leaderboard", color=discord.Color.random())
         embed.description = "```"
