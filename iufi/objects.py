@@ -3,6 +3,7 @@ from __future__ import annotations
 import random, os, asyncio
 import functions as func
 
+from concurrent.futures import ThreadPoolExecutor
 from PIL import Image, ImageDraw, ImageSequence
 from io import BytesIO
 from typing import TYPE_CHECKING
@@ -84,33 +85,38 @@ class Card:
         
     def _load_image(self):
         """Load and process the image"""
-        if not self.stars:
-            self.stars = random.randint(1, 5)
-            asyncio.create_task(func.update_card(self.id, {"$set": {"stars": self.stars}}, insert=True))
+        def blocking_io(loop):
+            if not self.stars:
+                self.stars = random.randint(1, 5)
+                loop.create_task(func.update_card(self.id, {"$set": {"stars": self.stars}}, insert=True))
 
-        try:
-            if self._tier != "celestial":
-                with Image.open(os.path.join(func.ROOT_DIR, "images", self._tier, f"{self.id}.jpg")) as img:
-                    image = img.resize(((190, 338) if self._frame else (200, 355)), Image.LANCZOS)
-                    if self._frame:
-                        self._image = self._load_frame(image)
-                    else:
-                        self._image = self._round_corners(image)
-            else:
-                with Image.open(os.path.join(func.ROOT_DIR, "images", self._tier, f"{self.id}.gif")) as img:
-                    modified_frames = []
-                    for img_frame in ImageSequence.Iterator(img):
-                        frame = img_frame.resize((190, 338) if self._frame else (200, 355))
+            try:
+                if self._tier != "celestial":
+                    with Image.open(os.path.join(func.ROOT_DIR, "images", self._tier, f"{self.id}.jpg")) as img:
+                        image = img.resize(((190, 338) if self._frame else (200, 355)), Image.LANCZOS)
                         if self._frame:
-                            frame = self._load_frame(frame)
-                        else:    
-                            frame = self._round_corners(frame)
-                        modified_frames.append(frame)
-                    
-                    self._image = modified_frames
+                            self._image = self._load_frame(image)
+                        else:
+                            self._image = self._round_corners(image)
+                else:
+                    with Image.open(os.path.join(func.ROOT_DIR, "images", self._tier, f"{self.id}.gif")) as img:
+                        modified_frames = []
+                        for img_frame in ImageSequence.Iterator(img):
+                            frame = img_frame.resize((190, 338) if self._frame else (200, 355))
+                            if self._frame:
+                                frame = self._load_frame(frame)
+                            else:    
+                                frame = self._round_corners(frame)
+                            modified_frames.append(frame)
 
-        except Exception as e:
-            raise ImageLoadError(f"Unable to load the image. Reason: {e}")
+                        self._image = modified_frames
+
+            except Exception as e:
+                raise ImageLoadError(f"Unable to load the image. Reason: {e}")
+
+        with ThreadPoolExecutor() as executor:
+            loop = asyncio.get_event_loop()
+            loop.run_in_executor(executor, blocking_io, loop)
 
     def change_owner(self, owner_id: int | None = None, *, remove_tag: bool = True, remove_frame: bool = True) -> None:
         if self.owner_id != owner_id:
