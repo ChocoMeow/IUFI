@@ -22,12 +22,12 @@ class RollButton(discord.ui.Button):
             else:
                 return await interaction.response.send_message("This card has claimed by you already!")
         
-        func.update_user(interaction.user.id, {
+        await func.update_user(interaction.user.id, {
             "$push": {"cards": self.card.id},
             "$set": {"cooldown.claim": time.time() + func.COOLDOWN_BASE["claim"]},
             "$inc": {"exp": 10}
         })
-        func.update_card(self.card.id, {"$set": {"owner_id": interaction.user.id}})
+        await func.update_card(self.card.id, {"$set": {"owner_id": interaction.user.id}})
 
         self.card.change_owner(interaction.user.id)
         CardPool.remove_available_card(self.card)
@@ -81,7 +81,7 @@ class RollView(discord.ui.View):
             await interaction.response.send_message("You have already take this roll!", ephemeral=True)
             return False
 
-        user = func.get_user(interaction.user.id)
+        user = await func.get_user(interaction.user.id)
         if (retry := user["cooldown"]["claim"]) > time.time() and self.author != interaction.user:
             await interaction.response.send_message(f"{interaction.user.mention} your next roll is <t:{round(retry)}:R>", ephemeral=True)
             return False

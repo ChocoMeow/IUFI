@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-import random, os
+import random, os, asyncio
 import functions as func
 
 from PIL import Image, ImageDraw, ImageSequence
@@ -86,7 +86,7 @@ class Card:
         """Load and process the image"""
         if not self.stars:
             self.stars = random.randint(1, 5)
-            func.update_card(self.id, {"$set": {"stars": self.stars}}, insert=True)
+            asyncio.create_task(func.update_card(self.id, {"$set": {"stars": self.stars}}, insert=True))
 
         try:
             if self._tier != "celestial":
@@ -126,7 +126,7 @@ class Card:
     def change_tag(self, tag: str | None = None) -> None:
         if self.tag != tag:
             self.tag = tag
-            func.update_card(self.id, {"$set": {"tag": tag}})
+            asyncio.create_task(func.update_card(self.id, {"$set": {"tag": tag}}))
     
     def change_frame(self, frame: str | None = None) -> None:
         if self._frame != frame:

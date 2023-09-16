@@ -11,7 +11,7 @@ class Frames(commands.Cog):
     @commands.command(aliases=["sf"])
     async def setframe(self, ctx: commands.Context, card_id: str, frame: str):
         """Sets the frame for the photocard. Both card and frame can be identified by id or given tag."""
-        user = func.get_user(ctx.author.id)
+        user = await func.get_user(ctx.author.id)
         frame = frame.lower()
 
         if frame not in iufi.FRAMES_BASE:
@@ -28,8 +28,8 @@ class Frames(commands.Cog):
         if card.owner_id != ctx.author.id:
             return await ctx.reply("You are not the owner of this card.")
         
-        func.update_user(ctx.author.id, {"$inc": {f"frame.{frame}": -1}})
-        func.update_card(card.id, {"$set": {"frame": frame}})
+        await func.update_user(ctx.author.id, {"$inc": {f"frame.{frame}": -1}})
+        await func.update_card(card.id, {"$set": {"frame": frame}})
         card.change_frame(frame)
         embed = discord.Embed(title="🖼️  Set Frame", color=discord.Color.random())
         embed.description = f"```🆔 {card.tier[0]} {card.id}\n🖼️ {frame.title()}```"
@@ -44,7 +44,7 @@ class Frames(commands.Cog):
         if frame not in iufi.FRAMES_BASE:
             return await ctx.reply(content=f"Frame `{frame}` does not exist!")
         
-        user = func.get_user(ctx.author.id)
+        user = await func.get_user(ctx.author.id)
         frame_card = user.get("frame", {}).get(frame, 0)
         if not frame_card:
             return await ctx.reply(content=f"You’ve used up all your `{frame}` frame for now.")
@@ -60,8 +60,8 @@ class Frames(commands.Cog):
         if card.owner_id != ctx.author.id:
             return await ctx.reply("You are not the owner of this card.")
         
-        func.update_user(ctx.author.id, {"$inc": {f"frame.{frame}": -1}})
-        func.update_card(card.id, {"$set": {"frame": frame}})
+        await func.update_user(ctx.author.id, {"$inc": {f"frame.{frame}": -1}})
+        await func.update_card(card.id, {"$set": {"frame": frame}})
         card.change_frame(frame)
         embed = discord.Embed(title="🖼️  Set Frame", color=discord.Color.random())
         embed.description = f"```🆔 {card.tier[0]} {card.id}\n🖼️ {frame.title()}```"
@@ -80,7 +80,7 @@ class Frames(commands.Cog):
             return await ctx.reply("You are not the owner of this card.")
         
         card.change_frame()
-        func.update_card(card.id, {"$set": {"frame": None}})
+        await func.update_card(card.id, {"$set": {"frame": None}})
         embed = discord.Embed(title="🖼️  Set Frame", color=discord.Color.random())
         embed.description = f"```🆔 {card.tier[0]} {card.id}\n🖼️  None```"
         await ctx.reply(embed=embed)

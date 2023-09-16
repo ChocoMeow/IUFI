@@ -28,7 +28,7 @@ class Profile(commands.Cog):
         if not member:
             member = ctx.author
 
-        user = func.get_user(member.id)
+        user = await func.get_user(member.id)
         level, exp = func.calculate_level(user['exp'])
         bio = user.get('profile', {}).get('bio', 'Empty Bio')
 
@@ -49,7 +49,7 @@ class Profile(commands.Cog):
         if bio and len(bio) > 20:
             return await ctx.reply(content="Please shorten the bio as it is too long. (No more than 20 chars)")
 
-        func.update_user(ctx.author.id, {"$set": {"profile.bio": bio}})
+        await func.update_user(ctx.author.id, {"$set": {"profile.bio": bio}})
         embed = discord.Embed(description=f"Bio has been set to\n```{bio}```", color=discord.Color.random())
         await ctx.reply(embed=embed)
     
@@ -63,7 +63,7 @@ class Profile(commands.Cog):
         if card.owner_id != ctx.author.id:
             return await ctx.reply("You are not the owner of this card.")
 
-        func.update_user(ctx.author.id, {"$set": {"profile.main": card_id}})
+        await func.update_user(ctx.author.id, {"$set": {"profile.main": card_id}})
         embed = discord.Embed(title="👤 Set Main", color=discord.Color.random())
         embed.description=f"```{card.tier[0]} {card.id} has been set as profile card.```" if card_id else "```Your profile card has been cleared```"
         await ctx.reply(embed=embed)
@@ -71,7 +71,7 @@ class Profile(commands.Cog):
     @commands.command(aliases=["ml"])
     async def mainlast(self, ctx: commands.Context):
         """Sets the last photocard in your collection as your profile display."""
-        user = func.get_user(ctx.author.id)
+        user = await func.get_user(ctx.author.id)
         if not user["cards"]:
             return await ctx.reply(f"**{ctx.author.mention} you have no photocards.**", delete_after=5)
         
@@ -83,7 +83,7 @@ class Profile(commands.Cog):
         if card.owner_id != ctx.author.id:
             return await ctx.reply("You are not the owner of this card.")
 
-        func.update_user(ctx.author.id, {"$set": {"profile.main": card_id}})
+        await func.update_user(ctx.author.id, {"$set": {"profile.main": card_id}})
         embed = discord.Embed(title="👤 Set Main", color=discord.Color.random())
         embed.description=f"```{card.tier[0]} {card.id} has been set as profile card.```" if card_id else "```Your profile card has been cleared```"
         await ctx.reply(embed=embed)
@@ -95,14 +95,14 @@ class Profile(commands.Cog):
             return await ctx.reply(content="Please shorten the collection name as it is too long. (No more than 10 chars)")
         
         name = name.lower()
-        user = func.get_user(ctx.author.id)
+        user = await func.get_user(ctx.author.id)
         if user.get("collections", {}).get(name):
             return await ctx.reply(content=f"{ctx.author.mention} a collection with the name `{name.title()}` already exists.")
 
         if len(user.get("collections")) >= 5:
             return await ctx.reply(content=f"{ctx.author.mention} you have reached the maximum limit of 5 collections.")
         
-        func.update_user(ctx.author.id, {"$set": {f"collections.{name}": [None] * 6}})
+        await func.update_user(ctx.author.id, {"$set": {f"collections.{name}": [None] * 6}})
         await ctx.reply(content=f"{ctx.author.mention} collection successfully created with the name `{name.title()}`. You can now use qsetcollection to edit your collection.")
     
     @commands.command(aliases=["sc"])
@@ -112,7 +112,7 @@ class Profile(commands.Cog):
             return await ctx.reply(content=f"{ctx.author.mention} the slot must be within `the range of 1 to 6`.")
         
         name = name.lower()
-        user = func.get_user(ctx.author.id)
+        user = await func.get_user(ctx.author.id)
         if not user.get("collections", {}).get(name):
             return await ctx.reply(content=f"{ctx.author.mention} no collection with the name `{name}` was found.")
         
@@ -123,7 +123,7 @@ class Profile(commands.Cog):
         if card.owner_id != ctx.author.id:
             return await ctx.reply("You are not the owner of this card.")
 
-        func.update_user(ctx.author.id, {"$set": {f"collections.{name}.{slot - 1}": card.id if card_id else None}})
+        await func.update_user(ctx.author.id, {"$set": {f"collections.{name}.{slot - 1}": card.id if card_id else None}})
 
         embed = discord.Embed(title="💕 Collection Set", color=discord.Color.random())
         embed.description = f"```📮 {name.title()}\n🆔 {card.id.zfill(5) if card_id else None}\n🎰 {slot}\n```"
@@ -136,7 +136,7 @@ class Profile(commands.Cog):
             return await ctx.reply(content=f"{ctx.author.mention} the slot must be within `the range of 1 to 6`.")
         
         name = name.lower()
-        user = func.get_user(ctx.author.id)
+        user = await func.get_user(ctx.author.id)
         if not user.get("collections", {}).get(name):
             return await ctx.reply(content=f"{ctx.author.mention} no collection with the name `{name}` was found.")
         
@@ -151,7 +151,7 @@ class Profile(commands.Cog):
         if card.owner_id != ctx.author.id:
             return await ctx.reply("You are not the owner of this card.")
 
-        func.update_user(ctx.author.id, {"$set": {f"collections.{name}.{slot - 1}": card.id if card_id else None}})
+        await func.update_user(ctx.author.id, {"$set": {f"collections.{name}.{slot - 1}": card.id if card_id else None}})
 
         embed = discord.Embed(title="💕 Collection Set", color=discord.Color.random())
         embed.description = f"```📮 {name.title()}\n🆔 {card.id.zfill(5) if card_id else None}\n🎰 {slot}\n```"
@@ -160,13 +160,13 @@ class Profile(commands.Cog):
     @commands.command(aliases=["rc"])
     async def removecollection(self, ctx: commands.Context, name: str):
         """Removes the collection."""
-        user = func.get_user(ctx.author.id)
+        user = await func.get_user(ctx.author.id)
 
         name = name.lower()
         if not user.get("collections", {}).get(name):
             return await ctx.reply(content=f"{ctx.author.mention} no collection with the name `{name}` was found.")
         
-        func.update_user(ctx.author.id, {"$unset": {f"collections.{name}": ""}})
+        await func.update_user(ctx.author.id, {"$unset": {f"collections.{name}": ""}})
         await ctx.reply(content=f"{ctx.author.mention}, the collection with the name `{name}` has been successfully removed.")
 
     @commands.command(aliases=["f"])
@@ -175,7 +175,7 @@ class Profile(commands.Cog):
         if not member:
             member = ctx.author
 
-        user = func.get_user(member.id)
+        user = await func.get_user(member.id)
         if len(user.get("collections", {})) == 0:
             return await ctx.reply(content=f"{member.mention} don't have any collections.", allowed_mentions=False)
 
@@ -186,7 +186,7 @@ class Profile(commands.Cog):
     @commands.cooldown(1, 5, commands.BucketType.user)
     async def daily(self, ctx: commands.Context):
         """Claims your daily reward."""
-        user = func.get_user(ctx.author.id)
+        user = await func.get_user(ctx.author.id)
 
         end_time: float = user.get("cooldown", {}).get("daily", None)
         retry = func.cal_retry_time(end_time)
@@ -198,7 +198,7 @@ class Profile(commands.Cog):
             claimed = 1
         
         reward = {"candies": 5} if claimed % 5 else {WEEKLY_REWARDS[(claimed//5) - 1][1]: WEEKLY_REWARDS[(claimed//5) - 1][2]}
-        func.update_user(ctx.author.id, {
+        await func.update_user(ctx.author.id, {
             "$set": {"claimed": claimed, "cooldown.daily": time.time() + func.COOLDOWN_BASE["daily"]},
             "$inc": reward
         })
@@ -222,7 +222,7 @@ class Profile(commands.Cog):
     @commands.command(aliases=["v"])
     async def view(self, ctx: commands.Context):
         """View your photocard collection."""
-        user = func.get_user(ctx.author.id)
+        user = await func.get_user(ctx.author.id)
 
         if not user["cards"]:
             return await ctx.reply(f"**{ctx.author.mention} you have no photocards.**", delete_after=5)
@@ -233,7 +233,7 @@ class Profile(commands.Cog):
     @commands.command(aliases=["in"])
     async def inventory(self, ctx: commands.Context):
         """Shows the items that you own."""
-        user = func.get_user(ctx.author.id)
+        user = await func.get_user(ctx.author.id)
 
         embed = discord.Embed(title=f"🎒 {ctx.author.display_name}'s Inventory", color=0x5cb045)
         embed.description = f"```🍬 Starcandies        x{user['candies']}\n" \

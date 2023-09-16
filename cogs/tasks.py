@@ -11,7 +11,7 @@ class Tasks(commands.Cog):
     def cog_unload(self):
         self.cache_clear.cancel()
     
-    @tasks.loop(hours=24.0)
+    @tasks.loop(hours=2.0)
     async def cache_clear(self):
         func.USERS_BUFFER.clear()
 

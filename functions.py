@@ -1,6 +1,10 @@
 import os, time, copy
 
-from pymongo import MongoClient
+from motor.motor_asyncio import (
+    AsyncIOMotorClient,
+    AsyncIOMotorCollection,
+)
+
 from dotenv import load_dotenv
 from typing import Any
 
@@ -14,23 +18,12 @@ class TOKEN:
         self.mongodb_url = os.getenv("MONGODB_URL")
         self.mongodb_name = os.getenv("MONGODB_NAME")
 
+
 tokens: TOKEN = TOKEN()
 
-if not (tokens.mongodb_name and tokens.mongodb_url):
-    raise Exception("MONGODB_NAME and MONGODB_URL can't not be empty in .env")
-
-try:
-    mongodb = MongoClient(host=tokens.mongodb_url, serverSelectionTimeoutMS=5000)
-    mongodb.server_info()
-    if tokens.mongodb_name not in mongodb.list_database_names():
-        raise Exception(f"{tokens.mongodb_name} does not exist in your mongoDB!")
-    print("Successfully connected to MongoDB!")
-
-except Exception as e:
-    raise Exception("Not able to connect MongoDB! Reason:", e)
-
-USERS_DB = mongodb[tokens.mongodb_name]['users']
-CARDS_DB = mongodb[tokens.mongodb_name]['cards'] 
+MONGO_DB: AsyncIOMotorClient = None
+USERS_DB: AsyncIOMotorCollection = None
+CARDS_DB: AsyncIOMotorCollection = None
 
 USERS_BUFFER: dict[int, dict[str, Any]] = {}
 COOLDOWN: dict[int, dict[str, float]] = {}
@@ -59,9 +52,9 @@ USER_BASE: dict[str, Any] = {
         "legendary": 0
     },
     "cooldown": {
-        "roll": (now := int(time.time())),
-        "claim": now,
-        "daily": now
+        "roll": 0,
+        "claim": 0,
+        "daily": 0
     },
     "profile": {
         "bio": "",
@@ -75,18 +68,38 @@ COOLDOWN_BASE: dict[str, int] = {
     "daily": 82800
 }
 
-def get_user(user_id: int) -> dict[str, Any]:
+def cal_retry_time(end_time: float, default: str=None) -> str | None:
+    if end_time <= (current_time := time.time()):
+        return default
+    
+    retry: float = int(end_time - current_time)
+
+    minutes, seconds = divmod(retry, 60)
+    hours, minutes = divmod(minutes, 60)
+
+    return (f"{hours}h " if hours > 0 else "") + f"{minutes}m {seconds}s"
+
+def calculate_level(exp: int) -> tuple[int, int]:
+    level = 0
+
+    while exp >= DEAFAULT_EXP:
+        exp -= DEAFAULT_EXP
+        level += 1
+    
+    return level, exp
+
+async def get_user(user_id: int) -> dict[str, Any]:
     user = USERS_BUFFER.get(user_id)
     if not user:
-        user = USERS_DB.find_one({"_id": user_id})
+        user = await USERS_DB.find_one({"_id": user_id})
         if not user:
-            USERS_DB.insert_one({"_id": user_id, **USER_BASE})
+            await USERS_DB.insert_one({"_id": user_id, **USER_BASE})
 
         user = USERS_BUFFER[user_id] = user if user else copy.deepcopy(USER_BASE)
     return user
 
-def update_user(user_id: int, data: dict) -> None:
-    user = get_user(user_id)
+async def update_user(user_id: int, data: dict) -> None:
+    user = await get_user(user_id)
 
     for mode, action in data.items():
         for key, value in action.items():
@@ -122,33 +135,13 @@ def update_user(user_id: int, data: dict) -> None:
             else:
                 raise ValueError(f"Invalid mode: {mode}")
                 
-    USERS_DB.update_one({"_id": user_id}, data)
+    await USERS_DB.update_one({"_id": user_id}, data)
 
-def update_card(card_id: list[str] | str, data: dict, insert: bool = False) -> None:
+async def update_card(card_id: list[str] | str, data: dict, insert: bool = False) -> None:
     if insert:
-        CARDS_DB.insert_one({"_id": card_id})
+        await CARDS_DB.insert_one({"_id": card_id})
     
     if isinstance(card_id, list):
-        return CARDS_DB.update_many({"_id": {"$in": card_id}}, data)
+        return await CARDS_DB.update_many({"_id": {"$in": card_id}}, data)
     
-    CARDS_DB.update_one({"_id": card_id}, data)
-
-def cal_retry_time(end_time: float, default: str=None) -> str | None:
-    if end_time <= (current_time := time.time()):
-        return default
-    
-    retry: float = int(end_time - current_time)
-
-    minutes, seconds = divmod(retry, 60)
-    hours, minutes = divmod(minutes, 60)
-
-    return (f"{hours}h " if hours > 0 else "") + f"{minutes}m {seconds}s"
-
-def calculate_level(exp: int) -> tuple[int, int]:
-    level = 0
-
-    while exp >= DEAFAULT_EXP:
-        exp -= DEAFAULT_EXP
-        level += 1
-    
-    return level, exp
+    await CARDS_DB.update_one({"_id": card_id}, data)

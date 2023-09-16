@@ -37,7 +37,7 @@ class TradeView(discord.ui.View):
             self.stop()
             return await interaction.response.send_message(f"This card is ineligible for trading because its owner has already converted it!", ephemeral=True)
         
-        user = func.get_user(self.buyer.id)
+        user = await func.get_user(self.buyer.id)
         if user["candies"] < self.candies:
             return await interaction.response.send_message(f"You don't have enough candies! You only have `{user['candies']}` candies", ephemeral=True)
 
@@ -46,9 +46,9 @@ class TradeView(discord.ui.View):
         
         await interaction.response.defer()
         self.card.change_owner(self.buyer.id, remove_tag=False)
-        func.update_user(self.seller.id, {"$pull": {"cards": self.card.id}, "$inc": {"candies": self.candies}})
-        func.update_user(self.buyer.id, {"$push": {"cards": self.card.id}, "$inc": {"candies": self.candies}})
-        func.update_card(self.card.id, {"$set": {"owner_id": self.buyer.id}})
+        await func.update_user(self.seller.id, {"$pull": {"cards": self.card.id}, "$inc": {"candies": self.candies}})
+        await func.update_user(self.buyer.id, {"$push": {"cards": self.card.id}, "$inc": {"candies": self.candies}})
+        await func.update_card(self.card.id, {"$set": {"owner_id": self.buyer.id}})
 
         embed = discord.Embed(title="✅ Traded", color=discord.Color.random())
         embed.description = f"```🆔 {self.card.id}\n🍬 - {self.candies}```"

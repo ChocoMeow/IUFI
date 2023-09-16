@@ -18,7 +18,7 @@ class Card(commands.Cog):
         cards: list[iufi.Card] = []
 
         card_ids = card_ids.split(" ")
-        for card_id in card_ids:
+        for card_id in card_ids[:8]:
             card = iufi.CardPool.get_card(card_id)
             if card:
                 cards.append(card)
@@ -28,7 +28,7 @@ class Card(commands.Cog):
         
         if len(cards) > 1:
             desc = "```"
-            for card in cards[:8]:
+            for card in cards:
                 member = ctx.guild.get_member(card.owner_id)
                 desc += f"🆔{card.id.zfill(5)} 🏷️{card.tag if card.tag else '-':<12} 🖼️ {card.frame[0] if [1] else '-  '} ⭐{card.stars} {card.tier[0]} {member.display_name if member else 'None':5}\n"
             desc += "```"
@@ -53,7 +53,7 @@ class Card(commands.Cog):
     @commands.command(aliases=["il"])
     async def info_last(self, ctx: commands.Context):
         """Shows the details of your last photocard."""
-        user = func.get_user(ctx.author.id)
+        user = await func.get_user(ctx.author.id)
 
         if not user["cards"]:
             return await ctx.reply(f"**{ctx.author.mention} you have no photocards.**", delete_after=5)
@@ -87,11 +87,11 @@ class Card(commands.Cog):
                 iufi.CardPool.add_available_card(card)
                 converted_cards.append(card)
         
-        func.update_user(ctx.author.id, {
+        await func.update_user(ctx.author.id, {
             "$pull": {"cards": {"$in": (card_ids := [card.id for card in converted_cards])}},
             "$inc": {"candies": (candies := sum([card.cost for card in converted_cards]))}
         })
-        func.update_card(card_ids, {"$set": {"owner_id": None, "tag": None, "frame": None}})
+        await func.update_card(card_ids, {"$set": {"owner_id": None, "tag": None, "frame": None}})
 
         embed = discord.Embed(title="✨ Convert", color=discord.Color.random())
         embed.description = f"```🆔 {', '.join([f'{card.tier[0]} {card.id}' for card in converted_cards])} \n🍬 + {candies}```"
@@ -100,7 +100,7 @@ class Card(commands.Cog):
     @commands.command(aliases=["cl"])
     async def convertlast(self, ctx: commands.Context):
         """Converts the last photocard of your collection."""
-        user = func.get_user(ctx.author.id)
+        user = await func.get_user(ctx.author.id)
 
         if not user["cards"]:
             return await ctx.reply(f"**{ctx.author.mention} you have no photocards.**", delete_after=5)
@@ -128,18 +128,18 @@ class Card(commands.Cog):
         card.change_owner()
         iufi.CardPool.add_available_card(card)
 
-        func.update_user(ctx.author.id, {
+        await func.update_user(ctx.author.id, {
             "$pull": {"cards": card.id},
             "$inc": {"candies": card.cost}
         })
-        func.update_card(card.id, {"$set": {"owner_id": None, "tag": None, "frame": None}})
+        await func.update_card(card.id, {"$set": {"owner_id": None, "tag": None, "frame": None}})
         embed.title="✨ Converted"
         await message.edit(embed=embed, view=None) if message else await ctx.reply(embed=embed)
         
     @commands.command(aliases=["ca"])
     async def convertall(self, ctx: commands.Context):
         """Converts all photocard of your collection."""
-        user = func.get_user(ctx.author.id)
+        user = await func.get_user(ctx.author.id)
 
         if not user["cards"]:
             return await ctx.reply(f"**{ctx.author.mention} you have no photocards.**", delete_after=5)
@@ -169,11 +169,11 @@ class Card(commands.Cog):
                 card.change_owner()
                 iufi.CardPool.add_available_card(card)
 
-            func.update_user(ctx.author.id, {
+            await func.update_user(ctx.author.id, {
                 "$pull": {"cards": {"$in": card_ids}},
                 "$inc": {"candies": candies}
             })
-            func.update_card(card_ids, {"$set": {"owner_id": None, "tag": None, "frame": None}})
+            await func.update_card(card_ids, {"$set": {"owner_id": None, "tag": None, "frame": None}})
 
             embed.title = "✨ Converted"
             await view.message.edit(embed=embed, view=None)
@@ -181,7 +181,7 @@ class Card(commands.Cog):
     @commands.command(aliases=["cm"])
     async def convertmass(self, ctx: commands.Context, category: str):
         """Converts photocards that fit the given mode."""
-        user = func.get_user(ctx.author.id)
+        user = await func.get_user(ctx.author.id)
         category = category.lower()
 
         if not user["cards"]:
@@ -215,11 +215,11 @@ class Card(commands.Cog):
                 card.change_owner()
                 iufi.CardPool.add_available_card(card)
 
-            func.update_user(ctx.author.id, {
+            await func.update_user(ctx.author.id, {
                 "$pull": {"cards": {"$in": card_ids}},
                 "$inc": {"candies": candies}
             })
-            func.update_card(card_ids, {"$set": {"owner_id": None, "tag": None, "frame": None}})
+            await func.update_card(card_ids, {"$set": {"owner_id": None, "tag": None, "frame": None}})
 
             embed.title = "✨ Converted"
             await view.message.edit(embed=embed, view=None)
@@ -238,9 +238,9 @@ class Card(commands.Cog):
             return await ctx.reply("You are not the owner of this card.")
         
         if card.tag:
-            await iufi.CardPool.change_tag(card, tag)
+            iufi.CardPool.change_tag(card, tag)
         else:
-            await iufi.CardPool.add_tag(card, tag)
+            iufi.CardPool.add_tag(card, tag)
         
         embed = discord.Embed(title="🏷️ Set Tag", color=discord.Color.random())
         embed.description = f"```🆔 {card.tier[0]} {card.id}\n🏷️ {tag}```"
@@ -252,7 +252,7 @@ class Card(commands.Cog):
         if tag and len(tag) >= 10:
             return await ctx.reply(content="Please shorten the tag name as it is too long.")
         
-        user = func.get_user(ctx.author.id)
+        user = await func.get_user(ctx.author.id)
         if not user["cards"]:
             return await ctx.reply(f"**{ctx.author.mention} you have no photocards.**", delete_after=5)
         
@@ -260,9 +260,9 @@ class Card(commands.Cog):
         card = iufi.CardPool.get_card(card_id)
         if card:
             if card.tag:
-                await iufi.CardPool.change_tag(card, tag)
+                iufi.CardPool.change_tag(card, tag)
             else:
-                await iufi.CardPool.add_tag(card, tag)
+                iufi.CardPool.add_tag(card, tag)
         
             embed = discord.Embed(title="🏷️ Set Tag", color=discord.Color.random())
             embed.description = f"```🆔 {card.tier[0]} {card.id}\n🏷️ {tag}```"
@@ -278,7 +278,7 @@ class Card(commands.Cog):
         if card.owner_id != ctx.author.id:
             return await ctx.reply("You are not the owner of this card.")
         
-        await iufi.CardPool.remove_tag(card)
+        iufi.CardPool.remove_tag(card)
 
         embed = discord.Embed(title="🏷️ Set Tag", color=discord.Color.random())
         embed.description = f"```🆔 {card.id}\n🏷️ {card.tag}```"

@@ -2,6 +2,7 @@ import discord, os, iufi
 import functions as func
 
 from discord.ext import commands
+from motor.motor_asyncio import AsyncIOMotorClient
 
 class IUFI(commands.Bot):
     def __init__(self, *args, **kwargs):
@@ -12,7 +13,23 @@ class IUFI(commands.Bot):
     async def setup_hook(self) -> None:
         all_card_data = {}
 
-        for document in func.CARDS_DB.find():
+        if not ((db_name := func.tokens.mongodb_name) and (db_url := func.tokens.mongodb_url)):
+            raise Exception("MONGODB_NAME and MONGODB_URL can't not be empty in .env")
+
+        try:
+            func.MONGO_DB = AsyncIOMotorClient(host=db_url, serverSelectionTimeoutMS=5000)
+            await func.MONGO_DB.server_info()
+            if db_name not in await func.MONGO_DB.list_database_names():
+                raise Exception(f"{db_name} does not exist in your mongoDB!")
+            print("Successfully connected to MongoDB!")
+
+        except Exception as e:
+            raise Exception("Not able to connect MongoDB! Reason:", e)
+        
+        func.CARDS_DB = func.MONGO_DB[db_name]["cards"]
+        func.USERS_DB = func.MONGO_DB[db_name]["users"]
+        
+        async for document in func.CARDS_DB.find():
             all_card_data[document["_id"]] = document
 
         image_folder = os.path.join(func.ROOT_DIR, 'images')

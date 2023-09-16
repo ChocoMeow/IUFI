@@ -36,6 +36,8 @@ class QuantityModal(discord.ui.Modal):
         self.quantity = self.children[0].value
         try:
             self.quantity = int(self.quantity)
+            if self.quantity <= 0:
+                self.quantity = 0
             await interaction.response.defer()
         except Exception as _:
             await interaction.response.send_message("Please enter a number!", ephemeral=True)
@@ -63,12 +65,12 @@ class Dropdown(discord.ui.Select):
                 await modal.wait()
 
                 if modal.quantity:
-                    user = func.get_user(interaction.user.id)
+                    user = await func.get_user(interaction.user.id)
                     price = modal.quantity * item[2]
                     if user["candies"] < price:
                         return await interaction.followup.send(f"You don't have enough candies! You only have `{user['candies']}` candies", ephemeral=True)
                     
-                    func.update_user(interaction.user.id, {
+                    await func.update_user(interaction.user.id, {
                         "$inc": {"candies": -price, item[1]: modal.quantity},
                     })
 
@@ -93,8 +95,8 @@ class ShopView(discord.ui.View):
     async def interaction_check(self, interaction: discord.Interaction) -> bool:
         return interaction.user == self.author
 
-    def build_embed(self) -> discord.Embed:
-        user = func.get_user(self.author.id)
+    async def build_embed(self) -> discord.Embed:
+        user = await func.get_user(self.author.id)
 
         embed = discord.Embed(title="🛒 IUFI Shop", color=discord.Color.random())
         embed.description = f"🍬 Starcandies: `{user.get('candies', 0)}`\n```"
@@ -106,5 +108,3 @@ class ShopView(discord.ui.View):
         embed.set_thumbnail(url=self.author.display_avatar.url)
 
         return embed
-
-    
