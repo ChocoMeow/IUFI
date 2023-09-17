@@ -30,18 +30,18 @@ class Card(commands.Cog):
             desc = "```"
             for card in cards:
                 member = ctx.guild.get_member(card.owner_id)
-                desc += f"🆔{card.id.zfill(5)} 🏷️{card.tag if card.tag else '-':<11} 🖼️{card.frame[0] if card.frame[1] else '- '} ⭐{card.stars} {card.tier[0]} 👤{member.display_name if member else 'None':5}\n"
+                desc += f"{card.display_id} {card.display_tag} {card.display_frame} {card.display_stars} {card.tier[0]} 👤{member.display_name if member else 'None':5}\n"
             desc += "```"
 
             image_bytes, is_gif = iufi.gen_cards_view(cards, 4)
             image_format = "gif" if is_gif else "png"
 
         else:
-            desc = f"```🆔 {card.id.zfill(5)}\n" \
-                   f"🏷️ {card.tag}\n" \
-                   f"🖼️ {card.frame[0]}\n" \
+            desc = f"```{card.display_id}\n" \
+                   f"{card.display_tag}\n" \
+                   f"{card.display_frame}\n" \
                    f"{card.tier[0]} {card.tier[1].capitalize()}\n" \
-                   f"⭐ {card.stars}```\n" \
+                   f"{card.display_stars}```\n" \
                    "**Owned by: **" + (f"<@{card.owner_id}>" if card.owner_id else "None")
 
             image_bytes, image_format = card.image_bytes, card.format
@@ -51,7 +51,7 @@ class Card(commands.Cog):
         await ctx.reply(file=discord.File(image_bytes, filename=f"image.{image_format}"), embed=embed)
 
     @commands.command(aliases=["il"])
-    async def info_last(self, ctx: commands.Context):
+    async def infolast(self, ctx: commands.Context):
         """Shows the details of your last photocard."""
         user = await func.get_user(ctx.author.id)
 
@@ -64,11 +64,11 @@ class Card(commands.Cog):
             return await ctx.reply("Card not found! Please try again.")
         
         embed = discord.Embed(title=f"ℹ️ Card Info", color=0x949fb8)
-        embed.description = f"```🆔 {card.id.zfill(5)}\n" \
-                            f"🏷️ {card.tag}\n" \
-                            f"🖼️ {card.frame[0]}\n" \
+        embed.description = f"```{card.display_id}\n" \
+                            f"{card.display_tag}\n" \
+                            f"{card.display_frame}\n" \
                             f"{card.tier[0]} {card.tier[1].capitalize()}\n" \
-                            f"⭐ {card.stars}```\n" \
+                            f"{card.display_stars}```\n" \
                             "**Owned by: **" + (f"<@{card.owner_id}>" if card.owner_id else "None")
         
         embed.set_image(url=f"attachment://image.{card.format}")
@@ -243,7 +243,7 @@ class Card(commands.Cog):
             iufi.CardPool.add_tag(card, tag)
         
         embed = discord.Embed(title="🏷️ Set Tag", color=discord.Color.random())
-        embed.description = f"```🆔 {card.tier[0]} {card.id}\n🏷️ {tag}```"
+        embed.description = f"```🆔 {card.tier[0]} {card.id}\n{card.display_tag}```"
         await ctx.reply(embed=embed)
 
     @commands.command(aliases=["stl"])
@@ -265,7 +265,7 @@ class Card(commands.Cog):
                 iufi.CardPool.add_tag(card, tag)
         
             embed = discord.Embed(title="🏷️ Set Tag", color=discord.Color.random())
-            embed.description = f"```🆔 {card.tier[0]} {card.id}\n🏷️ {tag}```"
+            embed.description = f"```🆔 {card.tier[0]} {card.id}\n{card.display_tag}```"
             await ctx.reply(embed=embed)
 
     @commands.command(aliases=["rt"])
@@ -281,7 +281,7 @@ class Card(commands.Cog):
         iufi.CardPool.remove_tag(card)
 
         embed = discord.Embed(title="🏷️ Set Tag", color=discord.Color.random())
-        embed.description = f"```🆔 {card.id}\n🏷️ {card.tag}```"
+        embed.description = f"```🆔 {card.tier[0]} {card.id}\n{card.display_tag}```"
         await ctx.reply(embed=embed)
 
     @commands.command(aliases=["t"])
@@ -301,11 +301,11 @@ class Card(commands.Cog):
         embed.description = f"```Seller: {ctx.author.display_name}\n" \
                             f"Buyer: {member.display_name}\n" \
                             f"Candies: 🍬 {candies}\n\n" \
-                            f"🆔 {card.id.zfill(5)}\n" \
-                            f"🏷️ {card.tag}\n" \
-                            f"🖼️ {card.frame[0]}\n" \
-                            f"{card.tier[0]} {card.tier[1].title()}\n" \
-                            f"⭐ {card.stars}```\n" \
+                            f"{card.display_id}\n" \
+                            f"{card.display_tag}\n" \
+                            f"{card.display_frame}\n" \
+                            f"{card.tier[0]} {card.tier[1].capitalize()}\n" \
+                            f"{card.display_stars}```\n" \
         
         embed.set_image(url="attachment://image.png")
 

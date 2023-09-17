@@ -14,6 +14,7 @@ class Developer(commands.Cog):
     def __init__(self, bot: commands.Bot) -> None:
         self.bot = bot
         self.emoji = "⚙️"
+        self.invisible = True
         
     @commands.command()
     @commands.is_owner()

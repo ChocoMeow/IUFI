@@ -18,7 +18,7 @@ TIERS_BASE: dict[str, tuple[str, int]] = {
     "epic": ("💎", 40),
     "legendary": ("👑", 100),
     "mystic": ("🦄", 500),
-    "celestial": ("💫", 1500)
+    "celestial": ("💫", 1000)
 }
 
 FRAMES_BASE: dict[str, str] = {
@@ -153,6 +153,7 @@ class Card:
     @property
     def frame(self) -> tuple[str, str]:
         return FRAMES_BASE.get(self._frame), self._frame
+    
     @property
     def image(self) -> list[Image.Image] | Image.Image:
         """Return the image"""
@@ -179,3 +180,19 @@ class Card:
     @property
     def format(self) -> str:
         return "gif" if self.is_gif else "png"
+    
+    @property
+    def display_id(self) -> str:
+        return f"🆔 {self.id.zfill(5)}"
+    
+    @property
+    def display_stars(self) -> str:
+        return ("⭐ " if self.stars < 5 else "🌟 ") + str(self.stars)
+
+    @property
+    def display_tag(self) -> str:
+        return f"🏷️ {self.tag if self.tag else '-':<11}"
+
+    @property
+    def display_frame(self) -> str:
+        return f"🖼️ {FRAMES_BASE.get(self._frame) if self._frame else '- '}"

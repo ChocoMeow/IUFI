@@ -116,12 +116,13 @@ class Profile(commands.Cog):
         if not user.get("collections", {}).get(name):
             return await ctx.reply(content=f"{ctx.author.mention} no collection with the name `{name}` was found.")
         
-        card = iufi.CardPool.get_card(card_id)
-        if not card:
-            return await ctx.reply("The card was not found. Please try again.")
+        if card_id:
+            card = iufi.CardPool.get_card(card_id)
+            if not card:
+                return await ctx.reply("The card was not found. Please try again.")
 
-        if card.owner_id != ctx.author.id:
-            return await ctx.reply("You are not the owner of this card.")
+            if card.owner_id != ctx.author.id:
+                return await ctx.reply("You are not the owner of this card.")
 
         await func.update_user(ctx.author.id, {"$set": {f"collections.{name}.{slot - 1}": card.id if card_id else None}})
 
@@ -151,10 +152,10 @@ class Profile(commands.Cog):
         if card.owner_id != ctx.author.id:
             return await ctx.reply("You are not the owner of this card.")
 
-        await func.update_user(ctx.author.id, {"$set": {f"collections.{name}.{slot - 1}": card.id if card_id else None}})
+        await func.update_user(ctx.author.id, {"$set": {f"collections.{name}.{slot - 1}": card.id}})
 
         embed = discord.Embed(title="💕 Collection Set", color=discord.Color.random())
-        embed.description = f"```📮 {name.title()}\n🆔 {card.id.zfill(5) if card_id else None}\n🎰 {slot}\n```"
+        embed.description = f"```📮 {name.title()}\n{card.display_id}\n🎰 {slot}\n```"
         await ctx.reply(embed=embed)
 
     @commands.command(aliases=["rc"])

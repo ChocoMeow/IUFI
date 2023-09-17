@@ -27,6 +27,9 @@ class HelpView(discord.ui.View):
         embed.set_thumbnail(url=self.bot.user.display_avatar.url)
 
         for name, cog in self.bot.cogs.items():
+            if cog.invisible:
+                continue
+            
             commands = [command for command in cog.walk_commands()]
             if not commands:
                 continue
