@@ -64,18 +64,21 @@ class Developer(commands.Cog):
 
             with ThreadPoolExecutor() as executor:
                 loop = asyncio.get_event_loop()
+                if not iufi.CardPool.search_image:
+                    iufi.CardPool.load_search_metadata()
+
                 results = await loop.run_in_executor(
                     executor,
-                    iufi.CardPool.st.get_similar_images,
+                    iufi.CardPool.search_image.get_similar_images,
                     await image.read()
                 )
 
                 cards: list[iufi.Card] = []
                 for result in results.values():
-                    result = result.split("/")[-1]
+                    result = result.split("\\")[-1]
                     card = iufi.CardPool.get_card(result.split(".")[0])
-
-                    cards.append(card)
+                    if card:
+                        cards.append(card)
 
                 if not cards:
                     return await interaction.followup.send("The card was not found. Please try again.")

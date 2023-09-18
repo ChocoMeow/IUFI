@@ -25,9 +25,13 @@ class CardPool:
     _rand = Random()
 
     #DeepSearch
-    image_list = Load_Data().from_folder(["/metadata-files"])
-    st = Search_Setup(image_list=image_list)
-    st.run_index()
+    search_image: Search_Setup | None = None
+
+    @classmethod
+    def load_search_metadata(cls) -> None:
+        image_list = Load_Data().from_folder(["/metadata-files"])
+        cls.search_image = Search_Setup(image_list=image_list)
+        cls.search_image.run_index()
 
     @classmethod
     def add_available_card(cls, card: Card) -> None:
@@ -96,4 +100,3 @@ class CardPool:
             results[amount - 1] = included
 
         return [cls._rand.choice(cls._available_cards[result]) for result in results]
-

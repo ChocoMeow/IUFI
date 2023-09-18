@@ -16,6 +16,7 @@ class Tasks(commands.Cog):
     async def cache_clear(self):
         func.USERS_BUFFER.clear()
 
+        iufi.CardPool.search_image = None
         for card in iufi.CardPool._cards.values():
             card._image = None
 
