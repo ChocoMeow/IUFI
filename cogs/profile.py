@@ -21,7 +21,8 @@ class Profile(commands.Cog):
     def __init__(self, bot: commands.Bot) -> None:
         self.bot = bot
         self.emoji = "👤"
-
+        self.invisible = False
+        
     @commands.command(aliases=["p"])
     async def profile(self, ctx: commands.Context, member: discord.Member = None):
         """Shows the profile of a member. If called without a member, shows your own profile."""

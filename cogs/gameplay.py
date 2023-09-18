@@ -9,6 +9,7 @@ class Gameplay(commands.Cog):
     def __init__(self, bot: commands.Bot) -> None:
         self.bot = bot
         self.emoji = "🎮"
+        self.invisible = False
         
     @commands.command(aliases=["r"])
     @commands.cooldown(1, 5, commands.BucketType.user) 

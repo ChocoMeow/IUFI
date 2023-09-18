@@ -21,6 +21,7 @@ class TOKEN:
 
 tokens: TOKEN = TOKEN()
 
+#DB Var
 MONGO_DB: AsyncIOMotorClient = None
 USERS_DB: AsyncIOMotorCollection = None
 CARDS_DB: AsyncIOMotorCollection = None

@@ -7,6 +7,7 @@ class Frames(commands.Cog):
     def __init__(self, bot: commands.Bot) -> None:
         self.bot = bot
         self.emoji = "🖼️"
+        self.invisible = False
         
     @commands.command(aliases=["sf"])
     async def setframe(self, ctx: commands.Context, card_id: str, frame: str):

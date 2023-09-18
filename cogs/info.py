@@ -10,7 +10,8 @@ class Info(commands.Cog):
     def __init__(self, bot: commands.Bot) -> None:
         self.bot = bot
         self.emoji = "ℹ️"
-
+        self.invisible = False
+        
     @commands.command(aliases=["l"])
     async def leaderboard(self, ctx: commands.Context):
         """Shows the IUFI leaderboard."""

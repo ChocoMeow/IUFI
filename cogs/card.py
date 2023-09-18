@@ -11,7 +11,8 @@ class Card(commands.Cog):
     def __init__(self, bot: commands.Bot) -> None:
         self.bot = bot
         self.emoji = "🎴"
-        
+        self.invisible = False
+
     @commands.command(aliases=["i"])
     async def cardinfo(self, ctx: commands.Context, *, card_ids: str):
         """Shows the details of a photocard. Card can be identified by its ID or given tag."""
