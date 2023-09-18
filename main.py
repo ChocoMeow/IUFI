@@ -10,6 +10,25 @@ class IUFI(commands.Bot):
 
         self.iufi: iufi.CardPool = iufi.CardPool()
 
+    async def on_message(self, message: discord.Message, /) -> None:
+        if message.author.bot or not message.guild:
+            return False
+
+        if message.channel.id == 1147547592469782548:
+            emojis = ()
+            for attachment in message.attachments:
+                if attachment.filename.endswith((".png", ".jpg")):
+                    emojis = ("🥬", "🌸", "💎", "👑")
+                    break
+                elif attachment.filename.endswith(".gif"):
+                    emojis = ("✅", "❌")
+                    break
+            
+            for emoji in emojis:
+                await message.add_reaction(emoji)
+                
+        await self.process_commands(message)
+
     async def setup_hook(self) -> None:
         all_card_data = {}
 
