@@ -2,6 +2,10 @@ from random import Random
 
 from .objects import Card
 from .exceptions import DuplicatedCardError, DuplicatedTagError
+from .deepsearch import (
+    Load_Data,
+    Search_Setup
+)
 
 DROP_RATES = {
     'common': .9,
@@ -18,8 +22,12 @@ class CardPool:
     _available_cards: dict[str, list[Card]] = {
         category: [] for category in DROP_RATES
     }
-
     _rand = Random()
+
+    #DeepSearch
+    image_list = Load_Data().from_folder(["/metadata-files"])
+    st = Search_Setup(image_list=image_list)
+    st.run_index()
 
     @classmethod
     def add_available_card(cls, card: Card) -> None:
