@@ -345,5 +345,45 @@ class Card(commands.Cog):
 
         view = TradeView(ctx.author, member, card, candies)
         view.message = await ctx.reply(content=f"{member.mention}, {ctx.author.mention} want to trade with you.", file=discord.File(card.image_bytes, filename=f"image.{card.format}"), embed=embed, view=view)
+
+    @commands.command(aliases=["u"])
+    async def upgrade(self, ctx: commands.Context, upgrade_card_id: str, *, card_ids: str) -> None:
+        """Use cards of the same type to upgrade your card star."""
+        upgrade_card = iufi.CardPool.get_card(upgrade_card_id)
+        if not upgrade_card:
+            return await ctx.reply("The card was not found. Please try again.")
+        
+        if upgrade_card.owner_id != ctx.author.id:
+            return await ctx.reply("You are not the owner of this card.")
+        
+        if upgrade_card.stars >= 10:
+            return await ctx.reply("Your card has reached the maximum number of stars")
+        
+        converted_cards: list[iufi.Card] = []
+        for card_id in card_ids.split(" "):
+            card = iufi.CardPool.get_card(card_id)
+            if card and card.owner_id == ctx.author.id and card.tier[1] == upgrade_card.tier[1]:
+                converted_cards.append(card)
+
+        converted_cards = converted_cards[:(10 - upgrade_card.stars)]
+        if not converted_cards:
+            return await ctx.reply("There are no card can applied into your card.")
+        
+        for card in converted_cards:
+            card.change_owner()
+            iufi.CardPool.add_available_card(card)
+        
+        await func.update_user(ctx.author.id, {
+            "$pull": {"cards": {"$in": (card_ids := [card.id for card in converted_cards])}},
+        })
+        await func.update_card(card_ids, {"$set": {"owner_id": None, "tag": None, "frame": None}})
+        upgraded_stars = upgrade_card.stars + len(converted_cards)
+
+        embed = discord.Embed(title="🆙 Upgraded", color=discord.Color.random())
+        embed.description = f"```🆔 {upgrade_card} <- {', '.join([f'{card}' for card in converted_cards])}\n⭐ {upgraded_stars} <- {upgrade_card.stars}```"
+        await ctx.reply(embed=embed)
+        
+        upgrade_card.change_stars(upgraded_stars)
+
 async def setup(bot: commands.Bot) -> None:
     await bot.add_cog(Card(bot))
