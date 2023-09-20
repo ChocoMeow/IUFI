@@ -141,6 +141,12 @@ class Card:
             if self.image:
                 self._load_image()
 
+    def change_stars(self, stars: int) -> None:
+        if self.stars != stars:
+            self.stars = stars
+
+            asyncio.create_task(func.update_card(self.id, {"$set": {"stars": stars}}))
+
     @property
     def cost(self) -> int:
         return TIERS_BASE.get(self._tier)[1]
@@ -196,3 +202,6 @@ class Card:
     @property
     def display_frame(self) -> str:
         return f"🖼️ {FRAMES_BASE.get(self._frame) if self._frame else '- '}"
+
+    def __str__(self) -> str:
+        return f"{self._emoji} {self.id.zfill(5)}"

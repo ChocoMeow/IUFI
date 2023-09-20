@@ -95,7 +95,7 @@ class Card(commands.Cog):
         await func.update_card(card_ids, {"$set": {"owner_id": None, "tag": None, "frame": None}})
 
         embed = discord.Embed(title="✨ Convert", color=discord.Color.random())
-        embed.description = f"```🆔 {', '.join([f'{card.tier[0]} {card.id}' for card in converted_cards])} \n🍬 + {candies}```"
+        embed.description = f"```🆔 {', '.join([f'{card}' for card in converted_cards])} \n🍬 + {candies}```"
         await ctx.reply(embed=embed)
 
     @commands.command(aliases=["cl"])
@@ -110,7 +110,7 @@ class Card(commands.Cog):
             return
         
         embed = discord.Embed(color=discord.Color.random())
-        embed.description = f"```🆔 {card.tier[0]} {card.id} \n🍬 + {card.cost}```"
+        embed.description = f"```🆔 {card} \n🍬 + {card.cost}```"
         message: discord.Message = None
 
         if card.tier[1] not in ["common", "rare"]:
@@ -156,7 +156,7 @@ class Card(commands.Cog):
         candies = sum([card.cost for card in converted_cards])
                        
         embed = discord.Embed(title="✨ Confirm to convert?", color=discord.Color.random())
-        embed.description = f"```🆔 {', '.join([f'{card.tier[0]} {card.id}' for card in converted_cards])} \n🍬 + {candies}```"
+        embed.description = f"```🆔 {', '.join([f'{card}' for card in converted_cards])} \n🍬 + {candies}```"
 
         view = ConfirmView(ctx.author)
         view.message = await ctx.reply(embed=embed, view=view)
@@ -202,7 +202,7 @@ class Card(commands.Cog):
         candies = sum([card.cost for card in converted_cards])
                        
         embed = discord.Embed(title="✨ Confirm to convert?", color=discord.Color.random())
-        embed.description = f"```🆔 {', '.join([f'{card.tier[0]} {card.id}' for card in converted_cards])} \n🍬 + {candies}```"
+        embed.description = f"```🆔 {', '.join([f'{card}' for card in converted_cards])} \n🍬 + {candies}```"
 
         view = ConfirmView(ctx.author)
         view.message = await ctx.reply(embed=embed, view=view)
@@ -244,7 +244,7 @@ class Card(commands.Cog):
             iufi.CardPool.add_tag(card, tag)
         
         embed = discord.Embed(title="🏷️ Set Tag", color=discord.Color.random())
-        embed.description = f"```🆔 {card.tier[0]} {card.id}\n{card.display_tag}```"
+        embed.description = f"```🆔 {card}\n{card.display_tag}```"
         await ctx.reply(embed=embed)
 
     @commands.command(aliases=["stl"])
@@ -266,7 +266,7 @@ class Card(commands.Cog):
                 iufi.CardPool.add_tag(card, tag)
         
             embed = discord.Embed(title="🏷️ Set Tag", color=discord.Color.random())
-            embed.description = f"```🆔 {card.tier[0]} {card.id}\n{card.display_tag}```"
+            embed.description = f"```🆔 {card}\n{card.display_tag}```"
             await ctx.reply(embed=embed)
 
     @commands.command(aliases=["rt"])
@@ -282,7 +282,7 @@ class Card(commands.Cog):
         iufi.CardPool.remove_tag(card)
 
         embed = discord.Embed(title="🏷️ Set Tag", color=discord.Color.random())
-        embed.description = f"```🆔 {card.tier[0]} {card.id}\n{card.display_tag}```"
+        embed.description = f"```🆔 {card}\n{card.display_tag}```"
         await ctx.reply(embed=embed)
 
     @commands.command(aliases=["t"])
@@ -315,7 +315,7 @@ class Card(commands.Cog):
     
     @commands.command(aliases=["tl"])
     async def tradelast(self, ctx: commands.Context, member: discord.Member, candies: int):
-        """Trades your card with a member."""
+        """Trades your last card with a member."""
         if candies < 0:
             return await ctx.reply("The candy count cannot be set to a negative value.")
         
