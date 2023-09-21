@@ -149,7 +149,11 @@ class Card:
 
     @property
     def cost(self) -> int:
-        return TIERS_BASE.get(self._tier)[1]
+        price = TIERS_BASE.get(self._tier)[1]
+        if self.stars > 5:
+            price *= 1 + ((self.stars - 5) * .25)
+
+        return round(price)
     
     @property
     def tier(self) -> tuple[str, str]:
