@@ -241,17 +241,17 @@ class Profile(commands.Cog):
         embed.description = f"```🍬 Starcandies        x{user['candies']}\n" \
                             f"🌸 Rare rolls         x{user['roll']['rare']}\n" \
                             f"💎 Epic rolls         x{user['roll']['epic']}\n" \
-                            f"👑 Legend rolls       x{user['roll']['legendary']}\n" \
-                            f"🛠️ Upgrades           Coming Soon\n\n" \
-                            f"🖼️ Frames:\n"
+                            f"👑 Legend rolls       x{user['roll']['legendary']}\n\n" 
 
-        frames = ""
-        for frame, amount in user["frame"].items():
-            if amount != 0:
-                frames += f"{frame.title() + ' Frame':<21} x{amount}\n"
-        
-        embed.description += (frames if frames else "Frames not found!") + "```"
+        potions = "🍶 Potions:\n" + ("\n".join(
+            [f"{potion.title() + ' Potion':<21} x{amount}" for potion, amount in potions.items() if amount]
+        ) if (potions := user.get("potions")) else "Potion not found!\n\n")
 
+        frames = "🖼️ Frames:\n" + ("\n".join(
+            [f"{frame.title() + ' Frame':<21} x{amount}" for frame, amount in frames.items() if amount]
+        ) if (frames := user.get("frames")) else "Frame not found!\n\n")
+
+        embed.description += f"{potions}{frames}```"
         embed.set_thumbnail(url=ctx.author.avatar.url)
         await ctx.reply(embed=embed)
 
