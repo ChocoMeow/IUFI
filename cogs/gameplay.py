@@ -22,7 +22,7 @@ class Gameplay(commands.Cog):
         if len(user["cards"]) >= func.MAX_CARDS:
             return await ctx.reply(f"**{ctx.author.mention} your inventory is full.**", delete_after=5)
 
-        cards = iufi.CardPool.roll()
+        cards = iufi.CardPool.roll(is_lucky=func.is_luck_potion_active(user))
         image_bytes, is_gif = iufi.gen_cards_view(cards)
 
         view = RollView(ctx.author, cards)

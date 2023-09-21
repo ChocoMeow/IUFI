@@ -16,6 +16,15 @@ DROP_RATES = {
     "celestial": .0005
 }
 
+LUCKY_DROP_RATES = {
+    'common': .5,
+    'rare': .3,
+    'epic': .1,
+    'legendary': .06,
+    'mystic': .03,
+    "celestial": .01
+}
+
 class CardPool:
     _cards: dict[str, Card] = {}
     _tag_cards: dict[str, Card] = {}
@@ -94,9 +103,10 @@ class CardPool:
         return card
     
     @classmethod
-    def roll(cls, amount: int = 3, *, included: str = None) -> list[Card]:
+    def roll(cls, amount: int = 3, *, included: str = None, is_lucky: bool = False) -> list[Card]:
         categories = list(DROP_RATES.keys())
-        results = cls._rand.choices(categories, weights=DROP_RATES.values(), k=amount)
+        current_drop_rates = LUCKY_DROP_RATES if is_lucky else DROP_RATES
+        results = cls._rand.choices(categories, weights=current_drop_rates.values(), k=amount)
         if included:
             results[amount - 1] = included
 
