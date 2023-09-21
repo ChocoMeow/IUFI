@@ -26,3 +26,6 @@ class Potion(commands.Cog):
         
         await func.USERS_DB.update_one({"_id": ctx.author.id}, {"$inc": {"potions." + potion_id: -1}, "$set": {"cooldown." + potion_id: time.time() + func.COOLDOWN_BASE[potion_id]}})
 
+
+async def setup(bot: commands.Bot) -> None:
+    await bot.add_cog(Potion(bot))
