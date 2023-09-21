@@ -24,7 +24,8 @@ class Potion(commands.Cog):
 
         potion = iufi.POTIONS_BASE[potion_id]
         
-        await func.USERS_DB.update_one({"_id": ctx.author.id}, {"$inc": {"potions." + potion_id: -1}, "$set": {"cooldown." + potion_id: time.time() + func.COOLDOWN_BASE[potion_id]}})
+        await func.update_user(ctx.author.id, {"$inc": {"potions." + potion_id: -1}, "$set": {"cooldown." + potion_id: time.time() + func.COOLDOWN_BASE[potion_id]}})
+        await ctx.reply(f"You have used a {potion['name']} potion. It will expire in <t:{round(time.time() + func.COOLDOWN_BASE[potion_id])}:R>")
 
 
 async def setup(bot: commands.Bot) -> None:
