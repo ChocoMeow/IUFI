@@ -18,7 +18,7 @@ class Frames(commands.Cog):
         if frame not in iufi.FRAMES_BASE:
             return await ctx.reply(content=f"Frame `{frame}` does not exist!")
         
-        frame_card = user.get("frame", {}).get(frame, 0)
+        frame_card = user.get("frames", {}).get(frame, 0)
         if not frame_card:
             return await ctx.reply(content=f"You’ve used up all your `{frame}` frame for now.")
             
@@ -32,7 +32,7 @@ class Frames(commands.Cog):
         if card.stars < 5:
             return await ctx.reply("Only cards with 5 stars or above can apply for the frame")
         
-        await func.update_user(ctx.author.id, {"$inc": {f"frame.{frame}": -1}})
+        await func.update_user(ctx.author.id, {"$inc": {f"frames.{frame}": -1}})
         await func.update_card(card.id, {"$set": {"frame": frame}})
         card.change_frame(frame)
         embed = discord.Embed(title="🖼️  Set Frame", color=discord.Color.random())
@@ -49,7 +49,7 @@ class Frames(commands.Cog):
             return await ctx.reply(content=f"Frame `{frame}` does not exist!")
         
         user = await func.get_user(ctx.author.id)
-        frame_card = user.get("frame", {}).get(frame, 0)
+        frame_card = user.get("frames", {}).get(frame, 0)
         if not frame_card:
             return await ctx.reply(content=f"You’ve used up all your `{frame}` frame for now.")
             
@@ -67,7 +67,7 @@ class Frames(commands.Cog):
         if card.stars < 5:
             return await ctx.reply("Only cards with 5 stars or above can apply for the frame")
         
-        await func.update_user(ctx.author.id, {"$inc": {f"frame.{frame}": -1}})
+        await func.update_user(ctx.author.id, {"$inc": {f"frames.{frame}": -1}})
         await func.update_card(card.id, {"$set": {"frame": frame}})
         card.change_frame(frame)
         embed = discord.Embed(title="🖼️  Set Frame", color=discord.Color.random())

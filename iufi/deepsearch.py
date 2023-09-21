@@ -52,7 +52,24 @@ class Search_Setup:
 
     def _extract(self, img: Image.Image) -> float:
         # Resize and convert the image
-        img = img.resize((224, 224))
+        size = (224, 224)
+        img_ratio = img.width / img.height
+        ratio = size[0] / size[1]
+        
+        # The image is scaled/cropped vertically or horizontally depending on the ratio
+        if ratio > img_ratio:
+            # The image is scaled/cropped based on the width of the image
+            img = img.resize((size[0], round(size[0] * img.height / img.width)))
+            box = (0, (img.height - size[1]) / 2, img.width, (img.height + size[1]) / 2)
+            img = img.crop(box)
+        elif ratio < img_ratio:
+            # The image is scaled/cropped based on the height of the image
+            img = img.resize((round(size[1] * img.width / img.height), size[1]))
+            box = ((img.width - size[0]) / 2, 0, (img.width + size[0]) / 2, img.height)
+            img = img.crop(box)
+        else :
+            # If the image ratio is equal to the desired ratio it is resized without cropping
+            img = img.resize((size[0], size[1]))
         img = img.convert('RGB')
 
         # Preprocess the image

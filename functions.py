@@ -37,16 +37,8 @@ USER_BASE: dict[str, Any] = {
     "claimed": 0,
     "cards": [],
     "collections": {},
-    "frame": {
-        "hearts": 0,
-        "celebrity": 0,
-        "uaena": 0,
-        "dandelions": 0,
-        "shine": 0,
-        "cheer": 0,
-        "smoon": 0,
-        "signed": 0,
-    },
+    "potions": {},
+    "frames": {},
     "roll": {
         "rare": 0,
         "epic": 0,
@@ -108,31 +100,28 @@ async def update_user(user_id: int, data: dict) -> None:
 
             nested_user = user
             for c in cursors[:-1]:
-                nested_user = nested_user[c]
+                nested_user = nested_user.setdefault(c, {})
 
             if mode == "$set":
                 try:
                     nested_user[cursors[-1]] = value
                 except TypeError:
                     nested_user[int(cursors[-1])] = value
+
             elif mode == "$unset":
-                del nested_user[cursors[-1]]
+                nested_user.pop(cursors[-1], None)
+
             elif mode == "$inc":
-                nested_user[cursors[-1]] += value
+                nested_user[cursors[-1]] = nested_user.get(cursors[-1], 0) + value
+
             elif mode == "$push":
-                if isinstance(value, dict):
-                    for items in value.values():
-                        for item in items:
-                            nested_user[cursors[-1]].append(item)
-                else:
-                    nested_user[cursors[-1]].append(value)
+                nested_user.setdefault(cursors[-1], []).extend(value.get("$in", []) if isinstance(value, dict) else [value])
+
             elif mode == "$pull":
-                if isinstance(value, dict):
-                    for items in value.values():
-                        for item in items:
-                            nested_user[cursors[-1]].remove(item)
-                else:
-                    nested_user[cursors[-1]].remove(value)
+                if cursors[-1] in nested_user:
+                    value = value.get("$in", []) if isinstance(value, dict) else [value]
+                    nested_user[cursors[-1]] = [item for item in nested_user[cursors[-1]] if item not in value]
+
             else:
                 raise ValueError(f"Invalid mode: {mode}")
                 
