@@ -33,6 +33,11 @@ FRAMES_BASE: dict[str, str] = {
     "signed": "✍️",
 }
 
+POTIONS_BASE: dict[str, str] = {
+    "speed": "🏃",
+    "luck": "🌠",
+}
+
 class Card:
     def __init__(
         self,

@@ -30,7 +30,8 @@ class Gameplay(commands.Cog):
             file=discord.File(image_bytes, filename=f'image.{"gif" if is_gif else "png"}'),
             view=view
         )
-        await func.update_user(ctx.author.id, {"$set": {"cooldown.roll": time.time() + func.COOLDOWN_BASE["roll"]}})
+        next_roll_cooldown = time.time() + func.COOLDOWN_BASE["roll"]
+        await func.update_user(ctx.author.id, {"$set": {"cooldown.roll": next_roll_cooldown}})
         await view.timeout_count()
 
     @commands.command(aliases=["rr"])

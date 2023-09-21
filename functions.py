@@ -54,11 +54,15 @@ USER_BASE: dict[str, Any] = {
     "cooldown": {
         "roll": 0,
         "claim": 0,
-        "daily": 0
+        "daily": 0,
     },
     "profile": {
         "bio": "",
         "main": ""
+    },
+    "potions": {
+        "speed": 0,
+        "luck": 0
     }
 }
 
@@ -67,6 +71,8 @@ COOLDOWN_BASE: dict[str, int] = {
     "claim": 120,
     "daily": 82800
 }
+
+SPEED_POTION_ROLL_COOLDOWN: int = 60
 
 def cal_retry_time(end_time: float, default: str=None) -> str | None:
     if end_time <= (current_time := time.time()):
