@@ -151,8 +151,12 @@ async def update_card(card_id: list[str] | str, data: dict, insert: bool = False
 
 
 def is_speed_potion_active(user: dict[str, Any]) -> bool:
+    if "speed" not in user["cooldown"]:
+        return False
     return user["cooldown"]["speed"] > time.time()
 
 
 def is_luck_potion_active(user: dict[str, Any]) -> bool:
+    if "luck" not in user["cooldown"]:
+        return False
     return user["cooldown"]["luck"] > time.time()
