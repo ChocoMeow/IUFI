@@ -245,7 +245,7 @@ class Profile(commands.Cog):
 
         potions = "🍶 Potions:\n" + ("\n".join(
             [f"{potion.title() + ' Potion':<21} x{amount}" for potion, amount in potions.items() if amount]
-        ) if (potions := user.get("potions")) else "Potion not found!\n") + "\n"
+        ) if (potions := user.get("potions")) else "Potion not found!") + "\n\n"
 
         frames = "🖼️ Frames:\n" + ("\n".join(
             [f"{frame.title() + ' Frame':<21} x{amount}" for frame, amount in frames.items() if amount]
