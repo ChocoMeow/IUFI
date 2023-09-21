@@ -16,8 +16,8 @@ SHOP_BASE: list[tuple[str, str, int]] = [
     (FRAMES_BASE.get("cheer"), "frame.cheer", 70),
     (FRAMES_BASE.get("smoon"), "frame.smoon", 80),
     (FRAMES_BASE.get("signed"), "frame.signed", 90),
-    {POTIONS_BASE.get("speed"), "potion.speed", 10},
-    {POTIONS_BASE.get("luck"), "potion.luck", 10},
+    {POTIONS_BASE.get("speed"), "potions.speed", 0},
+    {POTIONS_BASE.get("luck"), "potions.luck", 0},
 ]
 
 class QuantityModal(discord.ui.Modal):
