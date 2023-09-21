@@ -113,7 +113,10 @@ class Gameplay(commands.Cog):
         embed = discord.Embed(title=f"⏰ {ctx.author.display_name}'s Cooldowns", color=0x59b0c0)
         embed.description = f"```🎲 Roll : {func.cal_retry_time(user['cooldown']['roll'], 'Ready')}\n" \
                             f"🎮 Claim: {func.cal_retry_time(user['cooldown']['claim'], 'Ready')}\n" \
-                            f"📅 Daily: {func.cal_retry_time(user['cooldown']['daily'], 'Ready')}```"
+                            f"📅 Daily: {func.cal_retry_time(user['cooldown']['daily'], 'Ready')}\n" \
+                            f"\nTime Left:\n" \
+                            f"🏃 Speed: {func.cal_retry_time(user['cooldown']['speed'], 'Not Active')}\n" \
+                            f"🌠 Luck : {func.cal_retry_time(user['cooldown']['luck'], 'Not Active')}```"
 
         embed.set_thumbnail(url=ctx.author.avatar.url)
         await ctx.reply(embed=embed)
