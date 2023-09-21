@@ -89,9 +89,7 @@ class Developer(commands.Cog):
                         desc += f"{card.display_id} {card.display_tag} {card.display_frame} {card.display_stars} {card.tier[0]}\n"
                     desc += "```"
 
-                    image_bytes, is_gif = iufi.gen_cards_view(cards, 4)
-                    image_format = "gif" if is_gif else "png"
-
+                    image_bytes, image_format = iufi.gen_cards_view(cards, 4)
                 else:
                     desc = f"```{card.display_id}\n" \
                         f"{card.display_tag}\n" \

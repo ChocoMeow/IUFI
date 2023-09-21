@@ -22,6 +22,8 @@ class RollButton(discord.ui.Button):
             else:
                 return await interaction.response.send_message("This card has claimed by you already!")
         
+        self.card.change_owner(interaction.user.id)
+        CardPool.remove_available_card(self.card)
         await func.update_user(interaction.user.id, {
             "$push": {"cards": self.card.id},
             "$set": {"cooldown.claim": time.time() + func.COOLDOWN_BASE["claim"]},
@@ -29,12 +31,10 @@ class RollButton(discord.ui.Button):
         })
         await func.update_card(self.card.id, {"$set": {"owner_id": interaction.user.id}})
 
-        self.card.change_owner(interaction.user.id)
-        CardPool.remove_available_card(self.card)
-        
         self.view.claimed_users.add(interaction.user)
         if self.view.author == interaction.user:
             self.view.author_claimed()
+            
         self.disabled = True
         self.style = discord.ButtonStyle.gray
 

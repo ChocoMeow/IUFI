@@ -23,12 +23,12 @@ class Gameplay(commands.Cog):
             return await ctx.reply(f"**{ctx.author.mention} your inventory is full.**", delete_after=5)
         
         cards = iufi.CardPool.roll()
-        image_bytes, is_gif = iufi.gen_cards_view(cards)
+        image_bytes, image_format = iufi.gen_cards_view(cards)
 
         view = RollView(ctx.author, cards)
         view.message = await ctx.send(
             content=f"**{ctx.author.mention} This is your roll!** (Ends: <t:{round(time.time()) + 71}:R>)",
-            file=discord.File(image_bytes, filename=f'image.{"gif" if is_gif else "png"}'),
+            file=discord.File(image_bytes, filename=f'image.{image_format}'),
             view=view
         )
         await func.update_user(ctx.author.id, {"$set": {"cooldown.roll": time.time() + func.COOLDOWN_BASE["roll"]}})
@@ -46,12 +46,12 @@ class Gameplay(commands.Cog):
             return await ctx.reply(f"**{ctx.author.mention} your inventory is full.**", delete_after=5)
         
         cards = iufi.CardPool.roll(included="rare")
-        image_bytes, is_gif = iufi.gen_cards_view(cards)
+        image_bytes, image_format = iufi.gen_cards_view(cards)
 
         view = RollView(ctx.author, cards)
         view.message = await ctx.send(
             content=f"**{ctx.author.mention} This is your roll!** (Ends: <t:{round(time.time()) + 71}:R>)",
-            file=discord.File(image_bytes, filename=f'image.{"gif" if is_gif else "png"}'),
+            file=discord.File(image_bytes, filename=f'image.{image_format}'),
             view=view
         )
 
@@ -70,12 +70,12 @@ class Gameplay(commands.Cog):
             return await ctx.reply(f"**{ctx.author.mention} your inventory is full.**", delete_after=5)
         
         cards = iufi.CardPool.roll(included="epic")
-        image_bytes, is_gif = iufi.gen_cards_view(cards)
+        image_bytes, image_format = iufi.gen_cards_view(cards)
 
         view = RollView(ctx.author, cards)
         view.message = await ctx.send(
             content=f"**{ctx.author.mention} This is your roll!** (Ends: <t:{round(time.time()) + 71}:R>)",
-            file=discord.File(image_bytes, filename=f'image.{"gif" if is_gif else "png"}'),
+            file=discord.File(image_bytes, filename=f'image.{image_format}'),
             view=view
         )
         await func.update_user(ctx.author.id, {"$inc": {"roll.epic": -1}})
@@ -93,12 +93,12 @@ class Gameplay(commands.Cog):
             return await ctx.reply(f"**{ctx.author.mention} your inventory is full.**", delete_after=5)
 
         cards = iufi.CardPool.roll(included="legendary")
-        image_bytes, is_gif = iufi.gen_cards_view(cards)
+        image_bytes, image_format = iufi.gen_cards_view(cards)
 
         view = RollView(ctx.author, cards)
         view.message = await ctx.send(
             content=f"**{ctx.author.mention} This is your roll!** (Ends: <t:{round(time.time()) + 71}:R>)",
-            file=discord.File(image_bytes, filename=f'image.{"gif" if is_gif else "png"}'),
+            file=discord.File(image_bytes, filename=f'image.{image_format}'),
             view=view
         )
         await func.update_user(ctx.author.id, {"$inc": {"roll.legendary": -1}})
