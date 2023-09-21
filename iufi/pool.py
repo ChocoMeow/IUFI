@@ -35,6 +35,7 @@ class CardPool:
 
     @classmethod
     def add_available_card(cls, card: Card) -> None:
+        card.change_owner()
         cls._available_cards[card.tier[1]].append(card)
 
     @classmethod

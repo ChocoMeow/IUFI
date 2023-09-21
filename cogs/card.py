@@ -84,7 +84,6 @@ class Card(commands.Cog):
         for card_id in card_ids:
             card = iufi.CardPool.get_card(card_id)
             if card and card.owner_id == ctx.author.id:
-                card.change_owner()
                 iufi.CardPool.add_available_card(card)
                 converted_cards.append(card)
         
@@ -126,7 +125,6 @@ class Card(commands.Cog):
         if card.owner_id != ctx.author.id:
             return await ctx.reply(content="Your cards cannot be converted because there has been a change in your inventory.")
         
-        card.change_owner()
         iufi.CardPool.add_available_card(card)
 
         await func.update_user(ctx.author.id, {
@@ -167,7 +165,6 @@ class Card(commands.Cog):
                 return await ctx.reply(content="Your cards cannot be converted because there has been a change in your inventory.", ephemeral=True)
             
             for card in converted_cards:
-                card.change_owner()
                 iufi.CardPool.add_available_card(card)
 
             await func.update_user(ctx.author.id, {
@@ -213,7 +210,6 @@ class Card(commands.Cog):
                 return await ctx.reply(content="Your cards cannot be converted because there has been a change in your inventory.", ephemeral=True)
             
             for card in converted_cards:
-                card.change_owner()
                 iufi.CardPool.add_available_card(card)
 
             await func.update_user(ctx.author.id, {
@@ -370,7 +366,6 @@ class Card(commands.Cog):
             return await ctx.reply("There are no card can applied into your card.")
         
         for card in converted_cards:
-            card.change_owner()
             iufi.CardPool.add_available_card(card)
         
         await func.update_user(ctx.author.id, {

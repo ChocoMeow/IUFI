@@ -34,6 +34,18 @@ FRAMES_BASE: dict[str, str] = {
 }
 
 class Card:
+    __slots__ = (
+        "id",
+        "_tier",
+        "_pool",
+        "owner_id",
+        "stars",
+        "tag",
+        "_frame",
+        "_image",
+        "_emoji"
+    )
+
     def __init__(
         self,
         pool: CardPool,
@@ -118,16 +130,19 @@ class Card:
             loop = asyncio.get_event_loop()
             loop.run_in_executor(executor, blocking_io, loop)
 
-    def change_owner(self, owner_id: int | None = None, *, remove_tag: bool = True, remove_frame: bool = True) -> None:
+    def change_owner(self, owner_id: int | None = None) -> None:
         if self.owner_id != owner_id:
             self.owner_id = owner_id
-            if remove_tag:
+
+            if owner_id is None:
+                if self.stars > 5:
+                    self.change_stars(random.randint(1, 5))
+
                 if self.tag and self.tag.lower() in self._pool._tag_cards:
                     self._pool._tag_cards.pop(self.tag.lower())
                 self.tag = None
-            if remove_frame:
-                self._frame = None
-                self._image = None
+
+                self._frame, self._image = None, None
 
     def change_tag(self, tag: str | None = None) -> None:
         if self.tag != tag:
