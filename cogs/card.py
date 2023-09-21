@@ -11,7 +11,8 @@ class Card(commands.Cog):
     def __init__(self, bot: commands.Bot) -> None:
         self.bot = bot
         self.emoji = "🎴"
-        
+        self.invisible = False
+
     @commands.command(aliases=["i"])
     async def cardinfo(self, ctx: commands.Context, *, card_ids: str):
         """Shows the details of a photocard. Card can be identified by its ID or given tag."""
@@ -30,18 +31,18 @@ class Card(commands.Cog):
             desc = "```"
             for card in cards:
                 member = ctx.guild.get_member(card.owner_id)
-                desc += f"🆔{card.id.zfill(5)} 🏷️{card.tag if card.tag else '-':<11} 🖼️{card.frame[0] if card.frame[1] else '- '} ⭐{card.stars} {card.tier[0]} 👤{member.display_name if member else 'None':5}\n"
+                desc += f"{card.display_id} {card.display_tag} {card.display_frame} {card.display_stars} {card.tier[0]} 👤{member.display_name if member else 'None':5}\n"
             desc += "```"
 
             image_bytes, is_gif = iufi.gen_cards_view(cards, 4)
             image_format = "gif" if is_gif else "png"
 
         else:
-            desc = f"```🆔 {card.id.zfill(5)}\n" \
-                   f"🏷️ {card.tag}\n" \
-                   f"🖼️ {card.frame[0]}\n" \
+            desc = f"```{card.display_id}\n" \
+                   f"{card.display_tag}\n" \
+                   f"{card.display_frame}\n" \
                    f"{card.tier[0]} {card.tier[1].capitalize()}\n" \
-                   f"⭐ {card.stars}```\n" \
+                   f"{card.display_stars}```\n" \
                    "**Owned by: **" + (f"<@{card.owner_id}>" if card.owner_id else "None")
 
             image_bytes, image_format = card.image_bytes, card.format
@@ -51,7 +52,7 @@ class Card(commands.Cog):
         await ctx.reply(file=discord.File(image_bytes, filename=f"image.{image_format}"), embed=embed)
 
     @commands.command(aliases=["il"])
-    async def info_last(self, ctx: commands.Context):
+    async def infolast(self, ctx: commands.Context):
         """Shows the details of your last photocard."""
         user = await func.get_user(ctx.author.id)
 
@@ -64,11 +65,11 @@ class Card(commands.Cog):
             return await ctx.reply("Card not found! Please try again.")
         
         embed = discord.Embed(title=f"ℹ️ Card Info", color=0x949fb8)
-        embed.description = f"```🆔 {card.id.zfill(5)}\n" \
-                            f"🏷️ {card.tag}\n" \
-                            f"🖼️ {card.frame[0]}\n" \
+        embed.description = f"```{card.display_id}\n" \
+                            f"{card.display_tag}\n" \
+                            f"{card.display_frame}\n" \
                             f"{card.tier[0]} {card.tier[1].capitalize()}\n" \
-                            f"⭐ {card.stars}```\n" \
+                            f"{card.display_stars}```\n" \
                             "**Owned by: **" + (f"<@{card.owner_id}>" if card.owner_id else "None")
         
         embed.set_image(url=f"attachment://image.{card.format}")
@@ -83,7 +84,6 @@ class Card(commands.Cog):
         for card_id in card_ids:
             card = iufi.CardPool.get_card(card_id)
             if card and card.owner_id == ctx.author.id:
-                card.change_owner()
                 iufi.CardPool.add_available_card(card)
                 converted_cards.append(card)
         
@@ -94,7 +94,7 @@ class Card(commands.Cog):
         await func.update_card(card_ids, {"$set": {"owner_id": None, "tag": None, "frame": None}})
 
         embed = discord.Embed(title="✨ Convert", color=discord.Color.random())
-        embed.description = f"```🆔 {', '.join([f'{card.tier[0]} {card.id}' for card in converted_cards])} \n🍬 + {candies}```"
+        embed.description = f"```🆔 {', '.join([f'{card}' for card in converted_cards])} \n🍬 + {candies}```"
         await ctx.reply(embed=embed)
 
     @commands.command(aliases=["cl"])
@@ -109,7 +109,7 @@ class Card(commands.Cog):
             return
         
         embed = discord.Embed(color=discord.Color.random())
-        embed.description = f"```🆔 {card.tier[0]} {card.id} \n🍬 + {card.cost}```"
+        embed.description = f"```🆔 {card} \n🍬 + {card.cost}```"
         message: discord.Message = None
 
         if card.tier[1] not in ["common", "rare"]:
@@ -125,7 +125,6 @@ class Card(commands.Cog):
         if card.owner_id != ctx.author.id:
             return await ctx.reply(content="Your cards cannot be converted because there has been a change in your inventory.")
         
-        card.change_owner()
         iufi.CardPool.add_available_card(card)
 
         await func.update_user(ctx.author.id, {
@@ -155,7 +154,7 @@ class Card(commands.Cog):
         candies = sum([card.cost for card in converted_cards])
                        
         embed = discord.Embed(title="✨ Confirm to convert?", color=discord.Color.random())
-        embed.description = f"```🆔 {', '.join([f'{card.tier[0]} {card.id}' for card in converted_cards])} \n🍬 + {candies}```"
+        embed.description = f"```🆔 {', '.join([f'{card}' for card in converted_cards])} \n🍬 + {candies}```"
 
         view = ConfirmView(ctx.author)
         view.message = await ctx.reply(embed=embed, view=view)
@@ -166,7 +165,6 @@ class Card(commands.Cog):
                 return await ctx.reply(content="Your cards cannot be converted because there has been a change in your inventory.", ephemeral=True)
             
             for card in converted_cards:
-                card.change_owner()
                 iufi.CardPool.add_available_card(card)
 
             await func.update_user(ctx.author.id, {
@@ -201,7 +199,7 @@ class Card(commands.Cog):
         candies = sum([card.cost for card in converted_cards])
                        
         embed = discord.Embed(title="✨ Confirm to convert?", color=discord.Color.random())
-        embed.description = f"```🆔 {', '.join([f'{card.tier[0]} {card.id}' for card in converted_cards])} \n🍬 + {candies}```"
+        embed.description = f"```🆔 {', '.join([f'{card}' for card in converted_cards])} \n🍬 + {candies}```"
 
         view = ConfirmView(ctx.author)
         view.message = await ctx.reply(embed=embed, view=view)
@@ -212,7 +210,6 @@ class Card(commands.Cog):
                 return await ctx.reply(content="Your cards cannot be converted because there has been a change in your inventory.", ephemeral=True)
             
             for card in converted_cards:
-                card.change_owner()
                 iufi.CardPool.add_available_card(card)
 
             await func.update_user(ctx.author.id, {
@@ -243,7 +240,7 @@ class Card(commands.Cog):
             iufi.CardPool.add_tag(card, tag)
         
         embed = discord.Embed(title="🏷️ Set Tag", color=discord.Color.random())
-        embed.description = f"```🆔 {card.tier[0]} {card.id}\n🏷️ {tag}```"
+        embed.description = f"```🆔 {card}\n{card.display_tag}```"
         await ctx.reply(embed=embed)
 
     @commands.command(aliases=["stl"])
@@ -265,7 +262,7 @@ class Card(commands.Cog):
                 iufi.CardPool.add_tag(card, tag)
         
             embed = discord.Embed(title="🏷️ Set Tag", color=discord.Color.random())
-            embed.description = f"```🆔 {card.tier[0]} {card.id}\n🏷️ {tag}```"
+            embed.description = f"```🆔 {card}\n{card.display_tag}```"
             await ctx.reply(embed=embed)
 
     @commands.command(aliases=["rt"])
@@ -281,7 +278,7 @@ class Card(commands.Cog):
         iufi.CardPool.remove_tag(card)
 
         embed = discord.Embed(title="🏷️ Set Tag", color=discord.Color.random())
-        embed.description = f"```🆔 {card.id}\n🏷️ {card.tag}```"
+        embed.description = f"```🆔 {card}\n{card.display_tag}```"
         await ctx.reply(embed=embed)
 
     @commands.command(aliases=["t"])
@@ -301,16 +298,87 @@ class Card(commands.Cog):
         embed.description = f"```Seller: {ctx.author.display_name}\n" \
                             f"Buyer: {member.display_name}\n" \
                             f"Candies: 🍬 {candies}\n\n" \
-                            f"🆔 {card.id.zfill(5)}\n" \
-                            f"🏷️ {card.tag}\n" \
-                            f"🖼️ {card.frame[0]}\n" \
-                            f"{card.tier[0]} {card.tier[1].title()}\n" \
-                            f"⭐ {card.stars}```\n" \
+                            f"{card.display_id}\n" \
+                            f"{card.display_tag}\n" \
+                            f"{card.display_frame}\n" \
+                            f"{card.tier[0]} {card.tier[1].capitalize()}\n" \
+                            f"{card.display_stars}```\n" \
         
         embed.set_image(url="attachment://image.png")
 
         view = TradeView(ctx.author, member, card, candies)
         view.message = await ctx.reply(content=f"{member.mention}, {ctx.author.mention} want to trade with you.", file=discord.File(card.image_bytes, filename=f"image.{card.format}"), embed=embed, view=view)
+    
+    @commands.command(aliases=["tl"])
+    async def tradelast(self, ctx: commands.Context, member: discord.Member, candies: int):
+        """Trades your last card with a member."""
+        if candies < 0:
+            return await ctx.reply("The candy count cannot be set to a negative value.")
+        
+        user = await func.get_user(ctx.author.id)
+        if not user["cards"]:
+            return await ctx.reply(f"**{ctx.author.mention} you have no photocards.**", delete_after=5)
+        
+        card_id = user["cards"][-1]
+        card = iufi.CardPool.get_card(card_id)
+        if not card:
+            return await ctx.reply("The card was not found. Please try again.")
+
+        if card.owner_id != ctx.author.id:
+            return await ctx.reply("You are not the owner of this card.")
+        
+        embed = discord.Embed(title="⤵️ Trade", color=discord.Color.random())
+        embed.description = f"```Seller: {ctx.author.display_name}\n" \
+                            f"Buyer: {member.display_name}\n" \
+                            f"Candies: 🍬 {candies}\n\n" \
+                            f"{card.display_id}\n" \
+                            f"{card.display_tag}\n" \
+                            f"{card.display_frame}\n" \
+                            f"{card.tier[0]} {card.tier[1].capitalize()}\n" \
+                            f"{card.display_stars}```\n" \
+        
+        embed.set_image(url="attachment://image.png")
+
+        view = TradeView(ctx.author, member, card, candies)
+        view.message = await ctx.reply(content=f"{member.mention}, {ctx.author.mention} want to trade with you.", file=discord.File(card.image_bytes, filename=f"image.{card.format}"), embed=embed, view=view)
+
+    @commands.command(aliases=["u"])
+    async def upgrade(self, ctx: commands.Context, upgrade_card_id: str, *, card_ids: str) -> None:
+        """Use cards of the same type to upgrade your card star."""
+        upgrade_card = iufi.CardPool.get_card(upgrade_card_id)
+        if not upgrade_card:
+            return await ctx.reply("The card was not found. Please try again.")
+        
+        if upgrade_card.owner_id != ctx.author.id:
+            return await ctx.reply("You are not the owner of this card.")
+        
+        if upgrade_card.stars >= 10:
+            return await ctx.reply("Your card has reached the maximum number of stars")
+        
+        converted_cards: list[iufi.Card] = []
+        for card_id in card_ids.split(" "):
+            card = iufi.CardPool.get_card(card_id)
+            if card and card.owner_id == ctx.author.id and card.tier[1] == upgrade_card.tier[1]:
+                converted_cards.append(card)
+
+        converted_cards = converted_cards[:(10 - upgrade_card.stars)]
+        if not converted_cards:
+            return await ctx.reply("There are no card can applied into your card.")
+        
+        for card in converted_cards:
+            iufi.CardPool.add_available_card(card)
+        
+        await func.update_user(ctx.author.id, {
+            "$pull": {"cards": {"$in": (card_ids := [card.id for card in converted_cards])}},
+        })
+        await func.update_card(card_ids, {"$set": {"owner_id": None, "tag": None, "frame": None}})
+        upgraded_stars = upgrade_card.stars + len(converted_cards)
+
+        embed = discord.Embed(title="🆙 Upgraded", color=discord.Color.random())
+        embed.description = f"```🆔 {upgrade_card} <- {', '.join([f'{card}' for card in converted_cards])}\n⭐ {upgraded_stars} <- {upgrade_card.stars}```"
+        await ctx.reply(embed=embed)
+        
+        upgrade_card.change_stars(upgraded_stars)
 
 async def setup(bot: commands.Bot) -> None:
     await bot.add_cog(Card(bot))

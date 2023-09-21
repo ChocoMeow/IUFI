@@ -53,18 +53,14 @@ class CogsDropdown(discord.ui.Select):
         await interaction.response.send_message(f"Reloaded `{selected}` sucessfully!", ephemeral=True)
 
 class ExceutePanel(discord.ui.View):
-    def __init__(self, bot: commands.Bot, author: discord.Member, *, timeout = 180):
+    def __init__(self, bot: commands.Bot, *, timeout = 180):
         self.bot: commands.Bot = bot
-        self.author: discord.Member = author
 
         self.message: discord.WebhookMessage = None
         self.code: str = None
         self._error: Exception = None
 
         super().__init__(timeout=timeout)
-
-    def interaction_check(self, interaction: discord.Interaction) -> None:
-        return interaction.user == self.author
     
     def toggle_button(self, name: str, status: bool):
         child: discord.ui.Button
@@ -147,11 +143,15 @@ class CogsView(discord.ui.View):
         self.add_item(CogsDropdown(bot))
 
 class DebugView(discord.ui.View):
-    def __init__(self, bot, *, timeout: float | None = 180):
+    def __init__(self, bot: commands.Bot, author: discord.Member, *, timeout: float | None = 180):
         self.bot: commands.Bot = bot
+        self.author: discord.Member = author
         self.panel: ExceutePanel = ExceutePanel(bot)
 
         super().__init__(timeout=timeout)
+
+    async def interaction_check(self, interaction: discord.Interaction) -> None:
+        return interaction.user == self.author
 
     @discord.ui.button(label='Command', emoji="▶️", style=discord.ButtonStyle.green)
     async def run_command(self, interaction: discord.Interaction, button: discord.ui.Button):

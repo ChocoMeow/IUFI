@@ -18,7 +18,7 @@ TIERS_BASE: dict[str, tuple[str, int]] = {
     "epic": ("💎", 40),
     "legendary": ("👑", 100),
     "mystic": ("🦄", 500),
-    "celestial": ("💫", 1500)
+    "celestial": ("💫", 1000)
 }
 
 FRAMES_BASE: dict[str, str] = {
@@ -39,6 +39,18 @@ POTIONS_BASE: dict[str, str] = {
 }
 
 class Card:
+    __slots__ = (
+        "id",
+        "_tier",
+        "_pool",
+        "owner_id",
+        "stars",
+        "tag",
+        "_frame",
+        "_image",
+        "_emoji"
+    )
+
     def __init__(
         self,
         pool: CardPool,
@@ -123,16 +135,19 @@ class Card:
             loop = asyncio.get_event_loop()
             loop.run_in_executor(executor, blocking_io, loop)
 
-    def change_owner(self, owner_id: int | None = None, *, remove_tag: bool = True, remove_frame: bool = True) -> None:
+    def change_owner(self, owner_id: int | None = None) -> None:
         if self.owner_id != owner_id:
             self.owner_id = owner_id
-            if remove_tag:
+
+            if owner_id is None:
+                if self.stars > 5:
+                    self.change_stars(random.randint(1, 5))
+
                 if self.tag and self.tag.lower() in self._pool._tag_cards:
                     self._pool._tag_cards.pop(self.tag.lower())
                 self.tag = None
-            if remove_frame:
-                self._frame = None
-                self._image = None
+
+                self._frame, self._image = None, None
 
     def change_tag(self, tag: str | None = None) -> None:
         if self.tag != tag:
@@ -146,9 +161,19 @@ class Card:
             if self.image:
                 self._load_image()
 
+    def change_stars(self, stars: int) -> None:
+        if self.stars != stars:
+            self.stars = stars
+
+            asyncio.create_task(func.update_card(self.id, {"$set": {"stars": stars}}))
+
     @property
     def cost(self) -> int:
-        return TIERS_BASE.get(self._tier)[1]
+        price = TIERS_BASE.get(self._tier)[1]
+        if self.stars > 5:
+            price *= 1 + ((self.stars - 5) * .25)
+
+        return round(price)
     
     @property
     def tier(self) -> tuple[str, str]:
@@ -158,6 +183,7 @@ class Card:
     @property
     def frame(self) -> tuple[str, str]:
         return FRAMES_BASE.get(self._frame), self._frame
+    
     @property
     def image(self) -> list[Image.Image] | Image.Image:
         """Return the image"""
@@ -184,3 +210,22 @@ class Card:
     @property
     def format(self) -> str:
         return "gif" if self.is_gif else "png"
+    
+    @property
+    def display_id(self) -> str:
+        return f"🆔 {self.id.zfill(5)}"
+    
+    @property
+    def display_stars(self) -> str:
+        return ("⭐ " if self.stars < 5 else "🌟 ") + str(self.stars)
+
+    @property
+    def display_tag(self) -> str:
+        return f"🏷️ {self.tag if self.tag else '-':<11}"
+
+    @property
+    def display_frame(self) -> str:
+        return f"🖼️ {FRAMES_BASE.get(self._frame) if self._frame else '- '}"
+
+    def __str__(self) -> str:
+        return f"{self._emoji} {self.id.zfill(5)}"

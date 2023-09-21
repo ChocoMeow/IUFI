@@ -51,7 +51,7 @@ class TradeView(discord.ui.View):
         await func.update_card(self.card.id, {"$set": {"owner_id": self.buyer.id}})
 
         embed = discord.Embed(title="✅ Traded", color=discord.Color.random())
-        embed.description = f"```🆔 {self.card.id}\n🍬 - {self.candies}```"
+        embed.description = f"```{self.card.display_id}\n🍬 - {self.candies}```"
 
         await self.on_timeout()
         await interaction.followup.send(content=f"{self.seller.mention}, {self.buyer.mention} has made a trade with you for the card!", embed=embed)

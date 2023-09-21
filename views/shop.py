@@ -43,6 +43,7 @@ class QuantityModal(discord.ui.Modal):
             await interaction.response.defer()
         except Exception as _:
             await interaction.response.send_message("Please enter a number!", ephemeral=True)
+            self.quantity = 0
         self.stop()
 
 class Dropdown(discord.ui.Select):

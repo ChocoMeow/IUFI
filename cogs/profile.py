@@ -21,7 +21,8 @@ class Profile(commands.Cog):
     def __init__(self, bot: commands.Bot) -> None:
         self.bot = bot
         self.emoji = "👤"
-
+        self.invisible = False
+        
     @commands.command(aliases=["p"])
     async def profile(self, ctx: commands.Context, member: discord.Member = None):
         """Shows the profile of a member. If called without a member, shows your own profile."""
@@ -116,12 +117,13 @@ class Profile(commands.Cog):
         if not user.get("collections", {}).get(name):
             return await ctx.reply(content=f"{ctx.author.mention} no collection with the name `{name}` was found.")
         
-        card = iufi.CardPool.get_card(card_id)
-        if not card:
-            return await ctx.reply("The card was not found. Please try again.")
+        if card_id:
+            card = iufi.CardPool.get_card(card_id)
+            if not card:
+                return await ctx.reply("The card was not found. Please try again.")
 
-        if card.owner_id != ctx.author.id:
-            return await ctx.reply("You are not the owner of this card.")
+            if card.owner_id != ctx.author.id:
+                return await ctx.reply("You are not the owner of this card.")
 
         await func.update_user(ctx.author.id, {"$set": {f"collections.{name}.{slot - 1}": card.id if card_id else None}})
 
@@ -151,10 +153,10 @@ class Profile(commands.Cog):
         if card.owner_id != ctx.author.id:
             return await ctx.reply("You are not the owner of this card.")
 
-        await func.update_user(ctx.author.id, {"$set": {f"collections.{name}.{slot - 1}": card.id if card_id else None}})
+        await func.update_user(ctx.author.id, {"$set": {f"collections.{name}.{slot - 1}": card.id}})
 
         embed = discord.Embed(title="💕 Collection Set", color=discord.Color.random())
-        embed.description = f"```📮 {name.title()}\n🆔 {card.id.zfill(5) if card_id else None}\n🎰 {slot}\n```"
+        embed.description = f"```📮 {name.title()}\n{card.display_id}\n🎰 {slot}\n```"
         await ctx.reply(embed=embed)
 
     @commands.command(aliases=["rc"])
@@ -239,17 +241,17 @@ class Profile(commands.Cog):
         embed.description = f"```🍬 Starcandies        x{user['candies']}\n" \
                             f"🌸 Rare rolls         x{user['roll']['rare']}\n" \
                             f"💎 Epic rolls         x{user['roll']['epic']}\n" \
-                            f"👑 Legend rolls       x{user['roll']['legendary']}\n" \
-                            f"🛠️ Upgrades           Coming Soon\n\n" \
-                            f"🖼️ Frames:\n"
+                            f"👑 Legend rolls       x{user['roll']['legendary']}\n\n" 
 
-        frames = ""
-        for frame, amount in user["frame"].items():
-            if amount != 0:
-                frames += f"{frame.title() + ' Frame':<21} x{amount}\n"
-        
-        embed.description += (frames if frames else "Frames not found!") + "```"
+        potions = "🍶 Potions:\n" + ("\n".join(
+            [f"{potion.title() + ' Potion':<21} x{amount}" for potion, amount in potions.items() if amount]
+        ) if (potions := user.get("potions")) else "Potion not found!\n\n")
 
+        frames = "🖼️ Frames:\n" + ("\n".join(
+            [f"{frame.title() + ' Frame':<21} x{amount}" for frame, amount in frames.items() if amount]
+        ) if (frames := user.get("frames")) else "Frame not found!\n\n")
+
+        embed.description += f"{potions}{frames}```"
         embed.set_thumbnail(url=ctx.author.avatar.url)
         await ctx.reply(embed=embed)
 

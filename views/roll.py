@@ -39,7 +39,7 @@ class RollButton(discord.ui.Button):
         self.style = discord.ButtonStyle.gray
 
         await self.view.message.edit(view=self.view)
-        await interaction.response.send_message(f"{interaction.user.mention} has claimed ` {self.custom_id} | 🆔 {self.card.id.zfill(5)} | {self.card.tier[0]} | ⭐ {self.card.stars} `")
+        await interaction.response.send_message(f"{interaction.user.mention} has claimed ` {self.custom_id} | {self.card.display_id} | {self.card.tier[0]} | {self.card.display_stars} `")
         
 class RollView(discord.ui.View):
     def __init__(self, author: discord.Member, cards: list[Card], *, timeout: float | None = None):
