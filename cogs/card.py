@@ -34,8 +34,7 @@ class Card(commands.Cog):
                 desc += f"{card.display_id} {card.display_tag} {card.display_frame} {card.display_stars} {card.tier[0]} 👤{member.display_name if member else 'None':5}\n"
             desc += "```"
 
-            image_bytes, is_gif = iufi.gen_cards_view(cards, 4)
-            image_format = "gif" if is_gif else "png"
+            image_bytes, image_format = iufi.gen_cards_view(cards, 4)
 
         else:
             desc = f"```{card.display_id}\n" \
@@ -304,7 +303,7 @@ class Card(commands.Cog):
                             f"{card.tier[0]} {card.tier[1].capitalize()}\n" \
                             f"{card.display_stars}```\n" \
         
-        embed.set_image(url="attachment://image.png")
+        embed.set_image(url=f"attachment://image.{card.format}")
 
         view = TradeView(ctx.author, member, card, candies)
         view.message = await ctx.reply(content=f"{member.mention}, {ctx.author.mention} want to trade with you.", file=discord.File(card.image_bytes, filename=f"image.{card.format}"), embed=embed, view=view)
@@ -337,7 +336,7 @@ class Card(commands.Cog):
                             f"{card.tier[0]} {card.tier[1].capitalize()}\n" \
                             f"{card.display_stars}```\n" \
         
-        embed.set_image(url="attachment://image.png")
+        embed.set_image(url=f"attachment://image.{card.format}")
 
         view = TradeView(ctx.author, member, card, candies)
         view.message = await ctx.reply(content=f"{member.mention}, {ctx.author.mention} want to trade with you.", file=discord.File(card.image_bytes, filename=f"image.{card.format}"), embed=embed, view=view)

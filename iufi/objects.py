@@ -38,7 +38,64 @@ POTIONS_BASE: dict[str, str] = {
     "luck": "🌠",
 }
 
-class Card:
+class CardObject:
+    __slots__ = ("_image")
+
+    def __init__(self) -> None:
+        self._image: list[Image.Image] | Image.Image = None
+
+    def _round_corners(self, image: Image.Image, radius: int = 10) -> Image.Image:
+        """Creates a rounded corner image"""
+        mask = Image.new('L', image.size, 0)
+        draw = ImageDraw.Draw(mask)
+        draw.pieslice([(0, 0), (radius * 2, radius * 2)], 180, 270, fill=255)
+        draw.rectangle([(radius, 0), (image.size[0] - radius, image.size[1])], fill=255)
+        draw.rectangle([(0, radius), (image.size[0], image.size[1] - radius)], fill=255)
+        draw.pieslice([(image.size[0] - radius * 2, 0), (image.size[0], radius * 2)], 270, 360, fill=255)
+        draw.pieslice([(0, image.size[1] - radius * 2), (radius * 2, image.size[1])], 90, 180, fill=255)
+        draw.pieslice([(image.size[0] - radius * 2, image.size[1] - radius * 2), (image.size[0], image.size[1])], 0, 90, fill=255)
+
+        # Apply the mask to the image
+        output = Image.new('RGBA', image.size)
+        output.putalpha(mask)
+        output.paste(image, (0, 0), mask)
+
+        return output
+
+    def _load_frame(self, image: Image.Image) -> Image.Image:
+        with Image.open(os.path.join(func.ROOT_DIR, "frames", f"{self._frame}.png")).convert("RGBA").resize((200, 355)) as frame:
+            image = self._round_corners(image)
+            output = Image.new("RGBA", frame.size)
+            output.paste(image, (6, 8))
+            output.paste(frame, (0, 0), mask=frame)
+
+            return output
+    
+    def _load_image(self, path: str):
+        """Load and process the image"""
+        def blocking_io():
+            try:
+                with Image.open(os.path.join(path)) as img:
+                    if img.format == "GIF":
+                        modified_frames = []
+                        for img_frame in ImageSequence.Iterator(img):
+                            frame = img_frame.resize((200, 355))
+                            frame = self._round_corners(frame)
+                            modified_frames.append(frame)
+                        self._image = modified_frames
+
+                    else:
+                        image = img.resize((200, 355), Image.LANCZOS)
+                        self._image = self._round_corners(image)
+
+            except Exception as e:
+                raise ImageLoadError(f"Unable to load the image. Reason: {e}")
+
+        with ThreadPoolExecutor() as executor:
+            loop = asyncio.get_event_loop()
+            loop.run_in_executor(executor, blocking_io)
+
+class Card(CardObject):
     __slots__ = (
         "id",
         "_tier",
@@ -72,34 +129,7 @@ class Card:
 
         self._image: list[Image.Image] | Image.Image = None
         self._emoji: str = TIERS_BASE.get(self._tier)[0]
-
-    def _round_corners(self, image: Image.Image, radius: int = 10) -> Image.Image:
-        """Creates a rounded corner image"""
-        mask = Image.new('L', image.size, 0)
-        draw = ImageDraw.Draw(mask)
-        draw.pieslice([(0, 0), (radius * 2, radius * 2)], 180, 270, fill=255)
-        draw.rectangle([(radius, 0), (image.size[0] - radius, image.size[1])], fill=255)
-        draw.rectangle([(0, radius), (image.size[0], image.size[1] - radius)], fill=255)
-        draw.pieslice([(image.size[0] - radius * 2, 0), (image.size[0], radius * 2)], 270, 360, fill=255)
-        draw.pieslice([(0, image.size[1] - radius * 2), (radius * 2, image.size[1])], 90, 180, fill=255)
-        draw.pieslice([(image.size[0] - radius * 2, image.size[1] - radius * 2), (image.size[0], image.size[1])], 0, 90, fill=255)
-
-        # Apply the mask to the image
-        output = Image.new('RGBA', image.size)
-        output.putalpha(mask)
-        output.paste(image, (0, 0), mask)
-
-        return output
-
-    def _load_frame(self, image: Image.Image) -> Image.Image:
-        with Image.open(os.path.join(func.ROOT_DIR, "frames", f"{self._frame}.png")).convert("RGBA").resize((200, 355)) as frame:
-            image = self._round_corners(image)
-            output = Image.new("RGBA", frame.size)
-            output.paste(image, (6, 8))
-            output.paste(frame, (0, 0), mask=frame)
-
-            return output
-        
+    
     def _load_image(self):
         """Load and process the image"""
         def blocking_io(loop):
@@ -229,3 +259,20 @@ class Card:
 
     def __str__(self) -> str:
         return f"{self._emoji} {self.id.zfill(5)}"
+
+class TempCard(CardObject):
+    def __init__(self, path: str) -> None:
+        super().__init__()
+
+        self._path = path
+
+    @property
+    def image(self) -> list[Image.Image] | Image.Image:
+        """Return the image"""
+        if self._image is None:
+            self._load_image(self._path)
+        return self._image
+
+    @property
+    def is_gif(self) -> bool:
+        return isinstance(self.image, list)
