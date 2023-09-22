@@ -243,15 +243,17 @@ class Profile(commands.Cog):
                             f"💎 Epic rolls         x{user['roll']['epic']}\n" \
                             f"👑 Legend rolls       x{user['roll']['legendary']}\n\n" 
 
-        potions = "🍶 Potions:\n" + ("\n".join(
+        potions = user.get("potions", {})
+        potions = ("\n".join(
             [f"{potion.title() + ' Potion':<21} x{amount}" for potion, amount in potions.items() if amount]
-        ) if (potions := user.get("potions")) else "Potion not found!\n\n")
+        ) if sum(potions.values()) else "Potion not found!\n")
 
-        frames = "🖼️ Frames:\n" + ("\n".join(
+        frames = user.get("frames", {})
+        frames = ("\n".join(
             [f"{frame.title() + ' Frame':<21} x{amount}" for frame, amount in frames.items() if amount]
-        ) if (frames := user.get("frames")) else "Frame not found!\n\n")
+        ) if sum(frames.values()) else "Frame not found!\n")
 
-        embed.description += f"{potions}{frames}```"
+        embed.description += f"🍶 Potions:\n{potions}\n🖼️ Frames:\n{frames}\n```"
         embed.set_thumbnail(url=ctx.author.avatar.url)
         await ctx.reply(embed=embed)
 

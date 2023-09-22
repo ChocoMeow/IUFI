@@ -42,7 +42,7 @@ class Frames(commands.Cog):
         await ctx.reply(file=discord.File(card.image_bytes, filename=f"image.{card.format}"), embed=embed)
 
     @commands.command(aliases=["sfl"])
-    async def setframelast(self, ctx: commands.Context, card_id: str, frame: str):
+    async def setframelast(self, ctx: commands.Context, frame: str):
         """Sets the frame for the last photocard. Frame can be identified by its id or given tag."""
         frame = frame.lower()
         if frame not in iufi.FRAMES_BASE:

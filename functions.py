@@ -93,7 +93,6 @@ async def get_user(user_id: int) -> dict[str, Any]:
 
 async def update_user(user_id: int, data: dict) -> None:
     user = await get_user(user_id)
-
     for mode, action in data.items():
         for key, value in action.items():
             cursors = key.split(".")
