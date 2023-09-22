@@ -3,7 +3,7 @@ import functions as func
 
 from discord.ext import commands
 
-from views import RollView, ShopView
+from views import RollView, ShopView, MatchGame, GAME_SETTINGS
 
 class Gameplay(commands.Cog):
     def __init__(self, bot: commands.Bot) -> None:
@@ -105,19 +105,38 @@ class Gameplay(commands.Cog):
         await func.update_user(ctx.author.id, {"$inc": {"roll.legendary": -1}})
         await view.timeout_count()
 
+    @commands.command(aliases=["mg"])
+    async def game(self, ctx: commands.Context, level: str):
+        """Matching game."""
+        if level not in (levels := GAME_SETTINGS.keys()):
+            return await ctx.reply(f"Invalid level selection! Please select a valid level: `{', '.join(levels)}`")
+        
+        user = await func.get_user(ctx.author.id)
+        if (retry := user.get("cooldown", {}).setdefault("match_game", 0)) > time.time():
+            return await ctx.reply(f"{ctx.author.mention} your game is <t:{round(retry)}:R>", delete_after=10)
+
+        await func.update_user(ctx.author.id, {"$set": {"cooldown.match_game": time.time() + GAME_SETTINGS.get(level, {}).get("cooldown", 0)}})
+        view = MatchGame(ctx.author, level)
+        embed, file = view.build()
+        view.response = await ctx.reply(embed=embed, file=file, view=view)
+        await view.timeout_count()
+
     @commands.command(aliases=["cd"])
     async def cooldown(self, ctx: commands.Context):
         """Shows all your cooldowns."""
         user = await func.get_user(ctx.author.id)
 
+        cooldown: dict[str, float] = user.get("cooldown", {})
         embed = discord.Embed(title=f"⏰ {ctx.author.display_name}'s Cooldowns", color=0x59b0c0)
-        embed.description = f"```🎲 Roll : {func.cal_retry_time(user['cooldown']['roll'], 'Ready')}\n" \
-                            f"🎮 Claim: {func.cal_retry_time(user['cooldown']['claim'], 'Ready')}\n" \
-                            f"📅 Daily: {func.cal_retry_time(user['cooldown']['daily'], 'Ready')}\n" \
+        embed.description = f"```🎲 Roll : {func.cal_retry_time(cooldown.get('roll', 0), 'Ready')}\n" \
+                            f"🎮 Claim: {func.cal_retry_time(cooldown.get('claim', 0), 'Ready')}\n" \
+                            f"📅 Daily: {func.cal_retry_time(cooldown.get('daily', 0), 'Ready')}\n" \
+                            f"🃏 Game : {func.cal_retry_time(cooldown.get('match_game', 0), 'Ready')}" \
                             f"\nTime Left:\n" \
                             f"🏃 Speed: {func.cal_retry_time(user['cooldown']['speed'], 'Not Active')}\n" \
                             f"🌠 Luck : {func.cal_retry_time(user['cooldown']['luck'], 'Not Active')}```"
 
+        
         embed.set_thumbnail(url=ctx.author.avatar.url)
         await ctx.reply(embed=embed)
 
