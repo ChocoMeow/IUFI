@@ -243,17 +243,18 @@ class Profile(commands.Cog):
                             f"💎 Epic rolls         x{user['roll']['epic']}\n" \
                             f"👑 Legend rolls       x{user['roll']['legendary']}\n\n" 
 
-        potions = user.get("potions", {})
+        potions_data: dict[str, int] = user.get("potions", {})
         potions = ("\n".join(
-            [f"{potion.title() + ' Potion':<21} x{amount}" for potion, amount in potions.items() if amount]
-        ) if sum(potions.values()) else "Potion not found!\n")
+            [f"{potion.split('_')[0].title() + ' ' + potion.split('_')[1].upper() + ' Potion':21} x{amount}"
+            for potion, amount in potions_data.items()]
+        ) if sum(potions_data.values()) else "Potion not found!")
 
-        frames = user.get("frames", {})
+        frames: dict[str, int] = user.get("frames", {})
         frames = ("\n".join(
             [f"{frame.title() + ' Frame':<21} x{amount}" for frame, amount in frames.items() if amount]
-        ) if sum(frames.values()) else "Frame not found!\n")
+        ) if sum(frames.values()) else "Frame not found!")
 
-        embed.description += f"🍶 Potions:\n{potions}\n🖼️ Frames:\n{frames}\n```"
+        embed.description += f"🍶 Potions:\n{potions}\n\n🖼️ Frames:\n{frames}```"
         embed.set_thumbnail(url=ctx.author.avatar.url)
         await ctx.reply(embed=embed)
 

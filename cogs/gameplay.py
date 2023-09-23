@@ -131,15 +131,15 @@ class Gameplay(commands.Cog):
         embed.description = f"```🎲 Roll : {func.cal_retry_time(cooldown.get('roll', 0), 'Ready')}\n" \
                             f"🎮 Claim: {func.cal_retry_time(cooldown.get('claim', 0), 'Ready')}\n" \
                             f"📅 Daily: {func.cal_retry_time(cooldown.get('daily', 0), 'Ready')}\n" \
-                            f"🃏 Game : {func.cal_retry_time(cooldown.get('match_game', 0), 'Ready')}" \
-                            f"\nPotion Time Left:\n" 
+                            f"🃏 Game : {func.cal_retry_time(cooldown.get('match_game', 0), 'Ready')}\n\n" \
+                            f"Potion Time Left:\n" 
 
         potion_status = "\n".join(
-            [f"{data['emoji']} {potion.title():<5} {data['level'].upper():<3}: {func.cal_retry_time(data['expiration'])}"]
-            for potion, data in func.get_potions(user.get("actived_potions", {}), iufi.POTIONS_BASE, details=True)
+            [f"{data['emoji']} {potion.title():<5} {data['level'].upper():<3}: {func.cal_retry_time(data['expiration'])}"
+            for potion, data in func.get_potions(user.get("actived_potions", {}), iufi.POTIONS_BASE, details=True).items()]
         )
         
-        embed.description += potion_status if potion_status else "No potions are activated."    
+        embed.description += (potion_status if potion_status else "No potions are activated.") + "```"
         embed.set_thumbnail(url=ctx.author.avatar.url)
         await ctx.reply(embed=embed)
 

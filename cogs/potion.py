@@ -27,7 +27,7 @@ class Potion(commands.Cog):
         user = await func.get_user(ctx.author.id)
 
         actived_potions = func.get_potions(user.get("actived_potions", {}), iufi.POTIONS_BASE)
-        if actived_potions.get(potion_name):
+        if potion_name in actived_potions:
             return await ctx.reply("Wait for the current potion's effect to end before using another potion from the same category.")
     
         if user.get("potions", {}).get(f"{potion_name}_{level}", 0) <= 0:
@@ -35,7 +35,7 @@ class Potion(commands.Cog):
 
         await func.update_user(ctx.author.id, {
             "$inc": {f"potions.{potion_name}_{level}": -1},
-            "$set": {f"actived_potions.{potion_name}": (expire := time.time() + potion_data.get("expiration"))}
+            "$set": {f"actived_potions.{potion_name}_{level}": (expire := time.time() + potion_data.get("expiration"))}
         })
 
         await ctx.reply(f"You have used a {potion_name} potion. It will expire in <t:{round(expire)}:R>")

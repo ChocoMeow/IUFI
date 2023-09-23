@@ -83,14 +83,12 @@ def calculate_level(exp: int) -> tuple[int, int]:
 
 def get_potions(potions: dict[str, float], base: dict[str, str | dict[str, float]], details: bool = False) -> dict[str, float]:
     result: dict[str, float] = {}
-
     for potion, expiration in potions.items():
-        if expiration > time.time():
+        if expiration <= time.time():
             continue
         potion = potion.split("_")
         potion_data = base.get(potion[0], {})
-        result[potion[0]] = potion_data.copy() | {"level": potions[1], "expiration": expiration} if details else potion_data.get(potions[1], 0)
-    
+        result[potion[0]] = potion_data.copy() | {"level": potion[1], "expiration": expiration} if details else potion_data.get("levels", {}).get(potion[1], 0)
     return result
 
 async def get_user(user_id: int) -> dict[str, Any]:
