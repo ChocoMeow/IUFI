@@ -17,17 +17,25 @@ GAME_SETTINGS: dict[str, dict[str, Any]] = {
     "1": {
         "cooldown": 600,
         "timeout": 200,
-        "cover_img": "cover/level1.jpg",
         "cards": 3,
         "elem_per_row": 3,
+        "max_clicks": 8,
         "rewards": [None, None, None],
     },
     "2": {
         "cooldown": 900,
-        "timeout": 300,
-        "cover_img": "cover/level2.jpg",
-        "cards": 4,
+        "timeout": 400,
+        "cards": 6,
         "elem_per_row": 4,
+        "max_clicks": 16,
+        "rewards": [None, None, None],
+    },
+    "3": {
+        "cooldown": 1200,
+        "timeout": 600,
+        "cards": 10,
+        "elem_per_row": 5,
+        "max_clicks": 26,
         "rewards": [None, None, None],
     }
 }
@@ -77,6 +85,7 @@ class GuessButton(discord.ui.Button):
                 break
         else:
             self.disabled = True
+            self.style = discord.ButtonStyle.blurple
             self.view.guessed[self.custom_id] = self.card
 
             embed, file = self.view.build()
@@ -89,6 +98,7 @@ class GuessButton(discord.ui.Button):
     def reset_cards(self):
         # Reset the last clicked card and current card to covered state
         self.view._last_clicked.disabled = False
+        self.view._last_clicked.style = discord.ButtonStyle.gray
         self.view.guessed[self.view._last_clicked.custom_id] = self.view.covered_card
         self.view.guessed[self.custom_id] = self.view.covered_card
 
@@ -105,13 +115,14 @@ class MatchGame(discord.ui.View):
         self._level: str = level
         self._data: dict[str, Any] = GAME_SETTINGS.get(level)
         self._cards: int = self._data.get("cards")
-        self._max_click: int = (self._cards * 2) + 2
+        self._max_click: int = self._data.get("max_clicks")
         
         self._is_matching: bool = False
         self._need_wait: bool = False
+        self._is_ended: bool = False
         self.clicked: int = 0
         self._last_clicked: discord.ui.Button = None
-        self.covered_card: TempCard = TempCard(self._data.get("cover_img"))
+        self.covered_card: TempCard = TempCard(f"cover/level{self._level}.jpg")
 
         cards: list[Card] = CardPool.roll(self._cards)
         cards.extend(cards)
@@ -121,7 +132,7 @@ class MatchGame(discord.ui.View):
         self.guessed: dict[str, Card] = {}
         self.embed_color = discord.Color.random()
         self.response: discord.Message = None
-        self._is_ended: bool = False
+        
         self.cooldown = commands.CooldownMapping.from_cooldown(1.0, 3.0, key)
 
         for index, card in enumerate(self.cards, start=1):
