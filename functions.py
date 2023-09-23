@@ -18,7 +18,6 @@ class TOKEN:
         self.mongodb_url = os.getenv("MONGODB_URL")
         self.mongodb_name = os.getenv("MONGODB_NAME")
 
-
 tokens: TOKEN = TOKEN()
 
 # DB Var
@@ -82,15 +81,15 @@ def calculate_level(exp: int) -> tuple[int, int]:
 
     return level, exp
 
-def get_potions(potions: dict[str, float], base: dict[str, str | dict[str, float]]) -> dict[str, float]:
+def get_potions(potions: dict[str, float], base: dict[str, str | dict[str, float]], details: bool = False) -> dict[str, float]:
     result: dict[str, float] = {}
 
     for potion, expiration in potions.items():
         if expiration > time.time():
             continue
         potion = potion.split("_")
-        potion_data = base.get(potion[0], {}).get(potion[1], 0)
-        result[potion[0]] = potion_data
+        potion_data = base.get(potion[0], {})
+        result[potion[0]] = potion_data.copy() | {"level": potions[1], "expiration": expiration} if details else potion_data.get(potions[1], 0)
     
     return result
 
@@ -103,7 +102,6 @@ async def get_user(user_id: int) -> dict[str, Any]:
 
         user = USERS_BUFFER[user_id] = user if user else copy.deepcopy(USER_BASE)
     return user
-
 
 async def update_user(user_id: int, data: dict) -> None:
     user = await get_user(user_id)
@@ -128,8 +126,7 @@ async def update_user(user_id: int, data: dict) -> None:
                 nested_user[cursors[-1]] = nested_user.get(cursors[-1], 0) + value
 
             elif mode == "$push":
-                nested_user.setdefault(cursors[-1], []).extend(
-                    value.get("$in", []) if isinstance(value, dict) else [value])
+                nested_user.setdefault(cursors[-1], []).extend(value.get("$in", []) if isinstance(value, dict) else [value])
 
             elif mode == "$pull":
                 if cursors[-1] in nested_user:
@@ -140,7 +137,6 @@ async def update_user(user_id: int, data: dict) -> None:
                 raise ValueError(f"Invalid mode: {mode}")
 
     await USERS_DB.update_one({"_id": user_id}, data)
-
 
 async def update_card(card_id: list[str] | str, data: dict, insert: bool = False) -> None:
     if insert:
