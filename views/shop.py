@@ -1,7 +1,7 @@
 import discord
 import functions as func
 
-from iufi import TIERS_BASE, FRAMES_BASE
+from iufi import TIERS_BASE, FRAMES_BASE , POTIONS_BASE
 
 SHOP_BASE: list[tuple[str, str, int]] = [
     (TIERS_BASE.get("rare")[0], "roll.rare", 30),

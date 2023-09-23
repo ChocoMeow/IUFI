@@ -10,9 +10,9 @@ class Gameplay(commands.Cog):
         self.bot = bot
         self.emoji = "🎮"
         self.invisible = False
-        
+
     @commands.command(aliases=["r"])
-    @commands.cooldown(1, 5, commands.BucketType.user) 
+    @commands.cooldown(1, 5, commands.BucketType.user)
     async def roll(self, ctx: commands.Context):
         """Rolls a set of photocards for claiming."""
         user = await func.get_user(ctx.author.id)
@@ -22,7 +22,8 @@ class Gameplay(commands.Cog):
         if len(user["cards"]) >= func.MAX_CARDS:
             return await ctx.reply(f"**{ctx.author.mention} your inventory is full.**", delete_after=5)
         
-        cards = iufi.CardPool.roll()
+        actived_potions = func.get_potions(user.get("actived_potions", {}), iufi.POTIONS_BASE)
+        cards = iufi.CardPool.roll(luck_rates=actived_potions.get("luck", None))
         image_bytes, image_format = iufi.gen_cards_view(cards)
 
         view = RollView(ctx.author, cards)
@@ -31,11 +32,11 @@ class Gameplay(commands.Cog):
             file=discord.File(image_bytes, filename=f'image.{image_format}'),
             view=view
         )
-        await func.update_user(ctx.author.id, {"$set": {"cooldown.roll": time.time() + func.COOLDOWN_BASE["roll"]}})
+        await func.update_user(ctx.author.id, {"$set": {"cooldown.roll": time.time() + (func.COOLDOWN_BASE["roll"] * (1 - actived_potions.get("speed", 0)))}})
         await view.timeout_count()
 
     @commands.command(aliases=["rr"])
-    @commands.cooldown(1, 5, commands.BucketType.user) 
+    @commands.cooldown(1, 5, commands.BucketType.user)
     async def rareroll(self, ctx: commands.Context):
         """Starts a roll with at least one rare photocard guaranteed."""
         user = await func.get_user(ctx.author.id)
@@ -44,7 +45,7 @@ class Gameplay(commands.Cog):
 
         if len(user["cards"]) >= func.MAX_CARDS:
             return await ctx.reply(f"**{ctx.author.mention} your inventory is full.**", delete_after=5)
-        
+
         cards = iufi.CardPool.roll(included="rare")
         image_bytes, image_format = iufi.gen_cards_view(cards)
 
@@ -59,16 +60,16 @@ class Gameplay(commands.Cog):
         await view.timeout_count()
 
     @commands.command(aliases=["er"])
-    @commands.cooldown(1, 5, commands.BucketType.user) 
+    @commands.cooldown(1, 5, commands.BucketType.user)
     async def epicroll(self, ctx: commands.Context):
         """Starts a roll with at least one epic photocard guaranteed."""
         user = await func.get_user(ctx.author.id)
         if user["roll"]["epic"] <= 0:
             return await ctx.reply("You’ve used up all your `epic` rolls for now.")
-        
+
         if len(user["cards"]) >= func.MAX_CARDS:
             return await ctx.reply(f"**{ctx.author.mention} your inventory is full.**", delete_after=5)
-        
+
         cards = iufi.CardPool.roll(included="epic")
         image_bytes, image_format = iufi.gen_cards_view(cards)
 
@@ -80,15 +81,15 @@ class Gameplay(commands.Cog):
         )
         await func.update_user(ctx.author.id, {"$inc": {"roll.epic": -1}})
         await view.timeout_count()
-        
+
     @commands.command(aliases=["lr"])
-    @commands.cooldown(1, 5, commands.BucketType.user) 
+    @commands.cooldown(1, 5, commands.BucketType.user)
     async def legendroll(self, ctx: commands.Context):
         """Starts a roll with at least one legendary photocard guaranteed."""
         user = await func.get_user(ctx.author.id)
         if user["roll"]["legendary"] <= 0:
             return await ctx.reply("You’ve used up all your `legend` rolls for now.")
-        
+
         if len(user["cards"]) >= func.MAX_CARDS:
             return await ctx.reply(f"**{ctx.author.mention} your inventory is full.**", delete_after=5)
 
@@ -130,8 +131,15 @@ class Gameplay(commands.Cog):
         embed.description = f"```🎲 Roll : {func.cal_retry_time(cooldown.get('roll', 0), 'Ready')}\n" \
                             f"🎮 Claim: {func.cal_retry_time(cooldown.get('claim', 0), 'Ready')}\n" \
                             f"📅 Daily: {func.cal_retry_time(cooldown.get('daily', 0), 'Ready')}\n" \
-                            f"🃏 Game : {func.cal_retry_time(cooldown.get('match_game', 0), 'Ready')}```"
+                            f"🃏 Game : {func.cal_retry_time(cooldown.get('match_game', 0), 'Ready')}\n\n" \
+                            f"Potion Time Left:\n" 
+
+        potion_status = "\n".join(
+            [f"{data['emoji']} {potion.title():<5} {data['level'].upper():<3}: {func.cal_retry_time(data['expiration'])}"
+            for potion, data in func.get_potions(user.get("actived_potions", {}), iufi.POTIONS_BASE, details=True).items()]
+        )
         
+        embed.description += (potion_status if potion_status else "No potions are activated.") + "```"
         embed.set_thumbnail(url=ctx.author.avatar.url)
         await ctx.reply(embed=embed)
 

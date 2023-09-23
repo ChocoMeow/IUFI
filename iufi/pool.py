@@ -94,9 +94,17 @@ class CardPool:
         return card
     
     @classmethod
-    def roll(cls, amount: int = 3, *, included: str = None) -> list[Card]:
+    def roll(cls, amount: int = 3, *, included: str = None, luck_rates: float = None) -> list[Card]:
         categories = list(DROP_RATES.keys())
-        results = cls._rand.choices(categories, weights=DROP_RATES.values(), k=amount)
+
+        if luck_rates:
+            drop_rates = {k: v if k == 'common' else v*(1 + luck_rates) for k, v in DROP_RATES.copy().items()}
+            total = sum(drop_rates.values())
+            drop_rates['common'] = 1 - (total - drop_rates['common'])
+        else:
+            drop_rates = DROP_RATES
+
+        results = cls._rand.choices(categories, weights=drop_rates.values(), k=amount)
         if included:
             results[amount - 1] = included
 

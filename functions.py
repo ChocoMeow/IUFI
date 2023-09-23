@@ -18,10 +18,9 @@ class TOKEN:
         self.mongodb_url = os.getenv("MONGODB_URL")
         self.mongodb_name = os.getenv("MONGODB_NAME")
 
-
 tokens: TOKEN = TOKEN()
 
-#DB Var
+# DB Var
 MONGO_DB: AsyncIOMotorClient = None
 USERS_DB: AsyncIOMotorCollection = None
 CARDS_DB: AsyncIOMotorCollection = None
@@ -38,6 +37,7 @@ USER_BASE: dict[str, Any] = {
     "cards": [],
     "collections": {},
     "potions": {},
+    "actived_potions": {},
     "frames": {},
     "roll": {
         "rare": 0,
@@ -58,13 +58,13 @@ USER_BASE: dict[str, Any] = {
 COOLDOWN_BASE: dict[str, int] = {
     "roll": 300,
     "claim": 120,
-    "daily": 82800
+    "daily": 82800,
 }
 
-def cal_retry_time(end_time: float, default: str=None) -> str | None:
+def cal_retry_time(end_time: float, default: str = None) -> str | None:
     if end_time <= (current_time := time.time()):
         return default
-    
+
     retry: float = int(end_time - current_time)
 
     minutes, seconds = divmod(retry, 60)
@@ -78,8 +78,18 @@ def calculate_level(exp: int) -> tuple[int, int]:
     while exp >= DEAFAULT_EXP:
         exp -= DEAFAULT_EXP
         level += 1
-    
+
     return level, exp
+
+def get_potions(potions: dict[str, float], base: dict[str, str | dict[str, float]], details: bool = False) -> dict[str, float]:
+    result: dict[str, float] = {}
+    for potion, expiration in potions.items():
+        if expiration <= time.time():
+            continue
+        potion = potion.split("_")
+        potion_data = base.get(potion[0], {})
+        result[potion[0]] = potion_data.copy() | {"level": potion[1], "expiration": expiration} if details else potion_data.get("levels", {}).get(potion[1], 0)
+    return result
 
 async def get_user(user_id: int) -> dict[str, Any]:
     user = USERS_BUFFER.get(user_id)
@@ -123,14 +133,14 @@ async def update_user(user_id: int, data: dict) -> None:
 
             else:
                 raise ValueError(f"Invalid mode: {mode}")
-                
+
     await USERS_DB.update_one({"_id": user_id}, data)
 
 async def update_card(card_id: list[str] | str, data: dict, insert: bool = False) -> None:
     if insert:
         await CARDS_DB.insert_one({"_id": card_id})
-    
+
     if isinstance(card_id, list):
         return await CARDS_DB.update_many({"_id": {"$in": card_id}}, data)
-    
+
     await CARDS_DB.update_one({"_id": card_id}, data)
