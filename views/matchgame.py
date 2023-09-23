@@ -5,10 +5,11 @@ from iufi import (
     Card,
     TempCard,
     CardPool,
-    gen_cards_view
+    gen_cards_view,
+    POTIONS_BASE
 )
 from discord.ext import commands
-from random import shuffle
+from random import shuffle, choice
 from typing import Any
 from collections import Counter
 from . import ButtonOnCooldown
@@ -20,7 +21,10 @@ GAME_SETTINGS: dict[str, dict[str, Any]] = {
         "cards": 3,
         "elem_per_row": 3,
         "max_clicks": 8,
-        "rewards": [None, None, None],
+        "rewards": {
+            "2": ("candies",  10),
+            "3": [("potions.speed_i", 1), ("potions.luck_i", 1)]
+        },
     },
     "2": {
         "cooldown": 900,
@@ -85,7 +89,6 @@ class GuessButton(discord.ui.Button):
                 break
         else:
             self.disabled = True
-            self.style = discord.ButtonStyle.blurple
             self.view.guessed[self.custom_id] = self.card
 
             embed, file = self.view.build()
@@ -98,7 +101,6 @@ class GuessButton(discord.ui.Button):
     def reset_cards(self):
         # Reset the last clicked card and current card to covered state
         self.view._last_clicked.disabled = False
-        self.view._last_clicked.style = discord.ButtonStyle.gray
         self.view.guessed[self.view._last_clicked.custom_id] = self.view.covered_card
         self.view.guessed[self.custom_id] = self.view.covered_card
 
@@ -173,15 +175,32 @@ class MatchGame(discord.ui.View):
             child.disabled = True
 
         embed = discord.Embed(title="Game Ended (Rewards)", color=discord.Color.random())
-        embed.description = "```None```"
-        # data = {}
-        # for reward in self._data.get("rewards"):
-        #     if reward:
-        #         data.update(reward)
-
-        # if self.matched() > 0:
-        #     await func.update_user(self.author.id, {"$inc": data})
+        matched_raw = self.matched()
+        final_rewards: dict[str, int] = {}
         
+        for matched, reward in self._data.get("rewards").items():
+            if int(matched) > matched_raw:
+                break
+            
+            if isinstance(reward, list):
+                reward = choice(reward)
+            
+            if reward[0] not in final_rewards:
+                final_rewards[reward[0]] = 0
+            final_rewards[reward[0]] += reward[1]
+        
+        rewards = ""
+        for reward, amount in final_rewards.items():
+            reward = reward.split(".")
+            if reward[0] == "candies":
+                rewards += f"{'🍬 Candy':<12} + {amount}"
+            else:
+                reward = reward[1].split("_")
+                potion_data = POTIONS_BASE.get(reward[0])
+                rewards += f"{potion_data.get('emoji') + ' ' + reward[0].title() + ' ' + reward[1].upper():<12} + {amount}"
+        
+        embed.description = f"```{rewards}```"
+        await func.update_user(self.author.id, {"$inc": final_rewards})
         await self.response.channel.send(content=f"<@{self.author.id}>", embed=embed)
 
     def build(self) -> tuple[discord.Embed, discord.File]:
