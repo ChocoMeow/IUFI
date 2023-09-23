@@ -45,7 +45,7 @@ class TradeView(discord.ui.View):
             return await interaction.response.send_message(f"**Your inventory is full.**", ephemeral=True)
         
         await interaction.response.defer()
-        self.card.change_owner(self.buyer.id, remove_tag=False)
+        self.card.change_owner(self.buyer.id)
         await func.update_user(self.seller.id, {"$pull": {"cards": self.card.id}, "$inc": {"candies": self.candies}})
         await func.update_user(self.buyer.id, {"$push": {"cards": self.card.id}, "$inc": {"candies": self.candies}})
         await func.update_card(self.card.id, {"$set": {"owner_id": self.buyer.id}})
