@@ -1,7 +1,7 @@
 import discord, time, asyncio
 import functions as func
 
-from iufi import CardPool, Card
+from iufi import CardPool, Card, POTIONS_BASE
 
 class RollButton(discord.ui.Button):
     def __init__(self, card: Card, **kwargs):
@@ -24,9 +24,12 @@ class RollButton(discord.ui.Button):
         
         self.card.change_owner(interaction.user.id)
         CardPool.remove_available_card(self.card)
+
+        user = await func.get_user(interaction.user.id)
+        actived_potions = func.get_potions(user.get("actived_potions", {}), POTIONS_BASE)
         await func.update_user(interaction.user.id, {
             "$push": {"cards": self.card.id},
-            "$set": {"cooldown.claim": time.time() + func.COOLDOWN_BASE["claim"]},
+            "$set": {"cooldown.claim": time.time() + (func.COOLDOWN_BASE["claim"] * (1 - actived_potions.get("speed", 0)))},
             "$inc": {"exp": 10}
         })
         await func.update_card(self.card.id, {"$set": {"owner_id": interaction.user.id}})

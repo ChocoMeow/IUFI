@@ -246,7 +246,7 @@ class Profile(commands.Cog):
         potions_data: dict[str, int] = user.get("potions", {})
         potions = ("\n".join(
             [f"{potion.split('_')[0].title() + ' ' + potion.split('_')[1].upper() + ' Potion':21} x{amount}"
-            for potion, amount in potions_data.items()]
+            for potion, amount in potions_data.items() if amount]
         ) if sum(potions_data.values()) else "Potion not found!")
 
         frames: dict[str, int] = user.get("frames", {})

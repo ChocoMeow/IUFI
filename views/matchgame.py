@@ -1,4 +1,4 @@
-import discord, asyncio
+import discord, asyncio, time
 import functions as func
 
 from iufi import (
@@ -32,7 +32,11 @@ GAME_SETTINGS: dict[str, dict[str, Any]] = {
         "cards": 6,
         "elem_per_row": 4,
         "max_clicks": 16,
-        "rewards": [None, None, None],
+        "rewards": {
+            "2": ("candies",  20),
+            "4": ("candies",  40),
+            "5": [("potions.speed_ii", 1), ("potions.luck_ii", 1)]
+        },
     },
     "3": {
         "cooldown": 1200,
@@ -40,7 +44,7 @@ GAME_SETTINGS: dict[str, dict[str, Any]] = {
         "cards": 10,
         "elem_per_row": 5,
         "max_clicks": 26,
-        "rewards": [None, None, None],
+        "rewards": {},
     }
 }
 
@@ -79,7 +83,9 @@ class GuessButton(discord.ui.Button):
             await self.view.end_game()
         
         embed, file = self.view.build()
-        await self.view.response.edit(embed=embed, attachments=[file], view=self.view)
+        await self.view.response.edit(
+            content="This game has expired." if self.view._is_ended else f"**This game ends** {self.view._end_time}",
+            embed=embed, attachments=[file], view=self.view)
 
     async def matching_process(self):
         for card in self.view.guessed.values():
@@ -118,7 +124,8 @@ class MatchGame(discord.ui.View):
         self._data: dict[str, Any] = GAME_SETTINGS.get(level)
         self._cards: int = self._data.get("cards")
         self._max_click: int = self._data.get("max_clicks")
-        
+        self._end_time: str = f"<t:{round(time.time() + self._data.get('timeout', 0))}:R>"
+
         self._is_matching: bool = False
         self._need_wait: bool = False
         self._is_ended: bool = False
@@ -170,7 +177,6 @@ class MatchGame(discord.ui.View):
         if self._is_ended:
             return
         self._is_ended = True
-
         for child in self.children:
             child.disabled = True
 
@@ -193,11 +199,11 @@ class MatchGame(discord.ui.View):
         for reward, amount in final_rewards.items():
             reward = reward.split(".")
             if reward[0] == "candies":
-                rewards += f"{'🍬 Candy':<12} + {amount}"
+                rewards += f"{'🍬 Candy':<20} + {amount}\n"
             else:
                 reward = reward[1].split("_")
                 potion_data = POTIONS_BASE.get(reward[0])
-                rewards += f"{potion_data.get('emoji') + ' ' + reward[0].title() + ' ' + reward[1].upper():<12} + {amount}"
+                rewards += f"{potion_data.get('emoji') + ' ' + reward[0].title() + ' ' + reward[1].upper() + ' Potion':<20} + {amount}\n"
         
         embed.description = f"```{rewards}```"
         await func.update_user(self.author.id, {"$inc": final_rewards})
