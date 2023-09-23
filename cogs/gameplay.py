@@ -22,7 +22,8 @@ class Gameplay(commands.Cog):
         if len(user["cards"]) >= func.MAX_CARDS:
             return await ctx.reply(f"**{ctx.author.mention} your inventory is full.**", delete_after=5)
         
-        cards = iufi.CardPool.roll(is_lucky=func.is_luck_potion_active(user))
+        actived_potions = func.get_potions(user.get("actived_potions", {}), iufi.POTIONS_BASE)
+        cards = iufi.CardPool.roll(luck_rates=actived_potions.get("speed", None))
         image_bytes, image_format = iufi.gen_cards_view(cards)
 
         view = RollView(ctx.author, cards)
@@ -31,8 +32,7 @@ class Gameplay(commands.Cog):
             file=discord.File(image_bytes, filename=f'image.{image_format}'),
             view=view
         )
-        next_roll_cooldown = time.time() + ( func.SPEED_POTION_ROLL_COOLDOWN if func.is_speed_potion_active(user) else func.COOLDOWN_BASE["roll"])
-        await func.update_user(ctx.author.id, {"$set": {"cooldown.roll": next_roll_cooldown}})
+        await func.update_user(ctx.author.id, {"$set": {"cooldown.roll": time.time() + (func.COOLDOWN_BASE["roll"] * (1 - actived_potions.get("luck", 0)))}})
         await view.timeout_count()
 
     @commands.command(aliases=["rr"])

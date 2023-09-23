@@ -6,7 +6,7 @@ import functions as func
 from concurrent.futures import ThreadPoolExecutor
 from PIL import Image, ImageDraw, ImageSequence
 from io import BytesIO
-from typing import TYPE_CHECKING
+from typing import Any, TYPE_CHECKING
 
 from .exceptions import ImageLoadError
 if TYPE_CHECKING:
@@ -33,9 +33,25 @@ FRAMES_BASE: dict[str, str] = {
     "signed": "✍️",
 }
 
-POTIONS_BASE: dict[str, str] = {
-    "speed": "🏃",
-    "luck": "🌠",
+POTIONS_BASE: dict[str, str | dict[str, float]] = {
+    "speed": {
+        "emoji": "⚡",
+        "expiration": 900,
+        "levels": {
+            "i": .1,
+            "ii": .2,
+            "iii": .3
+        }
+    },
+    "luck": {
+        "emoji": "🍀",
+        "expiration": 900,
+        "levels": {
+            "i": .5,
+            "ii": 1,
+            "iii": 1.5
+        }
+    }
 }
 
 class CardObject:

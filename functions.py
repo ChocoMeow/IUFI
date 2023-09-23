@@ -10,7 +10,6 @@ from typing import Any
 
 ROOT_DIR = os.path.dirname(os.path.abspath(__file__))
 
-
 class TOKEN:
     def __init__(self) -> None:
         load_dotenv()
@@ -39,6 +38,7 @@ USER_BASE: dict[str, Any] = {
     "cards": [],
     "collections": {},
     "potions": {},
+    "actived_potions": {},
     "frames": {},
     "roll": {
         "rare": 0,
@@ -48,9 +48,7 @@ USER_BASE: dict[str, Any] = {
     "cooldown": {
         "roll": 0,
         "claim": 0,
-        "daily": 0,
-        "speed": 0,
-        "luck": 0
+        "daily": 0
     },
     "profile": {
         "bio": "",
@@ -62,12 +60,7 @@ COOLDOWN_BASE: dict[str, int] = {
     "roll": 300,
     "claim": 120,
     "daily": 82800,
-    "speed": 300,
-    "luck": 300
 }
-
-SPEED_POTION_ROLL_COOLDOWN: int = 60
-
 
 def cal_retry_time(end_time: float, default: str = None) -> str | None:
     if end_time <= (current_time := time.time()):
@@ -80,7 +73,6 @@ def cal_retry_time(end_time: float, default: str = None) -> str | None:
 
     return (f"{hours}h " if hours > 0 else "") + f"{minutes}m {seconds}s"
 
-
 def calculate_level(exp: int) -> tuple[int, int]:
     level = 0
 
@@ -90,6 +82,17 @@ def calculate_level(exp: int) -> tuple[int, int]:
 
     return level, exp
 
+def get_potions(potions: dict[str, float], base: dict[str, str | dict[str, float]]) -> dict[str, float]:
+    result: dict[str, float] = {}
+
+    for potion, expiration in potions.items():
+        if expiration > time.time():
+            continue
+        potion = potion.split("_")
+        potion_data = base.get(potion[0], {}).get(potion[1], 0)
+        result[potion[0]] = potion_data
+    
+    return result
 
 async def get_user(user_id: int) -> dict[str, Any]:
     user = USERS_BUFFER.get(user_id)
@@ -147,15 +150,3 @@ async def update_card(card_id: list[str] | str, data: dict, insert: bool = False
         return await CARDS_DB.update_many({"_id": {"$in": card_id}}, data)
 
     await CARDS_DB.update_one({"_id": card_id}, data)
-
-
-def is_speed_potion_active(user: dict[str, Any]) -> bool:
-    if "speed" not in user["cooldown"]:
-        return False
-    return user["cooldown"]["speed"] > time.time()
-
-
-def is_luck_potion_active(user: dict[str, Any]) -> bool:
-    if "luck" not in user["cooldown"]:
-        return False
-    return user["cooldown"]["luck"] > time.time()
