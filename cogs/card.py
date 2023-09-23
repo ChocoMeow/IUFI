@@ -80,15 +80,17 @@ class Card(commands.Cog):
         converted_cards: list[iufi.Card] = []
 
         card_ids = card_ids.split(" ")
+        candies = 0
         for card_id in card_ids:
             card = iufi.CardPool.get_card(card_id)
             if card and card.owner_id == ctx.author.id:
+                candies += card.cost
                 iufi.CardPool.add_available_card(card)
                 converted_cards.append(card)
         
         await func.update_user(ctx.author.id, {
             "$pull": {"cards": {"$in": (card_ids := [card.id for card in converted_cards])}},
-            "$inc": {"candies": (candies := sum([card.cost for card in converted_cards]))}
+            "$inc": {"candies": candies}
         })
         await func.update_card(card_ids, {"$set": {"owner_id": None, "tag": None, "frame": None}})
 
@@ -124,13 +126,13 @@ class Card(commands.Cog):
         if card.owner_id != ctx.author.id:
             return await ctx.reply(content="Your cards cannot be converted because there has been a change in your inventory.")
         
-        iufi.CardPool.add_available_card(card)
-
         await func.update_user(ctx.author.id, {
             "$pull": {"cards": card.id},
             "$inc": {"candies": card.cost}
         })
         await func.update_card(card.id, {"$set": {"owner_id": None, "tag": None, "frame": None}})
+        iufi.CardPool.add_available_card(card)
+        
         embed.title="✨ Converted"
         await message.edit(embed=embed, view=None) if message else await ctx.reply(embed=embed)
         
