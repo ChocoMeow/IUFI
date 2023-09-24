@@ -47,9 +47,9 @@ POTIONS_BASE: dict[str, str | dict[str, float]] = {
         "emoji": "🍀",
         "expiration": 900,
         "levels": {
-            "i": .5,
-            "ii": 1,
-            "iii": 1.5
+            "i": 1,
+            "ii": 2,
+            "iii": 5
         }
     }
 }

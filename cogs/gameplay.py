@@ -16,6 +16,13 @@ class Gameplay(commands.Cog):
     async def roll(self, ctx: commands.Context):
         """Rolls a set of photocards for claiming."""
         user = await func.get_user(ctx.author.id)
+
+        if user["exp"] == 0:
+            view = discord.ui.View()
+            view.add_item(discord.ui.Button(label='Beginner Guide', emoji='📗', url='https://docs.google.com/document/d/1clS-HmpKX8MJOv9K383jq7TijJqCi5y5yn68kHPTTpk/edit?usp=drivesdk'))
+            await ctx.reply(f"**Welcome to IUFI! Please have a look at the guide or use `qhelp` to begin.**", view=view)
+
+
         if (retry := user["cooldown"]["roll"]) > time.time():
             return await ctx.reply(f"{ctx.author.mention} your next roll is <t:{round(retry)}:R>", delete_after=10)
 

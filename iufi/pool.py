@@ -12,7 +12,7 @@ DROP_RATES = {
     'rare': .08,
     'epic': .007,
     'legendary': .003,
-    'mystic':.001,
+    'mystic': .001,
     "celestial": .0005
 }
 
@@ -98,7 +98,7 @@ class CardPool:
         categories = list(DROP_RATES.keys())
 
         if luck_rates:
-            drop_rates = {k: v if k == 'common' else v*(1 + luck_rates) for k, v in DROP_RATES.copy().items()}
+            drop_rates = {k: v if k == 'common' else v * (1 + luck_rates) for k, v in DROP_RATES.copy().items()}
             total = sum(drop_rates.values())
             drop_rates['common'] = 1 - (total - drop_rates['common'])
         else:
