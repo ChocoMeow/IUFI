@@ -1,4 +1,4 @@
-import discord
+import discord, asyncio
 import functions as func
 
 from iufi import CardPool, Card
@@ -26,7 +26,7 @@ class Dropdown(discord.ui.Select):
                             "Owned by: " + (f"<@{card.owner_id}>" if card.owner_id else "None")
         
         embed.set_image(url=f"attachment://image.{card.format}")
-        await interaction.response.send_message(file=discord.File(card.image_bytes, filename=f"image.{card.format}"), embed=embed)
+        await interaction.response.send_message(file=discord.File(await asyncio.to_thread(card.image_bytes), filename=f"image.{card.format}"), embed=embed)
 
 class PhotoCardView(discord.ui.View):
     def __init__(self, author: discord.Member, cards: list[int], *, timeout: float | None = 100):

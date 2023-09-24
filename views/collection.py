@@ -1,5 +1,5 @@
 
-import discord, iufi
+import discord, iufi, asyncio
 
 from discord.ext import commands
 
@@ -64,7 +64,7 @@ class CollectionView(discord.ui.View):
             cards.append(None)
             
         embed.description += "```"
-        image_bytes, image_format = iufi.gen_cards_view(cards)
+        image_bytes, image_format = await asyncio.to_thread(iufi.gen_cards_view, cards)
         embed.set_image(url=f"attachment://image.{image_format}")
         file=discord.File(image_bytes, filename=f'image.{image_format}')
 

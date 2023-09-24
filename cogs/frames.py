@@ -1,4 +1,4 @@
-import discord, iufi
+import discord, iufi, asyncio
 import functions as func
 
 from discord.ext import commands
@@ -39,7 +39,7 @@ class Frames(commands.Cog):
         embed.description = f"```🆔 {card.tier[0]} {card.id}\n🖼️ {frame.title()}```"
 
         embed.set_image(url=f"attachment://image.{card.format}")
-        await ctx.reply(file=discord.File(card.image_bytes, filename=f"image.{card.format}"), embed=embed)
+        await ctx.reply(file=discord.File(await asyncio.to_thread(card.image_bytes), filename=f"image.{card.format}"), embed=embed)
 
     @commands.command(aliases=["sfl"])
     async def setframelast(self, ctx: commands.Context, frame: str):
@@ -74,7 +74,7 @@ class Frames(commands.Cog):
         embed.description = f"```🆔 {card.tier[0]} {card.id}\n🖼️ {frame.title()}```"
 
         embed.set_image(url=f"attachment://image.{card.format}")
-        await ctx.reply(file=discord.File(card.image_bytes, filename=f"image.{card.format}"), embed=embed)
+        await ctx.reply(file=discord.File(await asyncio.to_thread(card.image_bytes), filename=f"image.{card.format}"), embed=embed)
 
     @commands.command(aliases=["rf"])
     async def removeframe(self, ctx: commands.Context, card_id: str):

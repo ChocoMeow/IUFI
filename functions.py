@@ -56,8 +56,8 @@ USER_BASE: dict[str, Any] = {
 }
 
 COOLDOWN_BASE: dict[str, int] = {
-    "roll": 300,
-    "claim": 120,
+    "roll": 600,
+    "claim": 180,
     "daily": 82800,
 }
 

@@ -197,14 +197,15 @@ class MatchGame(discord.ui.View):
             if isinstance(reward, list):
                 reward = choice(reward)
             
-            if reward[0] not in final_rewards:
-                final_rewards[reward[0]] = 0
-            final_rewards[reward[0]] += reward[1]
+            if is_matched := (matched <= matched_raw):
+                if reward[0] not in final_rewards:
+                    final_rewards[reward[0]] = 0
+                final_rewards[reward[0]] += reward[1]
 
             reward_name, amount = reward
             reward_name = reward_name.split(".")
 
-            rewards += ("✅" if matched <= matched_raw  else "⬛") + f"  {matched:<3}"
+            rewards += ("✅" if is_matched else "⬛") + f"  {matched:<3}"
             if reward_name[0] == "candies":
                 rewards += f"    {'🍬 Candy':<18} x{amount}\n"
             else:

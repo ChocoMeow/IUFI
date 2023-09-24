@@ -1,4 +1,4 @@
-import discord, iufi
+import discord, iufi, asyncio
 import functions as func
 
 from discord.ext import commands
@@ -34,8 +34,7 @@ class Card(commands.Cog):
                 desc += f"{card.display_id} {card.display_tag} {card.display_frame} {card.display_stars} {card.tier[0]} 👤{member.display_name if member else 'None':5}\n"
             desc += "```"
 
-            image_bytes, image_format = iufi.gen_cards_view(cards, 4)
-
+            image_bytes, image_format = await asyncio.to_thread(iufi.gen_cards_view, cards, 4)
         else:
             desc = f"```{card.display_id}\n" \
                    f"{card.display_tag}\n" \
@@ -44,7 +43,7 @@ class Card(commands.Cog):
                    f"{card.display_stars}```\n" \
                    "**Owned by: **" + (f"<@{card.owner_id}>" if card.owner_id else "None")
 
-            image_bytes, image_format = card.image_bytes, card.format
+            image_bytes, image_format = await asyncio.to_thread(card.image_bytes), card.format
 
         embed = discord.Embed(title=f"ℹ️ Card Info", description=desc, color=0x949fb8)
         embed.set_image(url=f"attachment://image.{image_format}")
@@ -72,7 +71,7 @@ class Card(commands.Cog):
                             "**Owned by: **" + (f"<@{card.owner_id}>" if card.owner_id else "None")
         
         embed.set_image(url=f"attachment://image.{card.format}")
-        await ctx.reply(file=discord.File(card.image_bytes, filename=f"image.{card.format}"), embed=embed)
+        await ctx.reply(file=discord.File(await asyncio.to_thread(card.image_bytes), filename=f"image.{card.format}"), embed=embed)
 
     @commands.command(aliases=["c"])
     async def convert(self, ctx: commands.Context, *, card_ids: str):
@@ -308,7 +307,7 @@ class Card(commands.Cog):
         embed.set_image(url=f"attachment://image.{card.format}")
 
         view = TradeView(ctx.author, member, card, candies)
-        view.message = await ctx.reply(content=f"{member.mention}, {ctx.author.mention} want to trade with you.", file=discord.File(card.image_bytes, filename=f"image.{card.format}"), embed=embed, view=view)
+        view.message = await ctx.reply(content=f"{member.mention}, {ctx.author.mention} want to trade with you.", file=discord.File(await asyncio.to_thread(card.image_bytes), filename=f"image.{card.format}"), embed=embed, view=view)
     
     @commands.command(aliases=["tl"])
     async def tradelast(self, ctx: commands.Context, member: discord.Member, candies: int):
@@ -341,7 +340,7 @@ class Card(commands.Cog):
         embed.set_image(url=f"attachment://image.{card.format}")
 
         view = TradeView(ctx.author, member, card, candies)
-        view.message = await ctx.reply(content=f"{member.mention}, {ctx.author.mention} want to trade with you.", file=discord.File(card.image_bytes, filename=f"image.{card.format}"), embed=embed, view=view)
+        view.message = await ctx.reply(content=f"{member.mention}, {ctx.author.mention} want to trade with you.", file=discord.File(await asyncio.to_thread(card.image_bytes), filename=f"image.{card.format}"), embed=embed, view=view)
 
     @commands.command(aliases=["u"])
     async def upgrade(self, ctx: commands.Context, upgrade_card_id: str, *, card_ids: str) -> None:

@@ -1,4 +1,4 @@
-import discord, iufi, time
+import discord, iufi, time, asyncio
 import functions as func
 
 from discord.ext import commands
@@ -31,7 +31,7 @@ class Gameplay(commands.Cog):
         
         actived_potions = func.get_potions(user.get("actived_potions", {}), iufi.POTIONS_BASE)
         cards = iufi.CardPool.roll(luck_rates=actived_potions.get("luck", None))
-        image_bytes, image_format = iufi.gen_cards_view(cards)
+        image_bytes, image_format = await asyncio.to_thread(iufi.gen_cards_view, cards, 4)
 
         view = RollView(ctx.author, cards)
         view.message = await ctx.send(
@@ -54,7 +54,7 @@ class Gameplay(commands.Cog):
             return await ctx.reply(f"**{ctx.author.mention} your inventory is full.**", delete_after=5)
 
         cards = iufi.CardPool.roll(included="rare")
-        image_bytes, image_format = iufi.gen_cards_view(cards)
+        image_bytes, image_format = await asyncio.to_thread(iufi.gen_cards_view, cards)
 
         view = RollView(ctx.author, cards)
         view.message = await ctx.send(
@@ -78,7 +78,7 @@ class Gameplay(commands.Cog):
             return await ctx.reply(f"**{ctx.author.mention} your inventory is full.**", delete_after=5)
 
         cards = iufi.CardPool.roll(included="epic")
-        image_bytes, image_format = iufi.gen_cards_view(cards)
+        image_bytes, image_format = await asyncio.to_thread(iufi.gen_cards_view, cards)
 
         view = RollView(ctx.author, cards)
         view.message = await ctx.send(
@@ -101,7 +101,7 @@ class Gameplay(commands.Cog):
             return await ctx.reply(f"**{ctx.author.mention} your inventory is full.**", delete_after=5)
 
         cards = iufi.CardPool.roll(included="legendary")
-        image_bytes, image_format = iufi.gen_cards_view(cards)
+        image_bytes, image_format = await asyncio.to_thread(iufi.gen_cards_view, cards)
 
         view = RollView(ctx.author, cards)
         view.message = await ctx.send(

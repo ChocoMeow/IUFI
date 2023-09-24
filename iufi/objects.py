@@ -36,7 +36,7 @@ FRAMES_BASE: dict[str, str] = {
 POTIONS_BASE: dict[str, str | dict[str, float]] = {
     "speed": {
         "emoji": "⚡",
-        "expiration": 900,
+        "expiration": 1800,
         "levels": {
             "i": .1,
             "ii": .2,
@@ -45,7 +45,7 @@ POTIONS_BASE: dict[str, str | dict[str, float]] = {
     },
     "luck": {
         "emoji": "🍀",
-        "expiration": 900,
+        "expiration": 1800,
         "levels": {
             "i": 1,
             "ii": 2,
@@ -89,27 +89,22 @@ class CardObject:
     
     def _load_image(self, path: str):
         """Load and process the image"""
-        def blocking_io():
-            try:
-                with Image.open(os.path.join(path)) as img:
-                    if img.format == "GIF":
-                        modified_frames = []
-                        for img_frame in ImageSequence.Iterator(img):
-                            frame = img_frame.resize((200, 355))
-                            frame = self._round_corners(frame)
-                            modified_frames.append(frame)
-                        self._image = modified_frames
+        try:
+            with Image.open(os.path.join(path)) as img:
+                if img.format == "GIF":
+                    modified_frames = []
+                    for img_frame in ImageSequence.Iterator(img):
+                        frame = img_frame.resize((200, 355))
+                        frame = self._round_corners(frame)
+                        modified_frames.append(frame)
+                    self._image = modified_frames
 
-                    else:
-                        image = img.resize((200, 355), Image.LANCZOS)
-                        self._image = self._round_corners(image)
+                else:
+                    image = img.resize((200, 355), Image.LANCZOS)
+                    self._image = self._round_corners(image)
 
-            except Exception as e:
-                raise ImageLoadError(f"Unable to load the image. Reason: {e}")
-
-        with ThreadPoolExecutor() as executor:
-            loop = asyncio.get_event_loop()
-            loop.run_in_executor(executor, blocking_io)
+        except Exception as e:
+            raise ImageLoadError(f"Unable to load the image. Reason: {e}")
 
 class Card(CardObject):
     __slots__ = (
@@ -148,38 +143,33 @@ class Card(CardObject):
     
     def _load_image(self):
         """Load and process the image"""
-        def blocking_io(loop):
-            if not self.stars:
-                self.stars = random.randint(1, 5)
-                loop.create_task(func.update_card(self.id, {"$set": {"stars": self.stars}}, insert=True))
+        if not self.stars:
+            self.stars = random.randint(1, 5)
+            asyncio.create_task(func.update_card(self.id, {"$set": {"stars": self.stars}}, insert=True))
 
-            try:
-                if self._tier != "celestial":
-                    with Image.open(os.path.join(func.ROOT_DIR, "images", self._tier, f"{self.id}.jpg")) as img:
-                        image = img.resize(((190, 338) if self._frame else (200, 355)), Image.LANCZOS)
+        try:
+            if self._tier != "celestial":
+                with Image.open(os.path.join(func.ROOT_DIR, "images", self._tier, f"{self.id}.jpg")) as img:
+                    image = img.resize(((190, 338) if self._frame else (200, 355)), Image.LANCZOS)
+                    if self._frame:
+                        self._image = self._load_frame(image)
+                    else:
+                        self._image = self._round_corners(image)
+            else:
+                with Image.open(os.path.join(func.ROOT_DIR, "images", self._tier, f"{self.id}.gif")) as img:
+                    modified_frames = []
+                    for img_frame in ImageSequence.Iterator(img):
+                        frame = img_frame.resize((190, 338) if self._frame else (200, 355))
                         if self._frame:
-                            self._image = self._load_frame(image)
-                        else:
-                            self._image = self._round_corners(image)
-                else:
-                    with Image.open(os.path.join(func.ROOT_DIR, "images", self._tier, f"{self.id}.gif")) as img:
-                        modified_frames = []
-                        for img_frame in ImageSequence.Iterator(img):
-                            frame = img_frame.resize((190, 338) if self._frame else (200, 355))
-                            if self._frame:
-                                frame = self._load_frame(frame)
-                            else:    
-                                frame = self._round_corners(frame)
-                            modified_frames.append(frame)
+                            frame = self._load_frame(frame)
+                        else:    
+                            frame = self._round_corners(frame)
+                        modified_frames.append(frame)
 
-                        self._image = modified_frames
+                    self._image = modified_frames
 
-            except Exception as e:
-                raise ImageLoadError(f"Unable to load the image. Reason: {e}")
-
-        with ThreadPoolExecutor() as executor:
-            loop = asyncio.get_event_loop()
-            loop.run_in_executor(executor, blocking_io, loop)
+        except Exception as e:
+            raise ImageLoadError(f"Unable to load the image. Reason: {e}")
 
     def change_owner(self, owner_id: int | None = None) -> None:
         if self.owner_id != owner_id:
@@ -213,6 +203,17 @@ class Card(CardObject):
 
             asyncio.create_task(func.update_card(self.id, {"$set": {"stars": stars}}))
 
+    def image_bytes(self) -> BytesIO:
+        image_bytes = BytesIO()
+
+        if self.is_gif:
+            self.image[0].save(image_bytes, format="GIF", save_all=True, append_images=self.image[1:], loop=0)
+        else:
+            self.image.save(image_bytes, format='PNG')
+        image_bytes.seek(0)
+
+        return image_bytes
+    
     @property
     def cost(self) -> int:
         price = TIERS_BASE.get(self._tier)[1]
@@ -236,18 +237,6 @@ class Card(CardObject):
         if self._image is None:
             self._load_image()
         return self._image
-
-    @property
-    def image_bytes(self) -> BytesIO:
-        image_bytes = BytesIO()
-
-        if self.is_gif:
-            self.image[0].save(image_bytes, format="GIF", save_all=True, append_images=self.image[1:], loop=0)
-        else:
-            self.image.save(image_bytes, format='PNG')
-        image_bytes.seek(0)
-
-        return image_bytes
 
     @property
     def is_gif(self) -> bool:

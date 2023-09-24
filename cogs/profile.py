@@ -1,4 +1,4 @@
-import discord, iufi, time
+import discord, iufi, time, asyncio
 import functions as func
 
 from discord.ext import commands
@@ -40,7 +40,7 @@ class Profile(commands.Cog):
         card = iufi.CardPool.get_card(user["profile"]["main"])
         if card and card.owner_id == user["_id"]:
             embed.set_image(url=f"attachment://image.{card.format}")
-            return await ctx.reply(file=discord.File(card.image_bytes, filename=f"image.{card.format}"), embed=embed)
+            return await ctx.reply(file=discord.File(await asyncio.to_thread(card.image_bytes), filename=f"image.{card.format}"), embed=embed)
         
         await ctx.reply(embed=embed)
 
