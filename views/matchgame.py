@@ -17,34 +17,42 @@ from . import ButtonOnCooldown
 GAME_SETTINGS: dict[str, dict[str, Any]] = {
     "1": {
         "cooldown": 600,
-        "timeout": 200,
+        "timeout": 120,
         "cards": 3,
         "elem_per_row": 3,
         "max_clicks": 8,
         "rewards": {
-            "2": ("candies",  10),
-            "3": [("potions.speed_i", 1), ("potions.luck_i", 1)]
+            2: ("candies",  10),
+            3: [("potions.speed_i", 1), ("potions.luck_i", 1)]
         },
     },
     "2": {
         "cooldown": 900,
-        "timeout": 400,
+        "timeout": 240,
         "cards": 6,
         "elem_per_row": 4,
         "max_clicks": 16,
         "rewards": {
-            "2": ("candies",  20),
-            "4": ("candies",  40),
-            "5": [("potions.speed_ii", 1), ("potions.luck_ii", 1)]
+            2: ("candies",  15),
+            4: ("candies",  20),
+            5: [("potions.speed_ii", 1), ("potions.luck_ii", 1)],
+            6: ("candies",  30),
         },
     },
     "3": {
         "cooldown": 1200,
-        "timeout": 600,
+        "timeout": 480,
         "cards": 10,
         "elem_per_row": 5,
         "max_clicks": 26,
-        "rewards": {},
+        "rewards": {
+            2: ("candies",  25),
+            4: ("candies",  30),
+            6: [("potions.speed_ii", 1), ("potions.luck_ii", 1)],
+            8: ("candies",  35),
+            9: [("potions.speed_iii", 1), ("potions.luck_iii", 1)],
+            10: ("candies",  45)
+        },
     }
 }
 
@@ -184,27 +192,26 @@ class MatchGame(discord.ui.View):
         matched_raw = self.matched()
         final_rewards: dict[str, int] = {}
         
+        rewards = f"{'Pairs':>9}{'Rewards':>9}\n"
         for matched, reward in self._data.get("rewards").items():
-            if int(matched) > matched_raw:
-                break
-            
             if isinstance(reward, list):
                 reward = choice(reward)
             
             if reward[0] not in final_rewards:
                 final_rewards[reward[0]] = 0
             final_rewards[reward[0]] += reward[1]
-        
-        rewards = ""
-        for reward, amount in final_rewards.items():
-            reward = reward.split(".")
-            if reward[0] == "candies":
-                rewards += f"{'🍬 Candy':<20} + {amount}\n"
+
+            reward_name, amount = reward
+            reward_name = reward_name.split(".")
+
+            rewards += ("✅" if matched <= matched_raw  else "⬛") + f"  {matched:<3}"
+            if reward_name[0] == "candies":
+                rewards += f"    {'🍬 Candy':<18} x{amount}\n"
             else:
-                reward = reward[1].split("_")
-                potion_data = POTIONS_BASE.get(reward[0])
-                rewards += f"{potion_data.get('emoji') + ' ' + reward[0].title() + ' ' + reward[1].upper() + ' Potion':<20} + {amount}\n"
-        
+                reward_name = reward_name[1].split("_")
+                potion_data = POTIONS_BASE.get(reward_name[0])
+                rewards += f"    {potion_data.get('emoji') + ' ' + reward_name[0].title() + ' ' + reward_name[1].upper() + ' Potion':<18} x{amount}\n"
+            
         embed.description = f"```{rewards}```"
         await func.update_user(self.author.id, {"$inc": final_rewards})
         await self.response.channel.send(content=f"<@{self.author.id}>", embed=embed)

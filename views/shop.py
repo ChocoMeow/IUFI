@@ -26,7 +26,7 @@ class QuantityModal(discord.ui.Modal):
 
         self.add_item(
             discord.ui.TextInput(
-                label="Code Runner",
+                label="Quantity",
                 placeholder="Enter a number E.g. 10",
                 style=discord.TextStyle.short,
             )
