@@ -15,6 +15,7 @@ class HelpView(discord.ui.View):
         self.response: discord.Message = None
 
         self.add_item(discord.ui.Button(label='Github', emoji=':github:1098265017268322406', url='https://github.com/ChocoMeow/IUFI'))
+        self.add_item(discord.ui.Button(label='Beginner Guide', emoji=':green_book:', url='https://docs.google.com/document/d/1clS-HmpKX8MJOv9K383jq7TijJqCi5y5yn68kHPTTpk/edit?usp=drivesdk'))
     
     async def on_error(self, error, item, interaction) -> None:
         return
