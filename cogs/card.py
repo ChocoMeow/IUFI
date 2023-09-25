@@ -284,6 +284,10 @@ class Card(commands.Cog):
     @commands.command(aliases=["t"])
     async def trade(self, ctx: commands.Context, member: discord.Member, card_id: str, candies: int):
         """Trades your card with a member."""
+        if member.bot:
+            return await ctx.reply("You are not able to trade with a bot.")
+        if member == ctx.author:
+            return await ctx.reply("You are not able to trade with yourself.")
         if candies < 0:
             return await ctx.reply("The candy count cannot be set to a negative value.")
         
@@ -312,6 +316,10 @@ class Card(commands.Cog):
     @commands.command(aliases=["tl"])
     async def tradelast(self, ctx: commands.Context, member: discord.Member, candies: int):
         """Trades your last card with a member."""
+        if member.bot:
+            return await ctx.reply("You are not able to trade with a bot.")
+        if member == ctx.author:
+            return await ctx.reply("You are not able to trade with yourself.")
         if candies < 0:
             return await ctx.reply("The candy count cannot be set to a negative value.")
         

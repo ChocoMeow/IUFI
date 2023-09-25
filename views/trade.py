@@ -47,7 +47,7 @@ class TradeView(discord.ui.View):
         await interaction.response.defer()
         self.card.change_owner(self.buyer.id)
         await func.update_user(self.seller.id, {"$pull": {"cards": self.card.id}, "$inc": {"candies": self.candies}})
-        await func.update_user(self.buyer.id, {"$push": {"cards": self.card.id}, "$inc": {"candies": self.candies}})
+        await func.update_user(self.buyer.id, {"$push": {"cards": self.card.id}, "$inc": {"candies": -self.candies}})
         await func.update_card(self.card.id, {"$set": {"owner_id": self.buyer.id}})
 
         embed = discord.Embed(title="✅ Traded", color=discord.Color.random())
