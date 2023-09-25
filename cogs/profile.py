@@ -47,8 +47,8 @@ class Profile(commands.Cog):
     @commands.command(aliases=["sb"])
     async def setbio(self, ctx: commands.Context, *, bio: str = None):
         """Sets your profile bio"""
-        if bio and len(bio) > 20:
-            return await ctx.reply(content="Please shorten the bio as it is too long. (No more than 20 chars)")
+        if bio and len(bio) > 30:
+            return await ctx.reply(content="Please shorten the bio as it is too long. (No more than 30 chars)")
 
         await func.update_user(ctx.author.id, {"$set": {"profile.bio": bio}})
         embed = discord.Embed(description=f"Bio has been set to\n```{bio}```", color=discord.Color.random())
