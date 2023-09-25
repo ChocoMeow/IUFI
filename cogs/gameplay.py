@@ -31,7 +31,7 @@ class Gameplay(commands.Cog):
         
         actived_potions = func.get_potions(user.get("actived_potions", {}), iufi.POTIONS_BASE)
         cards = iufi.CardPool.roll(luck_rates=actived_potions.get("luck", None))
-        image_bytes, image_format = await asyncio.to_thread(iufi.gen_cards_view, cards, 4)
+        image_bytes, image_format = await asyncio.to_thread(iufi.gen_cards_view, cards)
 
         view = RollView(ctx.author, cards)
         view.message = await ctx.send(

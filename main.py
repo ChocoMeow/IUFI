@@ -1,8 +1,12 @@
 import discord, os, iufi
 import functions as func
 
+from random import randint
 from discord.ext import commands
 from motor.motor_asyncio import AsyncIOMotorClient
+
+ALLOWED_CATEGORY_IDS = [987352501172989993, 1144810748158165043]
+IGONE_CHANNEL_IDS = [1004494130874953769, 987354694236131418]
 
 class IUFI(commands.Bot):
     def __init__(self, *args, **kwargs):
@@ -26,7 +30,13 @@ class IUFI(commands.Bot):
             
             for emoji in emojis:
                 await message.add_reaction(emoji)
-                
+
+        if message.channel.category_id not in ALLOWED_CATEGORY_IDS:
+            return False
+        
+        if message.channel.id in IGONE_CHANNEL_IDS:
+            return False
+        
         await self.process_commands(message)
 
     async def setup_hook(self) -> None:
@@ -58,6 +68,10 @@ class IUFI(commands.Bot):
                 card_id = filename.split(".")[0]
 
                 card_data = all_card_data.get(card_id, {"_id": card_id})
+                if "stars" not in card_data:
+                    stars = randint(1, 5)
+                    card_data["stars"] = stars
+                    await func.update_card(card_id, {"$set": {"stars": stars}}, insert=True)
                 self.iufi.add_card(tier=category, **card_data)
 
         if len(NEW_IMAGES_DIR := os.listdir(os.path.join(func.ROOT_DIR, "newImages"))):
@@ -120,7 +134,7 @@ bot = IUFI(
     command_prefix=["q", "Q"],
     help_command=None,
     chunk_guilds_at_startup=True,
-    activity=discord.Activity(type=discord.ActivityType.playing, name="IU Card Game"),
+    activity=discord.Activity(type=discord.ActivityType.listening, name="qhelp"),
     case_insensitive=True,
     intents=intents
 )

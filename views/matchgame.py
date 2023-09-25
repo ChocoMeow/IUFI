@@ -16,7 +16,7 @@ from . import ButtonOnCooldown
 
 GAME_SETTINGS: dict[str, dict[str, Any]] = {
     "1": {
-        "cooldown": 600,
+        "cooldown": 18_000,
         "timeout": 120,
         "cards": 3,
         "elem_per_row": 3,
@@ -27,7 +27,7 @@ GAME_SETTINGS: dict[str, dict[str, Any]] = {
         },
     },
     "2": {
-        "cooldown": 900,
+        "cooldown": 32_400,
         "timeout": 240,
         "cards": 6,
         "elem_per_row": 4,
@@ -40,7 +40,7 @@ GAME_SETTINGS: dict[str, dict[str, Any]] = {
         },
     },
     "3": {
-        "cooldown": 1200,
+        "cooldown": 42_200,
         "timeout": 480,
         "cards": 10,
         "elem_per_row": 5,

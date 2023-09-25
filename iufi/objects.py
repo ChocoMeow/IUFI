@@ -143,10 +143,6 @@ class Card(CardObject):
     
     def _load_image(self):
         """Load and process the image"""
-        if not self.stars:
-            self.stars = random.randint(1, 5)
-            asyncio.create_task(func.update_card(self.id, {"$set": {"stars": self.stars}}, insert=True))
-
         try:
             if self._tier != "celestial":
                 with Image.open(os.path.join(func.ROOT_DIR, "images", self._tier, f"{self.id}.jpg")) as img:
