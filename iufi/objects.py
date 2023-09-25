@@ -36,7 +36,7 @@ FRAMES_BASE: dict[str, str] = {
 POTIONS_BASE: dict[str, str | dict[str, float]] = {
     "speed": {
         "emoji": "⚡",
-        "expiration": 1800,
+        "expiration": 900,
         "levels": {
             "i": .1,
             "ii": .2,
@@ -45,11 +45,11 @@ POTIONS_BASE: dict[str, str | dict[str, float]] = {
     },
     "luck": {
         "emoji": "🍀",
-        "expiration": 1800,
+        "expiration": 900,
         "levels": {
             "i": 1,
             "ii": 2,
-            "iii": 5
+            "iii": 4
         }
     }
 }

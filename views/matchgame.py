@@ -16,42 +16,42 @@ from . import ButtonOnCooldown
 
 GAME_SETTINGS: dict[str, dict[str, Any]] = {
     "1": {
-        "cooldown": 18_000,
+        "cooldown": 3_000,
         "timeout": 120,
         "cards": 3,
         "elem_per_row": 3,
         "max_clicks": 8,
         "rewards": {
-            2: ("candies",  10),
+            2: ("candies",  5),
             3: [("potions.speed_i", 1), ("potions.luck_i", 1)]
         },
     },
     "2": {
-        "cooldown": 32_400,
+        "cooldown": 5_400,
         "timeout": 240,
         "cards": 6,
         "elem_per_row": 4,
         "max_clicks": 16,
         "rewards": {
-            2: ("candies",  15),
-            4: ("candies",  20),
+            2: ("candies",  5),
+            4: ("candies",  10),
             5: [("potions.speed_ii", 1), ("potions.luck_ii", 1)],
-            6: ("candies",  30),
+            6: ("candies",  15),
         },
     },
     "3": {
-        "cooldown": 42_200,
+        "cooldown": 7_200,
         "timeout": 480,
         "cards": 10,
         "elem_per_row": 5,
         "max_clicks": 26,
         "rewards": {
-            2: ("candies",  25),
-            4: ("candies",  30),
+            2: ("candies",  10),
+            4: ("candies",  15),
             6: [("potions.speed_ii", 1), ("potions.luck_ii", 1)],
-            8: ("candies",  35),
+            8: ("candies",  20),
             9: [("potions.speed_iii", 1), ("potions.luck_iii", 1)],
-            10: ("candies",  45)
+            10: ("candies",  100)
         },
     }
 }
