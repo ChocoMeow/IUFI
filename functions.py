@@ -98,7 +98,7 @@ async def get_user(user_id: int) -> dict[str, Any]:
         if not user:
             await USERS_DB.insert_one({"_id": user_id, **USER_BASE})
 
-        user = USERS_BUFFER[user_id] = user if user else copy.deepcopy(USER_BASE)
+        user = USERS_BUFFER[user_id] = user if user else copy.deepcopy(USER_BASE) | {"_id": user_id}
     return user
 
 async def update_user(user_id: int, data: dict) -> None:

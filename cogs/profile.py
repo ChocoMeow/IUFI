@@ -57,12 +57,13 @@ class Profile(commands.Cog):
     @commands.command(aliases=["m"])
     async def main(self, ctx: commands.Context, card_id: str = None):
         """Sets the photocard as your profile display. Card can be identified by its ID or given tag."""
-        card = iufi.CardPool.get_card(card_id)
-        if not card:
-            return await ctx.reply("The card was not found. Please try again.")
+        if card_id:
+            card = iufi.CardPool.get_card(card_id)
+            if not card:
+                return await ctx.reply("The card was not found. Please try again.")
 
-        if card.owner_id != ctx.author.id:
-            return await ctx.reply("You are not the owner of this card.")
+            if card.owner_id != ctx.author.id:
+                return await ctx.reply("You are not the owner of this card.")
 
         await func.update_user(ctx.author.id, {"$set": {"profile.main": card_id}})
         embed = discord.Embed(title="👤 Set Main", color=discord.Color.random())
