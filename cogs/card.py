@@ -246,8 +246,8 @@ class Card(commands.Cog):
     @commands.command(aliases=["stl"])
     async def settaglast(self, ctx: commands.Context, tag: str):
         """Sets the tag of the last photocard in your collection."""
-        if tag and len(tag) >= 10:
-            return await ctx.reply(content="Please shorten the tag name as it is too long.")
+        if tag and len(tag) > 10:
+            return await ctx.reply(content="Please shorten the tag name as it is too long. (No more than 10 chars)")
         
         user = await func.get_user(ctx.author.id)
         if not user["cards"]:
