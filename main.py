@@ -81,7 +81,9 @@ class IUFI(commands.Bot):
                     if new_image.startswith(category):
                         card_id = available_ids.pop(0)
                         os.rename(os.path.join(func.ROOT_DIR, "newImages", new_image), os.path.join(image_folder, category, f"{card_id}.{'gif' if category == 'celestial' else 'jpg'}"))
-                        self.iufi.add_card(_id=card_id, tier=category)
+                        stars = randint(1, 5)
+                        await func.update_card(card_id, {"$set": {"stars": stars}}, insert=True)
+                        self.iufi.add_card(_id=card_id, tier=category, stars=stars)
 
                         print(f"Added New Image {new_image}({category}) -> ID: {card_id}")
 

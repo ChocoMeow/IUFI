@@ -55,9 +55,11 @@ class Developer(commands.Cog):
 
         await ctx.reply(embed=embed, view=DebugView(self.bot, ctx.author), ephemeral=True)
 
-    @commands.is_owner()
     async def _findsimilar(self, interaction: discord.Interaction, message: discord.Message):
         """Find similar image from the card pool."""
+        if interaction.guild_id not in [1144810748158165042]:
+            return await interaction.response.send_message("You are not able to use this command on this server!", ephemeral=True)
+        
         if message.attachments:
             image = message.attachments[0]
             await interaction.response.defer()
