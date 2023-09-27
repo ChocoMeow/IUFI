@@ -9,7 +9,7 @@ class Settings(commands.Cog):
         self.emoji = "⚙️"
         self.invisible = False
 
-    @commands.command(aliases=["qtr"])
+    @commands.command(aliases=["tr"])
     async def togglereminder(self, ctx: commands.Context) -> None:
         """Turns reminders on for your cooldowns. Make sure you are not blocking DMs."""
 
@@ -18,9 +18,9 @@ class Settings(commands.Cog):
         await func.update_user(ctx.author.id, {"$set": {"reminder": toggle}})
 
         toggle_text = "On" if toggle else "Off"
-        embed = discord.Embed(f"🔔 Reminder {toggle_text}", color=discord.Color.random())
+        embed = discord.Embed(title=f"🔔 Reminder {toggle_text}", color=discord.Color.random())
         embed.description = f"Reminders have been turned {toggle_text}"
         await ctx.reply(embed=embed)
 
 async def setup(bot: commands.Bot):
-    bot.add_cog(Settings)
+    await bot.add_cog(Settings(bot))
