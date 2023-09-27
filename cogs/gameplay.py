@@ -26,7 +26,7 @@ class Gameplay(commands.Cog):
 
         if user["exp"] == 0:
             view = discord.ui.View()
-            view.add_item(discord.ui.Button(label='Beginner Guide', emoji='📗', url='https://docs.google.com/document/d/1clS-HmpKX8MJOv9K383jq7TijJqCi5y5yn68kHPTTpk/edit?usp=drivesdk'))
+            view.add_item(discord.ui.Button(label='Beginner Guide', emoji='📗', url='https://docs.google.com/document/d/1VAD20wZQ56S_wDeMJlwIKn_jImIPuxh2lgy1fn17z0c/edit'))
             await ctx.reply(f"**Welcome to IUFI! Please have a look at the guide or use `qhelp` to begin.**", view=view)
 
 
