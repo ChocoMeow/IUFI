@@ -1,8 +1,18 @@
 import discord, asyncio
 import functions as func
 
-from iufi import CardPool, Card
+from iufi import (
+    CardPool,
+    Card,
+    gen_cards_view
+)
+
+from discord.ext import commands
+from . import ButtonOnCooldown
 from math import ceil
+
+def key(interaction: discord.Interaction):
+    return interaction.user
 
 class Dropdown(discord.ui.Select):
     def __init__(self, cards: dict[str, Card]):
@@ -42,6 +52,7 @@ class PhotoCardView(discord.ui.View):
         self.add_item(self._dropdown_view)
 
         self.message: discord.Message = None
+        self.cooldown = commands.CooldownMapping.from_cooldown(1.0, 10.0, key)
 
     def build_embed(self) -> discord.Embed:
         offset = self.current_page * 7
@@ -69,6 +80,11 @@ class PhotoCardView(discord.ui.View):
         
         await self.message.edit(view=self)
 
+    async def on_error(self, interaction: discord.Interaction, error: Exception, item: discord.ui.Item) -> None:
+        if isinstance(error, ButtonOnCooldown):
+            sec = int(error.retry_after)
+            await interaction.response.send_message(f"You're on cooldown for {sec} second{'' if sec == 1 else 's'}!", ephemeral=True)
+        
     async def interaction_check(self, interaction: discord.Interaction) -> bool:
         return self.author == interaction.user
     
@@ -100,7 +116,31 @@ class PhotoCardView(discord.ui.View):
             return await interaction.response.edit_message(embed=self.build_embed(), view=self)
         await interaction.response.defer()
     
-    @discord.ui.button(emoji='🗑️', style=discord.ButtonStyle.red)
-    async def stop_button(self, interaction: discord.Interaction, button: discord.ui.Button):
-        await self.message.delete()
-        self.stop()
+    @discord.ui.button(emoji='📄', style=discord.ButtonStyle.green)
+    async def view_all(self, interaction: discord.Interaction, button: discord.ui.Button):
+        retry_after = self.cooldown.update_rate_limit(interaction)
+        if retry_after:
+            raise ButtonOnCooldown(retry_after)
+        
+        await interaction.response.defer()
+
+        offset = self.current_page * 7
+        card_ids = list(self.cards.keys())[(offset-7):offset]
+        cards: list[Card] = []
+
+        for card_id in card_ids:
+            card = self.cards.get(card_id)
+            if not card:
+                card = self.cards[card_id] = CardPool.get_card(card_id)
+            cards.append(card)
+
+        desc = "```"
+        for card in cards:
+            desc += f"{card.display_id} {card.display_tag} {card.display_frame} {card.display_stars} {card.tier[0]}\n"
+        desc += "```"
+
+        image_bytes, image_format = await asyncio.to_thread(gen_cards_view, cards, 4)
+
+        embed = discord.Embed(title=f"ℹ️ Card Info", description=desc, color=0x949fb8)
+        embed.set_image(url=f"attachment://image.{image_format}")
+        await interaction.followup.send(file=discord.File(image_bytes, filename=f"image.{image_format}"), embed=embed)
