@@ -34,10 +34,13 @@ class Tasks(commands.Cog):
     @tasks.loop(minutes=10.0)
     async def reminder(self) -> None:
         time_range = {"$gt": (current_time := time.time()), "$lt": current_time + 600}
-        query = {"$or": [
-            {"cooldown.roll": time_range},
-            {"cooldown.daily": time_range},
-            {"cooldown.match_game": time_range}
+        query = {"$and":[
+            {"reminder": True},
+            {"$or": [
+                {"cooldown.roll": time_range},
+                {"cooldown.daily": time_range},
+                {"cooldown.match_game": time_range}
+            ]}
         ]}
 
         async for doc in func.USERS_DB.find(query):
