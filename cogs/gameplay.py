@@ -15,13 +15,6 @@ class Gameplay(commands.Cog):
     @commands.cooldown(1, 5, commands.BucketType.user)
     async def roll(self, ctx: commands.Context):
         """Rolls a set of photocards for claiming."""
-
-        # market channel check
-        if ctx.channel.id == 987354574304190476:
-            return await ctx.reply(f"**{ctx.author.mention} you can't use this command in this channel.**", delete_after=5)
-
-
-
         user = await func.get_user(ctx.author.id)
 
         if user["exp"] == 0:
@@ -53,11 +46,6 @@ class Gameplay(commands.Cog):
     @commands.cooldown(1, 5, commands.BucketType.user)
     async def rareroll(self, ctx: commands.Context):
         """Starts a roll with at least one rare photocard guaranteed."""
-
-        # market channel check
-        if ctx.channel.id == 987354574304190476:
-            return await ctx.reply(f"**{ctx.author.mention} you can't use this command in this channel.**", delete_after=5)
-
         user = await func.get_user(ctx.author.id)
         if user["roll"]["rare"] <= 0:
             return await ctx.reply("You’ve used up all your `rare` rolls for now.")
@@ -82,11 +70,6 @@ class Gameplay(commands.Cog):
     @commands.cooldown(1, 5, commands.BucketType.user)
     async def epicroll(self, ctx: commands.Context):
         """Starts a roll with at least one epic photocard guaranteed."""
-
-        # market channel check
-        if ctx.channel.id == 987354574304190476:
-            return await ctx.reply(f"**{ctx.author.mention} you can't use this command in this channel.**", delete_after=5)
-
         user = await func.get_user(ctx.author.id)
         if user["roll"]["epic"] <= 0:
             return await ctx.reply("You’ve used up all your `epic` rolls for now.")
@@ -110,11 +93,6 @@ class Gameplay(commands.Cog):
     @commands.cooldown(1, 5, commands.BucketType.user)
     async def legendroll(self, ctx: commands.Context):
         """Starts a roll with at least one legendary photocard guaranteed."""
-
-        # market channel check
-        if ctx.channel.id == 987354574304190476:
-            return await ctx.reply(f"**{ctx.author.mention} you can't use this command in this channel.**", delete_after=5)
-
         user = await func.get_user(ctx.author.id)
         if user["roll"]["legendary"] <= 0:
             return await ctx.reply("You’ve used up all your `legend` rolls for now.")
@@ -137,11 +115,6 @@ class Gameplay(commands.Cog):
     @commands.command(aliases=["mg"])
     async def game(self, ctx: commands.Context, level: str):
         """Matching game."""
-
-        # market channel check
-        if ctx.channel.id == 987354574304190476:
-            return await ctx.reply(f"**{ctx.author.mention} you can't use this command in this channel.**", delete_after=5)
-
         if level not in (levels := GAME_SETTINGS.keys()):
             return await ctx.reply(f"Invalid level selection! Please select a valid level: `{', '.join(levels)}`")
 
@@ -158,11 +131,6 @@ class Gameplay(commands.Cog):
     @commands.command(aliases=["cd"])
     async def cooldown(self, ctx: commands.Context):
         """Shows all your cooldowns."""
-
-        # market channel check
-        if ctx.channel.id == 987354574304190476:
-            return await ctx.reply(f"**{ctx.author.mention} you can't use this command in this channel.**", delete_after=5)
-
         user = await func.get_user(ctx.author.id)
 
         cooldown: dict[str, float] = user.get("cooldown", {})
@@ -186,11 +154,6 @@ class Gameplay(commands.Cog):
     @commands.command(aliases=["s"])
     async def shop(self, ctx: commands.Context):
         """Brings up the IUFI shop."""
-
-        # market channel check
-        if ctx.channel.id == 987354574304190476:
-            return await ctx.reply(f"**{ctx.author.mention} you can't use this command in this channel.**", delete_after=5)
-
         view = ShopView(ctx.author)
         view.message = await ctx.reply(embed=await view.build_embed(), view=view)
 

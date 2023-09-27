@@ -37,6 +37,10 @@ class IUFI(commands.Bot):
         if message.channel.id in IGONE_CHANNEL_IDS:
             return False
         
+        elif message.channel.id == 987354574304190476:
+            if not message.content.lstrip().lower().startswith(("qi", "qcardinfo", "qil", "qcardinfolast")):
+                return False
+            
         await self.process_commands(message)
 
     async def setup_hook(self) -> None:
