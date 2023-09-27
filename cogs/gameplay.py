@@ -138,7 +138,8 @@ class Gameplay(commands.Cog):
         embed.description = f"```🎲 Roll : {func.cal_retry_time(cooldown.get('roll', 0), 'Ready')}\n" \
                             f"🎮 Claim: {func.cal_retry_time(cooldown.get('claim', 0), 'Ready')}\n" \
                             f"📅 Daily: {func.cal_retry_time(cooldown.get('daily', 0), 'Ready')}\n" \
-                            f"🃏 Game : {func.cal_retry_time(cooldown.get('match_game', 0), 'Ready')}\n\n" \
+                            f"🃏 Game : {func.cal_retry_time(cooldown.get('match_game', 0), 'Ready')}\n" \
+                            f"🔔 Reminder: {'On' if user.get('reminder', False) else 'Off'}\n\n" \
                             f"Potion Time Left:\n" 
 
         potion_status = "\n".join(
@@ -147,7 +148,7 @@ class Gameplay(commands.Cog):
         )
         
         embed.description += (potion_status if potion_status else "No potions are activated.") + "```"
-        embed.set_thumbnail(url=ctx.author.avatar.url)
+        embed.set_thumbnail(url=ctx.author.display_avatar.url)
         await ctx.reply(embed=embed)
 
     @commands.command(aliases=["s"])

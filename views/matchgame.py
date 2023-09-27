@@ -67,6 +67,9 @@ class GuessButton(discord.ui.Button):
         super().__init__(*args, **kwargs)
     
     async def callback(self, interaction: discord.Interaction) -> None:
+        if self.disabled:
+            return await interaction.response.defer()
+        
         if self.view._need_wait:
             return await interaction.response.send_message("Too fast. Please slower!", ephemeral=True)
         
