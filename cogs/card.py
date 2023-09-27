@@ -50,7 +50,7 @@ class Card(commands.Cog):
         await ctx.reply(file=discord.File(image_bytes, filename=f"image.{image_format}"), embed=embed)
 
     @commands.command(aliases=["il"])
-    async def infolast(self, ctx: commands.Context):
+    async def cardinfolast(self, ctx: commands.Context):
         """Shows the details of your last photocard."""
         user = await func.get_user(ctx.author.id)
 

@@ -19,7 +19,7 @@ class Gameplay(commands.Cog):
 
         if user["exp"] == 0:
             view = discord.ui.View()
-            view.add_item(discord.ui.Button(label='Beginner Guide', emoji='📗', url='https://docs.google.com/document/d/1clS-HmpKX8MJOv9K383jq7TijJqCi5y5yn68kHPTTpk/edit?usp=drivesdk'))
+            view.add_item(discord.ui.Button(label='Beginner Guide', emoji='📗', url='https://docs.google.com/document/d/1VAD20wZQ56S_wDeMJlwIKn_jImIPuxh2lgy1fn17z0c/edit'))
             await ctx.reply(f"**Welcome to IUFI! Please have a look at the guide or use `qhelp` to begin.**", view=view)
 
 
@@ -28,7 +28,7 @@ class Gameplay(commands.Cog):
 
         if len(user["cards"]) >= func.MAX_CARDS:
             return await ctx.reply(f"**{ctx.author.mention} your inventory is full.**", delete_after=5)
-        
+
         actived_potions = func.get_potions(user.get("actived_potions", {}), iufi.POTIONS_BASE)
         cards = iufi.CardPool.roll(luck_rates=actived_potions.get("luck", None))
         image_bytes, image_format = await asyncio.to_thread(iufi.gen_cards_view, cards)
@@ -117,7 +117,7 @@ class Gameplay(commands.Cog):
         """Matching game."""
         if level not in (levels := GAME_SETTINGS.keys()):
             return await ctx.reply(f"Invalid level selection! Please select a valid level: `{', '.join(levels)}`")
-        
+
         user = await func.get_user(ctx.author.id)
         if (retry := user.get("cooldown", {}).setdefault("match_game", 0)) > time.time():
             return await ctx.reply(f"{ctx.author.mention} your game is <t:{round(retry)}:R>", delete_after=10)
@@ -140,13 +140,13 @@ class Gameplay(commands.Cog):
                             f"📅 Daily: {func.cal_retry_time(cooldown.get('daily', 0), 'Ready')}\n" \
                             f"🃏 Game : {func.cal_retry_time(cooldown.get('match_game', 0), 'Ready')}\n" \
                             f"🔔 Reminder: {'On' if user.get('reminder', False) else 'Off'}\n\n" \
-                            f"Potion Time Left:\n" 
+                            f"Potion Time Left:\n"
 
         potion_status = "\n".join(
             [f"{data['emoji']} {potion.title():<5} {data['level'].upper():<3}: {func.cal_retry_time(data['expiration'])}"
             for potion, data in func.get_potions(user.get("actived_potions", {}), iufi.POTIONS_BASE, details=True).items()]
         )
-        
+
         embed.description += (potion_status if potion_status else "No potions are activated.") + "```"
         embed.set_thumbnail(url=ctx.author.display_avatar.url)
         await ctx.reply(embed=embed)
