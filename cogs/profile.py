@@ -256,7 +256,7 @@ class Profile(commands.Cog):
         ) if sum(frames.values()) else "Frame not found!")
 
         embed.description += f"🍶 Potions:\n{potions}\n\n🖼️ Frames:\n{frames}```"
-        embed.set_thumbnail(url=ctx.author.avatar.url)
+        embed.set_thumbnail(url=ctx.author.display_avatar.url)
         await ctx.reply(embed=embed)
 
 async def setup(bot: commands.Bot) -> None:

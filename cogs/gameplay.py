@@ -147,7 +147,7 @@ class Gameplay(commands.Cog):
         )
         
         embed.description += (potion_status if potion_status else "No potions are activated.") + "```"
-        embed.set_thumbnail(url=ctx.author.avatar.url)
+        embed.set_thumbnail(url=ctx.author.display_avatar.url)
         await ctx.reply(embed=embed)
 
     @commands.command(aliases=["s"])
