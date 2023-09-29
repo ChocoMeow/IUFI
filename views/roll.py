@@ -22,17 +22,17 @@ class RollButton(discord.ui.Button):
             else:
                 return await interaction.response.send_message("This card has claimed by you already!")
         
-        await interaction.response.defer()
         user = await func.get_user(interaction.user.id)
         if (retry := user["cooldown"]["claim"]) > time.time() and self.view.author != interaction.user:
-            return await interaction.followup.send(f"{interaction.user.mention} your next claim is <t:{round(retry)}:R>", ephemeral=True)
+            return await interaction.response.send_message(f"{interaction.user.mention} your next claim is <t:{round(retry)}:R>", ephemeral=True)
         
         if len(user["cards"]) >= func.MAX_CARDS:
-            return await interaction.followup.send(f"**{interaction.user.mention} your inventory is full.**", ephemeral=True)
+            return await interaction.response.send_message(f"**{interaction.user.mention} your inventory is full.**", ephemeral=True)
         
         self.card.change_owner(interaction.user.id)
         CardPool.remove_available_card(self.card)
-
+        
+        await interaction.response.defer()
         actived_potions = func.get_potions(user.get("actived_potions", {}), POTIONS_BASE)
         await func.update_user(interaction.user.id, {
             "$push": {"cards": self.card.id},
