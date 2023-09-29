@@ -144,7 +144,7 @@ class MatchGame(discord.ui.View):
         self._last_clicked: discord.ui.Button = None
         self.covered_card: TempCard = TempCard(f"cover/level{self._level}.jpg")
 
-        cards: list[Card] = CardPool.roll(self._cards)
+        cards: list[Card] = CardPool.roll(self._cards, avoid=["celestial"])
         cards.extend(cards)
         self.cards: list[Card] = cards
         shuffle(self.cards)
