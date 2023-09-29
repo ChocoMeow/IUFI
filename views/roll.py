@@ -22,10 +22,17 @@ class RollButton(discord.ui.Button):
             else:
                 return await interaction.response.send_message("This card has claimed by you already!")
         
+        user = await func.get_user(interaction.user.id)
+        if (retry := user["cooldown"]["claim"]) > time.time() and self.view.author != interaction.user:
+            return await interaction.response.send_message(f"{interaction.user.mention} your next claim is <t:{round(retry)}:R>", ephemeral=True)
+        
+        if len(user["cards"]) >= func.MAX_CARDS:
+            return await interaction.response.send_message(f"**{interaction.user.mention} your inventory is full.**", ephemeral=True)
+        
         self.card.change_owner(interaction.user.id)
         CardPool.remove_available_card(self.card)
-
-        user = await func.get_user(interaction.user.id)
+        
+        await interaction.response.defer()
         actived_potions = func.get_potions(user.get("actived_potions", {}), POTIONS_BASE)
         await func.update_user(interaction.user.id, {
             "$push": {"cards": self.card.id},
@@ -42,7 +49,7 @@ class RollButton(discord.ui.Button):
         self.style = discord.ButtonStyle.gray
 
         await self.view.message.edit(view=self.view)
-        await interaction.response.send_message(f"{interaction.user.mention} has claimed ` {self.custom_id} | {self.card.display_id} | {self.card.tier[0]} | {self.card.display_stars} `")
+        await interaction.followup.send(f"{interaction.user.mention} has claimed ` {self.custom_id} | {self.card.display_id} | {self.card.tier[0]} | {self.card.display_stars} `")
         
 class RollView(discord.ui.View):
     def __init__(self, author: discord.Member, cards: list[Card], *, timeout: float | None = None):
@@ -84,9 +91,4 @@ class RollView(discord.ui.View):
             await interaction.response.send_message("Oops! You have already claimed a card in this roll", ephemeral=True)
             return False
 
-        user = await func.get_user(interaction.user.id)
-        if (retry := user["cooldown"]["claim"]) > time.time() and self.author != interaction.user:
-            await interaction.response.send_message(f"{interaction.user.mention} your next claim is <t:{round(retry)}:R>", ephemeral=True)
-            return False
-        
         return True

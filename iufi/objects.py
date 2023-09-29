@@ -90,18 +90,14 @@ class CardObject:
     def _load_image(self, path: str):
         """Load and process the image"""
         try:
-            with Image.open(os.path.join(path)) as img:
-                if img.format == "GIF":
-                    modified_frames = []
-                    for img_frame in ImageSequence.Iterator(img):
-                        frame = img_frame.resize((200, 355))
-                        frame = self._round_corners(frame)
-                        modified_frames.append(frame)
-                    self._image = modified_frames
+            with Image.open(path) as img:
+                size = (200, 355)
+                process_frame = self._round_corners
 
+                if img.format == "GIF":
+                    self._image = [process_frame(frame.resize(size)) for frame in ImageSequence.Iterator(img)]
                 else:
-                    image = img.resize((200, 355), Image.LANCZOS)
-                    self._image = self._round_corners(image)
+                    self._image = process_frame(img.resize(size, Image.LANCZOS))
 
         except Exception as e:
             raise ImageLoadError(f"Unable to load the image. Reason: {e}")
@@ -144,25 +140,17 @@ class Card(CardObject):
     def _load_image(self):
         """Load and process the image"""
         try:
-            if self._tier != "celestial":
-                with Image.open(os.path.join(func.ROOT_DIR, "images", self._tier, f"{self.id}.jpg")) as img:
-                    image = img.resize(((190, 338) if self._frame else (200, 355)), Image.LANCZOS)
-                    if self._frame:
-                        self._image = self._load_frame(image)
-                    else:
-                        self._image = self._round_corners(image)
-            else:
-                with Image.open(os.path.join(func.ROOT_DIR, "images", self._tier, f"{self.id}.gif")) as img:
-                    modified_frames = []
-                    for img_frame in ImageSequence.Iterator(img):
-                        frame = img_frame.resize((190, 338) if self._frame else (200, 355))
-                        if self._frame:
-                            frame = self._load_frame(frame)
-                        else:    
-                            frame = self._round_corners(frame)
-                        modified_frames.append(frame)
+            image_path = os.path.join(func.ROOT_DIR, "images", self._tier)
+            image_file = f"{self.id}.gif" if self._tier == "celestial" else f"{self.id}.jpg"
+            size = (190, 338) if self._frame else (200, 355)
 
-                    self._image = modified_frames
+            with Image.open(os.path.join(image_path, image_file)) as img:
+                process_frame = self._load_frame if self._frame else self._round_corners
+
+                if img.format != "GIF":
+                    self._image = process_frame(img.resize(size, Image.LANCZOS))
+                else:
+                    self._image = [process_frame(frame.resize(size)) for frame in ImageSequence.Iterator(img)]
 
         except Exception as e:
             raise ImageLoadError(f"Unable to load the image. Reason: {e}")

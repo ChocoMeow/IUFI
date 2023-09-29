@@ -1,4 +1,5 @@
 from random import Random
+from collections import Counter
 
 from .objects import Card
 from .exceptions import DuplicatedCardError, DuplicatedTagError
@@ -94,18 +95,23 @@ class CardPool:
         return card
     
     @classmethod
-    def roll(cls, amount: int = 3, *, included: str = None, luck_rates: float = None) -> list[Card]:
-        categories = list(DROP_RATES.keys())
+    def roll(cls, amount: int = 3, *, included: list[str] = None, avoid: list[str] = None, luck_rates: float = None) -> list[Card]:
+        results = included if included else []
 
+        drop_rates = DROP_RATES.copy()
         if luck_rates:
-            drop_rates = {k: v if k == 'common' else v * (1 + luck_rates) for k, v in DROP_RATES.copy().items()}
+            drop_rates = {k: v if k == 'common' else v * (1 + luck_rates) for k, v in DROP_RATES.items()}
             total = sum(drop_rates.values())
             drop_rates['common'] = 1 - (total - drop_rates['common'])
-        else:
-            drop_rates = DROP_RATES
+        
+        if avoid:
+            drop_rates = {k: v for k, v in drop_rates.items() if k not in avoid}
 
-        results = cls._rand.choices(categories, weights=drop_rates.values(), k=amount)
-        if included:
-            results[amount - 1] = included
-
-        return [cls._rand.choice(cls._available_cards[result]) for result in results]
+        results.extend(cls._rand.choices(list(drop_rates.keys()), weights=drop_rates.values(), k=amount - len(results)))
+        cards = [
+            card
+            for cat, amt in Counter(results).items()
+            for card in cls._rand.choices(cls._available_cards[cat], k=amt)
+        ]
+        cls._rand.shuffle(cards)
+        return cards

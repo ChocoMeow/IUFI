@@ -38,14 +38,12 @@ class IUFI(commands.Bot):
             return False
         
         elif message.channel.id == 987354574304190476:
-            if not message.content.lstrip().lower().startswith(("qi", "qcardinfo", "qil", "qcardinfolast")):
+            if message.content.split(" ")[0].lower() not in ("qi", "qcardinfo", "qil", "qcardinfolast"):
                 return False
             
         await self.process_commands(message)
 
-    async def setup_hook(self) -> None:
-        all_card_data = {}
-
+    async def connect_db(self) -> None:
         if not ((db_name := func.tokens.mongodb_name) and (db_url := func.tokens.mongodb_url)):
             raise Exception("MONGODB_NAME and MONGODB_URL can't not be empty in .env")
 
@@ -61,20 +59,20 @@ class IUFI(commands.Bot):
         
         func.CARDS_DB = func.MONGO_DB[db_name]["cards"]
         func.USERS_DB = func.MONGO_DB[db_name]["users"]
-        
-        async for document in func.CARDS_DB.find():
-            all_card_data[document["_id"]] = document
 
+    async def setup_hook(self) -> None:
+        await self.connect_db()
+
+        all_card_data: dict[str, dict] = {doc["_id"]: doc async for doc in func.CARDS_DB.find()}
         image_folder = os.path.join(func.ROOT_DIR, 'images')
+
         for category in os.listdir(image_folder):
             for image in os.listdir(os.path.join(image_folder, category)):
-                filename: str = os.path.join(image_folder, category, image).split("/")[-1]
-                card_id = filename.split(".")[0]
-
+                card_id = os.path.basename(image).split(".")[0]
                 card_data = all_card_data.get(card_id, {"_id": card_id})
+
                 if "stars" not in card_data:
-                    stars = randint(1, 5)
-                    card_data["stars"] = stars
+                    card_data["stars"] = (stars := randint(1, 5))
                     await func.update_card(card_id, {"$set": {"stars": stars}}, insert=True)
                 self.iufi.add_card(tier=category, **card_data)
 
@@ -85,8 +83,7 @@ class IUFI(commands.Bot):
                     if new_image.startswith(category):
                         card_id = available_ids.pop(0)
                         os.rename(os.path.join(func.ROOT_DIR, "newImages", new_image), os.path.join(image_folder, category, f"{card_id}.{'gif' if category == 'celestial' else 'jpg'}"))
-                        stars = randint(1, 5)
-                        await func.update_card(card_id, {"$set": {"stars": stars}}, insert=True)
+                        await func.update_card(card_id, {"$set": {"stars": (stars := randint(1, 5))}}, insert=True)
                         self.iufi.add_card(_id=card_id, tier=category, stars=stars)
 
                         print(f"Added New Image {new_image}({category}) -> ID: {card_id}")

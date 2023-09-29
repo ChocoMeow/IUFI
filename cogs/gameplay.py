@@ -22,7 +22,6 @@ class Gameplay(commands.Cog):
             view.add_item(discord.ui.Button(label='Beginner Guide', emoji='📗', url='https://docs.google.com/document/d/1VAD20wZQ56S_wDeMJlwIKn_jImIPuxh2lgy1fn17z0c/edit'))
             await ctx.reply(f"**Welcome to IUFI! Please have a look at the guide or use `qhelp` to begin.**", view=view)
 
-
         if (retry := user["cooldown"]["roll"]) > time.time():
             return await ctx.reply(f"{ctx.author.mention} your next roll is <t:{round(retry)}:R>", delete_after=10)
 
@@ -53,7 +52,7 @@ class Gameplay(commands.Cog):
         if len(user["cards"]) >= func.MAX_CARDS:
             return await ctx.reply(f"**{ctx.author.mention} your inventory is full.**", delete_after=5)
 
-        cards = iufi.CardPool.roll(included="rare")
+        cards = iufi.CardPool.roll(included=["rare"])
         image_bytes, image_format = await asyncio.to_thread(iufi.gen_cards_view, cards)
 
         view = RollView(ctx.author, cards)
@@ -77,7 +76,7 @@ class Gameplay(commands.Cog):
         if len(user["cards"]) >= func.MAX_CARDS:
             return await ctx.reply(f"**{ctx.author.mention} your inventory is full.**", delete_after=5)
 
-        cards = iufi.CardPool.roll(included="epic")
+        cards = iufi.CardPool.roll(included=["epic"])
         image_bytes, image_format = await asyncio.to_thread(iufi.gen_cards_view, cards)
 
         view = RollView(ctx.author, cards)
@@ -100,7 +99,7 @@ class Gameplay(commands.Cog):
         if len(user["cards"]) >= func.MAX_CARDS:
             return await ctx.reply(f"**{ctx.author.mention} your inventory is full.**", delete_after=5)
 
-        cards = iufi.CardPool.roll(included="legendary")
+        cards = iufi.CardPool.roll(included=["legendary"])
         image_bytes, image_format = await asyncio.to_thread(iufi.gen_cards_view, cards)
 
         view = RollView(ctx.author, cards)
@@ -122,10 +121,14 @@ class Gameplay(commands.Cog):
         if (retry := user.get("cooldown", {}).setdefault("match_game", 0)) > time.time():
             return await ctx.reply(f"{ctx.author.mention} your game is <t:{round(retry)}:R>", delete_after=10)
 
-        await func.update_user(ctx.author.id, {"$set": {"cooldown.match_game": time.time() + GAME_SETTINGS.get(level, {}).get("cooldown", 0)}})
         view = MatchGame(ctx.author, level)
-        embed, file = view.build()
-        view.response = await ctx.reply(embed=embed, file=file, view=view)
+        await func.update_user(ctx.author.id, {"$set": {"cooldown.match_game": time.time() + view._data.get("cooldown", 0)}})
+        
+        embed, file = await view.build()
+        view.response = await ctx.reply(
+            content=f"**This game ends** <t:{round(time.time() + view._data.get('timeout', 0))}:R>",
+            embed=embed, file=file, view=view
+        )
         await view.timeout_count()
 
     @commands.command(aliases=["cd"])
