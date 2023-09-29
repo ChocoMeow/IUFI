@@ -93,9 +93,9 @@ class GuessButton(discord.ui.Button):
         elif self.view.matched() >= self.view._cards:
             await self.view.end_game()
         
-        embed, file = self.view.build()
+        embed, file = await self.view.build()
         await self.view.response.edit(
-            content="This game has expired." if self.view._is_ended else f"**This game ends** {self.view._end_time}",
+            content="This game has expired." if self.view._is_ended else None,
             embed=embed, attachments=[file], view=self.view)
 
     async def matching_process(self):
@@ -108,7 +108,7 @@ class GuessButton(discord.ui.Button):
             self.disabled = True
             self.view.guessed[self.custom_id] = self.card
 
-            embed, file = self.view.build()
+            embed, file = await self.view.build()
             await self.view.response.edit(embed=embed, attachments=[file], view=self.view)
             self.view._need_wait = True
             
@@ -135,7 +135,6 @@ class MatchGame(discord.ui.View):
         self._data: dict[str, Any] = GAME_SETTINGS.get(level)
         self._cards: int = self._data.get("cards")
         self._max_click: int = self._data.get("max_clicks")
-        self._end_time: str = f"<t:{round(time.time() + self._data.get('timeout', 0))}:R>"
 
         self._is_matching: bool = False
         self._need_wait: bool = False
@@ -220,7 +219,7 @@ class MatchGame(discord.ui.View):
         await func.update_user(self.author.id, {"$inc": final_rewards})
         await self.response.channel.send(content=f"<@{self.author.id}>", embed=embed)
 
-    def build(self) -> tuple[discord.Embed, discord.File]:
+    async def build(self) -> tuple[discord.Embed, discord.File]:
         embed = discord.Embed(
             description=f"```Level:        {self._level}\n" \
                         f"Click left:   {self.click_left}\n" \
@@ -228,7 +227,7 @@ class MatchGame(discord.ui.View):
             color=self.embed_color
         )   
 
-        bytes, image_format = gen_cards_view([card for card in self.guessed.values()], cards_per_row=self._data.get("elem_per_row"))
+        bytes, image_format = await asyncio.to_thread(gen_cards_view([card for card in self.guessed.values()], cards_per_row=self._data.get("elem_per_row")))
         embed.set_image(url=f"attachment://image.{image_format}")
 
         return embed, discord.File(bytes, filename=f"image.{image_format}")

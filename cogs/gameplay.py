@@ -121,10 +121,14 @@ class Gameplay(commands.Cog):
         if (retry := user.get("cooldown", {}).setdefault("match_game", 0)) > time.time():
             return await ctx.reply(f"{ctx.author.mention} your game is <t:{round(retry)}:R>", delete_after=10)
 
-        await func.update_user(ctx.author.id, {"$set": {"cooldown.match_game": time.time() + GAME_SETTINGS.get(level, {}).get("cooldown", 0)}})
         view = MatchGame(ctx.author, level)
-        embed, file = view.build()
-        view.response = await ctx.reply(embed=embed, file=file, view=view)
+        await func.update_user(ctx.author.id, {"$set": {"cooldown.match_game": time.time() + view._data.get("cooldown", 0)}})
+        
+        embed, file = await view.build()
+        view.response = await ctx.reply(
+            content=f"**This game ends** <t:{round(time.time() + view._data.get('timeout', 0))}:R>",
+            embed=embed, file=file, view=view
+        )
         await view.timeout_count()
 
     @commands.command(aliases=["cd"])

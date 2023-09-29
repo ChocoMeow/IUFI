@@ -95,8 +95,8 @@ class CardPool:
         return card
     
     @classmethod
-    def roll(cls, amount: int = 3, *, included: list = None, avoid: list = None, luck_rates: float = None) -> list[Card]:
-        results: list[str] = included if included else []
+    def roll(cls, amount: int = 3, *, included: list[str] = None, avoid: list[str] = None, luck_rates: float = None) -> list[Card]:
+        results = included if included else []
 
         drop_rates = DROP_RATES.copy()
         if luck_rates:
