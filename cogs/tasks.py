@@ -52,10 +52,10 @@ class Tasks(commands.Cog):
             if not user:
                 continue
 
-            cd = doc["cooldown"]
-            await self.check_and_schedule(user, current_time, cd["roll"], f"🎲 Your roll is ready! Join <#{random.choice(self.game_channel_ids)}> and roll now.")
-            await self.check_and_schedule(user, current_time, cd["daily"], f"📅 Your daily is ready! Join <#{random.choice(self.game_channel_ids)}> and claim your daily.")
-            await self.check_and_schedule(user, current_time, cd["match_game"], f"🃏 Your game is ready! Join <#{random.choice(self.game_channel_ids)}> and play now.")
+            cd: dict[str, float] = doc["cooldown"]
+            await self.check_and_schedule(user, current_time, cd.get("roll", 0), f"🎲 Your roll is ready! Join <#{random.choice(self.game_channel_ids)}> and roll now.")
+            await self.check_and_schedule(user, current_time, cd.get("daily", 0), f"📅 Your daily is ready! Join <#{random.choice(self.game_channel_ids)}> and claim your daily.")
+            await self.check_and_schedule(user, current_time, cd.get("match_game", 0), f"🃏 Your game is ready! Join <#{random.choice(self.game_channel_ids)}> and play now.")
 
 async def setup(bot: commands.Bot):
     await bot.add_cog(Tasks(bot))
