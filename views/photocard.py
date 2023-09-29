@@ -45,7 +45,7 @@ class PhotoCardView(discord.ui.View):
         self.author: discord.Member = author
         self.cards: dict[str, Card | None] = {card: None for card in cards}
 
-        self.page: int = ceil(len(self.cards) / 7)
+        self.page: int = ceil(len(self.cards) / 8)
         self.current_page: int = 1
 
         self._dropdown_view: Dropdown = Dropdown(self.cards)
@@ -55,8 +55,8 @@ class PhotoCardView(discord.ui.View):
         self.cooldown = commands.CooldownMapping.from_cooldown(1.0, 10.0, key)
 
     def build_embed(self) -> discord.Embed:
-        offset = self.current_page * 7
-        cards = list(self.cards.keys())[(offset-7):offset]
+        offset = self.current_page * 8
+        cards = list(self.cards.keys())[(offset-8):offset]
 
         desc = f"\n**📙 Collection size: `{len(self.cards)}/{func.MAX_CARDS}`**\n```"
         self._dropdown_view.options.clear()
@@ -124,8 +124,8 @@ class PhotoCardView(discord.ui.View):
         
         await interaction.response.defer()
 
-        offset = self.current_page * 7
-        card_ids = list(self.cards.keys())[(offset-7):offset]
+        offset = self.current_page * 8
+        card_ids = list(self.cards.keys())[(offset-8):offset]
         cards: list[Card] = []
 
         for card_id in card_ids:
