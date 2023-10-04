@@ -94,9 +94,10 @@ class GuessButton(discord.ui.Button):
             await self.view.end_game()
         
         embed, file = await self.view.build()
-        await self.view.response.edit(
-            content="This game has expired." if self.view._is_ended else None,
-            embed=embed, attachments=[file], view=self.view)
+        if self.view._is_ended:
+            await self.view.response.edit(content="This game has expired.", embed=embed, attachments=[file], view=self.view)
+        else:
+            await self.view.response.edit(embed=embed, attachments=[file], view=self.view)
 
     async def matching_process(self):
         for card in self.view.guessed.values():
@@ -135,6 +136,7 @@ class MatchGame(discord.ui.View):
         self._data: dict[str, Any] = GAME_SETTINGS.get(level)
         self._cards: int = self._data.get("cards")
         self._max_click: int = self._data.get("max_clicks")
+        self._start_time: float = time.time()
 
         self._is_matching: bool = False
         self._need_wait: bool = False
@@ -227,7 +229,7 @@ class MatchGame(discord.ui.View):
             color=self.embed_color
         )   
 
-        bytes, image_format = await asyncio.to_thread(gen_cards_view([card for card in self.guessed.values()], cards_per_row=self._data.get("elem_per_row")))
+        bytes, image_format = await asyncio.to_thread(gen_cards_view, [card for card in self.guessed.values()], cards_per_row=self._data.get("elem_per_row"))
         embed.set_image(url=f"attachment://image.{image_format}")
 
         return embed, discord.File(bytes, filename=f"image.{image_format}")

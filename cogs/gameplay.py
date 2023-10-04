@@ -126,7 +126,7 @@ class Gameplay(commands.Cog):
         
         embed, file = await view.build()
         view.response = await ctx.reply(
-            content=f"**This game ends** <t:{round(time.time() + view._data.get('timeout', 0))}:R>",
+            content=f"**This game ends** <t:{round(view._start_time + view._data.get('timeout', 0))}:R>",
             embed=embed, file=file, view=view
         )
         await view.timeout_count()
