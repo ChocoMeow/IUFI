@@ -16,6 +16,7 @@ from . import ButtonOnCooldown
 
 GAME_SETTINGS: dict[str, dict[str, Any]] = {
     "1": {
+        "exp": 10,
         "cooldown": 3_000,
         "timeout": 120,
         "cards": 3,
@@ -27,6 +28,7 @@ GAME_SETTINGS: dict[str, dict[str, Any]] = {
         },
     },
     "2": {
+        "exp": 15,
         "cooldown": 5_400,
         "timeout": 240,
         "cards": 6,
@@ -40,6 +42,7 @@ GAME_SETTINGS: dict[str, dict[str, Any]] = {
         },
     },
     "3": {
+        "exp": 20,
         "cooldown": 7_200,
         "timeout": 480,
         "cards": 10,
@@ -222,7 +225,7 @@ class MatchGame(discord.ui.View):
             
         embed.description = f"```{rewards}```"
 
-        update_data = {"$inc": final_rewards}
+        update_data = {"$inc": final_rewards | {"exp": self._data["exp"]}}
         user = await func.get_user(self.author.id)
 
         best_state = user.get("game_state", {}).get("match_game", {}).get(self._level, {
