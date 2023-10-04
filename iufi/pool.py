@@ -1,7 +1,7 @@
-from random import Random
+from random import choices, sample, shuffle
 from collections import Counter
 
-from .objects import Card
+from .objects import Card, Question
 from .exceptions import DuplicatedCardError, DuplicatedTagError
 from .deepsearch import (
     Load_Data,
@@ -23,7 +23,6 @@ class CardPool:
     _available_cards: dict[str, list[Card]] = {
         category: [] for category in DROP_RATES
     }
-    _rand = Random()
 
     #DeepSearch
     search_image: Search_Setup | None = None
@@ -107,11 +106,26 @@ class CardPool:
         if avoid:
             drop_rates = {k: v for k, v in drop_rates.items() if k not in avoid}
 
-        results.extend(cls._rand.choices(list(drop_rates.keys()), weights=drop_rates.values(), k=amount - len(results)))
+        results.extend(choices(list(drop_rates.keys()), weights=drop_rates.values(), k=amount - len(results)))
         cards = [
             card
             for cat, amt in Counter(results).items()
-            for card in cls._rand.sample(cls._available_cards[cat], k=amt)
+            for card in sample(cls._available_cards[cat], k=amt)
         ]
-        cls._rand.shuffle(cards)
+        shuffle(cards)
         return cards
+
+class QuestionPool:
+    _questions: set[Question] = set()
+
+    @classmethod
+    def add_question(cls, question: Question) -> None:
+        cls._questions.add(question)
+
+    @classmethod
+    def remove_question(cls, question: Question) -> None:
+        cls._questions.remove(question)
+        
+    @classmethod
+    def get_question(cls, number: int = 5) -> list[Question]:
+        return sample(cls._questions, k=number)

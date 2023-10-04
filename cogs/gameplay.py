@@ -113,7 +113,7 @@ class Gameplay(commands.Cog):
 
     @commands.command(aliases=["mg"])
     async def game(self, ctx: commands.Context, level: str):
-        """Matching game."""
+        """IUFI Matching game."""
         if level not in (levels := GAME_SETTINGS.keys()):
             return await ctx.reply(f"Invalid level selection! Please select a valid level: `{', '.join(levels)}`")
 
@@ -130,6 +130,11 @@ class Gameplay(commands.Cog):
             embed=embed, file=file, view=view
         )
         await view.timeout_count()
+
+    @commands.command(aliases=["q"])
+    async def quiz(self, ctx: commands.Context):
+        """IUFI Quiz"""
+        
 
     @commands.command(aliases=["cd"])
     async def cooldown(self, ctx: commands.Context):

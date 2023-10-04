@@ -3,12 +3,13 @@ from __future__ import annotations
 import random, os, asyncio
 import functions as func
 
-from concurrent.futures import ThreadPoolExecutor
 from PIL import Image, ImageDraw, ImageSequence
 from io import BytesIO
-from typing import Any, TYPE_CHECKING
+from difflib import SequenceMatcher
+from typing import TYPE_CHECKING
 
 from .exceptions import ImageLoadError
+
 if TYPE_CHECKING:
     from .pool import CardPool
 
@@ -265,3 +266,51 @@ class TempCard(CardObject):
     @property
     def is_gif(self) -> bool:
         return isinstance(self.image, list)
+
+class Question:
+    def __init__(
+        self,
+        question: str,
+        answers: list[str],
+        num_correct: int,
+        num_wrong: int,
+        average_time: float,
+        attachment: str = None
+    ):
+        self.question: str = question
+        self.answers: list[str] = answers
+        self.attachment: str | None = attachment
+
+        self._correct: int = num_correct
+        self._wrong: int = num_wrong
+        self._average_time: float = average_time
+
+    def check_answer(self, answer: str) -> bool:
+        answer = answer.replace(" ", "").lower()
+        for ans in self.answers:
+            result = SequenceMatcher(None, answer, ans).ratio()
+            if result > .85:
+                return True
+        return False    
+
+    @property
+    def level(self) -> str:
+        if self.correct_rate >= 85:
+            return "Easy"
+        elif self.correct_rate >= 40:
+            return "Medium"
+        else:
+            return "Hard"
+
+    @property
+    def average_time(self) -> float:
+        return self._average_time
+    
+    @property
+    def correct_rate(self) -> float:
+        total = self._correct + self._wrong
+        return round(self._correct / total, 2) * 100
+    
+    @property
+    def wrong_rate(self) -> float:
+        return 100 - self.correct_rate
