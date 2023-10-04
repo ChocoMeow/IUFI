@@ -38,7 +38,7 @@ class IUFI(commands.Bot):
             return False
         
         elif message.channel.id == 987354574304190476:
-            if message.content.split(" ")[0].lower() not in ("qi", "qcardinfo", "qil", "qcardinfolast"):
+            if message.content.split(" ")[0].lower() not in ("qi", "qcardinfo", "qil", "qcardinfolast", "qt", "qtl", "qtade", "qtadelast"):
                 return False
             
         await self.process_commands(message)
