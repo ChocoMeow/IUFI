@@ -111,7 +111,7 @@ class CardPool:
         cards = [
             card
             for cat, amt in Counter(results).items()
-            for card in cls._rand.choices(cls._available_cards[cat], k=amt)
+            for card in cls._rand.sample(cls._available_cards[cat], k=amt)
         ]
         cls._rand.shuffle(cards)
         return cards
