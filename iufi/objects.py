@@ -150,7 +150,7 @@ class Card(CardObject):
                 if img.format != "GIF":
                     self._image = process_frame(img.resize(size, Image.LANCZOS))
                 else:
-                    self._image = [process_frame(frame.resize(size)) for frame in ImageSequence.Iterator(img)]
+                    self._image = [process_frame(frame.resize(size)).convert('RGB') for frame in ImageSequence.Iterator(img)]
 
         except Exception as e:
             raise ImageLoadError(f"Unable to load the image. Reason: {e}")
