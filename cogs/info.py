@@ -12,7 +12,7 @@ class Info(commands.Cog):
         self.emoji = "ℹ️"
         self.invisible = False
         
-    @commands.command(aliases=["l"])
+    @commands.group(aliases=["l"], invoke_without_command=True)
     async def leaderboard(self, ctx: commands.Context):
         """Shows the IUFI leaderboard."""
         users = await func.USERS_DB.find().sort("exp", -1).limit(10).to_list(10)
@@ -30,6 +30,17 @@ class Info(commands.Cog):
         embed.set_thumbnail(url=icon.url if (icon := ctx.guild.icon) else None)
 
         await ctx.reply(embed=embed)
+
+    @leaderboard.command(aliases=["mg"])
+    async def matchgame(self, ctx: commands.Context, level: str = "1"):
+        """Shows the IUFI Matching Game leaderboard."""
+        users = await func.USERS_DB.find().sort([
+            (f"game_state.match_game.{level}.matched", -1),
+            (f"game_state.match_game.{level}.click_left", -1),
+            (f"game_state.match_game.{level}.finished_time", -1)
+        ]).limit(10).to_list(10)
+
+        print(users)
 
     @commands.command(aliases=["h"])
     async def help(self, ctx: commands.Context, *, command: str = None):
