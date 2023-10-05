@@ -82,13 +82,12 @@ def calculate_level(exp: int) -> tuple[int, int]:
     return level, exp
 
 def convert_seconds(seconds: float) -> str:
-    seconds = round(seconds, 1)
     if seconds >= 60:
-        minutes = seconds // 60
+        minutes = int(seconds // 60)
         seconds = seconds % 60
-        return f'{minutes}m {seconds}s'
+        return f"{minutes:1d}m {seconds:.1f}s"
     else:
-        return f'{seconds}s'
+        return f"{seconds:.1f}s"
 
 def get_potions(potions: dict[str, float], base: dict[str, str | dict[str, float]], details: bool = False) -> dict[str, float]:
     result: dict[str, float] = {}
