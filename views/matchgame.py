@@ -234,8 +234,8 @@ class MatchGame(discord.ui.View):
             "click_left": 0
         })
 
-        if matched_raw > best_state["matched"]:
-            prefix: str = f"game_state.match_game.{self._level}"
+        prefix: str = f"game_state.match_game.{self._level}"
+        if matched_raw >= best_state["matched"] and (self.used_time < best_state["finished_time"] or self.click_left > best_state["click_left"]):
             update_data.update({
                 "$set": {
                     f"{prefix}.matched": matched_raw,
