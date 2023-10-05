@@ -2,7 +2,10 @@ import discord
 import functions as func
 
 from discord.ext import commands
-from views import HelpView
+from views import (
+    HelpView, 
+    GAME_SETTINGS
+)
 
 LEADERBOARD_EMOJIS: list[str] = ["🥇", "🥈", "🥉", "🏅"]
 
@@ -34,6 +37,9 @@ class Info(commands.Cog):
     @leaderboard.command(aliases=["mg"])
     async def matchgame(self, ctx: commands.Context, level: str = "1"):
         """Shows the IUFI Matching Game leaderboard."""
+        if level not in (levels := GAME_SETTINGS.keys()):
+            return await ctx.reply(f"Invalid level selection! Please select a valid level: `{', '.join(levels)}`")
+        
         users = await func.USERS_DB.find().sort([
             (f"game_state.match_game.{level}.matched", -1),
             (f"game_state.match_game.{level}.click_left", -1),
