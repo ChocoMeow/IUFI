@@ -99,6 +99,17 @@ def get_potions(potions: dict[str, float], base: dict[str, str | dict[str, float
         result[potion[0]] = potion_data.copy() | {"level": potion[1], "expiration": expiration} if details else potion_data.get("levels", {}).get(potion[1], 0)
     return result
 
+def clean_text(input_text: str, allow_spaces: bool = True, convert_to_lower: bool = False) -> str:
+    cleaned_text = "".join(char for char in input_text if char.isalnum() or char.isspace())
+    
+    if not allow_spaces:
+        cleaned_text = "".join(char for char in cleaned_text if char != " ")
+    
+    if convert_to_lower:
+        cleaned_text = cleaned_text.lower()
+    
+    return cleaned_text
+
 async def get_user(user_id: int) -> dict[str, Any]:
     user = USERS_BUFFER.get(user_id)
     if not user:
