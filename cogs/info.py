@@ -37,10 +37,22 @@ class Info(commands.Cog):
         users = await func.USERS_DB.find().sort([
             (f"game_state.match_game.{level}.matched", -1),
             (f"game_state.match_game.{level}.click_left", -1),
-            (f"game_state.match_game.{level}.finished_time", -1)
+            (f"game_state.match_game.{level}.finished_time", 1)
         ]).limit(10).to_list(10)
 
-        print(users)
+        embed = discord.Embed(title=f"🏆   Level {level} Matching Game Leaderboard", color=discord.Color.random())
+        embed.description = "```"
+
+        for index, user in enumerate(users):
+            game_state: dict[str, float | int] = user.get("game_state", {}).get("match_game", {}).get(level, {"matched": 0, "click_left": 0, "finished_time": 0})
+            member = self.bot.get_user(user['_id'])
+
+            if member:
+                embed.description += f"{LEADERBOARD_EMOJIS[index if index <= 2 else 3]} {member.display_name:<14} 🃏{game_state['matched']:<2} 🕒{func.convert_seconds(game_state['finished_time']):<10}\n"
+        embed.description += "```"
+        embed.set_thumbnail(url=icon.url if (icon := ctx.guild.icon) else None)
+
+        await ctx.reply(embed=embed)
 
     @commands.command(aliases=["h"])
     async def help(self, ctx: commands.Context, *, command: str = None):
