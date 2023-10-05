@@ -224,6 +224,7 @@ class Card(commands.Cog):
     @commands.command(aliases=["st"])
     async def settag(self, ctx: commands.Context, card_id: str, tag: str):
         """Sets the photocard's tag. Card can be identified by its ID or previous tag."""
+        tag = func.clean_text(tag, allow_spaces=False)
         if tag and len(tag) > 10:
             return await ctx.reply(content="Please shorten the tag name as it is too long. (No more than 10 chars)")
 
@@ -246,6 +247,7 @@ class Card(commands.Cog):
     @commands.command(aliases=["stl"])
     async def settaglast(self, ctx: commands.Context, tag: str):
         """Sets the tag of the last photocard in your collection."""
+        tag = func.clean_text(tag, allow_spaces=False)
         if tag and len(tag) > 10:
             return await ctx.reply(content="Please shorten the tag name as it is too long. (No more than 10 chars)")
         

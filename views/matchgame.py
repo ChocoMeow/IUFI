@@ -16,6 +16,7 @@ from . import ButtonOnCooldown
 
 GAME_SETTINGS: dict[str, dict[str, Any]] = {
     "1": {
+        "exp": 10,
         "cooldown": 3_000,
         "timeout": 120,
         "cards": 3,
@@ -27,6 +28,7 @@ GAME_SETTINGS: dict[str, dict[str, Any]] = {
         },
     },
     "2": {
+        "exp": 15,
         "cooldown": 5_400,
         "timeout": 240,
         "cards": 6,
@@ -40,6 +42,7 @@ GAME_SETTINGS: dict[str, dict[str, Any]] = {
         },
     },
     "3": {
+        "exp": 20,
         "cooldown": 7_200,
         "timeout": 480,
         "cards": 10,
@@ -137,6 +140,7 @@ class MatchGame(discord.ui.View):
         self._cards: int = self._data.get("cards")
         self._max_click: int = self._data.get("max_clicks")
         self._start_time: float = time.time()
+        self._ended_time: float = None
 
         self._is_matching: bool = False
         self._need_wait: bool = False
@@ -189,6 +193,8 @@ class MatchGame(discord.ui.View):
         if self._is_ended:
             return
         self._is_ended = True
+        self._ended_time = time.time()
+
         for child in self.children:
             child.disabled = True
 
@@ -218,7 +224,29 @@ class MatchGame(discord.ui.View):
                 rewards += f"    {potion_data.get('emoji') + ' ' + reward_name[0].title() + ' ' + reward_name[1].upper() + ' Potion':<18} x{amount}\n"
             
         embed.description = f"```{rewards}```"
-        await func.update_user(self.author.id, {"$inc": final_rewards})
+
+        update_data = {"$inc": final_rewards | {"exp": self._data["exp"]}}
+        user = await func.get_user(self.author.id)
+
+        best_state = user.get("game_state", {}).get("match_game", {}).get(self._level, {
+            "finished_time": 0,
+            "matched": 0,
+            "click_left": 0
+        })
+
+        prefix = f"game_state.match_game.{self._level}"
+        if matched_raw > best_state["matched"] or (
+                matched_raw == best_state["matched"] and (
+                    self.used_time < best_state["finished_time"] or self.click_left > best_state["click_left"]
+                )
+        ):
+            update_data["$set"] = {
+                f"{prefix}.matched": matched_raw,
+                f"{prefix}.finished_time": self.used_time,
+                f"{prefix}.click_left": self.click_left
+            }
+
+        await func.update_user(self.author.id, update_data)
         await self.response.channel.send(content=f"<@{self.author.id}>", embed=embed)
 
     async def build(self) -> tuple[discord.Embed, discord.File]:
@@ -237,6 +265,10 @@ class MatchGame(discord.ui.View):
     def matched(self) -> int:
         counter = Counter([card for card in self.guessed.values() if card != self.covered_card])
         return len([count for count in counter.values() if count == 2])
+    
+    @property
+    def used_time(self) -> float:
+        return round(self._ended_time - self._start_time, 2)
     
     @property
     def click_left(self) -> int:

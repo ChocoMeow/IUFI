@@ -28,7 +28,7 @@ class Profile(commands.Cog):
         """Shows the profile of a member. If called without a member, shows your own profile."""
         if not member:
             member = ctx.author
-
+        
         user = await func.get_user(member.id)
         level, exp = func.calculate_level(user['exp'])
         bio = user.get('profile', {}).get('bio', 'Empty Bio')
@@ -47,9 +47,10 @@ class Profile(commands.Cog):
     @commands.command(aliases=["sb"])
     async def setbio(self, ctx: commands.Context, *, bio: str = None):
         """Sets your profile bio"""
+        bio = func.clean_text(bio)
         if bio and len(bio) > 30:
             return await ctx.reply(content="Please shorten the bio as it is too long. (No more than 30 chars)")
-
+        
         await func.update_user(ctx.author.id, {"$set": {"profile.bio": bio}})
         embed = discord.Embed(description=f"Bio has been set to\n```{bio}```", color=discord.Color.random())
         await ctx.reply(embed=embed)
@@ -93,10 +94,10 @@ class Profile(commands.Cog):
     @commands.command(aliases=["cc"])
     async def createcollection(self, ctx: commands.Context, name: str):
         """Creates a collection."""
+        name = func.clean_text(name, allow_spaces=False, convert_to_lower=True)
         if len(name) > 10:
             return await ctx.reply(content="Please shorten the collection name as it is too long. (No more than 10 chars)")
-        
-        name = name.lower()
+
         user = await func.get_user(ctx.author.id)
         if user.get("collections", {}).get(name):
             return await ctx.reply(content=f"{ctx.author.mention} a collection with the name `{name.title()}` already exists.")
