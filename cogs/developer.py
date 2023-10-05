@@ -1,7 +1,6 @@
 import discord, iufi, psutil, asyncio
 
 from discord.ext import commands
-from concurrent.futures import ThreadPoolExecutor
 from views import DebugView
 
 def formatBytes(bytes: int, unit: bool = False):
@@ -64,47 +63,42 @@ class Developer(commands.Cog):
             image = message.attachments[0]
             await interaction.response.defer()
 
-            with ThreadPoolExecutor() as executor:
-                loop = asyncio.get_event_loop()
-                if not iufi.CardPool.search_image:
-                    iufi.CardPool.load_search_metadata()
 
-                results = await loop.run_in_executor(
-                    executor,
-                    iufi.CardPool.search_image.get_similar_images,
-                    await image.read()
-                )
+            if not iufi.CardPool.search_image:
+                await asyncio.to_thread(iufi.CardPool.load_search_metadata)
 
-                cards: list[iufi.Card] = []
-                for result in results.values():
-                    result = result.split("\\")[-1]
-                    card = iufi.CardPool.get_card(result.split(".")[0])
-                    if card:
-                        cards.append(card)
+            results = await asyncio.to_thread(iufi.CardPool.search_image.get_similar_images, await image.read())
 
-                if not cards:
-                    return await interaction.followup.send("The card was not found. Please try again.")
+            cards: list[iufi.Card] = []
+            for result in results.values():
+                result = result.split("\\")[-1]
+                card = iufi.CardPool.get_card(result.split(".")[0])
+                if card:
+                    cards.append(card)
+
+            if not cards:
+                return await interaction.followup.send("The card was not found. Please try again.")
+            
+            if len(cards) > 1:
+                desc = "```"
+                for card in cards:
+                    desc += f"{card.display_id} {card.display_tag} {card.display_frame} {card.display_stars} {card.tier[0]}\n"
+                desc += "```"
                 
-                if len(cards) > 1:
-                    desc = "```"
-                    for card in cards:
-                        desc += f"{card.display_id} {card.display_tag} {card.display_frame} {card.display_stars} {card.tier[0]}\n"
-                    desc += "```"
-                    
-                    image_bytes, image_format = await asyncio.to_thread(iufi.gen_cards_view, cards, 4)
-                else:
-                    desc = f"```{card.display_id}\n" \
-                        f"{card.display_tag}\n" \
-                        f"{card.display_frame}\n" \
-                        f"{card.tier[0]} {card.tier[1].capitalize()}\n" \
-                        f"{card.display_stars}```\n" \
-                        "**Owned by: **" + (f"<@{card.owner_id}>" if card.owner_id else "None")
+                image_bytes, image_format = await asyncio.to_thread(iufi.gen_cards_view, cards, 4)
+            else:
+                desc = f"```{card.display_id}\n" \
+                    f"{card.display_tag}\n" \
+                    f"{card.display_frame}\n" \
+                    f"{card.tier[0]} {card.tier[1].capitalize()}\n" \
+                    f"{card.display_stars}```\n" \
+                    "**Owned by: **" + (f"<@{card.owner_id}>" if card.owner_id else "None")
 
-                    image_bytes, image_format = await asyncio.to_thread(card.image_bytes), card.format
+                image_bytes, image_format = await asyncio.to_thread(card.image_bytes), card.format
 
-                embed = discord.Embed(title=f"ℹ️ Card Info", description=desc, color=0x949fb8)
-                embed.set_image(url=f"attachment://image.{image_format}")
-                await interaction.followup.send(file=discord.File(image_bytes, filename=f"image.{image_format}"), embed=embed)
+            embed = discord.Embed(title=f"ℹ️ Card Info", description=desc, color=0x949fb8)
+            embed.set_image(url=f"attachment://image.{image_format}")
+            await interaction.followup.send(file=discord.File(image_bytes, filename=f"image.{image_format}"), embed=embed)
 
         else:
             await interaction.response.send_message("No attachment was found in this message!", ephemeral=True)

@@ -2,7 +2,10 @@ import discord
 import functions as func
 
 from discord.ext import commands
-from views import HelpView
+from views import (
+    HelpView, 
+    GAME_SETTINGS
+)
 
 LEADERBOARD_EMOJIS: list[str] = ["🥇", "🥈", "🥉", "🏅"]
 
@@ -12,7 +15,7 @@ class Info(commands.Cog):
         self.emoji = "ℹ️"
         self.invisible = False
         
-    @commands.command(aliases=["l"])
+    @commands.group(aliases=["l"], invoke_without_command=True)
     async def leaderboard(self, ctx: commands.Context):
         """Shows the IUFI leaderboard."""
         users = await func.USERS_DB.find().sort("exp", -1).limit(10).to_list(10)
@@ -26,6 +29,32 @@ class Info(commands.Cog):
 
             if member:
                 embed.description += f"{LEADERBOARD_EMOJIS[index if index <= 2 else 3]} {member.display_name:<15} {level:>4} ⚔️\n"
+        embed.description += "```"
+        embed.set_thumbnail(url=icon.url if (icon := ctx.guild.icon) else None)
+
+        await ctx.reply(embed=embed)
+
+    @leaderboard.command(aliases=["mg"])
+    async def matchgame(self, ctx: commands.Context, level: str = "1"):
+        """Shows the IUFI Matching Game leaderboard."""
+        if level not in (levels := GAME_SETTINGS.keys()):
+            return await ctx.reply(f"Invalid level selection! Please select a valid level: `{', '.join(levels)}`")
+        
+        users = await func.USERS_DB.find().sort([
+            (f"game_state.match_game.{level}.matched", -1),
+            (f"game_state.match_game.{level}.click_left", -1),
+            (f"game_state.match_game.{level}.finished_time", 1)
+        ]).limit(10).to_list(10)
+
+        embed = discord.Embed(title=f"🏆   Level {level} Matching Game Leaderboard", color=discord.Color.random())
+        embed.description = "```"
+
+        for index, user in enumerate(users):
+            game_state: dict[str, float | int] = user.get("game_state", {}).get("match_game", {}).get(level, {"matched": 0, "click_left": 0, "finished_time": 0})
+            member = self.bot.get_user(user['_id'])
+
+            if member:
+                embed.description += f"{LEADERBOARD_EMOJIS[index if index <= 2 else 3]} {member.display_name:<14} 🃏{game_state['matched']:<2} 🕒{func.convert_seconds(game_state['finished_time']):<10}\n"
         embed.description += "```"
         embed.set_thumbnail(url=icon.url if (icon := ctx.guild.icon) else None)
 
