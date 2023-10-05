@@ -28,7 +28,7 @@ class Profile(commands.Cog):
         """Shows the profile of a member. If called without a member, shows your own profile."""
         if not member:
             member = ctx.author
-
+        
         user = await func.get_user(member.id)
         level, exp = func.calculate_level(user['exp'])
         bio = user.get('profile', {}).get('bio', 'Empty Bio')
@@ -49,7 +49,8 @@ class Profile(commands.Cog):
         """Sets your profile bio"""
         if bio and len(bio) > 30:
             return await ctx.reply(content="Please shorten the bio as it is too long. (No more than 30 chars)")
-
+        bio = bio.replace("`", "")
+        
         await func.update_user(ctx.author.id, {"$set": {"profile.bio": bio}})
         embed = discord.Embed(description=f"Bio has been set to\n```{bio}```", color=discord.Color.random())
         await ctx.reply(embed=embed)
