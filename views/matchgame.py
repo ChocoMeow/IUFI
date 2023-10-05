@@ -234,15 +234,17 @@ class MatchGame(discord.ui.View):
             "click_left": 0
         })
 
-        prefix: str = f"game_state.match_game.{self._level}"
-        if matched_raw >= best_state["matched"] and (self.used_time < best_state["finished_time"] or self.click_left > best_state["click_left"]):
-            update_data.update({
-                "$set": {
-                    f"{prefix}.matched": matched_raw,
-                    f"{prefix}.finished_time": self.used_time,
-                    f"{prefix}.click_left": self.click_left
-                }
-            })
+        prefix = f"game_state.match_game.{self._level}"
+        if matched_raw > best_state["matched"] or (
+                matched_raw == best_state["matched"] and (
+                    self.used_time > best_state["finished_time"] or self.click_left > best_state["click_left"]
+                )
+        ):
+            update_data["$set"] = {
+                f"{prefix}.matched": matched_raw,
+                f"{prefix}.finished_time": self.used_time,
+                f"{prefix}.click_left": self.click_left
+            }
 
         await func.update_user(self.author.id, update_data)
         await self.response.channel.send(content=f"<@{self.author.id}>", embed=embed)
