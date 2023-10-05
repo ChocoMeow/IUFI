@@ -83,6 +83,7 @@ class GuessButton(discord.ui.Button):
         if self.view._is_matching:
             await self.matching_process()
         else:
+            self.reset_cards()
             self.view.guessed[self.custom_id] = self.card
             self.disabled = True
 
@@ -116,19 +117,18 @@ class GuessButton(discord.ui.Button):
             await self.view.response.edit(embed=embed, attachments=[file], view=self.view)
             self.view._need_wait = True
             
-            await asyncio.sleep(5)
-            self.reset_cards()
+            await asyncio.sleep(1)
+             # Allow the next click
+            self.view._need_wait = False
+            # Enable the current button again for the next round of guessing
+            self.disabled = False
+            self.view._last_clicked.disabled = False
+            # self.reset_cards()
 
     def reset_cards(self):
         # Reset the last clicked card and current card to covered state
-        self.view._last_clicked.disabled = False
         self.view.guessed[self.view._last_clicked.custom_id] = self.view.covered_card
-        self.view.guessed[self.custom_id] = self.view.covered_card
-
-        # Allow the next click
-        self.view._need_wait = False
-        # Enable the current button again for the next round of guessing
-        self.disabled = False
+        self.view.guessed[self.custom_id] = self.view.covered_card # need to change this
 
 class MatchGame(discord.ui.View):
     def __init__(self, author: discord.Member, level: str = "1", timeout: float = None):
