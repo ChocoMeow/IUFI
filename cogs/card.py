@@ -341,7 +341,7 @@ class Card(commands.Cog):
         embed.set_image(url=f"attachment://image.{card.format}")
 
         view = TradeView(ctx.author, card, candies)
-        view.message = await ctx.reply(content=f"{ctx.author.mention} want to trade with everyone",
+        view.message = await ctx.reply(content=f"{ctx.author.mention} wants to trade",
                                        file=discord.File(await asyncio.to_thread(card.image_bytes),
                                                          filename=f"image.{card.format}"), embed=embed, view=view)
 
@@ -413,7 +413,7 @@ class Card(commands.Cog):
         embed.set_image(url=f"attachment://image.{card.format}")
 
         view = TradeView(ctx.author, card, candies)
-        view.message = await ctx.reply(content=f"{ctx.author.mention} want to trade with everyone",
+        view.message = await ctx.reply(content=f"{ctx.author.mention} wants to trade",
                                        file=discord.File(await asyncio.to_thread(card.image_bytes),
                                                          filename=f"image.{card.format}"), embed=embed, view=view)
 
