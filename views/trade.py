@@ -90,7 +90,7 @@ class TradeEveryoneView(discord.ui.View):
     async def trade(self, interaction: discord.Interaction, button: discord.ui.Button):
 
         if self.card.owner_id == interaction.user.id:
-            await interaction.response.send_message(f"Bruh, anyways for testing it will execute", ephemeral=True)
+            return await interaction.response.send_message(f"You can not trade with yourself. Please click cancel if you want to cancel the trade", ephemeral=True)
 
         if self.card.owner_id != self.seller.id:
             await self.on_timeout()
