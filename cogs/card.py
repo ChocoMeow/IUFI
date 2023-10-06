@@ -4,8 +4,7 @@ import functions as func
 from discord.ext import commands
 from views import (
     ConfirmView,
-    TradeView,
-    TradeEveryoneView
+    TradeView
 )
 
 class Card(commands.Cog):
@@ -313,7 +312,7 @@ class Card(commands.Cog):
         
         embed.set_image(url=f"attachment://image.{card.format}")
 
-        view = TradeView(ctx.author, member, card, candies)
+        view = TradeView(ctx.author, card, candies,buyer=member)
         view.message = await ctx.reply(content=f"{member.mention}, {ctx.author.mention} want to trade with you.", file=discord.File(await asyncio.to_thread(card.image_bytes), filename=f"image.{card.format}"), embed=embed, view=view)
 
     @commands.command(aliases=["te"])
@@ -341,7 +340,7 @@ class Card(commands.Cog):
 
         embed.set_image(url=f"attachment://image.{card.format}")
 
-        view = TradeEveryoneView(ctx.author, card, candies)
+        view = TradeView(ctx.author, card, candies)
         view.message = await ctx.reply(content=f"{ctx.author.mention} want to trade with everyone",
                                        file=discord.File(await asyncio.to_thread(card.image_bytes),
                                                          filename=f"image.{card.format}"), embed=embed, view=view)
@@ -380,7 +379,7 @@ class Card(commands.Cog):
         
         embed.set_image(url=f"attachment://image.{card.format}")
 
-        view = TradeView(ctx.author, member, card, candies)
+        view = TradeView(ctx.author, card, candies,buyer=member)
         view.message = await ctx.reply(content=f"{member.mention}, {ctx.author.mention} want to trade with you.", file=discord.File(await asyncio.to_thread(card.image_bytes), filename=f"image.{card.format}"), embed=embed, view=view)
 
     @commands.command(aliases=["tel"])
@@ -413,7 +412,7 @@ class Card(commands.Cog):
 
         embed.set_image(url=f"attachment://image.{card.format}")
 
-        view = TradeEveryoneView(ctx.author, card, candies)
+        view = TradeView(ctx.author, card, candies)
         view.message = await ctx.reply(content=f"{ctx.author.mention} want to trade with everyone",
                                        file=discord.File(await asyncio.to_thread(card.image_bytes),
                                                          filename=f"image.{card.format}"), embed=embed, view=view)

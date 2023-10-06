@@ -8,7 +8,7 @@ from .roll import RollView
 from .matchgame import MatchGame, GAME_SETTINGS
 from .photocard import PhotoCardView
 from .shop import ShopView
-from .trade import TradeView, TradeEveryoneView
+from .trade import TradeView
 from .confirm import ConfirmView
 from .collection import CollectionView
 from .help import HelpView
