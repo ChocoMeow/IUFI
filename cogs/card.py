@@ -383,7 +383,7 @@ class Card(commands.Cog):
         view.message = await ctx.reply(content=f"{member.mention}, {ctx.author.mention} want to trade with you.", file=discord.File(await asyncio.to_thread(card.image_bytes), filename=f"image.{card.format}"), embed=embed, view=view)
 
     @commands.command(aliases=["tel"])
-    async def tradeeverylast(self, ctx: commands.Context, candies: int):
+    async def tradeeveryonelast(self, ctx: commands.Context, candies: int):
         """Trades your last card with everyone."""
         if candies < 0:
             return await ctx.reply("The candy count cannot be set to a negative value.")
