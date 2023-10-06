@@ -110,11 +110,11 @@ def clean_text(input_text: str, allow_spaces: bool = True, convert_to_lower: boo
     
     return cleaned_text
 
-async def get_user(user_id: int) -> dict[str, Any]:
+async def get_user(user_id: int, *, insert: bool = True) -> dict[str, Any]:
     user = USERS_BUFFER.get(user_id)
     if not user:
         user = await USERS_DB.find_one({"_id": user_id})
-        if not user:
+        if not user and insert:
             await USERS_DB.insert_one({"_id": user_id, **USER_BASE})
 
         user = USERS_BUFFER[user_id] = user if user else copy.deepcopy(USER_BASE) | {"_id": user_id}
