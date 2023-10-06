@@ -7,15 +7,16 @@ class TradeView(discord.ui.View):
     def __init__(
             self,
             seller: discord.Member,
+            buyer: discord.Member | None,
             card: Card,
             candies: int,
             timeout: float | None = 43_200,
-            buyer: discord.Member = None,
+            
         ) -> None:
         super().__init__(timeout=timeout)
 
         self.seller: discord.Member = seller
-        self.buyer: discord.Member = buyer
+        self.buyer: discord.Member | None = buyer
         self.card: Card = card
         self.candies: int = candies
 
@@ -27,12 +28,29 @@ class TradeView(discord.ui.View):
         
         await self.message.edit(view=self)
 
+    def build_embed(self) -> discord.Embed:
+        embed = discord.Embed(title="⤵️ Trade", color=discord.Color.random())
+        embed.description = f"```Seller: {self.seller.display_name}\n" \
+                            f"Buyer: {self.buyer.display_name if self.buyer else 'Anyone'}\n" \
+                            f"Candies: 🍬 {self.candies}\n\n" \
+                            f"{self.card.display_id}\n" \
+                            f"{self.card.display_tag}\n" \
+                            f"{self.card.display_frame}\n" \
+                            f"{self.card.tier[0]} {self.card.tier[1].capitalize()}\n" \
+                            f"{self.card.display_stars}```\n"
+        
+        embed.set_image(url=f"attachment://image.{self.card.format}")
+        return embed
+
     @discord.ui.button(label='Trade Now', style=discord.ButtonStyle.green)
     async def trade(self, interaction: discord.Interaction, button: discord.ui.Button):
         buyer = self.buyer or interaction.user
 
         if interaction.user != buyer:
             return await interaction.response.send_message(f"This card is being traded to {buyer.mention}", ephemeral=True)
+        
+        if interaction.user == self.seller:
+            return await interaction.response.send_message("You can't trade with yourself!", ephemeral=True)
         
         if self.card.owner_id != self.seller.id:
             await self.on_timeout()
