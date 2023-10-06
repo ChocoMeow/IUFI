@@ -3,7 +3,6 @@ from __future__ import annotations
 import random, os, asyncio
 import functions as func
 
-from concurrent.futures import ThreadPoolExecutor
 from PIL import Image, ImageDraw, ImageSequence
 from io import BytesIO
 from typing import Any, TYPE_CHECKING
@@ -21,16 +20,16 @@ TIERS_BASE: dict[str, tuple[str, int]] = {
     "celestial": ("💫", 1000)
 }
 
-FRAMES_BASE: dict[str, str] = {
-    "hearts": "💕",
-    "celebrity": "🌟",
-    "uaena": "💌",
-    "dandelions": "🌷",
-    "shine": "✨",
-    "lovepoem": "💠",
-    "cheer": "🎤",
-    "smoon": "🍓",
-    "signed": "✍️",
+FRAMES_BASE: dict[str, tuple[str, str]] = {
+    "hearts": ("💕", 20),
+    "celebrity": ("🌟", 20),
+    "uaena": ("💌", 40),
+    "dandelions": ("🌷", 40),
+    "shine": ("✨", 60),
+    "lovepoem": ("💠", 60),
+    "cheer": ("🎤", 60),
+    "smoon": ("🍓", 60),
+    "signed": ("✍️", 60),
 }
 
 POTIONS_BASE: dict[str, str | dict[str, float]] = {
@@ -77,17 +76,8 @@ class CardObject:
         output.paste(image, (0, 0), mask)
 
         return output
-
-    def _load_frame(self, image: Image.Image) -> Image.Image:
-        with Image.open(os.path.join(func.ROOT_DIR, "frames", f"{self._frame}.png")).convert("RGBA").resize((200, 355)) as frame:
-            image = self._round_corners(image)
-            output = Image.new("RGBA", frame.size)
-            output.paste(image, (6, 8))
-            output.paste(frame, (0, 0), mask=frame)
-
-            return output
     
-    def _load_image(self, path: str):
+    def _load_image(self, path: str) -> None:
         """Load and process the image"""
         try:
             with Image.open(path) as img:
@@ -137,7 +127,16 @@ class Card(CardObject):
         self._image: list[Image.Image] | Image.Image = None
         self._emoji: str = TIERS_BASE.get(self._tier)[0]
     
-    def _load_image(self):
+    def _load_frame(self, image: Image.Image, frame: str = None) -> Image.Image:
+        with Image.open(os.path.join(func.ROOT_DIR, "frames", f"{frame if frame else self._frame}.png")).convert("RGBA").resize((200, 355)) as img:
+            image = self._round_corners(image)
+            output = Image.new("RGBA", img.size)
+            output.paste(image, (6, 8))
+            output.paste(img, (0, 0), mask=img)
+
+            return output
+
+    def _load_image(self) -> None:
         """Load and process the image"""
         try:
             image_path = os.path.join(func.ROOT_DIR, "images", self._tier)
@@ -155,6 +154,27 @@ class Card(CardObject):
         except Exception as e:
             raise ImageLoadError(f"Unable to load the image. Reason: {e}")
 
+    def preview_frame(self, frame: str = None) -> BytesIO:
+        try:
+            image_path = os.path.join(func.ROOT_DIR, "images", self._tier)
+            image_file = f"{self.id}.gif" if self._tier == "celestial" else f"{self.id}.jpg"
+            size = (190, 338) if frame else (200, 355)
+
+            image_bytes = BytesIO()
+
+            with Image.open(os.path.join(image_path, image_file)) as img:
+                if frame:
+                    image = self._load_frame(img.resize(size, Image.LANCZOS), frame)
+                else:
+                    image = self._round_corners(img.resize(size, Image.LANCZOS))
+                    
+                image.save(image_bytes, format='PNG')
+                image_bytes.seek(0)
+                return image_bytes
+        
+        except Exception as e:
+            raise ImageLoadError(f"Unable to load the image. Reason: {e}")
+        
     def change_owner(self, owner_id: int | None = None) -> None:
         if self.owner_id != owner_id:
             self.owner_id = owner_id
@@ -213,7 +233,7 @@ class Card(CardObject):
 
     @property
     def frame(self) -> tuple[str, str]:
-        return FRAMES_BASE.get(self._frame), self._frame
+        return FRAMES_BASE.get(self._frame)[0], self._frame
     
     @property
     def image(self) -> list[Image.Image] | Image.Image:
@@ -244,7 +264,7 @@ class Card(CardObject):
 
     @property
     def display_frame(self) -> str:
-        return f"🖼️ {FRAMES_BASE.get(self._frame) if self._frame else '- '}"
+        return f"🖼️ {FRAMES_BASE.get(self._frame)[0] if self._frame else '- '}"
 
     def __str__(self) -> str:
         return f"{self._emoji} {self.id.zfill(5)}"
