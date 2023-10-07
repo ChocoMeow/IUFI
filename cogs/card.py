@@ -300,21 +300,34 @@ class Card(commands.Cog):
         if card.owner_id != ctx.author.id:
             return await ctx.reply("You are not the owner of this card.")
         
-        embed = discord.Embed(title="⤵️ Trade", color=discord.Color.random())
-        embed.description = f"```Seller: {ctx.author.display_name}\n" \
-                            f"Buyer: {member.display_name}\n" \
-                            f"Candies: 🍬 {candies}\n\n" \
-                            f"{card.display_id}\n" \
-                            f"{card.display_tag}\n" \
-                            f"{card.display_frame}\n" \
-                            f"{card.tier[0]} {card.tier[1].capitalize()}\n" \
-                            f"{card.display_stars}```\n" \
-        
-        embed.set_image(url=f"attachment://image.{card.format}")
-
         view = TradeView(ctx.author, member, card, candies)
-        view.message = await ctx.reply(content=f"{member.mention}, {ctx.author.mention} want to trade with you.", file=discord.File(await asyncio.to_thread(card.image_bytes), filename=f"image.{card.format}"), embed=embed, view=view)
-    
+        view.message = await ctx.reply(
+            content=f"{member.mention}, {ctx.author.mention} want to trade with you.",
+            file=discord.File(await asyncio.to_thread(card.image_bytes), filename=f"image.{card.format}"),
+            embed=view.build_embed(), view=view
+        )
+
+    @commands.command(aliases=["te"])
+    async def tradeeveryone(self, ctx: commands.Context, card_id: str, candies: int):
+        """Trades your card with everyone."""
+        if candies < 0:
+            return await ctx.reply("The candy count cannot be set to a negative value.")
+
+        card = iufi.CardPool.get_card(card_id)
+        if not card:
+            return await ctx.reply("The card was not found. Please try again.")
+
+        if card.owner_id != ctx.author.id:
+            return await ctx.reply("You are not the owner of this card.")
+
+        view = TradeView(ctx.author, None, card, candies)
+        view.message = await ctx.reply(
+            content=f"{ctx.author.mention} wants to trade",
+            file=discord.File(await asyncio.to_thread(card.image_bytes), filename=f"image.{card.format}"),
+            embed=view.build_embed(),
+            view=view
+        )
+
     @commands.command(aliases=["tl"])
     async def tradelast(self, ctx: commands.Context, member: discord.Member, candies: int):
         """Trades your last card with a member."""
@@ -337,20 +350,39 @@ class Card(commands.Cog):
         if card.owner_id != ctx.author.id:
             return await ctx.reply("You are not the owner of this card.")
         
-        embed = discord.Embed(title="⤵️ Trade", color=discord.Color.random())
-        embed.description = f"```Seller: {ctx.author.display_name}\n" \
-                            f"Buyer: {member.display_name}\n" \
-                            f"Candies: 🍬 {candies}\n\n" \
-                            f"{card.display_id}\n" \
-                            f"{card.display_tag}\n" \
-                            f"{card.display_frame}\n" \
-                            f"{card.tier[0]} {card.tier[1].capitalize()}\n" \
-                            f"{card.display_stars}```\n" \
-        
-        embed.set_image(url=f"attachment://image.{card.format}")
-
         view = TradeView(ctx.author, member, card, candies)
-        view.message = await ctx.reply(content=f"{member.mention}, {ctx.author.mention} want to trade with you.", file=discord.File(await asyncio.to_thread(card.image_bytes), filename=f"image.{card.format}"), embed=embed, view=view)
+        view.message = await ctx.reply(
+            content=f"{member.mention}, {ctx.author.mention} want to trade with you.",
+            file=discord.File(await asyncio.to_thread(card.image_bytes), filename=f"image.{card.format}"),
+            embed=view.build_embed(),
+            view=view
+        )
+
+    @commands.command(aliases=["tel"])
+    async def tradeeveryonelast(self, ctx: commands.Context, candies: int):
+        """Trades your last card with everyone."""
+        if candies < 0:
+            return await ctx.reply("The candy count cannot be set to a negative value.")
+
+        user = await func.get_user(ctx.author.id)
+        if not user["cards"]:
+            return await ctx.reply(f"**{ctx.author.mention} you have no photocards.**", delete_after=5)
+
+        card_id = user["cards"][-1]
+        card = iufi.CardPool.get_card(card_id)
+        if not card:
+            return await ctx.reply("The card was not found. Please try again.")
+
+        if card.owner_id != ctx.author.id:
+            return await ctx.reply("You are not the owner of this card.")
+        
+        view = TradeView(ctx.author, None, card, candies)
+        view.message = await ctx.reply(
+            content=f"{ctx.author.mention} wants to trade",
+            file=discord.File(await asyncio.to_thread(card.image_bytes), filename=f"image.{card.format}"),
+            embed=view.build_embed(),
+            view=view
+        )
 
     @commands.command(aliases=["u"])
     async def upgrade(self, ctx: commands.Context, upgrade_card_id: str, *, card_ids: str) -> None:
