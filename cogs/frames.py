@@ -20,15 +20,18 @@ class Frames(commands.Cog):
         if card.owner_id != ctx.author.id:
             return await ctx.reply("You are not the owner of this card.")
         
+        if card.tier in ["mystic", "celestial"]:
+            return await ctx.reply("The card does not support the frame!")
+        
         if card.stars < 5:
             return await ctx.reply("Only cards with 5 stars or above can apply for the frame")
         
         view = FrameView(ctx.author, card)
         embed, file = await view.build()
-        await ctx.reply(file=file, embed=embed, view=view)
+        view.response = await ctx.reply(file=file, embed=embed, view=view)
         
     @commands.command(aliases=["sfl"])
-    async def setframelast(self, ctx: commands.Context, frame: str):
+    async def setframelast(self, ctx: commands.Context):
         """Sets the frame for the last photocard. Frame can be identified by its id or given tag."""
         user = await func.get_user(ctx.author.id)  
         if not user["cards"]:
@@ -42,12 +45,15 @@ class Frames(commands.Cog):
         if card.owner_id != ctx.author.id:
             return await ctx.reply("You are not the owner of this card.")
         
+        if card.tier in ["mystic", "celestial"]:
+            return await ctx.reply("The card does not support the frame!")
+        
         if card.stars < 5:
             return await ctx.reply("Only cards with 5 stars or above can apply for the frame")
         
         view = FrameView(ctx.author, card)
         embed, file = await view.build()
-        await ctx.reply(file=file, embed=embed, view=view)
+        view.response = await ctx.reply(file=file, embed=embed, view=view)
 
     @commands.command(aliases=["rf"])
     async def removeframe(self, ctx: commands.Context, card_id: str):

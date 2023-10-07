@@ -5,9 +5,9 @@ import functions as func
 
 from PIL import Image, ImageDraw, ImageSequence
 from io import BytesIO
-from typing import Any, TYPE_CHECKING
+from typing import TYPE_CHECKING
 
-from .exceptions import ImageLoadError
+from .exceptions import IUFIException, ImageLoadError
 if TYPE_CHECKING:
     from .pool import CardPool
 
@@ -190,16 +190,20 @@ class Card(CardObject):
                 self._frame, self._image = None, None
 
     def change_tag(self, tag: str | None = None) -> None:
-        if self.tag != tag:
-            self.tag = tag
-            asyncio.create_task(func.update_card(self.id, {"$set": {"tag": tag}}))
+        if self.tag == tag:
+            raise IUFIException("This tag is already assigned to this card.")
+        
+        self.tag = tag
+        asyncio.create_task(func.update_card(self.id, {"$set": {"tag": tag}}))
     
     def change_frame(self, frame: str | None = None) -> None:
-        if self._frame != frame:
-            self._frame = frame.lower() if frame else None
+        if self._frame == frame:
+            raise IUFIException("This frame is already assigned to this card.")
+        
+        self._frame = frame.lower() if frame else None
 
-            if self.image:
-                self._load_image()
+        if self.image:
+            self._load_image()
 
     def change_stars(self, stars: int) -> None:
         if self.stars != stars:

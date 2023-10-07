@@ -6,11 +6,6 @@ from iufi import (
     FRAMES_BASE
 )
 
-FRAMES: tuple[tuple[str, str, int]] = (
-    (values[0], frame, values[1]) 
-    for frame, values in FRAMES_BASE.items()
-)
-
 class FrameDropDown(discord.ui.Select):
     def __init__(self):
         self.view: FrameView
@@ -18,18 +13,19 @@ class FrameDropDown(discord.ui.Select):
         super().__init__(
             options=[
                 discord.SelectOption(
-                    emoji=emoji,
+                    emoji=data[0],
                     label=frame_name.title(),
-                    description=f"🍬 {candy}"
+                    description=f"🍬 {data[1]}"
                 )
-                for emoji, frame_name, candy in FRAMES
+                for frame_name, data in FRAMES_BASE.items()
             ],
             placeholder="Select a frame to view...",
-            min_values=1, max_values=1, row=1
+            min_values=1, max_values=1, row=0
         )
 
     async def callback(self, interaction: discord.Interaction) -> None:
         self.view._selected_frame = self.values[0].lower()
+        self.view._price = FRAMES_BASE.get(self.view._selected_frame)[1]
         embed, file = await self.view.build()
         await interaction.response.edit_message(embed=embed, attachments=[file])
 
@@ -40,23 +36,44 @@ class FrameView(discord.ui.View):
         self.author: discord.Member = author
         self.card: Card = card
 
-        self._selected_frame: str = None
+        self._selected_frame: str = ""
+        self._price: int = 0
+        self.response: discord.Message = None
 
         self.add_item(FrameDropDown())
 
+    async def on_timeout(self) -> None:
+        for child in self.children:
+            child.disabled = True
+        
+        await self.response.edit(view=self)
+
     async def build(self) -> tuple[discord.Embed, discord.File]:
-        embed = discord.Embed(title="🖼️ Frame Preview", color=discord.Color.random())
-        embed.description = f"```🆔 {self.card.tier[0]} {self.card.id}\n🖼️ {self._selected_frame.title()}```"
+        embed = discord.Embed(title="🖼️  Frame Preview", color=discord.Color.random())
+        embed.description = f"```🆔 {self.card.tier[0]} {self.card.id}\n🖼️ {self._selected_frame.title()}\n🍬 {self._price}```"
         bytes = await asyncio.to_thread(self.card.preview_frame, self._selected_frame)
         embed.set_image(url="attachment://image.png")
 
         return embed, discord.File(bytes, filename="image.png")
     
-    @discord.ui.button(label="Apply", style=discord.ButtonStyle.green)
+    @discord.ui.button(label="Apply", style=discord.ButtonStyle.green, row=1)
     async def apply(self, interaction: discord.Interaction, button: discord.ui.Button):
         if not self._selected_frame:
-            return await interaction.response.send_message("You must select a frame to apply!")
+            return await interaction.response.send_message("You must select a frame to apply!", ephemeral=True)
 
-        await func.update_card(self.card.id, {"$set": {"frame": self._selected_frame}})
-        self.card.change_frame(self._selected_frame)
+        user = await func.get_user(self.author.id)
+        if user["candies"] < self._price:
+            return await interaction.response.send_message(f"You don't have enough candies! You only have `{user['candies']}` candies", ephemeral=True)
         
+        try:
+            self.card.change_frame(self._selected_frame)
+        except Exception as e:
+            return await interaction.response.send_message(e, ephemeral=True)
+        
+        await func.update_user(self.author.id, {"$inc": {"candies": -self._price}})
+        await func.update_card(self.card.id, {"$set": {"frame": self._selected_frame}})
+        await self.response.edit(view=None)
+
+        embed = discord.Embed(title="🖼️  Set Frame", color=discord.Color.random())
+        embed.description = f"```🆔 {self.card.tier[0]} {self.card.id}\n{self.card.display_frame}```"
+        await interaction.response.send_message(embed=embed)

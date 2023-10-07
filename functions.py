@@ -38,7 +38,6 @@ USER_BASE: dict[str, Any] = {
     "collections": {},
     "potions": {},
     "actived_potions": {},
-    "frames": {},
     "roll": {
         "rare": 0,
         "epic": 0,
