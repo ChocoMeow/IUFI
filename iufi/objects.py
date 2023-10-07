@@ -30,6 +30,10 @@ FRAMES_BASE: dict[str, tuple[str, str]] = {
     "cheer": ("🎤", 60),
     "smoon": ("🍓", 60),
     "signed": ("✍️", 60),
+    "lilac": ("💐", 60),
+    "palette": ("🎨", 60),
+    "starfish": ("🍥", 60),
+    "cactus": ("🌵", 60)
 }
 
 POTIONS_BASE: dict[str, str | dict[str, float]] = {
