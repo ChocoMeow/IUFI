@@ -251,12 +251,7 @@ class Profile(commands.Cog):
             for potion, amount in potions_data.items() if amount]
         ) if sum(potions_data.values()) else "Potion not found!")
 
-        frames: dict[str, int] = user.get("frames", {})
-        frames = ("\n".join(
-            [f"{frame.title() + ' Frame':<21} x{amount}" for frame, amount in frames.items() if amount]
-        ) if sum(frames.values()) else "Frame not found!")
-
-        embed.description += f"🍶 Potions:\n{potions}\n\n🖼️ Frames:\n{frames}```"
+        embed.description += f"🍶 Potions:\n{potions}```"
         embed.set_thumbnail(url=ctx.author.display_avatar.url)
         await ctx.reply(embed=embed)
 
