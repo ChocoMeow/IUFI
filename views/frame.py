@@ -48,6 +48,9 @@ class FrameView(discord.ui.View):
         
         await self.response.edit(view=self)
 
+    async def interaction_check(self, interaction: discord.Interaction) -> None:
+        return interaction.user == self.author
+    
     async def build(self) -> tuple[discord.Embed, discord.File]:
         embed = discord.Embed(title="🖼️  Frame Preview", color=discord.Color.random())
         embed.description = f"```🆔 {self.card.tier[0]} {self.card.id}\n🖼️ {self._selected_frame.title()}\n🍬 {self._price}```"

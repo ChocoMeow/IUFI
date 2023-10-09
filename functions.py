@@ -99,6 +99,9 @@ def get_potions(potions: dict[str, float], base: dict[str, str | dict[str, float
     return result
 
 def clean_text(input_text: str, allow_spaces: bool = True, convert_to_lower: bool = False) -> str:
+    if not input_text:
+        return ""
+    
     cleaned_text = "".join(char for char in input_text if char.isalnum() or char.isspace())
     
     if not allow_spaces:
