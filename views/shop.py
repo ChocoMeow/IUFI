@@ -1,21 +1,12 @@
 import discord
 import functions as func
 
-from iufi import TIERS_BASE, FRAMES_BASE , POTIONS_BASE
+from iufi import TIERS_BASE
 
 SHOP_BASE: list[tuple[str, str, int]] = [
     (TIERS_BASE.get("rare")[0], "roll.rare", 30),
     (TIERS_BASE.get("epic")[0], "roll.epic", 100),
-    (TIERS_BASE.get("legendary")[0], "roll.legendary", 250),
-    (FRAMES_BASE.get("hearts"), "frames.hearts", 20),
-    (FRAMES_BASE.get("shine"), "frames.shine", 20),
-    (FRAMES_BASE.get("signed"), "frames.signed", 40),
-    (FRAMES_BASE.get("cheer"), "frames.cheer", 40),
-    (FRAMES_BASE.get("celebrity"), "frames.celebrity", 60),
-    (FRAMES_BASE.get("uaena"), "frames.uaena", 60),
-    (FRAMES_BASE.get("dandelions"), "frames.dandelions", 60),
-    (FRAMES_BASE.get("lovepoem"), "frames.lovepoem", 60),
-    (FRAMES_BASE.get("smoon"), "frames.smoon", 60),
+    (TIERS_BASE.get("legendary")[0], "roll.legendary", 250)
 ]
 
 class QuantityModal(discord.ui.Modal):

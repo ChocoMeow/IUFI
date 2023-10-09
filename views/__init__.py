@@ -7,6 +7,7 @@ class ButtonOnCooldown(commands.CommandError):
 from .roll import RollView
 from .matchgame import MatchGame, GAME_SETTINGS
 from .quiz import QuizView
+from .frame import FrameView
 from .photocard import PhotoCardView
 from .shop import ShopView
 from .trade import TradeView
