@@ -59,6 +59,12 @@ POTIONS_BASE: dict[str, str | dict[str, float]] = {
     }
 }
 
+QUIZ_LEVEL_BASE: dict[str, int] = {
+    "easy": 10,
+    "medium": 20,
+    "hard": 30
+}
+
 class CardObject:
     __slots__ = ("_image")
 
@@ -317,27 +323,45 @@ class Question:
     def check_answer(self, answer: str) -> bool:
         answer = answer.replace(" ", "").lower()
         for ans in self.answers:
+            ans = ans.replace(" ", "").lower()
             result = SequenceMatcher(None, answer, ans).ratio()
             if result > .85:
                 return True
         return False    
 
+    def update_average_time(self, time: float) -> None:
+        if self.total >= 0:
+            self._average_time += time
+        else:
+            self._average_time = (self._average_time + time) / self.total
+
     @property
     def level(self) -> str:
         if self.correct_rate >= 85:
-            return "Easy"
+            return "easy"
         elif self.correct_rate >= 40:
-            return "Medium"
+            return "medium"
         else:
-            return "Hard"
+            return "hard"
 
     @property
     def average_time(self) -> float:
-        return self._average_time
+        base_time = QUIZ_LEVEL_BASE.get(self.level)
+
+        if not self._average_time:
+            return base_time
+        
+        return round((self._average_time + base_time) / 2, 1)
+
+    @property
+    def total(self) -> int:
+        return self._correct + self._wrong
     
     @property
     def correct_rate(self) -> float:
-        total = self._correct + self._wrong
+        total = self.total
+        if not total:
+            return 0
         return round(self._correct / total, 2) * 100
     
     @property

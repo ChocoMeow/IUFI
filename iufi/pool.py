@@ -116,11 +116,11 @@ class CardPool:
         return cards
 
 class QuestionPool:
-    _questions: set[Question] = set()
+    _questions: list[Question] = []
 
     @classmethod
     def add_question(cls, question: Question) -> None:
-        cls._questions.add(question)
+        cls._questions.append(question)
 
     @classmethod
     def remove_question(cls, question: Question) -> None:

@@ -29,6 +29,13 @@ class RollButton(discord.ui.Button):
         if len(user["cards"]) >= func.MAX_CARDS:
             return await interaction.response.send_message(f"**{interaction.user.mention} your inventory is full.**", ephemeral=True)
         
+        self.view.claimed_users.add(interaction.user)
+        if self.view.author == interaction.user:
+            self.view.author_claimed()
+            
+        self.disabled = True
+        self.style = discord.ButtonStyle.gray
+        
         self.card.change_owner(interaction.user.id)
         CardPool.remove_available_card(self.card)
         
@@ -40,13 +47,6 @@ class RollButton(discord.ui.Button):
             "$inc": {"exp": 10}
         })
         await func.update_card(self.card.id, {"$set": {"owner_id": interaction.user.id}})
-
-        self.view.claimed_users.add(interaction.user)
-        if self.view.author == interaction.user:
-            self.view.author_claimed()
-            
-        self.disabled = True
-        self.style = discord.ButtonStyle.gray
 
         await self.view.message.edit(view=self.view)
         await interaction.followup.send(f"{interaction.user.mention} has claimed ` {self.custom_id} | {self.card.display_id} | {self.card.tier[0]} | {self.card.display_stars} `")
