@@ -35,6 +35,9 @@ class Tasks(commands.Cog):
         for card in iufi.CardPool._cards.values():
             card._image = None
 
+        questions = {f"{i}": q.toDict() for i, q in enumerate(iufi.QuestionPool._questions, start=1)}
+        func.update_json("questions.json", questions)
+        
     @tasks.loop(minutes=10.0)
     async def reminder(self) -> None:
         time_range = {"$gt": (current_time := time.time()), "$lt": current_time + 600}

@@ -78,7 +78,7 @@ class QuizView(discord.ui.View):
         embed = discord.Embed(title=f"Question {self.current + 1} out of {len(self.questions)}", color=discord.Color.random())
         embed.description = f"**Answer Time: <t:{round(time.time() + question.average_time)}:R>**\n```{question.question}```"
         if question.attachment:
-            embed.set_thumbnail(url=question.attachment)
+            embed.set_image(url=question.attachment)
 
         embed.set_footer(text=f"Correct: {question.correct_rate}% Wrong: {question.wrong_rate}%")
         return embed
@@ -99,7 +99,7 @@ class QuizView(discord.ui.View):
     @discord.ui.button(label="Answer", style=discord.ButtonStyle.green)
     async def answer(self, interaction: discord.Interaction, button: discord.ui.Button) -> None:
         if self._is_answered:
-            return await interaction.response.send_message("You are already answered! Please for the next question.")
+            return await interaction.response.send_message("You are already answered! Please for the next question.", ephemeral=True, delete_after=5)
 
         question = self.currect_question
         modal = AnswerModal()

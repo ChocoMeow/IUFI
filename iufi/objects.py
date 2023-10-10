@@ -335,6 +335,16 @@ class Question:
         else:
             self._average_time = (self._average_time + time) / self.total
 
+    def toDict(self) -> dict:
+        return {
+            "question": self.question,
+            "answers": self.answers,
+            "num_correct": self._correct,
+            "num_wrong": self._wrong,
+            "average_time": self.average_time,
+            "attachment": self.attachment
+        }
+    
     @property
     def level(self) -> str:
         if self.correct_rate >= 85:
