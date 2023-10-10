@@ -307,9 +307,9 @@ class Question:
         self,
         question: str,
         answers: list[str],
-        num_correct: int,
-        num_wrong: int,
-        average_time: float,
+        num_correct: int = 0,
+        num_wrong: int = 0,
+        average_time: float = 0.0,
         attachment: str = None
     ):
         self.question: str = question
