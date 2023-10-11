@@ -106,16 +106,20 @@ class QuizView(discord.ui.View):
         await interaction.response.send_modal(modal)
         await modal.wait()
 
-        used_time = time.time() - self._answering_time
-        self._average_time.append(used_time)
-        question.update_average_time(used_time)
+        if self._ended_time:
+            return 
 
         if self._is_timeout:
             message = await interaction.followup.send(f"You take too long to answer! Next question will be <t:{round(time.time() + 5)}:R>.", ephemeral=True)
         
         elif modal.answer:
+            used_time = time.time() - self._answering_time
+            self._average_time.append(used_time)
+            question.update_average_time(used_time)
+
             self._is_answered = True
             correct = question.check_answer(modal.answer)
+
             if not correct:
                 question._wrong += 1
                 message: discord.Message = await interaction.followup.send(f"The correct response is `{self.currect_question.answers[0]}.`\nNext question will be <t:{round(time.time() + 5)}:R>.", ephemeral=True)
