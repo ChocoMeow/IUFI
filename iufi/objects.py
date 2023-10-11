@@ -333,7 +333,7 @@ class Question:
         if self.total >= 0:
             self._average_time += time
         else:
-            self._average_time = (self._average_time + time) / self.total
+            self._average_time = ((self._average_time * self.total) + time) / (self.total + 1)
 
     def toDict(self) -> dict:
         return {
