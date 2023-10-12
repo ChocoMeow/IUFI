@@ -142,11 +142,11 @@ class Gameplay(commands.Cog):
         """IUFI Quiz"""
         view = QuizView(ctx.author)
         view.response = await ctx.reply(
-            content=f"**This game ends** <t:{round(view._start_time + 120)}:R>",
+            content=f"**This game ends** <t:{round(view._start_time + view.total_time)}:R>",
             embed=view.build_embed(),
             view=view
         )
-        await asyncio.sleep(120)
+        await asyncio.sleep(view.total_time)
         await view.end_game()
 
     @commands.command(aliases=["cd"])
