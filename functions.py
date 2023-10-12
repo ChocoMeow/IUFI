@@ -5,6 +5,11 @@ from motor.motor_asyncio import (
     AsyncIOMotorCollection,
 )
 
+from datetime import (
+    timedelta,
+    datetime
+)
+
 from dotenv import load_dotenv
 from typing import Any
 
@@ -128,6 +133,14 @@ def clean_text(input_text: str, allow_spaces: bool = True, convert_to_lower: boo
         cleaned_text = cleaned_text.lower()
     
     return cleaned_text
+
+def get_week_unix_timestamps() -> tuple[float, float]:
+    now = datetime.now()
+
+    start_of_week = now - timedelta(days=now.weekday())
+    end_of_week = start_of_week + timedelta(days=6)
+
+    return time.mktime(start_of_week.timetuple()), time.mktime(end_of_week.timetuple())
 
 async def get_user(user_id: int, *, insert: bool = True) -> dict[str, Any]:
     user = USERS_BUFFER.get(user_id)
