@@ -59,13 +59,13 @@ class Info(commands.Cog):
         embed.set_thumbnail(url=icon.url if (icon := ctx.guild.icon) else None)
     
     @leaderboard.command(aliases=["q"])
-    async def quiz(self, ctx: commands.Context, level: str = "1"):
+    async def quiz(self, ctx: commands.Context):
         """Shows the IUFI Quiz leaderboard."""
         sow, eow = func.get_week_unix_timestamps()
         users = await func.USERS_DB.find({f"game_state.quiz_game.last_update": {"$gt":sow, "$lte":eow}}).sort(f"game_state.quiz_game.points", -1).limit(10).to_list(10)
 
         embed = discord.Embed(title=f"🏆   Quiz Leaderboard", color=discord.Color.random())
-        embed.description = "```"
+        embed.description = f"The next reset is <t:{int(eow)}:R>\n```"
 
         for index, user in enumerate(users):
             game_state: dict[str, float | int] = user.get("game_state", {}).get("quiz_game")
