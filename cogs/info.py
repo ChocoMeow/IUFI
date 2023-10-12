@@ -57,7 +57,27 @@ class Info(commands.Cog):
                 embed.description += f"{LEADERBOARD_EMOJIS[index if index <= 2 else 3]} {member.display_name:<14} 🃏{game_state['matched']:<2} 🕒{func.convert_seconds(game_state['finished_time']):<10}\n"
         embed.description += "```"
         embed.set_thumbnail(url=icon.url if (icon := ctx.guild.icon) else None)
+    
+    @leaderboard.command(aliases=["q"])
+    async def quiz(self, ctx: commands.Context, level: str = "1"):
+        """Shows the IUFI Quiz leaderboard."""
+        sow, eow = func.get_week_unix_timestamps()
+        users = await func.USERS_DB.find({f"game_state.quiz_game.last_update": {"$gt":sow, "$lte":eow}}).sort(f"game_state.quiz_game.points", -1).limit(10).to_list(10)
 
+        embed = discord.Embed(title=f"🏆   Quiz Leaderboard", color=discord.Color.random())
+        embed.description = "```"
+
+        for index, user in enumerate(users):
+            game_state: dict[str, float | int] = user.get("game_state", {}).get("quiz_game")
+            if not game_state:
+                continue
+
+            member = self.bot.get_user(user['_id'])
+            if member:
+                embed.description += f"{LEADERBOARD_EMOJIS[index if index <= 2 else 3]} {member.display_name:<14} {game_state['points']:<4} 🔥\n"
+        
+        embed.description += "```"
+        embed.set_thumbnail(url=icon.url if (icon := ctx.guild.icon) else None)
         await ctx.reply(embed=embed)
 
     @commands.command(aliases=["h"])
