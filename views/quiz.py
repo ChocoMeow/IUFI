@@ -109,11 +109,13 @@ class QuizView(discord.ui.View):
         for question, result in zip(self.questions, self._results):
             summary += symbols[result] + " "
 
-            if result is not None:
-                points = LEVELS_BASE.get(question.level)
-                total_points += points[0] if result else -points[1]
+            points = LEVELS_BASE.get(question.level)
+            total_points += points[0] if result else -points[1]
+
+            if result is True:
+                question._correct += 1
             else:
-                total_points -= 0.5
+                question._wrong += 1
 
         return summary, total_points
 
@@ -146,6 +148,7 @@ class QuizView(discord.ui.View):
         self._average_time.append(used_time)
         
         if self._timeout < time.time():
+            question.update_average_time(question.average_time * (1 + .1))
             msg = f"You take too long to answer! Next question will be <t:{round(time.time() + 5)}:R>."
         
         elif modal.answer:
