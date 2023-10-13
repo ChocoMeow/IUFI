@@ -192,6 +192,7 @@ class MatchGame(discord.ui.View):
     async def end_game(self) -> None:
         if self._is_ended:
             return
+        
         self._is_ended = True
         self._ended_time = time.time()
 
@@ -223,7 +224,7 @@ class MatchGame(discord.ui.View):
                 potion_data = POTIONS_BASE.get(reward_name[0])
                 rewards += f"    {potion_data.get('emoji') + ' ' + reward_name[0].title() + ' ' + reward_name[1].upper() + ' Potion':<18} x{amount}\n"
             
-        embed.description = f"```{rewards}```"
+        embed.description = f"```{'🕔 Time Used:':<15} {func.convert_seconds(self.used_time)}\n{'🃏 Matched:':<15} {matched_raw}```\n```{rewards}```"
 
         update_data = {"$inc": final_rewards | {"exp": self._data["exp"]}}
         user = await func.get_user(self.author.id)
@@ -251,9 +252,9 @@ class MatchGame(discord.ui.View):
 
     async def build(self) -> tuple[discord.Embed, discord.File]:
         embed = discord.Embed(
-            description=f"```Level:        {self._level}\n" \
-                        f"Click left:   {self.click_left}\n" \
-                        f"Card Matched: {self.matched()}```",
+            description=f"```{'⚔️ Level:':<17}  {self._level}\n" \
+                        f"{'👆 Click left:':<17} {self.click_left}\n" \
+                        f"{'🃏 Card Matched:':<17} {self.matched()}```",
             color=self.embed_color
         )   
 
