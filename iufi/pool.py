@@ -1,4 +1,8 @@
-from random import choices, sample, shuffle
+from random import (
+    choices,
+    sample,
+    shuffle
+)
 from collections import Counter
 
 from .objects import Card, Question
