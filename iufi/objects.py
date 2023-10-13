@@ -337,12 +337,18 @@ class Question:
         return False 
 
     def update_average_time(self, time: float) -> None:
+        if not self.is_updated:
+            self.is_updated = True
+
         if self.total >= 0:
             self._average_time += time
         else:
             self._average_time = ((self._average_time * self.total) + time) / (self.total + 1)
 
     def toDict(self) -> dict:
+        if self.is_updated:
+            self.is_updated = False
+
         return {
             "question": self.question,
             "answers": self.answers,
