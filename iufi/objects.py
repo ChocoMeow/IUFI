@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-import random, os, asyncio
+import random, os, asyncio, Levenshtein
 import functions as func
 
 from PIL import Image, ImageDraw, ImageSequence
@@ -320,14 +320,21 @@ class Question:
         self._wrong: int = num_wrong
         self._average_time: float = average_time
 
-    def check_answer(self, answer: str) -> bool:
-        answer = answer.replace(" ", "").lower()
-        for ans in self.answers:
-            ans = ans.replace(" ", "").lower()
-            result = SequenceMatcher(None, answer, ans).ratio()
-            if result > .85:
+        self.is_updated: bool = False
+
+    def check_answer(self, answer: str, threshold: float = .75) -> bool:
+        for model_answer in self.answers:
+            lev_similarity = Levenshtein.ratio(model_answer, answer)
+
+            string1 = set(model_answer.lower().split())
+            string2 = set(answer.lower().split())
+
+            jac_similarity = len(string1 & string2) / len(string1 | string2)
+            seq_similarity = SequenceMatcher(None, string1, string2).ratio()
+
+            if lev_similarity >= threshold or jac_similarity >= threshold or seq_similarity >= threshold:
                 return True
-        return False    
+        return False 
 
     def update_average_time(self, time: float) -> None:
         if self.total >= 0:
