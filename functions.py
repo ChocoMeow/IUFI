@@ -7,7 +7,7 @@ from motor.motor_asyncio import (
 
 from datetime import (
     timedelta,
-    datetime
+    date
 )
 
 from dotenv import load_dotenv
@@ -135,12 +135,12 @@ def clean_text(input_text: str, allow_spaces: bool = True, convert_to_lower: boo
     return cleaned_text
 
 def get_week_unix_timestamps() -> tuple[float, float]:
-    now = datetime.now()
+    today = date.today()
 
-    start_of_week = now - timedelta(days=now.weekday())
-    end_of_week = start_of_week + timedelta(days=6)
+    start_of_this_week = today - timedelta(days=today.weekday())
+    start_of_next_week = start_of_this_week + timedelta(days=7)
 
-    return time.mktime(start_of_week.timetuple()), time.mktime(end_of_week.timetuple())
+    return time.mktime(start_of_this_week.timetuple()), time.mktime(start_of_next_week.timetuple())
 
 async def get_user(user_id: int, *, insert: bool = True) -> dict[str, Any]:
     user = USERS_BUFFER.get(user_id)
