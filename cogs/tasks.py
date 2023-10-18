@@ -36,7 +36,8 @@ class Tasks(commands.Cog):
             card._image = None
 
         questions = {f"{i}": q.toDict() for i, q in enumerate(iufi.QuestionPool._questions, start=1) if q.is_updated}
-        func.update_json("questions.json", questions)
+        if questions:
+            func.update_json("questions.json", questions)
         
     @tasks.loop(minutes=10.0)
     async def reminder(self) -> None:
