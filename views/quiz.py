@@ -1,6 +1,7 @@
-import discord, time, asyncio
+import discord, time, asyncio, random
 import functions as func
 
+from random import choice
 from iufi import (
     QuestionPool,
     Question
@@ -10,6 +11,51 @@ LEVELS_BASE: dict[str, tuple[int, int, hex]] = {
     "easy": (1, 3, 0x7CD74B),
     "medium": (2, 2, 0xF9E853),
     "hard": (3, 1, 0xD75C4B),
+}
+
+QUESTION_RESPONSE_BASE: dict[str, dict[str, list]] = {
+    True: {
+        "emojis": ["IUgiggles:1144937008037384204", "IUwow:1144937211943452712", "IUkek:1144937045534449694", "IUclap:1144936954782302262", "IUomo:1144937081169264692"],
+        "responses": [
+            "Fantastic! You’ve answered correctly in {time} seconds.",
+            "Brilliant! You got it right in just {time} seconds.",
+            "Superb! Your answer is correct and it took you {time} seconds.",
+            "Impressive! You nailed the answer in {time} seconds.",
+            "Awesome! You’ve got the right answer in {time} seconds.",
+            "Excellent work! You answered correctly in {time} seconds.",
+            "Good going! You got it right in {time} seconds."
+        ]
+    },
+    False: {
+        "emojis": ["IUnice:1144937060600401950", "IUcry:1144936965054152714", "IUthinking:1144937196630069249", "IUweary:1144937203689062523"],
+        "responses": [
+            "That’s not quite right. The correct answer should be {correct_answer}. Let’s try again.",
+            "Good attempt, but that’s not the correct answer. It should be {correct_answer}.",
+            "Unfortunately, that’s not correct. The right answer is {correct_answer}. Keep trying!",
+            "That’s not the right answer, but don’t lose hope! The correct answer is {correct_answer}.",
+            "That’s incorrect, but don’t worry! The correct answer is {correct_answer}.",
+            "Oops, that’s not correct. The correct answer is {correct_answer}. Keep going!",
+            "That’s not the right answer, but keep going! The correct answer is {correct_answer}."
+        ]
+    },
+    None: {
+        "emojis": ["IUfacepalm3:1144937000739274842", "IUsilentmad:1144937146592006195", "IUdone:1144936980275265536"],
+        "responses": [
+            "Time's up! You didn't answer within the given time.",
+            "It seems like you ran out of time to answer this one.",
+            "Unfortunately, time has run out and I didn't receive an answer from you.",
+            "Looks like you didn't manage to answer this one within the time limit.",
+            "Time has run out for this question and I didn't get your response.",
+            "Unfortunately, you didn't manage to respond within the given time frame for this one. Keep going!",
+            "Looks like time ran out before you could respond to this one."
+        ]
+    },
+    "next_question": [
+        "The next question will be {next}.",
+        "Get ready for the next question {next}.",
+        "The next question is coming up {next}.",
+        "Stay tuned for the next question {next}.",
+    ]
 }
 
 class AnswerModal(discord.ui.Modal):
@@ -110,7 +156,7 @@ class QuizView(discord.ui.View):
             summary += symbols[result] + " "
 
             points = LEVELS_BASE.get(question.level)
-            total_points += points[0] if result else -points[1]
+            total_points += points[0] if result else -points[1] if result is False else -points[1] * (1 - .5)
 
             if result is True:
                 question._correct += 1
@@ -118,6 +164,10 @@ class QuizView(discord.ui.View):
                 question._wrong += 1
 
         return summary, total_points
+
+    def gen_response(self, result: bool = None) -> str:
+        response_base = QUESTION_RESPONSE_BASE.get(result)
+        return f"<:{choice(response_base.get('emojis'))}> {choice(response_base.get('responses'))} {choice(QUESTION_RESPONSE_BASE.get('next_question'))}"
 
     @property
     def total_time(self) -> float:
@@ -146,16 +196,17 @@ class QuizView(discord.ui.View):
 
         used_time = time.time() - self._answering_time
         self._average_time.append(used_time)
+        _next = f"<t:{round(time.time() + 7)}:R>"
         
         if self._timeout < time.time():
             question.update_average_time(question.average_time * (1 + .1))
-            msg = f"You take too long to answer! Next question will be <t:{round(time.time() + 5)}:R>."
+            msg = self.gen_response().format(next=_next)
         
         elif modal.answer:
             question.update_average_time(used_time)
             correct = question.check_answer(modal.answer)
             
-            msg = f"You are correct! Next question will be <t:{round(time.time() + 5)}:R>." if correct else f"The correct response is `{self.currect_question.answers[0]}.`\nNext question will be <t:{round(time.time() + 5)}:R>."
+            msg = self.gen_response(correct).format(time=f"`{func.convert_seconds(used_time)}`", correct_answer=f"`{self.currect_question.answers[0]}`", next=_next)
             self._results[self.current] = correct
 
         message: discord.Message = await interaction.followup.send(msg, ephemeral=True)
