@@ -28,33 +28,33 @@ QUESTION_RESPONSE_BASE: dict[str, dict[str, list]] = {
     },
     False: {
         "emojis": ["IUnice:1144937060600401950", "IUcry:1144936965054152714", "IUthinking:1144937196630069249", "IUweary:1144937203689062523"],
-        "responses": [
-            "That’s not quite right. The correct answer should be {correct_answer}. Let’s try again.",
-            "Good attempt, but that’s not the correct answer. It should be {correct_answer}.",
-            "Unfortunately, that’s not correct. The right answer is {correct_answer}. Keep trying!",
+        "responses":  [
+            "That’s not quite right, sweetie. The correct answer should be {correct_answer}.",
+            "Good attempt, but that’s not the correct answer, darling. It should be {correct_answer}.",
+            "Unfortunately, that’s not correct, honey. The right answer is {correct_answer}.",
             "That’s not the right answer, but don’t lose hope! The correct answer is {correct_answer}.",
             "That’s incorrect, but don’t worry! The correct answer is {correct_answer}.",
-            "Oops, that’s not correct. The correct answer is {correct_answer}. Keep going!",
+            "Oops, that’s not correct, sweetheart. The correct answer is {correct_answer}.",
             "That’s not the right answer, but keep going! The correct answer is {correct_answer}."
         ]
     },
     None: {
         "emojis": ["IUfacepalm3:1144937000739274842", "IUsilentmad:1144937146592006195", "IUdone:1144936980275265536"],
         "responses": [
-            "Time's up! You didn't answer within the given time.",
-            "It seems like you ran out of time to answer this one.",
-            "Unfortunately, time has run out and I didn't receive an answer from you.",
-            "Looks like you didn't manage to answer this one within the time limit.",
-            "Time has run out for this question and I didn't get your response.",
-            "Unfortunately, you didn't manage to respond within the given time frame for this one. Keep going!",
-            "Looks like time ran out before you could respond to this one."
+            "Time's up, sweetie! You didn't answer within the given time. But it's okay, let's try the next one!",
+            "It seems like you ran out of time to answer this one, darling. Don't worry, there's always next time!",
+            "Unfortunately, time has run out and I didn't receive an answer from you, honey.",
+            "Looks like you didn't manage to answer this one within the time limit, sweetheart.",
+            "Time has run out for this question and I didn't get your response, darling.",
+            "Unfortunately, you didn't manage to respond within the given time frame for this one, sweetie.",
+            "Looks like time ran out before you could respond to this one, honey. But don't worry, there's always a next time!"
         ]
     },
     "next_question": [
-        "The next question will be {next}.",
-        "Get ready for the next question {next}.",
-        "The next question is coming up {next}.",
-        "Stay tuned for the next question {next}.",
+        'The next question will be {next}, sweetie! Are you ready?',
+        'Get ready for the next question {next}, darling! Let\'s do this together!',
+        'The next question is coming up {next}, honey! I\'m excited to see your answer!',
+        'Stay tuned for the next question {next}, sweetheart! I believe in you!'
     ]
 }
 
@@ -99,7 +99,7 @@ class QuizView(discord.ui.View):
         if len(self.questions) <= (self.current + 1):
             return await self.end_game()
         
-        await asyncio.sleep(5)
+        await asyncio.sleep(10)
 
         self.current += 1
         self._answering_time = time.time()
@@ -167,11 +167,15 @@ class QuizView(discord.ui.View):
 
     def gen_response(self, result: bool = None) -> str:
         response_base = QUESTION_RESPONSE_BASE.get(result)
-        return f"<:{choice(response_base.get('emojis'))}> {choice(response_base.get('responses'))} {choice(QUESTION_RESPONSE_BASE.get('next_question'))}"
+        response = f"<:{choice(response_base.get('emojis'))}> {choice(response_base.get('responses'))} "
+        if (self.current + 1) < len(self.questions):
+            response += choice(QUESTION_RESPONSE_BASE.get('next_question'))
+
+        return response
 
     @property
     def total_time(self) -> float:
-        return sum([question.average_time for question in self.questions])
+        return sum([question.average_time for question in self.questions]) + len(self.questions) * 10
     
     @property
     def used_time(self) -> float:
@@ -196,7 +200,7 @@ class QuizView(discord.ui.View):
 
         used_time = time.time() - self._answering_time
         self._average_time.append(used_time)
-        _next = f"<t:{round(time.time() + 7)}:R>"
+        _next = f"<t:{round(time.time() + 11)}:R>"
         
         if self._timeout < time.time():
             question.update_average_time(question.average_time * (1 + .1))
@@ -210,5 +214,5 @@ class QuizView(discord.ui.View):
             self._results[self.current] = correct
 
         message: discord.Message = await interaction.followup.send(msg, ephemeral=True)
-        await message.delete(delay=5)
+        await message.delete(delay=10)
         return await self.next_question()
