@@ -323,14 +323,19 @@ class Question:
         self.is_updated: bool = False
 
     def check_answer(self, answer: str, threshold: float = .75) -> bool:
+        answer = answer.lower()
         for model_answer in self.answers:
-            lev_similarity = Levenshtein.ratio(model_answer, answer)
-            seq_similarity = SequenceMatcher(None, model_answer, answer).ratio()
 
-            string1 = set(model_answer.lower().split())
-            string2 = set(answer.lower().split())
+            model_answer = model_answer.lower()
+
+            string1 = set(model_answer.split())
+            string2 = set(answer.split())
             jac_similarity = len(string1 & string2) / len(string1 | string2)
-            
+
+            string1 = model_answer.replace(" ", "")
+            string2 = answer.replace(" ", "")
+            lev_similarity = Levenshtein.ratio(string1, string2)
+            seq_similarity = SequenceMatcher(None, string1, string2).ratio()
 
             if lev_similarity >= threshold or jac_similarity >= threshold or seq_similarity >= threshold:
                 return True
