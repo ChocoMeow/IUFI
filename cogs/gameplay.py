@@ -130,6 +130,7 @@ class Gameplay(commands.Cog):
             embed=embed, file=file, view=view
         )
         await asyncio.sleep(view._data.get("timeout", 280))
+        await view.end_game()
         await view.response.edit(view=view)
 
     @commands.command(aliases=["cd"])
