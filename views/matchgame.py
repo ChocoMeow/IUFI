@@ -16,25 +16,25 @@ from . import ButtonOnCooldown
 
 GAME_SETTINGS: dict[str, dict[str, Any]] = {
     "1": {
-        "exp": 10,
         "cooldown": 3_000,
         "timeout": 120,
         "cards": 3,
         "elem_per_row": 3,
         "max_clicks": 8,
         "rewards": {
+            1: ("exp", 10),
             2: ("candies",  5),
             3: [("potions.speed_i", 1), ("potions.luck_i", 1)]
         },
     },
     "2": {
-        "exp": 15,
         "cooldown": 5_400,
         "timeout": 240,
         "cards": 6,
         "elem_per_row": 4,
         "max_clicks": 16,
         "rewards": {
+            1: ("exp", 15),
             2: ("candies",  5),
             4: ("candies",  10),
             5: [("potions.speed_ii", 1), ("potions.luck_ii", 1)],
@@ -42,13 +42,13 @@ GAME_SETTINGS: dict[str, dict[str, Any]] = {
         },
     },
     "3": {
-        "exp": 20,
         "cooldown": 7_200,
         "timeout": 480,
         "cards": 10,
         "elem_per_row": 5,
         "max_clicks": 26,
         "rewards": {
+            1: ("exp", 20),
             2: ("candies",  10),
             4: ("candies",  15),
             6: [("potions.speed_ii", 1), ("potions.luck_ii", 1)],
@@ -97,7 +97,7 @@ class GuessButton(discord.ui.Button):
             await self.view.end_game()
         
         embed, file = await self.view.build()
-        if self.view._is_ended:
+        if self.view._ended_time:
             await self.view.response.edit(content="This game has expired.", embed=embed, attachments=[file], view=self.view)
         else:
             await self.view.response.edit(embed=embed, attachments=[file], view=self.view)
@@ -144,7 +144,6 @@ class MatchGame(discord.ui.View):
 
         self._is_matching: bool = False
         self._need_wait: bool = False
-        self._is_ended: bool = False
         self.clicked: int = 0
         self._last_clicked: discord.ui.Button = None
         self.covered_card: TempCard = TempCard(f"cover/level{self._level}.jpg")
@@ -170,7 +169,7 @@ class MatchGame(discord.ui.View):
         if interaction.user != self.author:
             return False
         
-        if self._is_ended:
+        if self._ended_time:
             return False
 
         retry_after = self.cooldown.update_rate_limit(interaction)
@@ -182,20 +181,12 @@ class MatchGame(discord.ui.View):
         if isinstance(error, ButtonOnCooldown):
             sec = int(error.retry_after)
             await interaction.response.send_message(f"You're on cooldown for {sec} second{'' if sec == 1 else 's'}!", ephemeral=True)
-        
-    async def timeout_count(self) -> None:
-        await asyncio.sleep(self._data.get("timeout", 0))
-        await self.end_game()
-        await self.response.edit(view=self)
-        self.stop()
 
     async def end_game(self) -> None:
-        if self._is_ended:
+        if self._ended_time:
             return
-        
-        self._is_ended = True
-        self._ended_time = time.time()
 
+        self._ended_time = time.time()
         for child in self.children:
             child.disabled = True
 
@@ -219,6 +210,10 @@ class MatchGame(discord.ui.View):
             rewards += ("✅" if is_matched else "⬛") + f"  {matched:<3}"
             if reward_name[0] == "candies":
                 rewards += f"    {'🍬 Candy':<18} x{amount}\n"
+            
+            elif reward_name[0] == "exp":
+                rewards += f"    {'⚔️ Exp':<19} +{amount}\n"
+
             else:
                 reward_name = reward_name[1].split("_")
                 potion_data = POTIONS_BASE.get(reward_name[0])
@@ -226,7 +221,7 @@ class MatchGame(discord.ui.View):
             
         embed.description = f"```{'🕔 Time Used:':<15} {func.convert_seconds(self.used_time)}\n{'🃏 Matched:':<15} {matched_raw}```\n```{rewards}```"
 
-        update_data = {"$inc": final_rewards | {"exp": self._data["exp"]}}
+        update_data = {"$inc": final_rewards}
         user = await func.get_user(self.author.id)
 
         best_state = user.get("game_state", {}).get("match_game", {}).get(self._level, {
@@ -249,7 +244,8 @@ class MatchGame(discord.ui.View):
 
         await func.update_user(self.author.id, update_data)
         await self.response.channel.send(content=f"<@{self.author.id}>", embed=embed)
-
+        self.stop()
+        
     async def build(self) -> tuple[discord.Embed, discord.File]:
         embed = discord.Embed(
             description=f"```{'⚔️ Level:':<17}  {self._level}\n" \
