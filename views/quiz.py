@@ -1,4 +1,4 @@
-import discord, time, asyncio, random
+import discord, time, asyncio
 import functions as func
 
 from random import choice
@@ -96,6 +96,9 @@ class QuizView(discord.ui.View):
         return self.author == interaction.user
     
     async def next_question(self) -> None:
+        if self._ended_time:
+            return
+        
         if len(self.questions) <= (self.current + 1):
             return await self.end_game()
         
