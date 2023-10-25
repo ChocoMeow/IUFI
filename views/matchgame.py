@@ -59,9 +59,6 @@ GAME_SETTINGS: dict[str, dict[str, Any]] = {
     }
 }
 
-def key(interaction: discord.Interaction):
-    return interaction.user
-
 class GuessButton(discord.ui.Button):
     def __init__(self, card: Card, *args, **kwargs) -> None:
         self.view: MatchGame
@@ -74,12 +71,13 @@ class GuessButton(discord.ui.Button):
             return await interaction.response.defer()
         
         if self.view._need_wait:
-            return await interaction.response.send_message("Too fast. Please slower!", ephemeral=True)
+            return await interaction.response.send_message("Too fast! Pwease slow down, pwetty pwease!", ephemeral=True)
         
         await interaction.response.defer()
         await self.handle_matching()
         
     async def handle_matching(self):
+        self.view._need_wait = True
         if self.view._is_matching:
             await self.matching_process()
         else:
@@ -101,6 +99,7 @@ class GuessButton(discord.ui.Button):
             await self.view.response.edit(content="This game has expired.", embed=embed, attachments=[file], view=self.view)
         else:
             await self.view.response.edit(embed=embed, attachments=[file], view=self.view)
+        self.view._need_wait = False
 
     async def matching_process(self):
         for card in self.view.guessed.values():
@@ -114,7 +113,6 @@ class GuessButton(discord.ui.Button):
 
             embed, file = await self.view.build()
             await self.view.response.edit(embed=embed, attachments=[file], view=self.view)
-            self.view._need_wait = True
             
             await asyncio.sleep(5)
             self.reset_cards()
@@ -125,8 +123,6 @@ class GuessButton(discord.ui.Button):
         self.view.guessed[self.view._last_clicked.custom_id] = self.view.covered_card
         self.view.guessed[self.custom_id] = self.view.covered_card
 
-        # Allow the next click
-        self.view._need_wait = False
         # Enable the current button again for the next round of guessing
         self.disabled = False
 
@@ -156,8 +152,6 @@ class MatchGame(discord.ui.View):
         self.guessed: dict[str, Card] = {}
         self.embed_color = discord.Color.random()
         self.response: discord.Message = None
-        
-        self.cooldown = commands.CooldownMapping.from_cooldown(1.0, 3.0, key)
 
         for index, card in enumerate(self.cards, start=1):
             index = str(index)
@@ -171,16 +165,11 @@ class MatchGame(discord.ui.View):
         
         if self._ended_time:
             return False
-
-        retry_after = self.cooldown.update_rate_limit(interaction)
-        if retry_after:
-            raise ButtonOnCooldown(retry_after)
+        
         return True
     
     async def on_error(self, interaction: discord.Interaction, error: Exception, item: discord.ui.Item) -> None:
-        if isinstance(error, ButtonOnCooldown):
-            sec = int(error.retry_after)
-            await interaction.response.send_message(f"You're on cooldown for {sec} second{'' if sec == 1 else 's'}!", ephemeral=True)
+        pass
 
     async def end_game(self) -> None:
         if self._ended_time:
