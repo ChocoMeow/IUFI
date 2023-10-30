@@ -135,7 +135,9 @@ class Gameplay(commands.Cog):
             content=f"**This game ends** <t:{round(view._start_time + view._data.get('timeout', 0))}:R>",
             embed=embed, file=file, view=view
         )
-        await view.timeout_count()
+        await asyncio.sleep(view._data.get("timeout", 280))
+        await view.end_game()
+        await view.response.edit(view=view)
 
     @commands.command(aliases=["q"])
     async def quiz(self, ctx: commands.Context):
