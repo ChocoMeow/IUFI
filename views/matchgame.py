@@ -16,7 +16,7 @@ from . import ButtonOnCooldown
 
 GAME_SETTINGS: dict[str, dict[str, Any]] = {
     "1": {
-        "cooldown": 3_000,
+        "cooldown": 3_600,
         "timeout": 120,
         "cards": 3,
         "elem_per_row": 3,
