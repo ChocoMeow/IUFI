@@ -59,6 +59,7 @@ class IUFI(commands.Bot):
         
         func.CARDS_DB = func.MONGO_DB[db_name]["cards"]
         func.USERS_DB = func.MONGO_DB[db_name]["users"]
+        func.DAILY_QUEST_DB = func.MONGO_DB[db_name]["daily"]
 
     async def setup_hook(self) -> None:
         await self.connect_db()

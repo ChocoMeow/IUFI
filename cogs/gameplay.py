@@ -39,6 +39,7 @@ class Gameplay(commands.Cog):
             view=view
         )
         await func.update_user(ctx.author.id, {"$set": {"cooldown.roll": time.time() + (func.COOLDOWN_BASE["roll"] * (1 - actived_potions.get("speed", 0)))}})
+        await func.add_quest_progress(ctx.author.id, 0, 1)
         await view.timeout_count()
 
     @commands.command(aliases=["rr"])

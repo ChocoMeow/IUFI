@@ -232,6 +232,7 @@ class MatchGame(discord.ui.View):
             }
 
         await func.update_user(self.author.id, update_data)
+        await func.add_quest_progress(self.author.id, 2, 1)
         await self.response.channel.send(content=f"<@{self.author.id}>", embed=embed)
         self.stop()
         

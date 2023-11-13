@@ -69,6 +69,8 @@ class TradeView(discord.ui.View):
         await func.update_user(self.seller.id, {"$pull": {"cards": self.card.id}, "$inc": {"candies": self.candies}})
         await func.update_user(buyer.id, {"$push": {"cards": self.card.id}, "$inc": {"candies": -self.candies}})
         await func.update_card(self.card.id, {"$set": {"owner_id": buyer.id}})
+        await func.add_quest_progress(buyer.id, 4, 1)
+        await func.add_quest_progress(self.seller.id, 4, 1)
 
         embed = discord.Embed(title="✅ Traded", color=discord.Color.random())
         embed.description = f"```{self.card.display_id}\n🍬 - {self.candies}```"

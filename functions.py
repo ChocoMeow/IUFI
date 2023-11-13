@@ -24,8 +24,10 @@ tokens: TOKEN = TOKEN()
 MONGO_DB: AsyncIOMotorClient = None
 USERS_DB: AsyncIOMotorCollection = None
 CARDS_DB: AsyncIOMotorCollection = None
+DAILY_QUEST_DB: AsyncIOMotorCollection = None
 
 USERS_BUFFER: dict[int, dict[str, Any]] = {}
+DAILY_QUEST_BUFFER: dict[int, dict[str, Any]] = {}
 COOLDOWN: dict[int, dict[str, float]] = {}
 MAX_CARDS: int = 100
 DEAFAULT_EXP = 100
@@ -54,11 +56,27 @@ USER_BASE: dict[str, Any] = {
     }
 }
 
+DAILY_QUEST_BASE: dict[str, Any] = {
+    "claimed": 0,
+    "next_reset_at": 0,
+    "quests": []
+}
+
 COOLDOWN_BASE: dict[str, int] = {
     "roll": 600,
     "claim": 180,
     "daily": 82800,
 }
+
+DAILY_QUESTS = [
+            [0, 'Roll 5 times', 'Do "qr" or any other rolls five times', 10, '🍬', 5],
+            [1, 'Collect Epic+ card', 'Collect a photocard whose rarity is above or equal to Epic by rolling', 20, '🍬',
+             1],
+            [2, "Play 1 Matching Game", "Play a matching game of any level (qmg)", 10, '🍬', 1],
+            [3, "Buy 1 Item", "Buy an item from the shop.", 10, '🍬', 1],
+            [4, "Trade 1 photocard", "Buy or sell a photocard", 10, '🍬', 1],
+            [5, "Use 1 potion", "Use a potion", 10, '🍬', 1],
+        ]
 
 def cal_retry_time(end_time: float, default: str = None) -> str | None:
     if end_time <= (current_time := time.time()):
@@ -165,3 +183,59 @@ async def update_card(card_id: list[str] | str, data: dict, insert: bool = False
         return await CARDS_DB.update_many({"_id": {"$in": card_id}}, data)
 
     await CARDS_DB.update_one({"_id": card_id}, data)
+
+async def get_daily_quest(user_id: int, *, insert: bool = True) -> dict[str, Any]:
+    daily_quest = DAILY_QUEST_BUFFER.get(user_id)
+    if not daily_quest:
+        daily_quest = await DAILY_QUEST_DB.find_one({"_id": user_id})
+        if not daily_quest and insert:
+            await DAILY_QUEST_DB.insert_one({"_id": user_id, **DAILY_QUEST_BASE})
+
+        daily_quest = DAILY_QUEST_BUFFER[user_id] = daily_quest if daily_quest else copy.deepcopy(DAILY_QUEST_BASE) | {"_id": user_id}
+    return daily_quest
+
+async def update_daily_quest(user_id: int, data: dict) -> None:
+    daily_quest = await get_daily_quest(user_id)
+    for mode, action in data.items():
+        for key, value in action.items():
+            cursors = key.split(".")
+
+            nested_daily_quest = daily_quest
+            for c in cursors[:-1]:
+                nested_daily_quest = nested_daily_quest.setdefault(c, {})
+
+            if mode == "$set":
+                try:
+                    nested_daily_quest[cursors[-1]] = value
+                except TypeError:
+                    nested_daily_quest[int(cursors[-1])] = value
+
+            elif mode == "$unset":
+                nested_daily_quest.pop(cursors[-1], None)
+
+            elif mode == "$inc":
+                nested_daily_quest[cursors[-1]] = nested_daily_quest.get(cursors[-1], 0) + value
+
+            elif mode == "$push":
+                nested_daily_quest.setdefault(cursors[-1], []).extend(value.get("$in", []) if isinstance(value, dict) else [value])
+
+            elif mode == "$pull":
+                if cursors[-1] in nested_daily_quest:
+                    value = value.get("$in", []) if isinstance(value, dict) else [value]
+                    nested_daily_quest[cursors[-1]] = [item for item in nested_daily_quest[cursors[-1]] if item not in value]
+
+            else:
+                raise ValueError(f"Invalid mode: {mode}")
+
+async def add_quest_progress(user_id: int, quest_id: int, progress: int) -> None:
+    daily_quest = await get_daily_quest(user_id)
+    can_update = False
+    for quest in daily_quest["quests"]:
+        if quest[0] == quest_id and quest[1] < DAILY_QUESTS[quest_id][5]:
+            quest[1] += progress
+            if quest[1] > DAILY_QUESTS[quest_id][5]:
+                quest[1] = DAILY_QUESTS[quest_id][5]
+            can_update = True
+            break
+    if can_update:
+        await update_daily_quest(user_id, {"$set": {"quests": daily_quest["quests"]}})

@@ -38,6 +38,8 @@ class Potion(commands.Cog):
             "$set": {f"actived_potions.{potion_name}_{level}": (expire := time.time() + potion_data.get("expiration"))}
         })
 
+        await func.add_quest_progress(ctx.author.id, 5, 1)
+
         await ctx.reply(f"You have used a {potion_name} potion. It will expire in <t:{round(expire)}:R>")
 
 async def setup(bot: commands.Bot) -> None:

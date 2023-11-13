@@ -40,6 +40,7 @@ class RollButton(discord.ui.Button):
             "$inc": {"exp": 10}
         })
         await func.update_card(self.card.id, {"$set": {"owner_id": interaction.user.id}})
+        await func.add_quest_progress(interaction.user.id, 1, 1)
 
         self.view.claimed_users.add(interaction.user)
         if self.view.author == interaction.user:
