@@ -15,7 +15,7 @@ class FrameDropDown(discord.ui.Select):
                 discord.SelectOption(
                     emoji=data[0],
                     label=frame_name.title(),
-                    description=f"🍬 {data[1]}"
+                    description=f"❄️ {data[1]}"
                 )
                 for frame_name, data in FRAMES_BASE.items()
             ],
@@ -53,7 +53,7 @@ class FrameView(discord.ui.View):
     
     async def build(self) -> tuple[discord.Embed, discord.File]:
         embed = discord.Embed(title="🖼️  Frame Preview", color=discord.Color.random())
-        embed.description = f"```🆔 {self.card.tier[0]} {self.card.id}\n🖼️ {self._selected_frame.title()}\n🍬 {self._price}```"
+        embed.description = f"```🆔 {self.card.tier[0]} {self.card.id}\n🖼️ {self._selected_frame.title()}\n❄️ {self._price}```"
         bytes = await asyncio.to_thread(self.card.preview_frame, self._selected_frame)
         embed.set_image(url="attachment://image.png")
 
