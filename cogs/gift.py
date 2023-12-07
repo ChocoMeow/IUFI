@@ -28,7 +28,7 @@ class Gift(commands.Cog):
         random_channel = random.choice(DROP_CHANNEL)
         channel = self.bot.get_channel(random_channel)
         if channel:
-            await channel.send("A gift has dropped! Claim it by clicking the button below.", view=GiftDropView())
+            await channel.send("A gift has dropped! Claim it by clicking the button below.", view=GiftDropView(), file=discord.File("assets/gift.gif"))
 
     @commands.command(aliases=["gg"])
     async def givegift(self, ctx: commands.Context, member: discord.Member, amount: int = 1):
