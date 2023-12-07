@@ -70,5 +70,5 @@ class Gift(commands.Cog):
         await ctx.reply(f"Unknown reward: {reward}")
 
 
-def setup(bot: commands.Bot) -> None:
+async def setup(bot: commands.Bot) -> None:
     bot.add_cog(Gift(bot))

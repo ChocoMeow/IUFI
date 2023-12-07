@@ -7,7 +7,7 @@ from iufi import CardPool, Card, POTIONS_BASE
 class GiftButton(discord.ui.Button):
     def __init__(self, **kwargs):
 
-        self.gift_owner: discord.Member = None
+        self.gift_owner: int = None
 
         super().__init__(
             emoji="🎁",
@@ -16,9 +16,8 @@ class GiftButton(discord.ui.Button):
         )
 
     async def callback(self, interaction: discord.Interaction) -> None:
-        self.view: GiftDropView
 
-        if owner_id := self.gift_owner.id:
+        if owner_id := self.gift_owner:
             if owner_id != interaction.user.id:
                 return await interaction.response.send_message(f"Santa's sleigh delivered this gift to <@{owner_id}>")
             else:
@@ -36,7 +35,6 @@ class GiftButton(discord.ui.Button):
         self.disabled = True
         self.style = discord.ButtonStyle.gray
 
-        await self.view.message.edit(view=self.view)
         await interaction.followup.send(
             f"{interaction.user.mention} is on Santa's nice list and has received a jolly gift!")
 
