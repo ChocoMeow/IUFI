@@ -57,6 +57,8 @@ POTIONS_BASE: dict[str, str | dict[str, float]] = {
     }
 }
 
+CHRISTMAS_FRAME: list[str] = ["candy", "christmas", "snow", "tree"]
+
 class CardObject:
     __slots__ = ("_image")
 
@@ -126,12 +128,12 @@ class Card(CardObject):
         self.owner_id: int = owner_id
         self.stars: int = stars if stars else 0
         self.tag: str = tag
-        self._frame: str = frame
+        self._frame: str = frame if frame else random.choice(CHRISTMAS_FRAME)
 
         self._image: list[Image.Image] | Image.Image = None
         self._emoji: str = TIERS_BASE.get(self._tier)[0]
     
-    def _load_frame(self, image: Image.Image, frame: str = None) -> Image.Image:
+    def _load_frame(self, image: Image.Image, frame: str = None) -> Image.Image:        
         with Image.open(os.path.join(func.ROOT_DIR, "frames", f"{frame if frame else self._frame}.png")).convert("RGBA").resize((200, 355)) as img:
             image = self._round_corners(image)
             output = Image.new("RGBA", img.size)
@@ -148,7 +150,7 @@ class Card(CardObject):
             size = (190, 338) if self._frame else (200, 355)
 
             with Image.open(os.path.join(image_path, image_file)) as img:
-                process_frame = self._load_frame if self._frame else self._round_corners
+                process_frame = self._load_frame if self._frame and self._tier not in ["mystic", "celestial"] else self._round_corners
 
                 if img.format != "GIF":
                     self._image = process_frame(img.resize(size, Image.LANCZOS))
@@ -272,7 +274,7 @@ class Card(CardObject):
 
     @property
     def display_frame(self) -> str:
-        return f"🖼️ {FRAMES_BASE.get(self._frame)[0] if self._frame else '- '}"
+        return f"🖼️ {FRAMES_BASE.get(self._frame, ('- '))[0] if self._frame else '- '}"
 
     def __str__(self) -> str:
         return f"{self._emoji} {self.id.zfill(5)}"

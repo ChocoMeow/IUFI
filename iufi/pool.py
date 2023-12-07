@@ -1,7 +1,7 @@
 from random import Random
 from collections import Counter
 
-from .objects import Card
+from .objects import Card, CHRISTMAS_FRAME
 from .exceptions import DuplicatedCardError, DuplicatedTagError
 from .deepsearch import (
     Load_Data,
@@ -110,10 +110,10 @@ class CardPool:
         results.extend(cls._rand.choices(list(drop_rates.keys()), weights=drop_rates.values(), k=amount - len(results)))
         cards = []
         
-        frame = cls._rand.choice(["candy", "christmas", "snow", "tree"])
+        frame = cls._rand.choice(CHRISTMAS_FRAME)
         for cat, amt in Counter(results).items():
             for card in cls._rand.sample(cls._available_cards[cat], k=amt):
-                if not card._frame and card._tier not in ["mystic", "celestial"]:
+                if (not card._frame or card._frame in CHRISTMAS_FRAME):
                     card._frame = frame
                     card._image = None
                 cards.append(card)
