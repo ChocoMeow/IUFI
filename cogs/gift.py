@@ -7,7 +7,6 @@ import random
 
 from views import GiftDropView
 
-DROP_CHANNEL = [1159846609924927558]
 GIFT_REWARDS = {
     'roll.rare': .5,
     'roll.epic': .1,
@@ -21,16 +20,10 @@ class Gift(commands.Cog):
         self.bot = bot
         self.emoji = "🎁"
         self.invisible = False
-        self.gift_drop.start()
 
-    @tasks.loop(minutes=1)
-    async def gift_drop(self):
-        random_channel = random.choice(DROP_CHANNEL)
-        channel = self.bot.get_channel(random_channel)
-        if channel:
-            await channel.send("A gift has dropped! Claim it by clicking the button below.", view=GiftDropView(), file=discord.File("assets/gift.gif"))
 
     @commands.command(aliases=["gg"])
+    @commands.cooldown(1, 5, commands.BucketType.user)
     async def givegift(self, ctx: commands.Context, member: discord.Member, amount: int = 1):
         """Give a gift to a user"""
         if amount <= 0:
@@ -45,6 +38,7 @@ class Gift(commands.Cog):
         await ctx.reply(f"You have given {amount} gifts to {member.mention}.")
 
     @commands.command(aliases=["og"])
+    @commands.cooldown(1, 5, commands.BucketType.user)
     async def opengift(self, ctx: commands.Context):
         """Open a gift"""
         user = await func.get_user(ctx.author.id)
