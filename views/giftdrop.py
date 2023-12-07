@@ -29,8 +29,7 @@ class GiftButton(discord.ui.Button):
 
         await interaction.response.defer()
 
-        # add gift to user inventory
-        user = await func.get_user(interaction.user.id)
+        await func.update_user(interaction.user.id, {"$inc": {"gifts": 1}})
 
         self.view.claimed_users.add(interaction.user)
 
@@ -43,7 +42,7 @@ class GiftButton(discord.ui.Button):
 
 
 class GiftDropView(discord.ui.View):
-    def __init__(self, author: discord.Member, *, timeout: float | None = None):
+    def __init__(self, *, timeout: float | None = None):
         super().__init__(timeout=timeout)
 
         self.claimed_users: set[discord.Member] = set()
