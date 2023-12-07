@@ -108,10 +108,15 @@ class CardPool:
             drop_rates = {k: v for k, v in drop_rates.items() if k not in avoid}
 
         results.extend(cls._rand.choices(list(drop_rates.keys()), weights=drop_rates.values(), k=amount - len(results)))
-        cards = [
-            card
-            for cat, amt in Counter(results).items()
-            for card in cls._rand.sample(cls._available_cards[cat], k=amt)
-        ]
+        cards = []
+        
+        frame = cls._rand.choice(["candy", "christmas", "snow", "tree"])
+        for cat, amt in Counter(results).items():
+            for card in cls._rand.sample(cls._available_cards[cat], k=amt):
+                if not card._frame and card._tier not in ["mystic", "celestial"]:
+                    card._frame = frame
+                    card._image = None
+                cards.append(card)
+            
         cls._rand.shuffle(cards)
         return cards
