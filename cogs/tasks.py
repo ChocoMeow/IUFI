@@ -9,7 +9,6 @@ class Tasks(commands.Cog):
         self.bot = bot
         self.invisible = False
         self.game_channel_ids: list[int] = [1155772660979093555, 1155772719909044224, 1155772738858913792, 1155772756730859580]
-        self.DROP_CHANNEL = [1159846609924927558]
 
         self.cache_clear.start()
         self.reminder.start()
@@ -40,7 +39,7 @@ class Tasks(commands.Cog):
 
     @tasks.loop(minutes=15)
     async def gift_drop(self):
-        random_channel = random.choice(self.DROP_CHANNEL)
+        random_channel = random.choice(self.game_channel_ids)
         channel = self.bot.get_channel(random_channel)
         if channel:
             await channel.send("A gift has dropped! Claim it by clicking the button below.", view=GiftDropView(),
