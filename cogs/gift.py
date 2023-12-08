@@ -59,7 +59,7 @@ class Gift(commands.Cog):
             msg =  f"You have received {reward.split('.')[1].title()} roll."
 
         else:
-            msg = "Unknown reward: {reward}"
+            msg = f"Unknown reward: {reward}"
 
         await func.update_user(ctx.author.id, update_fields)
         await ctx.reply(msg)
