@@ -17,6 +17,7 @@ class Tasks(commands.Cog):
     def cog_unload(self):
         self.cache_clear.cancel()
         self.reminder.cancel()
+        self.gift_drop.cancel()
     
     async def schedule_message(self, user: discord.User, wait_time: int, message: str) -> None:
         await asyncio.sleep(wait_time)
