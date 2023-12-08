@@ -45,9 +45,9 @@ class Gift(commands.Cog):
         update_fields = {"$inc": {"gifts": -1}}
         reward = random.choices(list(GIFT_REWARDS.keys()), weights=list(GIFT_REWARDS.values()), k=1)[0]
         if reward == 'cooldown_reset':
-            rand = random.randint(1, len(COOLDOWN_TYPE)) - 1
-            update_fields["$set"] = {f"cooldown.{COOLDOWN_TYPE[rand]}": time.time()}
-            msg =  f"Your `{COOLDOWN_TYPE[rand].replace('_', ' ')}` cooldown has been reset."
+            rand = random.choice(COOLDOWN_TYPE)
+            update_fields["$set"] = {f"cooldown.{rand}": time.time()}
+            msg =  f"Your `{rand.replace('_', ' ')}` cooldown has been reset."
         
         elif reward == 'candies':
             candies = random.randint(10, 100)
