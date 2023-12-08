@@ -1,8 +1,5 @@
-import discord, time, asyncio
+import discord, asyncio
 import functions as func
-
-from iufi import CardPool, Card, POTIONS_BASE
-
 
 class GiftButton(discord.ui.Button):
     def __init__(self, **kwargs):
@@ -21,22 +18,18 @@ class GiftButton(discord.ui.Button):
             if owner_id != interaction.user.id:
                 return await interaction.response.send_message(f"Santa's sleigh delivered this gift to <@{owner_id}>")
             else:
-                return await interaction.response.send_message("Oh, ho, ho! You already received this gift! Naughty "
-                                                               "or nice, you can't claim it twice!")
+                return await interaction.response.send_message(
+                    "Oh, ho, ho! You already received this gift! Naughty or nice, you can't claim it twice!"
+                )
 
         self.gift_owner = interaction.user.id
-
-        await interaction.response.defer()
-
         await func.update_user(interaction.user.id, {"$inc": {"gifts": 1}})
-
         self.view.claimed_users.add(interaction.user)
-
+        
         self.disabled = True
         self.style = discord.ButtonStyle.gray
 
-        await interaction.followup.send(
-            f"{interaction.user.mention} is on Santa's nice list and has received a jolly gift!")
+        await interaction.response.send_message(f"{interaction.user.mention} is on Santa's nice list and has received a jolly gift!")
 
 
 class GiftDropView(discord.ui.View):
@@ -54,16 +47,16 @@ class GiftDropView(discord.ui.View):
         for child in self.children:
             child.style = discord.ButtonStyle.gray
             child.disabled = True
-        await self.message.edit(content="* Tinsel time's up! This Drop has melted away like a snowflake in the sun. ❄️",
-                                view=self)
+
+        await self.message.edit(
+            content="* Tinsel time's up! This Drop has melted away like a snowflake in the sun. ❄️",
+            view=self
+        )
         self.stop()
 
     async def interaction_check(self, interaction: discord.Interaction) -> bool:
-
         if interaction.user in self.claimed_users:
-            await interaction.response.send_message("Oh, ho, ho! Naughty "
-                                                    "or nice, you can't claim twice!",
-                                                    ephemeral=True)
+            await interaction.response.send_message("Oh, ho, ho! Naughty or nice, you can't claim twice!", ephemeral=True)
             return False
-
+        
         return True

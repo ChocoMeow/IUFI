@@ -38,7 +38,7 @@ class Tasks(commands.Cog):
         for card in iufi.CardPool._cards.values():
             card._image = None
 
-    @tasks.loop(minutes=1)
+    @tasks.loop(minutes=15)
     async def gift_drop(self):
         random_channel = random.choice(self.DROP_CHANNEL)
         channel = self.bot.get_channel(random_channel)
