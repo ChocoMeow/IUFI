@@ -27,7 +27,7 @@ class Gift(commands.Cog):
         self.invisible = False
 
     @commands.command(aliases=["gg"])
-    @commands.cooldown(1, 5, commands.BucketType.user)
+    @commands.cooldown(1, 1, commands.BucketType.user)
     async def givegift(self, ctx: commands.Context, member: discord.Member, amount: int = 1):
         """Give a Christmas gift to a user"""
         if amount <= 0:
@@ -41,10 +41,10 @@ class Gift(commands.Cog):
 
         await func.update_user(member.id, {"$inc": {"gifts": amount}})
         await func.update_user(ctx.author.id, {"$inc": {"gifts": -amount}})
-        await ctx.reply(f"🎁 {ctx.author.mention} 🎅 has sent {member.mention} a festive gift🎁! Unwrap it to discover the joy within. Merry Christmas!🎄")
+        await ctx.reply(f"🎁 {ctx.author.mention} <:IUsanta:786519160083447838> has sent {member.mention} a festive gift🎁! Unwrap it to discover the joy within. Merry Christmas!🎄")
 
     @commands.command(aliases=["og"])
-    @commands.cooldown(1, 5, commands.BucketType.user)
+    @commands.cooldown(1, 1, commands.BucketType.user)
     async def opengift(self, ctx: commands.Context):
         """Open a Christmas gift"""
         user = await func.get_user(ctx.author.id)
@@ -65,15 +65,18 @@ class Gift(commands.Cog):
                 [random.randint(1, 20), random.randint(20, 50), random.randint(50, 80), random.randint(80, 100)],
                 weights=[90, 8, 1.5, 0.5], k=1)[0]
             update_fields["$inc"]["candies"] = candies
-            msg = f"As you open the gift, a burst of snowflakes fly out and you catch {candies} :snowflake:"
+            msg = f"As you open the gift, a burst of snowflakes fly out and you catch `{candies} :snowflake:`"
 
         elif reward.startswith('roll'):
             update_fields["$inc"][reward] = 1
-            msg = f"You're unwrapping the gift, and inside, you discover a `{reward.split('.')[1].title()} roll` "
+            roll_type = reward.split('.')[1]
+            emojis = ("🌸", "💎", "👑")
+            emoji = emojis[0] if roll_type == 'rare' else emojis[1] if roll_type == 'epic' else emojis[2]
+            msg = f"You're unwrapping the gift, and inside, you discover a `{reward.split('.')[1].title()} roll` {emoji}"
 
         elif reward.startswith('potion'):
             update_fields["$inc"][reward] = 1
-            msg = f"As you tear away the wrapping paper, a burst of confetti reveals a {reward.split('.')[1].split('_')[0].title()} {reward.split('.')[1].split('_')[1].title()} potion."
+            msg = f"As you tear away the wrapping paper, a burst of confetti reveals a `{reward.split('.')[1].split('_')[0].title()} {reward.split('.')[1].split('_')[1].title()} potion`."
 
         else:
             msg = f"Unknown reward: {reward}"
