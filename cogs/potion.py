@@ -33,10 +33,15 @@ class Potion(commands.Cog):
         if user.get("potions", {}).get(f"{potion_name}_{level}", 0) <= 0:
             return await ctx.reply("You don't have this potion.")
 
-        await func.update_user(ctx.author.id, {
-            "$inc": {f"potions.{potion_name}_{level}": -1},
-            "$set": {f"actived_potions.{potion_name}_{level}": (expire := time.time() + potion_data.get("expiration"))}
-        })
+        data: dict[str, dict[str, float]] = {"$set": {}, "$inc": {}}
+        if potion_name == "speed":
+            time_reduce = POTIONS_BASE.get("speed").get("level").get(level)
+            for cooldown in user.get("cooldown", []):
+                if cooldown == "daily": continue
+                data["$set"][f"cooldown.{cooldown}"] = user.get(cooldown, time.time()) - (func.COOLDOWN_BASE.get(cooldown) * time_reduce)
+
+        data["$inc"][f"potions.{potion_name}_{level}"] = -1
+        data["$set"][f"actived_potions.{potion_name}_{level}"] = (expire := time.time() + potion_data.get("expiration"))
 
         await ctx.reply(f"You have used a {potion_name} potion. It will expire in <t:{round(expire)}:R>")
 
