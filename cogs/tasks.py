@@ -46,7 +46,7 @@ class Tasks(commands.Cog):
             view = GiftDropView()
             files = ["gift1.gif","gift2.gif","gift1.jpg","gift2.jpg"]
             random_file = random.choice(files)
-            view.message = await channel.send(f"Christmas gifts have appeared.! ** (Disappears: <t:{round(time.time()) + 120}:R>)", view=view,
+            view.message = await channel.send(f"Christmas gifts have appeared.! ** (Disappears: <t:{round(time.time()) + 120}:R>) **", view=view,
                                file=discord.File("assets/" + random_file))
             await view.timeout_count()
 
