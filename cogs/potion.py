@@ -1,8 +1,8 @@
-import discord, iufi
+import iufi, time
 import functions as func
 
 from discord.ext import commands
-import time
+from iufi.objects import POTIONS_BASE
 
 class Potion(commands.Cog):
     def __init__(self, bot: commands.Bot) -> None:
