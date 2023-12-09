@@ -52,7 +52,8 @@ USER_BASE: dict[str, Any] = {
         "bio": "",
         "main": ""
     },
-    "gifts": 0
+    "gifts": 0,
+    "gifts_given": 0
 }
 
 COOLDOWN_BASE: dict[str, int] = {
