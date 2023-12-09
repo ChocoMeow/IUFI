@@ -16,7 +16,7 @@ class GiftButton(discord.ui.Button):
 
         if owner_id := self.gift_owner:
             if owner_id != interaction.user.id:
-                return await interaction.response.send_message(f"Santa's sleigh delivered this gift to <@{owner_id}>")
+                return await interaction.response.send_message(f"Santa's sleigh🛷 delivered this gift to <@{owner_id}>")
             else:
                 return await interaction.response.send_message(
                     "Oh, ho, ho! You already received this gift! Naughty or nice, you can't claim it twice!"
@@ -29,7 +29,9 @@ class GiftButton(discord.ui.Button):
         self.disabled = True
         self.style = discord.ButtonStyle.gray
 
-        await interaction.response.send_message(f"{interaction.user.mention} is on Santa's nice list and has received a jolly gift!")
+        await self.view.message.edit(view=self.view)
+        await interaction.response.send_message(f"{interaction.user.mention} is on Santa's nice list and has received a Christmas gift!")
+
 
 
 class GiftDropView(discord.ui.View):

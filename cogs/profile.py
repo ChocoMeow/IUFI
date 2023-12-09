@@ -223,6 +223,10 @@ class Profile(commands.Cog):
         embed.add_field(name="Streak Rewards", value=value + "```")
         await ctx.reply(embed=embed)
 
+        is_christmas = time.localtime().tm_mon == 12 and time.localtime().tm_mday == 25
+        if is_christmas:
+            await ctx.reply("IUFI wishes you a Merry Christmas! 🎄🎅🎁")
+
     @commands.command(aliases=["v"])
     async def view(self, ctx: commands.Context):
         """View your photocard collection."""
