@@ -44,7 +44,7 @@ class Tasks(commands.Cog):
         channel = self.bot.get_channel(random_channel)
         if channel:
             view = GiftDropView()
-            await channel.send(f"A gift has dropped! ** (Ends: <t:{round(time.time()) + 120}:R>)", view=view,
+            view.message = await channel.send(f"A gift has dropped! ** (Ends: <t:{round(time.time()) + 120}:R>)", view=view,
                                file=discord.File("assets/gift.gif"))
             await view.timeout_count()
 
