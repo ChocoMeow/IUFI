@@ -2,7 +2,6 @@ import iufi, time
 import functions as func
 
 from discord.ext import commands
-from iufi.objects import POTIONS_BASE
 
 class Potion(commands.Cog):
     def __init__(self, bot: commands.Bot) -> None:
@@ -35,10 +34,10 @@ class Potion(commands.Cog):
 
         data: dict[str, dict[str, float]] = {"$set": {}, "$inc": {}}
         if potion_name == "speed":
-            time_reduce = POTIONS_BASE.get("speed").get("level").get(level)
+            time_reduce = iufi.POTIONS_BASE.get("speed").get("levels").get(level)
             for cooldown in user.get("cooldown", []):
-                if cooldown == "daily": continue
-                data["$set"][f"cooldown.{cooldown}"] = user.get(cooldown, time.time()) - (func.COOLDOWN_BASE.get(cooldown) * time_reduce)
+                if cooldown in ["daily", "match_game"]: continue
+                data["$set"][f"cooldown.{cooldown}"] = user.get("cooldown").get(cooldown, time.time()) - (func.COOLDOWN_BASE.get(cooldown) * time_reduce)
 
         data["$inc"][f"potions.{potion_name}_{level}"] = -1
         data["$set"][f"actived_potions.{potion_name}_{level}"] = (expire := time.time() + potion_data.get("expiration"))
