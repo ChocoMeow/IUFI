@@ -122,7 +122,8 @@ class Gameplay(commands.Cog):
             return await ctx.reply(f"{ctx.author.mention} your game is <t:{round(retry)}:R>", delete_after=10)
 
         view = MatchGame(ctx.author, level)
-        await func.update_user(ctx.author.id, {"$set": {"cooldown.match_game": time.time() + view._data.get("cooldown", 0)}})
+        actived_potions = func.get_potions(user.get("actived_potions", {}), iufi.POTIONS_BASE)
+        await func.update_user(ctx.author.id, {"$set": {"cooldown.match_game": time.time() + (view._data.get("cooldown", 0) * (1 - actived_potions.get("speed", 0)))}})
         
         embed, file = await view.build()
         view.response = await ctx.reply(
