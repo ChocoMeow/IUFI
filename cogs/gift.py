@@ -65,7 +65,7 @@ class Gift(commands.Cog):
                 [random.randint(1, 20), random.randint(20, 50), random.randint(50, 80), random.randint(80, 100)],
                 weights=[90, 8, 1.5, 0.5], k=1)[0]
             update_fields["$inc"]["candies"] = candies
-            msg = f"As you open the gift, a burst of snowflakes fly out and you catch `{candies} :snowflake:`"
+            msg = f"As you open the gift, a burst of snowflakes fly out and you catch `{candies}` :snowflake:"
 
         elif reward.startswith('roll'):
             update_fields["$inc"][reward] = 1
