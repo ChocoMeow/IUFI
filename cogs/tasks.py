@@ -38,14 +38,16 @@ class Tasks(commands.Cog):
         for card in iufi.CardPool._cards.values():
             card._image = None
 
-    @tasks.loop(minutes=15)
+    @tasks.loop(minutes=60)
     async def gift_drop(self):
         random_channel = random.choice(self.game_channel_ids)
         channel = self.bot.get_channel(random_channel)
         if channel:
             view = GiftDropView()
-            view.message = await channel.send(f"A gift has dropped! ** (Ends: <t:{round(time.time()) + 120}:R>)", view=view,
-                               file=discord.File("assets/gift.gif"))
+            files = ["gift1.gif","gift2.gif","gift1.jpg","gift2.jpg"]
+            random_file = random.choice(files)
+            view.message = await channel.send(f"Christmas gifts have appeared.! ** (Disappears: <t:{round(time.time()) + 120}:R>)", view=view,
+                               file=discord.File("assets/" + random_file))
             await view.timeout_count()
 
     @tasks.loop(minutes=10.0)
