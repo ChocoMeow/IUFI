@@ -69,7 +69,7 @@ class Gift(commands.Cog):
 
         elif reward.startswith('roll'):
             update_fields["$inc"][reward] = 1
-            msg = f"You're unwrapping the gift, and inside, you discover a {reward.split('.')[1].title()} roll."
+            msg = f"You're unwrapping the gift, and inside, you discover a `{reward.split('.')[1].title()} roll` "
 
         elif reward.startswith('potion'):
             update_fields["$inc"][reward] = 1

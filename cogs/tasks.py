@@ -43,8 +43,10 @@ class Tasks(commands.Cog):
         random_channel = random.choice(self.game_channel_ids)
         channel = self.bot.get_channel(random_channel)
         if channel:
-            await channel.send("A gift has dropped! Claim it by clicking the button below.", view=GiftDropView(),
+            view = GiftDropView()
+            await channel.send(f"A gift has dropped! ** (Ends: <t:{round(time.time()) + 120}:R>)", view=view,
                                file=discord.File("assets/gift.gif"))
+            await view.timeout_count()
 
     @tasks.loop(minutes=10.0)
     async def reminder(self) -> None:
