@@ -54,7 +54,7 @@ class GiftDropView(discord.ui.View):
             child.disabled = True
 
         await self.message.edit(
-            content="* Tinsel time's up! This Drop has melted away like a snowflake in the sun. ❄️",
+            content="Tinsel time's up! This Drop has melted away like a snowflake in the sun❄️",
             view=self
         )
         self.stop()
