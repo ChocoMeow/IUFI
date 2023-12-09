@@ -42,6 +42,7 @@ class Potion(commands.Cog):
 
         data["$inc"][f"potions.{potion_name}_{level}"] = -1
         data["$set"][f"actived_potions.{potion_name}_{level}"] = (expire := time.time() + potion_data.get("expiration"))
+        await func.update_user(ctx.author.id, data)
 
         await ctx.reply(f"You have used a {potion_name} potion. It will expire in <t:{round(expire)}:R>")
 
