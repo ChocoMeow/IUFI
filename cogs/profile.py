@@ -243,7 +243,8 @@ class Profile(commands.Cog):
         embed.description = f"```❄️ Starcandies        x{user['candies']}\n" \
                             f"🌸 Rare rolls         x{user['roll']['rare']}\n" \
                             f"💎 Epic rolls         x{user['roll']['epic']}\n" \
-                            f"👑 Legend rolls       x{user['roll']['legendary']}\n\n" 
+                            f"👑 Legend rolls       x{user['roll']['legendary']}\n" \
+                            f"🎁 Gifts              x{user['gifts']}\n\n ```"
 
         potions_data: dict[str, int] = user.get("potions", {})
         potions = ("\n".join(

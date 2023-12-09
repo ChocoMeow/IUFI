@@ -7,8 +7,8 @@ GIFT_REWARDS: dict[str, float] = {
     'roll.rare': .5,
     'roll.epic': .1,
     'roll.legendary': .01,
-    'candies': .1,
-    'cooldown_reset': .5,
+    'candies': .5,
+    'cooldown_reset': .2,
 }
 
 COOLDOWN_TYPE: tuple[str] = ("roll", "claim", "match_game")
