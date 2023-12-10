@@ -221,11 +221,9 @@ class Profile(commands.Cog):
                 claimed -= 1
             value += f"  {reward[2]:>4} {reward[0]} " + ("✅" if claimed >= 0 else "⬛") + "\n"
         embed.add_field(name="Streak Rewards", value=value + "```")
-        await ctx.reply(embed=embed)
 
         is_christmas = time.localtime().tm_mon == 12 and time.localtime().tm_mday == 25
-        if is_christmas:
-            await ctx.reply("IUFI wishes you a Merry Christmas! 🎄🎅🎁")
+        await ctx.reply(content="IUFI wishes you a Merry Christmas! 🎄🎅🎁" if is_christmas else None, embed=embed)
 
     @commands.command(aliases=["v"])
     async def view(self, ctx: commands.Context):
