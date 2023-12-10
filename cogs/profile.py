@@ -221,7 +221,9 @@ class Profile(commands.Cog):
                 claimed -= 1
             value += f"  {reward[2]:>4} {reward[0]} " + ("✅" if claimed >= 0 else "⬛") + "\n"
         embed.add_field(name="Streak Rewards", value=value + "```")
-        await ctx.reply(embed=embed)
+
+        is_christmas = time.localtime().tm_mon == 12 and time.localtime().tm_mday == 25
+        await ctx.reply(content="IUFI wishes you a Merry Christmas! 🎄🎅🎁" if is_christmas else None, embed=embed)
 
     @commands.command(aliases=["v"])
     async def view(self, ctx: commands.Context):
@@ -243,7 +245,8 @@ class Profile(commands.Cog):
         embed.description = f"```❄️ Starcandies        x{user['candies']}\n" \
                             f"🌸 Rare rolls         x{user['roll']['rare']}\n" \
                             f"💎 Epic rolls         x{user['roll']['epic']}\n" \
-                            f"👑 Legend rolls       x{user['roll']['legendary']}\n\n" 
+                            f"👑 Legend rolls       x{user['roll']['legendary']}\n" \
+                            f"🎁 Gifts              x{user['gifts']}\n\n"
 
         potions_data: dict[str, int] = user.get("potions", {})
         potions = ("\n".join(

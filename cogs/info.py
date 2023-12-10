@@ -60,6 +60,24 @@ class Info(commands.Cog):
 
         await ctx.reply(embed=embed)
 
+    @leaderboard.command(aliases=["gg"])
+    async def giftsgiven(self, ctx: commands.Context):
+        """Shows the IUFI Gifts Given leaderboard."""
+
+        users = await func.USERS_DB.find().sort("gifts_given", -1).limit(10).to_list(10)
+
+        embed = discord.Embed(title=f"🎁   Christmas Gifts Given Leaderboard", color=discord.Color.random())
+        embed.description = "```"
+
+        for index, user in enumerate(users):
+            member = self.bot.get_user(user['_id'])
+            if member:
+                embed.description += f"{LEADERBOARD_EMOJIS[index if index <= 2 else 3]} {member.display_name:<14} 🎁{user.get('gifts_given', 0):<2}\n"
+        embed.description += "```"
+        embed.set_thumbnail(url=icon.url if (icon := ctx.guild.icon) else None)
+
+        await ctx.reply(embed=embed)
+
     @commands.command(aliases=["h"])
     async def help(self, ctx: commands.Context, *, command: str = None):
         "Lists all the commands in IUFI."
