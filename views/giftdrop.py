@@ -38,9 +38,10 @@ class GiftButton(discord.ui.Button):
 
 
 class GiftDropView(discord.ui.View):
-    def __init__(self, *, timeout: float | None = None):
+    def __init__(self, image_link: str, *, timeout: float | None = None):
         super().__init__(timeout=timeout)
 
+        self.image_link: str = image_link
         self.claimed_users: set[discord.Member] = set()
         self.message: discord.Message = None
 
@@ -54,7 +55,7 @@ class GiftDropView(discord.ui.View):
             child.disabled = True
 
         await self.message.edit(
-            content="Tinsel time's up! This Drop has melted away like a snowflake in the sun❄️",
+            content=f"Tinsel time's up! This Drop has melted away like a snowflake in the sun❄️[.]({self.image_link})",
             view=self
         )
         self.stop()
