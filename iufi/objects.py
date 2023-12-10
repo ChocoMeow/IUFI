@@ -39,20 +39,20 @@ FRAMES_BASE: dict[str, tuple[str, str]] = {
 POTIONS_BASE: dict[str, str | dict[str, float]] = {
     "speed": {
         "emoji": "⚡",
-        "expiration": 900,
+        "expiration": 1800,
         "levels": {
-            "i": .1,
-            "ii": .2,
-            "iii": .3
+            "i": .3,
+            "ii": .5,
+            "iii": .7
         }
     },
     "luck": {
         "emoji": "🍀",
         "expiration": 900,
         "levels": {
-            "i": 1,
-            "ii": 2,
-            "iii": 4
+            "i": 3,
+            "ii": 4,
+            "iii": 6
         }
     }
 }
