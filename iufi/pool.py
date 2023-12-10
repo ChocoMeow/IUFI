@@ -3,10 +3,10 @@ from collections import Counter
 
 from .objects import Card
 from .exceptions import DuplicatedCardError, DuplicatedTagError
-from .deepsearch import (
-    Load_Data,
-    Search_Setup
-)
+# from .deepsearch import (
+#     Load_Data,
+#     Search_Setup
+# )
 
 DROP_RATES = {
     'common': .9,
@@ -26,13 +26,13 @@ class CardPool:
     _rand = Random()
 
     #DeepSearch
-    search_image: Search_Setup | None = None
+    # search_image: Search_Setup | None = None
 
-    @classmethod
-    def load_search_metadata(cls) -> None:
-        image_list = Load_Data().from_folder(["/metadata-files"])
-        cls.search_image = Search_Setup(image_list=image_list)
-        cls.search_image.run_index()
+    # @classmethod
+    # def load_search_metadata(cls) -> None:
+    #     image_list = Load_Data().from_folder(["/metadata-files"])
+    #     cls.search_image = Search_Setup(image_list=image_list)
+    #     cls.search_image.run_index()
 
     @classmethod
     def add_available_card(cls, card: Card) -> None:
