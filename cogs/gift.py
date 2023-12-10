@@ -2,6 +2,7 @@ import discord, time, random
 import functions as func
 
 from discord.ext import commands
+from iufi.objects import TIERS_BASE
 
 GIFT_REWARDS: dict[str, float] = {
     'roll.rare': .5,
@@ -18,7 +19,6 @@ GIFT_REWARDS: dict[str, float] = {
 }
 
 COOLDOWN_TYPE: tuple[str] = ("roll", "claim", "match_game")
-
 
 class Gift(commands.Cog):
     def __init__(self, bot: commands.Bot) -> None:
@@ -70,13 +70,12 @@ class Gift(commands.Cog):
         elif reward.startswith('roll'):
             update_fields["$inc"][reward] = 1
             roll_type = reward.split('.')[1]
-            emojis = ("🌸", "💎", "👑")
-            emoji = emojis[0] if roll_type == 'rare' else emojis[1] if roll_type == 'epic' else emojis[2]
-            msg = f"You're unwrapping the gift, and inside, you discover a `{reward.split('.')[1].title()} roll` {emoji}"
+            msg = f"You're unwrapping the gift, and inside, you discover a `{roll_type.title()} roll` {TIERS_BASE.get(roll_type)[0]}"
 
         elif reward.startswith('potion'):
             update_fields["$inc"][reward] = 1
-            msg = f"As you tear away the wrapping paper, a burst of confetti reveals a `{reward.split('.')[1].split('_')[0].title()} {reward.split('.')[1].split('_')[1].title()} potion`."
+            potion = reward.split('.')[1].split('_')
+            msg = f"As you tear away the wrapping paper, a burst of confetti reveals a `{potion[0].title()} {potion[1].upper()} potion`."
 
         else:
             msg = f"Unknown reward: {reward}"
