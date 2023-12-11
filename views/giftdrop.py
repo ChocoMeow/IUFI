@@ -49,7 +49,7 @@ class GiftDropView(discord.ui.View):
             self.add_item(GiftButton(custom_id=str(i)))
 
     async def timeout_count(self):
-        await asyncio.sleep(120)
+        await asyncio.sleep(360)
         for child in self.children:
             child.style = discord.ButtonStyle.gray
             child.disabled = True
