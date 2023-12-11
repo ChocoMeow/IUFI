@@ -5,7 +5,7 @@ class GiftButton(discord.ui.Button):
     def __init__(self, **kwargs):
 
         self.gift_owner: int = None
-        self.naughty_list: list[int] = [941709022560682080,406986532205887488]
+        self.naughty_list: list[int] = [941709022560682080,406986532205887488, 751737106803720244]
 
         super().__init__(
             emoji="🎁",
