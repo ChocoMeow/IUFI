@@ -41,7 +41,7 @@ class Gift(commands.Cog):
 
         await func.update_user(member.id, {"$inc": {"gifts": amount}})
         await func.update_user(ctx.author.id, {"$inc": {"gifts": -amount, "gifts_given": amount}})
-        await ctx.reply(f"🎁 {ctx.author.mention} <:IUsanta:786519160083447838> has sent {member.mention} a festive gift🎁! Unwrap it to discover the joy within. Merry Christmas!🎄")
+        await ctx.reply(f"🎁 {ctx.author.mention} <:IUsanta:786519160083447838> has sent {member.mention} a festive gift🎁! Type `qopengift` to unwrap and discover the joy within. Merry Christmas!🎄")
 
     @commands.command(aliases=["og"])
     @commands.cooldown(1, 1, commands.BucketType.user)
