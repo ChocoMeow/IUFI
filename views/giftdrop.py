@@ -5,6 +5,7 @@ class GiftButton(discord.ui.Button):
     def __init__(self, **kwargs):
 
         self.gift_owner: int = None
+        self.naughty_list: list[int] = [941709022560682080,406986532205887488]
 
         super().__init__(
             emoji="🎁",
@@ -15,6 +16,9 @@ class GiftButton(discord.ui.Button):
     async def callback(self, interaction: discord.Interaction) -> None:
 
         self.view: GiftDropView
+
+        if interaction.user.id in self.naughty_list:
+            return await interaction.response.send_message(f"<:IUsanta:786519160083447838> You're on Santa's naughty list, <@{interaction.user.id}>! No gifts for you!")
 
         if owner_id := self.gift_owner:
             if owner_id != interaction.user.id:
