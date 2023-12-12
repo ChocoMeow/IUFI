@@ -53,7 +53,7 @@ class Tasks(commands.Cog):
             random_image = random.choice(self.gift_drop_images)
             view = GiftDropView(random_image)
             view.message = await channel.send(
-                f"Christmas gifts have appeared.! ** (Disappears: <t:{round(time.time()) + 360}:R>) ** [.]({random_image}))",
+                f"Christmas gifts have appeared.! ** (Disappears: <t:{round(time.time()) + 360}:R>) ** [.]({random_image})",
                 view=view
             )
             await view.timeout_count()
