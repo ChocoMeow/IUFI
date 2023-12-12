@@ -10,12 +10,12 @@ GIFT_REWARDS: dict[str, float] = {
     'roll.legendary': .01,
     'candies': .5,
     'cooldown_reset': .2,
-    'potion.speed_i': .1,
-    'potion.speed_ii': .05,
-    'potion.speed_iii': .01,
-    'potion.luck_i': .1,
-    'potion.luck_ii': .05,
-    'potion.luck_iii': .01,
+    'potions.speed_i': .1,
+    'potions.speed_ii': .05,
+    'potions.speed_iii': .01,
+    'potions.luck_i': .1,
+    'potions.luck_ii': .05,
+    'potions.luck_iii': .01,
 }
 
 COOLDOWN_TYPE: tuple[str] = ("roll", "claim", "match_game")
