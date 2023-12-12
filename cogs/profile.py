@@ -223,7 +223,7 @@ class Profile(commands.Cog):
         embed.add_field(name="Streak Rewards", value=value + "```")
 
         is_christmas = time.localtime().tm_mon == 12 and time.localtime().tm_mday == 25
-        await ctx.reply(content="IUFI wishes you a Merry Christmas! 🎄🎅🎁" if is_christmas else None, embed=embed)
+        await ctx.reply(content="IUFI wishes you a Merry Christmas! 🎄<:IUsanta:786519160083447838>🎁" if is_christmas else None, embed=embed)
 
     @commands.command(aliases=["v"])
     async def view(self, ctx: commands.Context):
