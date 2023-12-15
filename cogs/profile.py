@@ -240,12 +240,12 @@ class Profile(commands.Cog):
     async def inventory(self, ctx: commands.Context):
         """Shows the items that you own."""
         user = await func.get_user(ctx.author.id)
-
         embed = discord.Embed(title=f"🎒 {ctx.author.display_name}'s Inventory", color=0x5cb045)
         embed.description = f"```❄️ Starcandies        x{user['candies']}\n" \
                             f"🌸 Rare rolls         x{user['roll']['rare']}\n" \
                             f"💎 Epic rolls         x{user['roll']['epic']}\n" \
                             f"👑 Legend rolls       x{user['roll']['legendary']}\n" \
+                            f"🦄 Mystic rolls       x{user['roll']['mystic']}\n" if user['roll']['mystic'] > 0 else "" \
                             f"🎁 Gifts              x{user.get('gifts', 0)}\n\n"
 
         potions_data: dict[str, int] = user.get("potions", {})

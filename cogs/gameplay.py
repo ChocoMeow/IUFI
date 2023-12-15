@@ -111,6 +111,30 @@ class Gameplay(commands.Cog):
         await func.update_user(ctx.author.id, {"$inc": {"roll.legendary": -1}})
         await view.timeout_count()
 
+    @commands.command(aliases=["mr"])
+    @commands.cooldown(1, 5, commands.BucketType.user)
+    async def mysticroll(self, ctx: commands.Context):
+        """Starts a roll with at least one legendary photocard guaranteed."""
+        user = await func.get_user(ctx.author.id)
+        if user["roll"]["mystic"] <= 0:
+            return await ctx.reply("You’ve used up all your `mystic` rolls for now.")
+
+        if len(user["cards"]) >= func.MAX_CARDS:
+            return await ctx.reply(f"**{ctx.author.mention} your inventory is full.**", delete_after=5)
+
+        cards = iufi.CardPool.roll(included=["mystic"])
+        image_bytes, image_format = await asyncio.to_thread(iufi.gen_cards_view, cards)
+
+        view = RollView(ctx.author, cards)
+        view.message = await ctx.send(
+            content=f"**{ctx.author.mention} This is your roll!** (Ends: <t:{round(time.time()) + 71}:R>)",
+            file=discord.File(image_bytes, filename=f'image.{image_format}'),
+            view=view
+        )
+        await func.update_user(ctx.author.id, {"$inc": {"roll.mystic": -1}})
+        await view.timeout_count()
+
+
     @commands.command(aliases=["mg"])
     async def game(self, ctx: commands.Context, level: str):
         """Matching game."""

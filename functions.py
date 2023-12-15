@@ -41,7 +41,8 @@ USER_BASE: dict[str, Any] = {
     "roll": {
         "rare": 0,
         "epic": 0,
-        "legendary": 0
+        "legendary": 0,
+        "mystic": 0,
     },
     "cooldown": {
         "roll": 0,
