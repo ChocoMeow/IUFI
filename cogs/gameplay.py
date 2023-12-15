@@ -13,9 +13,24 @@ class Gameplay(commands.Cog):
 
     @commands.command(aliases=["r"])
     @commands.cooldown(1, 5, commands.BucketType.user)
-    async def roll(self, ctx: commands.Context):
+    async def roll(self, ctx: commands.Context, *, tier: str = None):
         """Rolls a set of photocards for claiming."""
         user = await func.get_user(ctx.author.id)
+        actived_potions = {} if tier else func.get_potions(user.get("actived_potions", {}), iufi.POTIONS_BASE)
+
+        query = {}
+        if not tier:
+            query["$set"] = {"cooldown.roll": time.time() + (func.COOLDOWN_BASE["roll"] * (1 - actived_potions.get("speed", 0)))}
+
+        else:
+            tier = tier.lower()
+            if tier not in iufi.TIERS_BASE.keys():
+                return await ctx.reply(f"Tier was not found. Please select a valid tier: `{', '.join(iufi.TIERS_BASE.keys())}`")
+ 
+            if user.get("roll", {}).get(tier, 0) <= 0:
+                return await ctx.reply(f"You’ve used up all your `{tier}` rolls for now.")
+            
+            query["$inc"] = {f"roll.{tier}": -1}
 
         if user["exp"] == 0:
             view = discord.ui.View()
@@ -28,8 +43,7 @@ class Gameplay(commands.Cog):
         if len(user["cards"]) >= func.MAX_CARDS:
             return await ctx.reply(f"**{ctx.author.mention} your inventory is full.**", delete_after=5)
 
-        actived_potions = func.get_potions(user.get("actived_potions", {}), iufi.POTIONS_BASE)
-        cards = iufi.CardPool.roll(luck_rates=actived_potions.get("luck", None))
+        cards = iufi.CardPool.roll(luck_rates=actived_potions.get("luck", None), included=[tier] if tier else None)
         image_bytes, image_format = await asyncio.to_thread(iufi.gen_cards_view, cards)
 
         view = RollView(ctx.author, cards)
@@ -38,102 +52,9 @@ class Gameplay(commands.Cog):
             file=discord.File(image_bytes, filename=f'image.{image_format}'),
             view=view
         )
-        await func.update_user(ctx.author.id, {"$set": {"cooldown.roll": time.time() + (func.COOLDOWN_BASE["roll"] * (1 - actived_potions.get("speed", 0)))}})
+        
+        await func.update_user(ctx.author.id, query)
         await view.timeout_count()
-
-    @commands.command(aliases=["rr"])
-    @commands.cooldown(1, 5, commands.BucketType.user)
-    async def rareroll(self, ctx: commands.Context):
-        """Starts a roll with at least one rare photocard guaranteed."""
-        user = await func.get_user(ctx.author.id)
-        if user["roll"]["rare"] <= 0:
-            return await ctx.reply("You’ve used up all your `rare` rolls for now.")
-
-        if len(user["cards"]) >= func.MAX_CARDS:
-            return await ctx.reply(f"**{ctx.author.mention} your inventory is full.**", delete_after=5)
-
-        cards = iufi.CardPool.roll(included=["rare"])
-        image_bytes, image_format = await asyncio.to_thread(iufi.gen_cards_view, cards)
-
-        view = RollView(ctx.author, cards)
-        view.message = await ctx.send(
-            content=f"**{ctx.author.mention} This is your roll!** (Ends: <t:{round(time.time()) + 71}:R>)",
-            file=discord.File(image_bytes, filename=f'image.{image_format}'),
-            view=view
-        )
-
-        await func.update_user(ctx.author.id, {"$inc": {"roll.rare": -1}})
-        await view.timeout_count()
-
-    @commands.command(aliases=["er"])
-    @commands.cooldown(1, 5, commands.BucketType.user)
-    async def epicroll(self, ctx: commands.Context):
-        """Starts a roll with at least one epic photocard guaranteed."""
-        user = await func.get_user(ctx.author.id)
-        if user["roll"]["epic"] <= 0:
-            return await ctx.reply("You’ve used up all your `epic` rolls for now.")
-
-        if len(user["cards"]) >= func.MAX_CARDS:
-            return await ctx.reply(f"**{ctx.author.mention} your inventory is full.**", delete_after=5)
-
-        cards = iufi.CardPool.roll(included=["epic"])
-        image_bytes, image_format = await asyncio.to_thread(iufi.gen_cards_view, cards)
-
-        view = RollView(ctx.author, cards)
-        view.message = await ctx.send(
-            content=f"**{ctx.author.mention} This is your roll!** (Ends: <t:{round(time.time()) + 71}:R>)",
-            file=discord.File(image_bytes, filename=f'image.{image_format}'),
-            view=view
-        )
-        await func.update_user(ctx.author.id, {"$inc": {"roll.epic": -1}})
-        await view.timeout_count()
-
-    @commands.command(aliases=["lr"])
-    @commands.cooldown(1, 5, commands.BucketType.user)
-    async def legendroll(self, ctx: commands.Context):
-        """Starts a roll with at least one legendary photocard guaranteed."""
-        user = await func.get_user(ctx.author.id)
-        if user["roll"]["legendary"] <= 0:
-            return await ctx.reply("You’ve used up all your `legend` rolls for now.")
-
-        if len(user["cards"]) >= func.MAX_CARDS:
-            return await ctx.reply(f"**{ctx.author.mention} your inventory is full.**", delete_after=5)
-
-        cards = iufi.CardPool.roll(included=["legendary"])
-        image_bytes, image_format = await asyncio.to_thread(iufi.gen_cards_view, cards)
-
-        view = RollView(ctx.author, cards)
-        view.message = await ctx.send(
-            content=f"**{ctx.author.mention} This is your roll!** (Ends: <t:{round(time.time()) + 71}:R>)",
-            file=discord.File(image_bytes, filename=f'image.{image_format}'),
-            view=view
-        )
-        await func.update_user(ctx.author.id, {"$inc": {"roll.legendary": -1}})
-        await view.timeout_count()
-
-    @commands.command(aliases=["mr"])
-    @commands.cooldown(1, 5, commands.BucketType.user)
-    async def mysticroll(self, ctx: commands.Context):
-        """Starts a roll with at least one legendary photocard guaranteed."""
-        user = await func.get_user(ctx.author.id)
-        if user["roll"]["mystic"] <= 0:
-            return await ctx.reply("You’ve used up all your `mystic` rolls for now.")
-
-        if len(user["cards"]) >= func.MAX_CARDS:
-            return await ctx.reply(f"**{ctx.author.mention} your inventory is full.**", delete_after=5)
-
-        cards = iufi.CardPool.roll(included=["mystic"])
-        image_bytes, image_format = await asyncio.to_thread(iufi.gen_cards_view, cards)
-
-        view = RollView(ctx.author, cards)
-        view.message = await ctx.send(
-            content=f"**{ctx.author.mention} This is your roll!** (Ends: <t:{round(time.time()) + 71}:R>)",
-            file=discord.File(image_bytes, filename=f'image.{image_format}'),
-            view=view
-        )
-        await func.update_user(ctx.author.id, {"$inc": {"roll.mystic": -1}})
-        await view.timeout_count()
-
 
     @commands.command(aliases=["mg"])
     async def game(self, ctx: commands.Context, level: str):
