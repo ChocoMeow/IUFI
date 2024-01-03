@@ -24,7 +24,8 @@ class Gameplay(commands.Cog):
 
         else:
             tier = tier.lower()
-            if tier not in iufi.TIERS_BASE.keys():
+            tier = func.match_string(tier, iufi.TIERS_BASE.keys())
+            if not tier:
                 return await ctx.reply(f"Tier was not found. Please select a valid tier: `{', '.join(iufi.TIERS_BASE.keys())}`")
  
             if user.get("roll", {}).get(tier, 0) <= 0:
@@ -37,13 +38,13 @@ class Gameplay(commands.Cog):
             view.add_item(discord.ui.Button(label='Beginner Guide', emoji='📗', url='https://docs.google.com/document/d/1VAD20wZQ56S_wDeMJlwIKn_jImIPuxh2lgy1fn17z0c/edit'))
             await ctx.reply(f"**Welcome to IUFI! Please have a look at the guide or use `qhelp` to begin.**", view=view)
 
-        if (retry := user["cooldown"]["roll"]) > time.time():
+        if not tier and (retry := user["cooldown"]["roll"]) > time.time():
             return await ctx.reply(f"{ctx.author.mention} your next roll is <t:{round(retry)}:R>", delete_after=10)
 
         if len(user["cards"]) >= func.MAX_CARDS:
             return await ctx.reply(f"**{ctx.author.mention} your inventory is full.**", delete_after=5)
 
-        cards = iufi.CardPool.roll(luck_rates=actived_potions.get("luck", None), included=[tier] if tier else None)
+        cards = iufi.CardPool.roll(included=[tier] if tier else None, luck_rates=None if tier else actived_potions.get("luck", None))
         image_bytes, image_format = await asyncio.to_thread(iufi.gen_cards_view, cards)
 
         view = RollView(ctx.author, cards)
