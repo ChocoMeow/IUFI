@@ -18,10 +18,11 @@ class Info(commands.Cog):
     @commands.group(aliases=["l"], invoke_without_command=True)
     async def leaderboard(self, ctx: commands.Context):
         """Shows the IUFI leaderboard."""
+        user = await func.get_user(ctx.author.id)
         users = await func.USERS_DB.find().sort("exp", -1).limit(10).to_list(10)
 
         embed = discord.Embed(title="🏆   IUFI Leaderboard", color=discord.Color.random())
-        embed.description = "```"
+        embed.description = f"Your current position is `{await func.USERS_DB.count_documents({'exp': {'$gt': user.get('exp', 0)}}) + 1}`\n```"
 
         for index, user in enumerate(users):
             level, exp = func.calculate_level(user["exp"])

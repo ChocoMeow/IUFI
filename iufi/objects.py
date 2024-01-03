@@ -195,7 +195,7 @@ class Card(CardObject):
 
     def change_tag(self, tag: str | None = None) -> None:
         if self.tag == tag:
-            raise IUFIException("This tag is already assigned to this card.")
+            return
         
         self.tag = tag
         asyncio.create_task(func.update_card(self.id, {"$set": {"tag": tag}}))
