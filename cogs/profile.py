@@ -241,14 +241,14 @@ class Profile(commands.Cog):
         """Shows the items that you own."""
         user = await func.get_user(ctx.author.id)
         embed = discord.Embed(title=f"🎒 {ctx.author.display_name}'s Inventory", color=0x5cb045)
-        embed.description = f"```❄️ Starcandies        x{user['candies']}\n"
+        embed.description = f"```{'❄️ Starcandies':<21} x{user['candies']}\n"
 
-        for index, (tier, data) in enumerate(iufi.TIERS_BASE.items()):
-            count = user.get('roll', {}).get(tier, 0)
-            if 1 < index <= 3 or count != 0:
-                embed.description += f"{data[0]} {tier.title() + ' rolls':<18} x{count}\n"
+        for tier, count in user.get("roll").items():
+            if tier in iufi.TIERS_BASE.keys():
+                emoji, _ = iufi.TIERS_BASE.get(tier)
+                embed.description += f"{emoji} {tier.title() + ' Rolls':<18} x{count}\n"
 
-        embed.description += f"🎁 Gifts              x{user.get('gifts', 0)}\n\n"
+        embed.description += f"{'🎁 Gifts':<20} x{user.get('gifts', 0)}\n\n"
 
         potions_data: dict[str, int] = user.get("potions", {})
         potions = ("\n".join(
