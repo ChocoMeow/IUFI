@@ -244,7 +244,7 @@ class Profile(commands.Cog):
         embed.description = f"```{'❄️ Starcandies':<21} x{user['candies']}\n"
 
         for tier, count in user.get("roll").items():
-            if tier in iufi.TIERS_BASE.keys():
+            if count > 0 and tier in iufi.TIERS_BASE.keys():
                 emoji, _ = iufi.TIERS_BASE.get(tier)
                 embed.description += f"{emoji} {tier.title() + ' Rolls':<18} x{count}\n"
 
