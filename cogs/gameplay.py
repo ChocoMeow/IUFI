@@ -26,7 +26,7 @@ class Gameplay(commands.Cog):
             tier = tier.lower()
             tier = func.match_string(tier, iufi.TIERS_BASE.keys())
             if not tier:
-                return await ctx.reply(f"Tier was not found. Please select a valid tier: `{', '.join(iufi.TIERS_BASE.keys())}`")
+                return await ctx.reply(f"Tier was not found. Please select a valid tier: `{', '.join(user.get('roll').keys())}`")
  
             if user.get("roll", {}).get(tier, 0) <= 0:
                 return await ctx.reply(f"You’ve used up all your `{tier}` rolls for now.")
