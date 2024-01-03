@@ -240,13 +240,15 @@ class Profile(commands.Cog):
     async def inventory(self, ctx: commands.Context):
         """Shows the items that you own."""
         user = await func.get_user(ctx.author.id)
-
         embed = discord.Embed(title=f"🎒 {ctx.author.display_name}'s Inventory", color=0x5cb045)
-        embed.description = f"```❄️ Starcandies        x{user['candies']}\n" \
-                            f"🌸 Rare rolls         x{user['roll']['rare']}\n" \
-                            f"💎 Epic rolls         x{user['roll']['epic']}\n" \
-                            f"👑 Legend rolls       x{user['roll']['legendary']}\n" \
-                            f"🎁 Gifts              x{user.get('gifts', 0)}\n\n"
+        embed.description = f"```{'❄️ Starcandies':<21} x{user['candies']}\n"
+
+        for tier, count in user.get("roll").items():
+            if count > 0 and tier in iufi.TIERS_BASE.keys():
+                emoji, _ = iufi.TIERS_BASE.get(tier)
+                embed.description += f"{emoji} {tier.title() + ' Rolls':<18} x{count}\n"
+
+        embed.description += f"{'🎁 Gifts':<20} x{user.get('gifts', 0)}\n\n"
 
         potions_data: dict[str, int] = user.get("potions", {})
         potions = ("\n".join(

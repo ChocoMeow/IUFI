@@ -41,7 +41,7 @@ USER_BASE: dict[str, Any] = {
     "roll": {
         "rare": 0,
         "epic": 0,
-        "legendary": 0
+        "legendary": 0,
     },
     "cooldown": {
         "roll": 0,
@@ -113,6 +113,12 @@ def clean_text(input_text: str, allow_spaces: bool = True, convert_to_lower: boo
         cleaned_text = cleaned_text.lower()
     
     return cleaned_text
+
+def match_string(input_string: str, word_list: list[str]) -> str:
+    for word in word_list:
+        if word.startswith(input_string):
+            return word
+    return None
 
 async def get_user(user_id: int, *, insert: bool = True) -> dict[str, Any]:
     user = USERS_BUFFER.get(user_id)
