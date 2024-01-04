@@ -56,7 +56,9 @@ USER_BASE: dict[str, Any] = {
     "profile": {
         "bio": "",
         "main": ""
-    }
+    },
+    "gifts": 0,
+    "gifts_given": 0
 }
 
 COOLDOWN_BASE: dict[str, int] = {
@@ -141,6 +143,12 @@ def get_week_unix_timestamps() -> tuple[float, float]:
     start_of_next_week = start_of_this_week + timedelta(days=7)
 
     return time.mktime(start_of_this_week.timetuple()), time.mktime(start_of_next_week.timetuple())
+
+def match_string(input_string: str, word_list: list[str]) -> str:
+    for word in word_list:
+        if word.startswith(input_string):
+            return word
+    return None
 
 async def get_user(user_id: int, *, insert: bool = True) -> dict[str, Any]:
     user = USERS_BUFFER.get(user_id)

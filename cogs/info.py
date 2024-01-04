@@ -18,9 +18,11 @@ class Info(commands.Cog):
     @commands.group(aliases=["l"], invoke_without_command=True)
     async def leaderboard(self, ctx: commands.Context):
         """Shows the IUFI leaderboard."""
+        user = await func.get_user(ctx.author.id)
         users = await func.USERS_DB.find().sort("exp", -1).limit(10).to_list(10)
 
         embed = discord.Embed(title="🏆   IUFI Leaderboard", color=discord.Color.random())
+        embed.description = f"Your current position is `{await func.USERS_DB.count_documents({'exp': {'$gt': user.get('exp', 0)}}) + 1}`\n```"
 
         description = ""
         for index, user in enumerate(users):
@@ -50,7 +52,25 @@ class Info(commands.Cog):
             (f"game_state.match_game.{level}.finished_time", 1)
         ]).limit(10).to_list(10)
 
+        user = await func.get_user(ctx.author.id)
+        user = user.get("game_state", {}).get("match_game", {}).get(level, {})
+        better_states = await func.USERS_DB.count_documents({
+            '$or': [
+                {f"game_state.match_game.{level}.matched": {'$gt': user['matched']}},
+                {'$and': [
+                    {f"game_state.match_game.{level}.matched": user['matched']},
+                    {f"game_state.match_game.{level}.click_left": {'$gt': user['click_left']}}
+                ]},
+                {'$and': [
+                    {f"game_state.match_game.{level}.matched": user['matched']},
+                    {f"game_state.match_game.{level}.click_left": user['click_left']},
+                    {f"game_state.match_game.{level}.finished_time": {'$lt': user['finished_time']}}
+                ]}
+            ]
+        }) if user else 0
+        
         embed = discord.Embed(title=f"🏆   Level {level} Matching Game Leaderboard", color=discord.Color.random())
+        embed.description = (f"Your current position is `{better_states + 1}`" if user else "You haven't play any match game!") + "\n```"
 
         description = ""
         for index, user in enumerate(users):
