@@ -47,8 +47,25 @@ class Info(commands.Cog):
             (f"game_state.match_game.{level}.finished_time", 1)
         ]).limit(10).to_list(10)
 
+        user = await func.get_user(ctx.author.id)
+        user = user.get("game_state", {}).get("match_game", {}).get(level, {})
+        better_states = await func.USERS_DB.count_documents({
+            '$or': [
+                {f"game_state.match_game.{level}.matched": {'$gt': user['matched']}},
+                {'$and': [
+                    {f"game_state.match_game.{level}.matched": user['matched']},
+                    {f"game_state.match_game.{level}.click_left": {'$gt': user['click_left']}}
+                ]},
+                {'$and': [
+                    {f"game_state.match_game.{level}.matched": user['matched']},
+                    {f"game_state.match_game.{level}.click_left": user['click_left']},
+                    {f"game_state.match_game.{level}.finished_time": {'$lt': user['finished_time']}}
+                ]}
+            ]
+        }) if user else 0
+        
         embed = discord.Embed(title=f"🏆   Level {level} Matching Game Leaderboard", color=discord.Color.random())
-        embed.description = "```"
+        embed.description = (f"Your current position is `{better_states + 1}`" if user else "You haven't play any match game!") + "\n```"
 
         for index, user in enumerate(users):
             game_state: dict[str, float | int] = user.get("game_state", {}).get("match_game", {}).get(level, {"matched": 0, "click_left": 0, "finished_time": 0})
