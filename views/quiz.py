@@ -136,7 +136,8 @@ class QuizView(discord.ui.View):
 
         await func.update_user(self.author.id, {"$set": {"game_state.quiz_game": state}})
         await self.response.edit(content="This quiz has expired.", embed=embed, view=None)
-
+        self.stop()
+        
     def build_embed(self) -> discord.Embed:
         question: Question = self.currect_question
 
@@ -178,7 +179,7 @@ class QuizView(discord.ui.View):
 
     @property
     def total_time(self) -> float:
-        return sum([question.average_time for question in self.questions]) + len(self.questions) * 10
+        return sum([question.average_time for question in self.questions]) + (len(self.questions) * 10)
     
     @property
     def used_time(self) -> float:
