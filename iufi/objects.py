@@ -1,13 +1,15 @@
 from __future__ import annotations
 
-import random, os, asyncio
+import random, os, asyncio, Levenshtein
 import functions as func
 
 from PIL import Image, ImageDraw, ImageSequence
 from io import BytesIO
+from difflib import SequenceMatcher
 from typing import TYPE_CHECKING
 
-from .exceptions import IUFIException, ImageLoadError
+from .exceptions import ImageLoadError, IUFIException
+
 if TYPE_CHECKING:
     from .pool import CardPool
 
@@ -55,6 +57,12 @@ POTIONS_BASE: dict[str, str | dict[str, float]] = {
             "iii": 6
         }
     }
+}
+
+QUIZ_LEVEL_BASE: dict[str, int] = {
+    "easy": 10,
+    "medium": 20,
+    "hard": 30
 }
 
 class CardObject:
@@ -293,3 +301,97 @@ class TempCard(CardObject):
     @property
     def is_gif(self) -> bool:
         return isinstance(self.image, list)
+
+class Question:
+    def __init__(
+        self,
+        question: str,
+        answers: list[str],
+        num_correct: int = 0,
+        num_wrong: int = 0,
+        average_time: float = 0.0,
+        attachment: str = None
+    ):
+        self.question: str = question
+        self.answers: list[str] = answers
+        self.attachment: str | None = attachment
+
+        self._correct: int = num_correct
+        self._wrong: int = num_wrong
+        self._average_time: float = average_time
+
+        self.is_updated: bool = False
+
+    def check_answer(self, answer: str, threshold: float = .75) -> bool:
+        answer = answer.lower()
+        for model_answer in self.answers:
+
+            model_answer = model_answer.lower()
+
+            string1 = set(model_answer.split())
+            string2 = set(answer.split())
+            jac_similarity = len(string1 & string2) / len(string1 | string2)
+
+            string1 = model_answer.replace(" ", "")
+            string2 = answer.replace(" ", "")
+            lev_similarity = Levenshtein.ratio(string1, string2)
+            seq_similarity = SequenceMatcher(None, string1, string2).ratio()
+
+            if lev_similarity >= threshold or jac_similarity >= threshold or seq_similarity >= threshold:
+                return True
+        return False 
+
+    def update_average_time(self, time: float) -> None:
+        if not self.is_updated:
+            self.is_updated = True
+
+        if self.total >= 0:
+            self._average_time += time
+        else:
+            self._average_time = ((self._average_time * self.total) + time) / (self.total + 1)
+
+    def toDict(self) -> dict:
+        if self.is_updated:
+            self.is_updated = False
+
+        return {
+            "question": self.question,
+            "answers": self.answers,
+            "num_correct": self._correct,
+            "num_wrong": self._wrong,
+            "average_time": self.average_time,
+            "attachment": self.attachment
+        }
+    
+    @property
+    def level(self) -> str:
+        if self.correct_rate >= 85:
+            return "easy"
+        elif self.correct_rate >= 40:
+            return "medium"
+        else:
+            return "hard"
+
+    @property
+    def average_time(self) -> float:
+        base_time = QUIZ_LEVEL_BASE.get(self.level)
+
+        if not self._average_time:
+            return base_time
+        
+        return round((self._average_time + base_time) / 2, 1)
+
+    @property
+    def total(self) -> int:
+        return self._correct + self._wrong
+    
+    @property
+    def correct_rate(self) -> float:
+        total = self.total
+        if not total:
+            return 0
+        return round(self._correct / total, 2) * 100
+    
+    @property
+    def wrong_rate(self) -> float:
+        return 100 - self.correct_rate

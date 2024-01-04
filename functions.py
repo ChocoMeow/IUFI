@@ -1,8 +1,13 @@
-import os, time, copy
+import os, time, copy, json
 
 from motor.motor_asyncio import (
     AsyncIOMotorClient,
     AsyncIOMotorCollection,
+)
+
+from datetime import (
+    timedelta,
+    date
 )
 
 from dotenv import load_dotenv
@@ -62,6 +67,23 @@ COOLDOWN_BASE: dict[str, int] = {
     "daily": 82800,
 }
 
+def open_json(path: str) -> dict:
+    try:
+        with open(os.path.join(ROOT_DIR, path), encoding="utf8") as json_file:
+            return json.load(json_file)
+    except:
+        return {}
+    
+def update_json(path: str, new_data: dict) -> None:
+    data = open_json(path)
+    if not data:
+        return
+    
+    data.update(new_data)
+
+    with open(os.path.join(ROOT_DIR, path), "w") as json_file:
+        json.dump(data, json_file, indent=4)
+
 def cal_retry_time(end_time: float, default: str = None) -> str | None:
     if end_time <= (current_time := time.time()):
         return default
@@ -113,6 +135,14 @@ def clean_text(input_text: str, allow_spaces: bool = True, convert_to_lower: boo
         cleaned_text = cleaned_text.lower()
     
     return cleaned_text
+
+def get_week_unix_timestamps() -> tuple[float, float]:
+    today = date.today()
+
+    start_of_this_week = today - timedelta(days=today.weekday())
+    start_of_next_week = start_of_this_week + timedelta(days=7)
+
+    return time.mktime(start_of_this_week.timetuple()), time.mktime(start_of_next_week.timetuple())
 
 def match_string(input_string: str, word_list: list[str]) -> str:
     for word in word_list:

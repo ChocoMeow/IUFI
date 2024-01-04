@@ -3,7 +3,13 @@ import functions as func
 
 from discord.ext import commands
 
-from views import RollView, ShopView, MatchGame, GAME_SETTINGS
+from views import (
+    RollView,
+    ShopView,
+    MatchGame,
+    QuizView,
+    GAME_SETTINGS
+)
 
 class Gameplay(commands.Cog):
     def __init__(self, bot: commands.Bot) -> None:
@@ -59,7 +65,7 @@ class Gameplay(commands.Cog):
 
     @commands.command(aliases=["mg"])
     async def game(self, ctx: commands.Context, level: str):
-        """Matching game."""
+        """IUFI Matching game."""
         if level not in (levels := GAME_SETTINGS.keys()):
             return await ctx.reply(f"Invalid level selection! Please select a valid level: `{', '.join(levels)}`")
 
@@ -79,6 +85,18 @@ class Gameplay(commands.Cog):
         await asyncio.sleep(view._data.get("timeout", 280))
         await view.end_game()
         await view.response.edit(view=view)
+
+    @commands.command(aliases=["q"])
+    async def quiz(self, ctx: commands.Context):
+        """IUFI Quiz"""
+        view = QuizView(ctx.author)
+        view.response = await ctx.reply(
+            content=f"**This game ends** <t:{round(view._start_time + view.total_time)}:R>",
+            embed=view.build_embed(),
+            view=view
+        )
+        await asyncio.sleep(view.total_time)
+        await view.end_game()
 
     @commands.command(aliases=["cd"])
     async def cooldown(self, ctx: commands.Context):

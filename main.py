@@ -13,35 +13,36 @@ class IUFI(commands.Bot):
         super().__init__(*args, **kwargs)
 
         self.iufi: iufi.CardPool = iufi.CardPool()
+        self.questions: iufi.QuestionPool = iufi.QuestionPool()
 
-    async def on_message(self, message: discord.Message, /) -> None:
-        if message.author.bot or not message.guild:
-            return False
+    # async def on_message(self, message: discord.Message, /) -> None:
+    #     if message.author.bot or not message.guild:
+    #         return False
 
-        if message.channel.id == 1147547592469782548:
-            emojis = ()
-            for attachment in message.attachments:
-                if attachment.filename.endswith((".png", ".jpg")):
-                    emojis = ("🥬", "🌸", "💎", "👑")
-                    break
-                elif attachment.filename.endswith(".gif"):
-                    emojis = ("✅", "❌")
-                    break
+    #     if message.channel.id == 1147547592469782548:
+    #         emojis = ()
+    #         for attachment in message.attachments:
+    #             if attachment.filename.endswith((".png", ".jpg")):
+    #                 emojis = ("🥬", "🌸", "💎", "👑")
+    #                 break
+    #             elif attachment.filename.endswith(".gif"):
+    #                 emojis = ("✅", "❌")
+    #                 break
             
-            for emoji in emojis:
-                await message.add_reaction(emoji)
+    #         for emoji in emojis:
+    #             await message.add_reaction(emoji)
 
-        if message.channel.category_id not in ALLOWED_CATEGORY_IDS:
-            return False
+    #     if message.channel.category_id not in ALLOWED_CATEGORY_IDS:
+    #         return False
         
-        if message.channel.id in IGONE_CHANNEL_IDS:
-            return False
+    #     if message.channel.id in IGONE_CHANNEL_IDS:
+    #         return False
         
-        elif message.channel.id == 987354574304190476:
-            if message.content.split(" ")[0].lower() not in ("qi", "qcardinfo", "qil", "qcardinfolast", "qt", "qtl", "qtade", "qtadelast", "qte", "qtradeeveryone", "qtel", "qtradeeveryonelast"):
-                return False
+    #     elif message.channel.id == 987354574304190476:
+    #         if message.content.split(" ")[0].lower() not in ("qi", "qcardinfo", "qil", "qcardinfolast", "qt", "qtl", "qtade", "qtadelast", "qte", "qtradeeveryone", "qtel", "qtradeeveryonelast"):
+    #             return False
             
-        await self.process_commands(message)
+    #     await self.process_commands(message)
 
     async def connect_db(self) -> None:
         if not ((db_name := func.tokens.mongodb_name) and (db_url := func.tokens.mongodb_url)):
@@ -87,6 +88,10 @@ class IUFI(commands.Bot):
                         self.iufi.add_card(_id=card_id, tier=category, stars=stars)
 
                         print(f"Added New Image {new_image}({category}) -> ID: {card_id}")
+
+        questions = func.open_json("questions.json")
+        for _, data in questions.items():
+            iufi.QuestionPool.add_question(iufi.Question(**data))
 
         for module in os.listdir(os.path.join(func.ROOT_DIR, 'cogs')):
             if module.endswith(".py"):
