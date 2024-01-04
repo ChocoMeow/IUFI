@@ -8,15 +8,14 @@ from iufi import (
     gen_cards_view,
     POTIONS_BASE
 )
-from discord.ext import commands
+
 from random import shuffle, choice
 from typing import Any
 from collections import Counter
-from . import ButtonOnCooldown
 
 GAME_SETTINGS: dict[str, dict[str, Any]] = {
     "1": {
-        "cooldown": 3_000,
+        "cooldown": 3_600,
         "timeout": 120,
         "cards": 3,
         "elem_per_row": 3,
