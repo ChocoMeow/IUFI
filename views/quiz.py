@@ -8,9 +8,9 @@ from iufi import (
 )
 
 LEVELS_BASE: dict[str, tuple[int, int, hex]] = {
-    "easy": (1, 3, 0x7CD74B),
-    "medium": (2, 2, 0xF9E853),
-    "hard": (3, 1, 0xD75C4B),
+    "easy": (1, 1, 0x7CD74B),
+    "medium": (3, 2, 0xF9E853),
+    "hard": (5, 3, 0xD75C4B),
 }
 
 QUESTION_RESPONSE_BASE: dict[str, dict[str, list]] = {
@@ -126,6 +126,7 @@ class QuizView(discord.ui.View):
             state["points"] = 0
         
         state["points"] += total_points
+        state["points"] = max(0, state["points"])
         state["last_update"] = time.time()
 
         embed = discord.Embed(title="Quiz Result", color=discord.Color.random())

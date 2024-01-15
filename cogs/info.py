@@ -8,6 +8,23 @@ from views import (
 )
 
 LEADERBOARD_EMOJIS: list[str] = ["🥇", "🥈", "🥉", "🏅"]
+RANK_EMOJIS: dict[int, tuple[str, str]] = {
+    0: ("1173065442009555096", "Mike"),
+    10: ("1173063915098345472", "Bronze"),
+    25: ("1173063924116095087", "Silver"),
+    60: ("1173063917614927975", "Gold"),
+    100: ("1173063922564218961", "Platinum"),
+    200: ("1173064418075099167", "Diamond"),
+    350: ("1173063919846293535", "Master"),
+    500: ("1173064415453663242", "Challenger"),
+}
+
+def get_rank(value) -> tuple[str, str]:
+    ranks = sorted(RANK_EMOJIS.keys(), reverse=True)
+    for rank in ranks:
+        if value >= rank:
+            return RANK_EMOJIS[rank]
+    return None
 
 class Info(commands.Cog):
     def __init__(self, bot: commands.Bot) -> None:
@@ -98,19 +115,20 @@ class Info(commands.Cog):
         embed = discord.Embed(title=f"🏆   Quiz Leaderboard", color=discord.Color.random())
 
         description = ""
-        for index, user in enumerate(users):
+        for user in users:
             game_state: dict[str, float | int] = user.get("game_state", {}).get("quiz_game")
             if not game_state:
                 continue
 
             member = self.bot.get_user(user['_id'])
             if member:
-                description += f"{LEADERBOARD_EMOJIS[index if index <= 2 else 3]} {member.display_name:<14} {game_state['points']:<4} 🔥\n"
+                rank = get_rank(game_state['points'])
+                description += f"<:{rank[1]}:{rank[0]}> {member.display_name:<14} {game_state['points']:<4} 🔥\n"
         
         if not description:
             description = "The leaderboard is currently empty."
 
-        embed.description = f"The next reset is <t:{int(eow)}:R>\n```{description}```"
+        embed.description = f"The next reset is <t:{int(eow)}:R>\n{description}"
         embed.set_thumbnail(url=icon.url if (icon := ctx.guild.icon) else None)
         await ctx.reply(embed=embed)
 
