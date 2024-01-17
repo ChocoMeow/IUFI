@@ -1,4 +1,4 @@
-import discord
+import discord, iufi
 import functions as func
 
 from discord.ext import commands
@@ -8,23 +8,6 @@ from views import (
 )
 
 LEADERBOARD_EMOJIS: list[str] = ["🥇", "🥈", "🥉", "🏅"]
-RANK_EMOJIS: dict[int, tuple[str, str]] = {
-    0: ("1173065442009555096", "Mike"),
-    10: ("1173063915098345472", "Bronze"),
-    25: ("1173063924116095087", "Silver"),
-    60: ("1173063917614927975", "Gold"),
-    100: ("1173063922564218961", "Platinum"),
-    200: ("1173064418075099167", "Diamond"),
-    350: ("1173063919846293535", "Master"),
-    500: ("1173064415453663242", "Challenger"),
-}
-
-def get_rank(value) -> tuple[str, str]:
-    ranks = sorted(RANK_EMOJIS.keys(), reverse=True)
-    for rank in ranks:
-        if value >= rank:
-            return RANK_EMOJIS[rank]
-    return None
 
 class Info(commands.Cog):
     def __init__(self, bot: commands.Bot) -> None:
@@ -122,7 +105,7 @@ class Info(commands.Cog):
 
             member = self.bot.get_user(user['_id'])
             if member:
-                rank = get_rank(game_state['points'])
+                rank = iufi.QuestionPool.get_rank(game_state['points'])
                 description += f"<:{rank[1]}:{rank[0]}> {member.display_name:<14} {game_state['points']:<4} 🔥\n"
         
         if not description:

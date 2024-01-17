@@ -5,7 +5,7 @@ from random import (
 )
 from collections import Counter
 
-from .objects import Card, Question
+from .objects import Card, Question, QUIZ_LEVEL_BASE, RANK_BASE
 from .exceptions import DuplicatedCardError, DuplicatedTagError
 # from .deepsearch import (
 #     Load_Data,
@@ -129,7 +129,45 @@ class QuestionPool:
     @classmethod
     def remove_question(cls, question: Question) -> None:
         cls._questions.remove(question)
-        
+    
     @classmethod
-    def get_question(cls, number: int = 5) -> list[Question]:
-        return sample(cls._questions, k=number)
+    def get_rank(cls, points: int) -> tuple[str, int]:
+        sorted_ranks = sorted(RANK_BASE.items(), key=lambda item: item[1][1], reverse=True)
+        for rank, (emoji_id, rank_value) in sorted_ranks:
+            if points >= rank_value:
+                return (rank, emoji_id)
+        return None
+    
+    @classmethod
+    def get_question_distribution_by_rank(cls, rank: str) -> list[tuple[str, int]]:
+        rank_details = RANK_BASE.get(rank)
+        if not rank_details:
+            raise Exception(f"Rank '{rank}' not found!")
+        
+        return rank_details[2]
+
+    @classmethod
+    def get_question(cls, rank: str, number: int) -> list[Question]:
+        if rank not in QUIZ_LEVEL_BASE.keys():
+            raise Exception(f"{rank} is not found in the quiz!")
+        
+        questions: dict[str, list[Question]] = {
+            level: [q for q in cls._questions if q.level == level]
+            for level in QUIZ_LEVEL_BASE.keys()
+        }
+
+        num_available = len(questions[rank])
+        num_to_return = min(number, num_available)
+
+        return sample(cls._questions, k=num_to_return)
+    
+    @classmethod
+    def get_question_by_rank(cls, ranks: list[tuple[str, int]]) -> list[Question]:
+        questions: set[Question] = set()
+
+        for (rank_name, return_num) in ranks:
+            if rank_name not in QUIZ_LEVEL_BASE.keys():
+                raise Exception(f"{rank_name} is not found in the quiz!")
+            
+            questions.add(cls.get_question(rank_name, return_num))
+            

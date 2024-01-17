@@ -59,10 +59,21 @@ POTIONS_BASE: dict[str, str | dict[str, float]] = {
     }
 }
 
-QUIZ_LEVEL_BASE: dict[str, int] = {
-    "easy": 10,
-    "medium": 20,
-    "hard": 30
+QUIZ_LEVEL_BASE: dict[str, tuple[int, tuple[int, int, hex]]] = {
+    "easy": (10, (1, 1, 0x7CD74B)),
+    "medium": (20, (3, 2, 0xF9E853)),
+    "hard": (30, (5, 3, 0xD75C4B))
+}
+
+RANK_BASE: dict[str, tuple[str, int, list[tuple[str, int]]]] = {
+    "Mike": ("1173065442009555096", 0, [('easy', 5)]),
+    "Bronze": ("1173065442009555096", 10, [('easy', 4), ('normal', 1)]),
+    "Silver": ("1173065442009555096", 25, [('easy', 3), ('normal', 2)]),
+    "Gold": ("1173065442009555096", 60, [('easy', 2), ('normal', 3)]),
+    "Platinum": ("1173065442009555096", 100, [('easy', 1), ('normal', 4)]),
+    "Diamond": ("1173065442009555096", 200, [('normal', 5)]),
+    "Master": ("1173065442009555096", 350, [('normal', 3), ('hard', 2)]),
+    "Challenger": ("1173065442009555096", 500, [('normal', 2), ('hard', 3)]),
 }
 
 class CardObject:

@@ -4,14 +4,9 @@ import functions as func
 from random import choice
 from iufi import (
     QuestionPool,
-    Question
+    Question,
+    QUIZ_LEVEL_BASE
 )
-
-LEVELS_BASE: dict[str, tuple[int, int, hex]] = {
-    "easy": (1, 1, 0x7CD74B),
-    "medium": (3, 2, 0xF9E853),
-    "hard": (5, 3, 0xD75C4B),
-}
 
 QUESTION_RESPONSE_BASE: dict[str, dict[str, list]] = {
     True: {
@@ -142,7 +137,7 @@ class QuizView(discord.ui.View):
     def build_embed(self) -> discord.Embed:
         question: Question = self.currect_question
 
-        embed = discord.Embed(title=f"Question {self.current + 1} out of {len(self.questions)}", color=LEVELS_BASE.get(question.level)[2])
+        embed = discord.Embed(title=f"Question {self.current + 1} out of {len(self.questions)}", color=QUIZ_LEVEL_BASE.get(question.level)[1][2])
         embed.description = f"**Answer Time: <t:{round(time.time() + question.average_time)}:R>**\n```{question.question}```"
         if question.attachment:
             embed.set_image(url=question.attachment)
@@ -160,7 +155,7 @@ class QuizView(discord.ui.View):
         for question, result in zip(self.questions, self._results):
             summary += symbols[result] + " "
 
-            points = LEVELS_BASE.get(question.level)
+            points = QUIZ_LEVEL_BASE.get(question.level)[0]
             total_points += points[0] if result else -points[1] if result is False else -points[1] * (1 - .5)
 
             if result is True:
