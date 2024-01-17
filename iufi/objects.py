@@ -67,13 +67,13 @@ QUIZ_LEVEL_BASE: dict[str, tuple[int, tuple[int, int, hex]]] = {
 
 RANK_BASE: dict[str, tuple[str, int, list[tuple[str, int]]]] = {
     "Mike": ("1173065442009555096", 0, [('easy', 5)]),
-    "Bronze": ("1173065442009555096", 10, [('easy', 4), ('normal', 1)]),
-    "Silver": ("1173065442009555096", 25, [('easy', 3), ('normal', 2)]),
-    "Gold": ("1173065442009555096", 60, [('easy', 2), ('normal', 3)]),
-    "Platinum": ("1173065442009555096", 100, [('easy', 1), ('normal', 4)]),
-    "Diamond": ("1173065442009555096", 200, [('normal', 5)]),
-    "Master": ("1173065442009555096", 350, [('normal', 3), ('hard', 2)]),
-    "Challenger": ("1173065442009555096", 500, [('normal', 2), ('hard', 3)]),
+    "Bronze": ("1173065442009555096", 10, [('easy', 4), ('medium', 1)]),
+    "Silver": ("1173065442009555096", 25, [('easy', 3), ('medium', 2)]),
+    "Gold": ("1173065442009555096", 60, [('easy', 2), ('medium', 3)]),
+    "Platinum": ("1173065442009555096", 100, [('easy', 1), ('medium', 4)]),
+    "Diamond": ("1173065442009555096", 200, [('medium', 5)]),
+    "Master": ("1173065442009555096", 350, [('medium', 3), ('hard', 2)]),
+    "Challenger": ("1173065442009555096", 500, [('medium', 2), ('hard', 3)]),
 }
 
 class CardObject:
@@ -376,7 +376,7 @@ class Question:
     
     @property
     def level(self) -> str:
-        if self.correct_rate >= 85:
+        if self.correct_rate >= 85 or self._wrong == 0:
             return "easy"
         elif self.correct_rate >= 40:
             return "medium"
@@ -385,7 +385,7 @@ class Question:
 
     @property
     def average_time(self) -> float:
-        base_time = QUIZ_LEVEL_BASE.get(self.level)
+        base_time = QUIZ_LEVEL_BASE.get(self.level)[0]
 
         if not self._average_time:
             return base_time

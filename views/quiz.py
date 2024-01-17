@@ -71,11 +71,11 @@ class AnswerModal(discord.ui.Modal):
         self.stop()
 
 class QuizView(discord.ui.View):
-    def __init__(self, author: discord.Member, timeout: float = None):
+    def __init__(self, author: discord.Member, questions: list[Question], timeout: float = None):
         super().__init__(timeout=timeout)
 
         self.author: discord.Member = author
-        self.questions: list[Question] = QuestionPool.get_question()
+        self.questions: list[Question] = questions
         self._start_time: float = time.time()
         self._ended_time: float = None
 
@@ -83,6 +83,7 @@ class QuizView(discord.ui.View):
         self._timeout: float = None
         self._results: list[bool] = [None for _ in range(len(self.questions))]
         self._average_time: list[float] = []
+        self._delay_between_questions: int = 10
 
         self.current: int = 0
         self.response: discord.Message = None
@@ -97,7 +98,7 @@ class QuizView(discord.ui.View):
         if len(self.questions) <= (self.current + 1):
             return await self.end_game()
         
-        await asyncio.sleep(10)
+        await asyncio.sleep(self._delay_between_questions)
 
         self.current += 1
         self._answering_time = time.time()
@@ -155,7 +156,7 @@ class QuizView(discord.ui.View):
         for question, result in zip(self.questions, self._results):
             summary += symbols[result] + " "
 
-            points = QUIZ_LEVEL_BASE.get(question.level)[0]
+            points = QUIZ_LEVEL_BASE.get(question.level)[1]
             total_points += points[0] if result else -points[1] if result is False else -points[1] * (1 - .5)
 
             if result is True:
@@ -175,7 +176,7 @@ class QuizView(discord.ui.View):
 
     @property
     def total_time(self) -> float:
-        return sum([question.average_time for question in self.questions]) + (len(self.questions) * 10)
+        return sum([question.average_time for question in self.questions]) + (len(self.questions) * self._delay_between_questions)
     
     @property
     def used_time(self) -> float:
@@ -183,7 +184,7 @@ class QuizView(discord.ui.View):
     
     @property
     def currect_question(self) -> Question:
-        return self.questions[self.current - 1]
+        return self.questions[self.current]
 
     @discord.ui.button(label="Answer", style=discord.ButtonStyle.green)
     async def answer(self, interaction: discord.Interaction, button: discord.ui.Button) -> None:
@@ -200,19 +201,19 @@ class QuizView(discord.ui.View):
 
         used_time = time.time() - self._answering_time
         self._average_time.append(used_time)
-        _next = f"<t:{round(time.time() + 11)}:R>"
+        _next = f"<t:{round(time.time() + self._delay_between_questions)}:R>"
         
         if self._timeout < time.time():
             question.update_average_time(question.average_time * (1 + .1))
             msg = self.gen_response().format(next=_next)
         
         elif modal.answer:
-            question.update_average_time(used_time)
             correct = question.check_answer(modal.answer)
             
             msg = self.gen_response(correct).format(time=f"`{func.convert_seconds(used_time)}`", correct_answer=f"`{self.currect_question.answers[0]}`", next=_next)
             self._results[self.current] = correct
+            question.update_average_time(used_time)
 
         message: discord.Message = await interaction.followup.send(msg, ephemeral=True)
-        await message.delete(delay=10)
+        await message.delete(delay=self._delay_between_questions)
         return await self.next_question()

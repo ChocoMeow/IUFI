@@ -133,7 +133,7 @@ class QuestionPool:
     @classmethod
     def get_rank(cls, points: int) -> tuple[str, int]:
         sorted_ranks = sorted(RANK_BASE.items(), key=lambda item: item[1][1], reverse=True)
-        for rank, (emoji_id, rank_value) in sorted_ranks:
+        for rank, (emoji_id, rank_value, _) in sorted_ranks:
             if points >= rank_value:
                 return (rank, emoji_id)
         return None
@@ -163,11 +163,13 @@ class QuestionPool:
     
     @classmethod
     def get_question_by_rank(cls, ranks: list[tuple[str, int]]) -> list[Question]:
-        questions: set[Question] = set()
+        questions: list[Question] = []
 
         for (rank_name, return_num) in ranks:
             if rank_name not in QUIZ_LEVEL_BASE.keys():
                 raise Exception(f"{rank_name} is not found in the quiz!")
             
-            questions.add(cls.get_question(rank_name, return_num))
-            
+            for question in cls.get_question(rank_name, return_num):
+                questions.append(question)
+        
+        return questions

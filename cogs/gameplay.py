@@ -89,7 +89,10 @@ class Gameplay(commands.Cog):
     @commands.command(aliases=["q"])
     async def quiz(self, ctx: commands.Context):
         """IUFI Quiz"""
-        view = QuizView(ctx.author)
+        user = await func.get_user(ctx.author.id)
+
+        rank = iufi.QuestionPool.get_question_distribution_by_rank(iufi.QuestionPool.get_rank(user.get("game_state", {}).get("quiz_game", {}).get("points", 0))[0])
+        view = QuizView(ctx.author, iufi.QuestionPool.get_question_by_rank(rank))
         view.response = await ctx.reply(
             content=f"**This game ends** <t:{round(view._start_time + view.total_time)}:R>",
             embed=view.build_embed(),
