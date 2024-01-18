@@ -66,7 +66,7 @@ QUIZ_LEVEL_BASE: dict[str, tuple[int, tuple[int, int, hex]]] = {
 }
 
 RANK_BASE: dict[str, tuple[str, int, list[tuple[str, int]]]] = {
-    "Mike": ("1173065442009555096", 0, [('easy', 5)]),
+    "Milk": ("1173065442009555096", 0, [('easy', 5)]),
     "Bronze": ("1173063915098345472", 10, [('easy', 4), ('medium', 1)]),
     "Silver": ("1173063924116095087", 25, [('easy', 3), ('medium', 2)]),
     "Gold": ("1173063917614927975", 60, [('easy', 2), ('medium', 3)]),
