@@ -3,7 +3,6 @@ import functions as func
 
 from random import choice
 from iufi import (
-    QuestionPool,
     Question,
     QUIZ_LEVEL_BASE
 )
@@ -110,25 +109,42 @@ class QuizView(discord.ui.View):
         
         self._ended_time = time.time()
         summary, total_points = self.cal_results()
+        average_time = sum(self._average_time) / len(self.questions)
 
         user = await func.get_user(self.author.id)
         state = user.get("game_state", {}).get("quiz_game", {
             "points": 0,
-            "last_update": 0
+            "last_update": 0,
+            "correct": 0,
+            "wrong": 0,
+            "timeout": 0,
+            "average_time": 0
         })
 
         sow, eow = func.get_week_unix_timestamps()
         if not (sow <= state["last_update"] <= eow):
             state["points"] = 0
         
+        # Increase points by total_points and ensure it's not less than 0
         state["points"] += total_points
         state["points"] = max(0, state["points"])
+
+        # Update the last update time
         state["last_update"] = time.time()
+
+        # Update the count of correct and wrong answers
+        state["correct"] += self._results.count(True)
+        state["wrong"] += self._results.count(False)
+        state["timeout"] += self._results.count(None)
+
+        # Calculate the new average time
+        total_average_time = state["correct"] + state["wrong"] + state["timeout"]
+        state["average_time"] = round((total_average_time * state["average_time"]) + average_time) / (total_average_time + 1, 1)
 
         embed = discord.Embed(title="Quiz Result", color=discord.Color.random())
         embed.description = f"```{summary}```" \
                             f"```{'🕔 Time Used:':<12} {func.convert_seconds(self.used_time)}\n" \
-                            f"{'🕘 Avg Time:':<12} {func.convert_seconds(sum(self._average_time) / len(self.questions))}\n" \
+                            f"{'🕘 Avg Time:':<12} {func.convert_seconds(average_time)} {'🔺' if average_time < state['average_time'] else '🔻'}\n" \
                             f"{'🔥 Points:':<12} {state['points']} ({'+' if total_points >= 0 else '-'}{abs(total_points)})```"
 
         await func.update_user(self.author.id, {"$set": {"game_state.quiz_game": state}})
@@ -143,7 +159,7 @@ class QuizView(discord.ui.View):
         if question.attachment:
             embed.set_image(url=question.attachment)
 
-        embed.set_footer(text=f"Correct: {question.correct_rate}% Wrong: {question.wrong_rate}%")
+        embed.set_footer(text=f"Correct: {question.correct_rate}% | Wrong: {question.wrong_rate}%")
 
         self._timeout = self._answering_time + question.average_time
         return embed
