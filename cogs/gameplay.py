@@ -2,7 +2,7 @@ import discord, iufi, time, asyncio
 import functions as func
 
 from discord.ext import commands
-
+from iufi.pool import QuestionPool as QP
 from views import (
     RollView,
     ShopView,
@@ -91,8 +91,12 @@ class Gameplay(commands.Cog):
         """IUFI Quiz"""
         user = await func.get_user(ctx.author.id)
 
-        rank = iufi.QuestionPool.get_question_distribution_by_rank(iufi.QuestionPool.get_rank(user.get("game_state", {}).get("quiz_game", {}).get("points", 0))[0])
-        view = QuizView(ctx.author, iufi.QuestionPool.get_question_by_rank(rank))
+        rank = QP.get_question_distribution_by_rank(QP.get_rank(user.get("game_state", {}).get("quiz_game", {}).get("points", 0))[0])
+        questions = QP.get_question_by_rank(rank)
+        if not questions:
+            return await ctx.send("There are no questions for you right now! Please try again later")
+        
+        view = QuizView(ctx.author, questions)
         view.response = await ctx.reply(
             content=f"**This game ends** <t:{round(view._start_time + view.total_time)}:R>",
             embed=view.build_embed(),

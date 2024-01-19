@@ -159,12 +159,12 @@ class QuestionPool:
         num_available = len(questions[rank])
         num_to_return = min(number, num_available)
 
-        return sample(cls._questions, k=num_to_return)
+        return sample(questions[rank], k=num_to_return)
     
     @classmethod
     def get_question_by_rank(cls, ranks: list[tuple[str, int]]) -> list[Question]:
         questions: list[Question] = []
-
+        
         for (rank_name, return_num) in ranks:
             if rank_name not in QUIZ_LEVEL_BASE.keys():
                 raise Exception(f"{rank_name} is not found in the quiz!")
