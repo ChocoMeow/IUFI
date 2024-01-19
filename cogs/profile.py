@@ -51,8 +51,8 @@ class Profile(commands.Cog):
         embed.description = f"```{bio}```\n" if bio else ""
         embed.description += f"```📙 Photocards: {len(user.get('cards', []))}/{func.MAX_CARDS}\n⚔️ Level: {level} ({(exp/func.DEAFAULT_EXP)*100:.1f}%)```\u200b"
 
-        embed.add_field(name="Ranked Stats:", value=f"> <:{rank_name}:{rank_emoji}> {rank_name.title()} (`{quiz_stats['points']}`)\n> ✍️ KDA: `{round(quiz_stats['correct'] / total_questions, 1) if total_questions else 0}` (C: `{quiz_stats['correct']}` | W: `{quiz_stats['wrong']}`)\n> 🕒 Average Time: `{func.convert_seconds(quiz_stats['average_time'])}`", inline=True)
-        embed.add_field(name="Card Match Stats:", value="\n".join(f"> Level {level}: " + (f"🃏 {stats.get('matched', 0)} 🕒 {func.convert_seconds(stats.get('finished_time'))}" if (stats := card_match_stats.get(level)) else "Not attempt yet") for level in GAME_SETTINGS.keys()), inline=True)
+        embed.add_field(name="Ranked Stats:", value=f"> <:{rank_name}:{rank_emoji}> {rank_name.title()} (`{quiz_stats['points']}`)\n> 🎯 K/DA: `{round(quiz_stats['correct'] / total_questions, 1) if total_questions else 0}` (C: `{quiz_stats['correct']}` | W: `{quiz_stats['wrong'] + quiz_stats['timeout']}`)\n> 🕒 Average Time: `{func.convert_seconds(quiz_stats['average_time'])}`", inline=True)
+        embed.add_field(name="Card Match Stats:", value="\n".join(f"> {DAILY_ROWS[int(level) - 1]} **Level {level}**: " + (f"🃏 `{stats.get('matched', 0)}` 🕒 `{func.convert_seconds(stats.get('finished_time'))}`" if (stats := card_match_stats.get(level)) else "Not attempt yet") for level in GAME_SETTINGS.keys()), inline=True)
 
         card = iufi.CardPool.get_card(user["profile"]["main"])
         if card and card.owner_id == user["_id"]:

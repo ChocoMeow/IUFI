@@ -139,7 +139,7 @@ class QuizView(discord.ui.View):
 
         # Calculate the new average time
         total_average_time = state["correct"] + state["wrong"] + state["timeout"]
-        state["average_time"] = round(((total_average_time * state["average_time"]) + average_time) / (total_average_time + 1), 1)
+        state["average_time"] = round(((total_average_time * state["average_time"]) + average_time) / (total_average_time + 1), 1) if state["average_time"] else average_time
 
         embed = discord.Embed(title="Quiz Result", color=discord.Color.random())
         embed.description = f"```{summary}```" \
