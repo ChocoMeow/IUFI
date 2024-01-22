@@ -321,7 +321,8 @@ class Question:
         num_correct: int = 0,
         num_wrong: int = 0,
         average_time: float = 0.0,
-        attachment: str = None
+        attachment: str = None,
+        default_level: str = None
     ):
         self.question: str = question
         self.answers: list[str] = answers
@@ -330,6 +331,7 @@ class Question:
         self._correct: int = num_correct
         self._wrong: int = num_wrong
         self._average_time: float = average_time
+        self._default_level: str = default_level
 
         self.is_updated: bool = False
 
@@ -376,6 +378,9 @@ class Question:
     
     @property
     def level(self) -> str:
+        if self._default_level:
+            return self._default_level
+        
         if self.correct_rate >= 85 or self._wrong == 0:
             return "easy"
         elif self.correct_rate >= 40:
