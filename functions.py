@@ -136,13 +136,19 @@ def clean_text(input_text: str, allow_spaces: bool = True, convert_to_lower: boo
     
     return cleaned_text
 
-def get_week_unix_timestamps() -> tuple[float, float]:
+def get_month_unix_timestamps() -> tuple[float, float]:
     today = date.today()
 
-    start_of_this_week = today - timedelta(days=today.weekday())
-    start_of_next_week = start_of_this_week + timedelta(days=7)
+    # Get the first day of this month
+    start_of_this_month = date(today.year, today.month, 1)
+    
+    # Get the first day of next month
+    if today.month == 12:
+        start_of_next_month = date(today.year + 1, 1, 1)
+    else:
+        start_of_next_month = date(today.year, today.month + 1, 1)
 
-    return time.mktime(start_of_this_week.timetuple()), time.mktime(start_of_next_week.timetuple())
+    return time.mktime(start_of_this_month.timetuple()), time.mktime(start_of_next_month.timetuple())
 
 def match_string(input_string: str, word_list: list[str]) -> str:
     for word in word_list:

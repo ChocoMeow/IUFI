@@ -92,8 +92,8 @@ class Info(commands.Cog):
     @leaderboard.command(aliases=["q"])
     async def quiz(self, ctx: commands.Context):
         """Shows the IUFI Quiz leaderboard."""
-        sow, eow = func.get_week_unix_timestamps()
-        users = await func.USERS_DB.find({f"game_state.quiz_game.last_update": {"$gt":sow, "$lte":eow}}).sort(f"game_state.quiz_game.points", -1).limit(10).to_list(10)
+        start_date, end_date = func.get_month_unix_timestamps()
+        users = await func.USERS_DB.find({f"game_state.quiz_game.last_update": {"$gt":start_date, "$lte":end_date}}).sort(f"game_state.quiz_game.points", -1).limit(10).to_list(10)
 
         embed = discord.Embed(title=f"🏆   Quiz Leaderboard", color=discord.Color.random())
 
@@ -111,7 +111,7 @@ class Info(commands.Cog):
         if not description:
             description = "The leaderboard is currently empty."
 
-        embed.description = f"The next reset is <t:{int(eow)}:R>\n{description}"
+        embed.description = f"The next reset is <t:{int(end_date)}:R>\n{description}"
         embed.set_thumbnail(url=icon.url if (icon := ctx.guild.icon) else None)
         await ctx.reply(embed=embed)
 

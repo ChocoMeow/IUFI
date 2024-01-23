@@ -373,7 +373,8 @@ class Question:
             "num_correct": self._correct,
             "num_wrong": self._wrong,
             "average_time": self.average_time,
-            "attachment": self.attachment
+            "attachment": self.attachment,
+            "default_level": self._default_level
         }
     
     @property

@@ -121,8 +121,8 @@ class QuizView(discord.ui.View):
             "average_time": 0
         })
 
-        sow, eow = func.get_week_unix_timestamps()
-        if not (sow <= state["last_update"] <= eow):
+        start_date, end_date = func.get_month_unix_timestamps()
+        if not (start_date <= state["last_update"] <= end_date):
             state["points"] = 0
         
         # Increase points by total_points and ensure it's not less than 0
