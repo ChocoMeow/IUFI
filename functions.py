@@ -5,11 +5,7 @@ from motor.motor_asyncio import (
     AsyncIOMotorCollection,
 )
 
-from datetime import (
-    timedelta,
-    date
-)
-
+from datetime import date
 from dotenv import load_dotenv
 from typing import Any
 
@@ -31,7 +27,6 @@ USERS_DB: AsyncIOMotorCollection = None
 CARDS_DB: AsyncIOMotorCollection = None
 
 USERS_BUFFER: dict[int, dict[str, Any]] = {}
-COOLDOWN: dict[int, dict[str, float]] = {}
 MAX_CARDS: int = 100
 DEAFAULT_EXP = 100
 
@@ -64,7 +59,7 @@ USER_BASE: dict[str, Any] = {
 COOLDOWN_BASE: dict[str, int] = {
     "roll": 600,
     "claim": 180,
-    "daily": 82800,
+    "daily": 82800
 }
 
 def open_json(path: str) -> dict:

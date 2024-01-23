@@ -90,12 +90,16 @@ class Gameplay(commands.Cog):
     async def quiz(self, ctx: commands.Context):
         """IUFI Quiz"""
         user = await func.get_user(ctx.author.id)
-
+        if (retry := user.get("cooldown", {}).setdefault("quiz_game", 0)) > time.time():
+            return await ctx.reply(f"{ctx.author.mention} your quiz is <t:{round(retry)}:R>", delete_after=10)
+        
         rank = QP.get_question_distribution_by_rank(QP.get_rank(user.get("game_state", {}).get("quiz_game", {}).get("points", 0))[0])
         questions = QP.get_question_by_rank(rank)
         if not questions:
             return await ctx.send("There are no questions for you right now! Please try again later")
         
+        await func.update_user(ctx.author.id, {"$set": {"cooldown.quiz_game": time.time() + func.COOLDOWN_BASE["roll"]}})
+
         view = QuizView(ctx.author, questions)
         view.response = await ctx.reply(
             content=f"**This game ends** <t:{round(view._start_time + view.total_time)}:R>",
@@ -116,6 +120,7 @@ class Gameplay(commands.Cog):
                             f"🎮 Claim: {func.cal_retry_time(cooldown.get('claim', 0), 'Ready')}\n" \
                             f"📅 Daily: {func.cal_retry_time(cooldown.get('daily', 0), 'Ready')}\n" \
                             f"🃏 Game : {func.cal_retry_time(cooldown.get('match_game', 0), 'Ready')}\n" \
+                            f"💯 Quiz : {func.cal_retry_time(cooldown.get('quiz_game', 0), 'Ready')}\n" \
                             f"🔔 Reminder: {'On' if user.get('reminder', False) else 'Off'}\n\n" \
                             f"Potion Time Left:\n"
 
