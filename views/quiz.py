@@ -233,3 +233,24 @@ class QuizView(discord.ui.View):
         message: discord.Message = await interaction.followup.send(msg, ephemeral=True)
         await message.delete(delay=self._delay_between_questions)
         return await self.next_question()
+
+    @discord.ui.button(label="Skip", style=discord.ButtonStyle.red)
+    async def skip(self, interaction: discord.Interaction, button: discord.ui.Button) -> None:
+        if self._results[self.current] is not None:
+            return await interaction.response.send_message("You cannot skip a question that you have already answered!", ephemeral=True, delete_after=5)
+
+        if self._ended_time:
+            return 
+
+        used_time = time.time() - self._answering_time
+        self._average_time.append(used_time)
+        _next = f"<t:{round(time.time() + self._delay_between_questions)}:R>"
+        
+        msg = choice(QUESTION_RESPONSE_BASE.get('next_question')).format(next=_next)
+
+        await interaction.response.send_message(msg, ephemeral=True, delete_after=self._delay_between_questions)
+        return await self.next_question()
+
+    @discord.ui.button(label="Tips", emoji="💡", style=discord.ButtonStyle.grey)
+    async def tips(self, interaction: discord.Interaction, button: discord.ui.Button) -> None:
+        return await interaction.response.send_message("No tips for this question! Hahah", ephemeral=True, delete_after=5)
