@@ -322,11 +322,13 @@ class Question:
         num_wrong: int = 0,
         average_time: float = 0.0,
         attachment: str = None,
+        tips: str = "",
         default_level: str = None
     ):
         self.question: str = question
         self.answers: list[str] = answers
         self.attachment: str | None = attachment
+        self.tips: str = tips
 
         self._correct: int = num_correct
         self._wrong: int = num_wrong
