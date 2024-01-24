@@ -1,11 +1,14 @@
 import discord, time, asyncio
 import functions as func
 
+from discord.ext import commands
 from random import choice
 from iufi import (
     Question,
     QUIZ_LEVEL_BASE
 )
+
+from typing import Any
 
 QUESTION_RESPONSE_BASE: dict[str, dict[str, list]] = {
     True: {
@@ -69,6 +72,42 @@ class AnswerModal(discord.ui.Modal):
         self.answer = self.children[0].value
         self.stop()
 
+class ResetAttemptView(discord.ui.View):
+    def __init__(self, ctx: commands.Context, user_data: dict[str, Any], timeout: float = 30):
+        super().__init__(timeout=timeout)
+
+        self.ctx: commands.Context = ctx
+        self.data: dict[str, Any] = user_data
+        self.response: discord.Message = None
+
+    async def on_timeout(self) -> None:
+        for child in self.children:
+            child.TextStyle = discord.ButtonStyle.grey
+            child.disabled = True
+        
+        if self.response:
+            await self.response.edit(view=self)
+
+    async def interaction_check(self, interaction: discord.Interaction) -> bool:
+        return interaction.user == self.ctx.author
+
+    @discord.ui.button(label="Buy", emoji="🛍️", style=discord.ButtonStyle.green)
+    async def buy(self, interaction: discord.Interaction, button: discord.ui.Button) -> None:
+        if self.data.get("candies") < 50:
+            await interaction.response.send_message("You do not have enough candies to initiate the reset.!", ephemeral=True)
+            return await self.on_timeout()
+        
+        await func.update_user(self.ctx.author.id, {
+            "$set": {"game_state.quiz_game.attempted.times": 0},
+            "$inc": {"candies": -50}
+        })
+        
+        if self.response:
+            await self.response.delete()
+            self.response = None
+
+        await self.ctx.invoke(self.ctx.bot.get_command("quiz"))
+
 class QuizView(discord.ui.View):
     def __init__(self, author: discord.Member, questions: list[Question], timeout: float = None):
         super().__init__(timeout=timeout)
@@ -118,13 +157,24 @@ class QuizView(discord.ui.View):
             "correct": 0,
             "wrong": 0,
             "timeout": 0,
-            "average_time": 0
+            "average_time": 0,
+            "attempted": {
+                "first_time": 0, # Timestamp of the user’s first attempt to store data, represented as a float
+                "times": 0 # Number of attempts made by the user on this day
+            }
         })
 
         start_date, end_date = func.get_month_unix_timestamps()
         if not (start_date <= state["last_update"] <= end_date):
             state["points"] = 0
         
+        # Check if the first attempt was more than a day ago
+        if (time.time() - state["attempted"]["first_time"]) >= 1440:
+            state["attempted"]["first_time"] = time.time()
+        
+        # Increment the number of attempts
+        state["attempted"]["times"] += 1
+
         # Increase points by total_points and ensure it's not less than 0
         state["points"] += total_points
         state["points"] = max(0, state["points"])
@@ -242,6 +292,7 @@ class QuizView(discord.ui.View):
         if self._ended_time:
             return 
 
+        self._results[self.current] = False
         used_time = time.time() - self._answering_time
         self._average_time.append(used_time)
         _next = f"<t:{round(time.time() + self._delay_between_questions)}:R>"

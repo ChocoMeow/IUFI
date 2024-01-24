@@ -8,6 +8,7 @@ from views import (
     ShopView,
     MatchGame,
     QuizView,
+    ResetAttemptView,
     GAME_SETTINGS
 )
 
@@ -89,23 +90,46 @@ class Gameplay(commands.Cog):
     @commands.command(aliases=["q"])
     async def quiz(self, ctx: commands.Context):
         """IUFI Quiz"""
+        # Fetch the user data
         user = await func.get_user(ctx.author.id)
-        if (retry := user.get("cooldown", {}).setdefault("quiz_game", 0)) > time.time():
-            return await ctx.reply(f"{ctx.author.mention} your quiz is <t:{round(retry)}:R>", delete_after=10)
+
+        # If the cooldown is still in effect, inform the user and exit
+        # if (retry := user.get("cooldown", {}).setdefault("quiz_game", 0)) > time.time():
+        #     return await ctx.reply(f"{ctx.author.mention} your quiz is <t:{round(retry)}:R>", delete_after=10)
+
+        # Get the game state for the quiz game, or set to default values if not found
+        game_state = user.get("game_state", {}).get("quiz_game", {})
+        attempted = game_state.get("attempted", {
+            "first_time": 0,
+            "times": 0
+        })
+
+        # If the user has attempted more than 5 times in a day, inform them and exit
+        if (time.time() - attempted["first_time"] < 1440) and attempted["times"] >= 5:
+            view = ResetAttemptView(ctx, user)
+            view.response = await ctx.reply("Sorry, you have already reached the maximum number of attempts for today! You can use `50` candies to play more.", view=view)
+            return
         
-        rank = QP.get_question_distribution_by_rank(QP.get_rank(user.get("game_state", {}).get("quiz_game", {}).get("points", 0))[0])
+        # Get the rank and questions for the user
+        rank = QP.get_question_distribution_by_rank(QP.get_rank(game_state.get("points", 0))[0])
         questions = QP.get_question_by_rank(rank)
+
+        # If there are no questions, inform the user and exit
         if not questions:
-            return await ctx.send("There are no questions for you right now! Please try again later")
-        
+            return await ctx.send("There are no questions for you right now! Please try again later.")
+
+        # Update the user's cooldown time
         await func.update_user(ctx.author.id, {"$set": {"cooldown.quiz_game": time.time() + func.COOLDOWN_BASE["roll"]}})
 
+        # Create the quiz view and send the initial message
         view = QuizView(ctx.author, questions)
         view.response = await ctx.reply(
             content=f"**This game ends** <t:{round(view._start_time + view.total_time)}:R>",
             embed=view.build_embed(),
             view=view
         )
+
+        # Wait for the game to end
         await asyncio.sleep(view.total_time)
         await view.end_game()
 
