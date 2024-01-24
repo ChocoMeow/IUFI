@@ -9,7 +9,8 @@ from views import (
     MatchGame,
     QuizView,
     ResetAttemptView,
-    GAME_SETTINGS
+    GAME_SETTINGS,
+    QUIZ_SETTINGS
 )
 
 class Gameplay(commands.Cog):
@@ -105,9 +106,9 @@ class Gameplay(commands.Cog):
         })
 
         # If the user has attempted more than 5 times in a day, inform them and exit
-        if (time.time() - attempted["first_time"] < 1440) and attempted["times"] >= 5:
+        if (time.time() - attempted["first_time"] < QUIZ_SETTINGS["reset_time"]) and attempted["times"] >= QUIZ_SETTINGS["max_attempt"]:
             view = ResetAttemptView(ctx, user)
-            view.response = await ctx.reply("Sorry, you have already reached the maximum number of attempts for today! You can use `50` candies to play more.", view=view)
+            view.response = await ctx.reply(f"Sorry, you have already reached the maximum number of attempts for today! You can use `🍬 {QUIZ_SETTINGS['reset_price']}` candies to play more.", view=view)
             return
         
         # Get the rank and questions for the user
