@@ -94,8 +94,8 @@ class Gameplay(commands.Cog):
         user = await func.get_user(ctx.author.id)
 
         # If the cooldown is still in effect, inform the user and exit
-        # if (retry := user.get("cooldown", {}).setdefault("quiz_game", 0)) > time.time():
-        #     return await ctx.reply(f"{ctx.author.mention} your quiz is <t:{round(retry)}:R>", delete_after=10)
+        if (retry := user.get("cooldown", {}).setdefault("quiz_game", 0)) > time.time():
+            return await ctx.reply(f"{ctx.author.mention} your quiz is <t:{round(retry)}:R>", delete_after=10)
 
         # Get the game state for the quiz game, or set to default values if not found
         game_state = user.get("game_state", {}).get("quiz_game", {})
