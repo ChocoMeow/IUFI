@@ -300,8 +300,3 @@ class QuizView(discord.ui.View):
         msg = choice(QUESTION_RESPONSE_BASE.get('next_question')).format(next=_next)
 
         await interaction.response.send_message(msg, ephemeral=True, delete_after=self._delay_between_questions)
-        return await self.next_question()
-
-    @discord.ui.button(label="Tips", emoji="💡", style=discord.ButtonStyle.grey)
-    async def tips(self, interaction: discord.Interaction, button: discord.ui.Button) -> None:
-        return await interaction.response.send_message("No tips for this question! Hahah", ephemeral=True, delete_after=5)
