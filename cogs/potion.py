@@ -1,8 +1,7 @@
-import discord, iufi
+import iufi, time
 import functions as func
 
 from discord.ext import commands
-import time
 
 class Potion(commands.Cog):
     def __init__(self, bot: commands.Bot) -> None:
@@ -33,10 +32,16 @@ class Potion(commands.Cog):
         if user.get("potions", {}).get(f"{potion_name}_{level}", 0) <= 0:
             return await ctx.reply("You don't have this potion.")
 
-        await func.update_user(ctx.author.id, {
-            "$inc": {f"potions.{potion_name}_{level}": -1},
-            "$set": {f"actived_potions.{potion_name}_{level}": (expire := time.time() + potion_data.get("expiration"))}
-        })
+        data: dict[str, dict[str, float]] = {"$set": {}, "$inc": {}}
+        if potion_name == "speed":
+            time_reduce = iufi.POTIONS_BASE.get("speed").get("levels").get(level)
+            for cooldown in user.get("cooldown", []):
+                if cooldown in ["daily", "match_game"]: continue
+                data["$set"][f"cooldown.{cooldown}"] = user.get("cooldown").get(cooldown, time.time()) - (func.COOLDOWN_BASE.get(cooldown) * time_reduce)
+
+        data["$inc"][f"potions.{potion_name}_{level}"] = -1
+        data["$set"][f"actived_potions.{potion_name}_{level}"] = (expire := time.time() + potion_data.get("expiration"))
+        await func.update_user(ctx.author.id, data)
 
         await func.add_quest_progress(ctx.author.id, 5, 1)
 
