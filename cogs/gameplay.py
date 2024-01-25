@@ -96,23 +96,12 @@ class Gameplay(commands.Cog):
 
         # If the cooldown is still in effect, inform the user and exit
         if (retry := user.get("cooldown", {}).setdefault("quiz_game", 0)) > time.time():
-            return await ctx.reply(f"{ctx.author.mention} your quiz is <t:{round(retry)}:R>", delete_after=10)
-
-        # Get the game state for the quiz game, or set to default values if not found
-        game_state = user.get("game_state", {}).get("quiz_game", {})
-        attempted = game_state.get("attempted", {
-            "first_time": 0,
-            "times": 0
-        })
-
-        # If the user has attempted more than 5 times in a day, inform them and exit
-        if (time.time() - attempted["first_time"] < QUIZ_SETTINGS["reset_time"]) and attempted["times"] >= QUIZ_SETTINGS["max_attempt"]:
             view = ResetAttemptView(ctx, user)
-            view.response = await ctx.reply(f"Sorry, you have already reached the maximum number of attempts for today! You can use `🍬 {QUIZ_SETTINGS['reset_price']}` candies to play more.", view=view)
-            return
+            view.response = await ctx.reply(f"{ctx.author.mention} your quiz is <t:{round(retry)}:R>. If you’d like to bypass this cooldown, you can do so by paying `🍬 {QUIZ_SETTINGS['reset_price']}` candies.", delete_after=20, view=view)
+            return 
         
         # Get the rank and questions for the user
-        rank = QP.get_question_distribution_by_rank(QP.get_rank(game_state.get("points", 0))[0])
+        rank = QP.get_question_distribution_by_rank(QP.get_rank(user.get("game_state", {}).get("quiz_game", {}).get("points", 0))[0])
         questions = QP.get_question_by_rank(rank)
 
         # If there are no questions, inform the user and exit

@@ -56,19 +56,18 @@ QUESTION_RESPONSE_BASE: dict[str, dict[str, list]] = {
 }
 
 QUIZ_SETTINGS: dict[str, int] = {
-    "reset_price": 50,
-    "max_attempt": 5,
-    "reset_time": 86_400
+    "reset_price": 10
 }
 
 class AnswerModal(discord.ui.Modal):
-    def __init__(self, *args, **kwargs) -> None:
+    def __init__(self, question: Question, *args, **kwargs) -> None:
         super().__init__(title="Enter your answer", *args, **kwargs)
         self.answer: str = ""
 
         self.add_item(
             discord.ui.TextInput(
                 label="Answer",
+                placeholder=question.question,
                 style=discord.TextStyle.long,
             )
         )
@@ -79,7 +78,7 @@ class AnswerModal(discord.ui.Modal):
         self.stop()
 
 class ResetAttemptView(discord.ui.View):
-    def __init__(self, ctx: commands.Context, user_data: dict[str, Any], timeout: float = 30):
+    def __init__(self, ctx: commands.Context, user_data: dict[str, Any], timeout: float = 20):
         super().__init__(timeout=timeout)
 
         self.ctx: commands.Context = ctx
@@ -91,8 +90,10 @@ class ResetAttemptView(discord.ui.View):
             child.TextStyle = discord.ButtonStyle.grey
             child.disabled = True
         
-        if self.response:
+        try:
             await self.response.edit(view=self)
+        except:
+            pass
 
     async def interaction_check(self, interaction: discord.Interaction) -> bool:
         return interaction.user == self.ctx.author
@@ -100,17 +101,16 @@ class ResetAttemptView(discord.ui.View):
     @discord.ui.button(label="Buy", emoji="🛍️", style=discord.ButtonStyle.green)
     async def buy(self, interaction: discord.Interaction, button: discord.ui.Button) -> None:
         if self.data.get("candies") < QUIZ_SETTINGS["reset_price"]:
-            await interaction.response.send_message("You do not have enough candies to initiate the reset.!", ephemeral=True)
+            await interaction.response.send_message("You do not have enough candies to initiate the reset!", ephemeral=True)
             return await self.on_timeout()
         
         await func.update_user(self.ctx.author.id, {
-            "$set": {"game_state.quiz_game.attempted.times": 0},
+            "$set": {"cooldown.quiz_game": 0},
             "$inc": {"candies": -QUIZ_SETTINGS["reset_price"]}
         })
         
         if self.response:
             await self.response.delete()
-            self.response = None
 
         await self.ctx.invoke(self.ctx.bot.get_command("quiz"))
 
@@ -163,23 +163,12 @@ class QuizView(discord.ui.View):
             "correct": 0,
             "wrong": 0,
             "timeout": 0,
-            "average_time": 0,
-            "attempted": {
-                "first_time": 0, # Timestamp of the user’s first attempt to store data, represented as a float
-                "times": 0 # Number of attempts made by the user on this day
-            }
+            "average_time": 0
         })
 
         start_date, end_date = func.get_month_unix_timestamps()
         if not (start_date <= state["last_update"] <= end_date):
             state["points"] = 0
-        
-        # Check if the first attempt was more than a day ago
-        if (time.time() - state["attempted"]["first_time"]) >= QUIZ_SETTINGS["reset_time"]:
-            state["attempted"]["first_time"] = time.time()
-        
-        # Increment the number of attempts
-        state["attempted"]["times"] += 1
 
         # Increase points by total_points and ensure it's not less than 0
         state["points"] += total_points
@@ -264,7 +253,7 @@ class QuizView(discord.ui.View):
             return await interaction.response.send_message("You are already answered! Please for the next question.", ephemeral=True, delete_after=5)
 
         question = self.currect_question
-        modal = AnswerModal()
+        modal = AnswerModal(question)
         await interaction.response.send_modal(modal)
         await modal.wait()
 
