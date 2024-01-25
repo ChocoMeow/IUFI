@@ -14,13 +14,13 @@ QUESTION_RESPONSE_BASE: dict[str, dict[str, list]] = {
     True: {
         "emojis": ["IUgiggles:1144937008037384204", "IUwow:1144937211943452712", "IUkek:1144937045534449694", "IUclap:1144936954782302262", "IUomo:1144937081169264692"],
         "responses": [
-            "Fantastic! You’ve answered correctly in {time} seconds.",
-            "Brilliant! You got it right in just {time} seconds.",
-            "Superb! Your answer is correct and it took you {time} seconds.",
-            "Impressive! You nailed the answer in {time} seconds.",
-            "Awesome! You’ve got the right answer in {time} seconds.",
-            "Excellent work! You answered correctly in {time} seconds.",
-            "Good going! You got it right in {time} seconds."
+            "Fantastic! You’ve answered correctly in {time}.",
+            "Brilliant! You got it right in just {time}.",
+            "Superb! Your answer is correct and it took you {time}.",
+            "Impressive! You nailed the answer in {time}.",
+            "Awesome! You’ve got the right answer in {time}.",
+            "Excellent work! You answered correctly in {time}.",
+            "Good going! You got it right in {time}."
         ]
     },
     False: {
