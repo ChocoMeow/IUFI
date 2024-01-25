@@ -67,7 +67,7 @@ class AnswerModal(discord.ui.Modal):
         self.add_item(
             discord.ui.TextInput(
                 label="Answer",
-                placeholder=question.question,
+                placeholder=question.question if len(question.question) <= 100 else question.question[:97] + "...",
                 style=discord.TextStyle.long,
             )
         )
