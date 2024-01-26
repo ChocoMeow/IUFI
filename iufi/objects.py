@@ -6,7 +6,7 @@ import functions as func
 from PIL import Image, ImageDraw, ImageSequence
 from io import BytesIO
 from difflib import SequenceMatcher
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 from .exceptions import ImageLoadError, IUFIException
 
@@ -66,15 +66,86 @@ QUIZ_LEVEL_BASE: dict[str, tuple[int, tuple[int, int, hex]]] = {
     "hard": (30, (5, 3, 0xD75C4B))
 }
 
-RANK_BASE: dict[str, tuple[str, int, list[tuple[str, int]]]] = {
-    "Milk": ("1173065442009555096", 0, [('easy', 5)]),
-    "Bronze": ("1173063915098345472", 10, [('easy', 4), ('medium', 1)]),
-    "Silver": ("1173063924116095087", 25, [('easy', 3), ('medium', 2)]),
-    "Gold": ("1173063917614927975", 60, [('easy', 2), ('medium', 3)]),
-    "Platinum": ("1173063922564218961", 100, [('easy', 1), ('medium', 4)]),
-    "Diamond": ("1173064418075099167", 200, [('medium', 5)]),
-    "Master": ("1173063919846293535", 350, [('medium', 3), ('hard', 2)]),
-    "Challenger": ("1173064415453663242", 500, [('medium', 2), ('hard', 3)]),
+RANK_BASE: dict[str, dict[str, Any]] = {
+    "milk": {
+        "emoji_id": "1173065442009555096",
+        "points": 0,
+        "questions": [('easy', 5)],
+        "rewards": {
+            "candies": 30
+        }
+    },
+    "bronze": {
+        "emoji_id": "1173063915098345472",
+        "points": 10,
+        "questions": [('easy', 4), ('medium', 1)],
+        "rewards": {
+            1: ("candies", 50),
+            2: [("potions.speed_ii", 1), ("potions.luck_ii", 1)],
+        }
+    },
+    "silver": {
+        "emoji_id": "1173063924116095087",
+        "points": 25,
+        "questions": [('easy', 3), ('medium', 2)],
+        "rewards": {
+            1: ("candies", 80),
+            2: ("roll.epic", 1),
+            3: [("potions.speed_iii", 1), ("potions.luck_iii", 1)],
+        }
+    },
+    "gold": {
+        "emoji_id": "1173063917614927975",
+        "points": 60,
+        "questions": [('easy', 2), ('medium', 3)],
+        "rewards": {
+            1: ("candies", 80),
+            2: ("roll.epic", 1),
+            3: [("potions.speed_iii", 1), ("potions.luck_iii", 1)],
+        }
+    },
+    "platinum": {
+        "emoji_id": "1173063922564218961",
+        "points": 100,
+        "questions": [('easy', 1), ('medium', 4)],
+        "rewards": {
+            1: ("candies", 100),
+            2: ("roll.epic", 1),
+            3: [("potions.speed_iii", 1), ("potions.luck_iii", 1)],
+        }
+    },
+    "diamond": {
+        "emoji_id": "1173064418075099167",
+        "points": 200,
+        "questions": [('medium', 5)],
+        "rewards": {
+            1: ("candies", 150),
+            2: ("roll.epic", 2),
+            3: [("potions.speed_iii", 1), ("potions.luck_iii", 1)],
+        }
+    },
+    "master": {
+        "emoji_id": "1173063919846293535",
+        "points": 350,
+        "questions": [('medium', 3), ('hard', 2)],
+        "rewards": {
+            1: ("candies", 200),
+            2: ("roll.epic", 1),
+            3: ("roll.legendary", 1),
+            4: [("potions.speed_iii", 1), ("potions.luck_iii", 1)],
+        }
+    },
+    "challeneger": {
+        "emoji_id": "1173064415453663242",
+        "points": 500,
+        "questions": [('medium', 2), ('hard', 3)],
+        "rewards": {
+            1: ("candies", 400),
+            2: ("roll.epic", 1),
+            3: ("roll.legendary", 1),
+            4: [("potions.speed_iii", 1), ("potions.luck_iii", 1)],
+        }
+    }
 }
 
 class CardObject:

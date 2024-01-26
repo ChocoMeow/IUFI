@@ -132,19 +132,19 @@ class QuestionPool:
     
     @classmethod
     def get_rank(cls, points: int) -> tuple[str, int]:
-        sorted_ranks = sorted(RANK_BASE.items(), key=lambda item: item[1][1], reverse=True)
-        for rank, (emoji_id, rank_value, _) in sorted_ranks:
-            if points >= rank_value:
-                return (rank, emoji_id)
+        sorted_ranks = sorted(RANK_BASE.items(), key=lambda item: item[1]["points"], reverse=True)
+        for rank, details in sorted_ranks:
+            if points >= details["points"]:
+                return (rank, details["emoji_id"])
         return None
-    
+
     @classmethod
     def get_question_distribution_by_rank(cls, rank: str) -> list[tuple[str, int]]:
         rank_details = RANK_BASE.get(rank)
         if not rank_details:
             raise Exception(f"Rank '{rank}' not found!")
         
-        return rank_details[2]
+        return rank_details["questions"]
 
     @classmethod
     def get_question(cls, rank: str, number: int) -> list[Question]:
