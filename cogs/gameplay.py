@@ -28,7 +28,7 @@ class Gameplay(commands.Cog):
 
         query = {}
         if not tier:
-            query["$set"] = {"cooldown.roll": time.time() + (func.COOLDOWN_BASE["roll"] * (1 - actived_potions.get("speed", 0)))}
+            query["$set"] = {"cooldown.roll": time.time() + (func.COOLDOWN_BASE["roll"][1] * (1 - actived_potions.get("speed", 0)))}
 
         else:
             tier = tier.lower()
@@ -109,7 +109,7 @@ class Gameplay(commands.Cog):
             return await ctx.send("There are no questions for you right now! Please try again later.")
 
         # Update the user's cooldown time
-        await func.update_user(ctx.author.id, {"$set": {"cooldown.quiz_game": time.time() + func.COOLDOWN_BASE["roll"]}})
+        await func.update_user(ctx.author.id, {"$set": {"cooldown.quiz_game": time.time() + func.COOLDOWN_BASE["roll"][1]}})
 
         # Create the quiz view and send the initial message
         view = QuizView(ctx.author, questions)
@@ -130,13 +130,10 @@ class Gameplay(commands.Cog):
 
         cooldown: dict[str, float] = user.get("cooldown", {})
         embed = discord.Embed(title=f"⏰ {ctx.author.display_name}'s Cooldowns", color=0x59b0c0)
-        embed.description = f"```🎲 Roll : {func.cal_retry_time(cooldown.get('roll', 0), 'Ready')}\n" \
-                            f"🎮 Claim: {func.cal_retry_time(cooldown.get('claim', 0), 'Ready')}\n" \
-                            f"📅 Daily: {func.cal_retry_time(cooldown.get('daily', 0), 'Ready')}\n" \
-                            f"🃏 Game : {func.cal_retry_time(cooldown.get('match_game', 0), 'Ready')}\n" \
-                            f"💯 Quiz : {func.cal_retry_time(cooldown.get('quiz_game', 0), 'Ready')}\n" \
-                            f"🔔 Reminder: {'On' if user.get('reminder', False) else 'Off'}\n\n" \
-                            f"Potion Time Left:\n"
+        embed.description = "```" + "".join(f"{emoji} {name.split('_')[0].title():<5}: {func.cal_retry_time(cooldown.get(name, 0), 'Ready')}\n" for name, (emoji, cd) in func.COOLDOWN_BASE.items())
+        
+        embed.description += f"🔔 Reminder: {'On' if user.get('reminder', False) else 'Off'}\n\n" \
+                             f"Potion Time Left:\n"
 
         potion_status = "\n".join(
             [f"{data['emoji']} {potion.title():<5} {data['level'].upper():<3}: {func.cal_retry_time(data['expiration'])}"

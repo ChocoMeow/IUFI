@@ -45,10 +45,8 @@ class Tasks(commands.Cog):
         query = {"$and":[
             {"reminder": True},
             {"$or": [
-                {"cooldown.roll": time_range},
-                {"cooldown.daily": time_range},
-                {"cooldown.match_game": time_range},
-                {"cooldown.quiz_game": time_range}
+                {f"cooldown.{name}": time_range}
+                for name in func.COOLDOWN_BASE.keys() if name != "claim"
             ]}
         ]}
 
@@ -58,10 +56,9 @@ class Tasks(commands.Cog):
                 continue
 
             cd: dict[str, float] = doc["cooldown"]
-            await self.check_and_schedule(user, current_time, cd.get("roll", 0), f"🎲 Your roll is ready! Join <#{random.choice(self.game_channel_ids)}> and roll now.")
-            await self.check_and_schedule(user, current_time, cd.get("daily", 0), f"📅 Your daily is ready! Join <#{random.choice(self.game_channel_ids)}> and claim your daily.")
-            await self.check_and_schedule(user, current_time, cd.get("match_game", 0), f"🃏 Your game is ready! Join <#{random.choice(self.game_channel_ids)}> and play now.")
-            await self.check_and_schedule(user, current_time, cd.get("quiz_game", 0), f"💯 Your quiz is ready! Join <#{random.choice(self.game_channel_ids)}> and play now.")
+            for name, (emoji, cd) in func.COOLDOWN_BASE.items():
+                if name != "claim":
+                    await self.check_and_schedule(user, current_time, cd.get(name, 0), f"{emoji} Your {name.split('_')[0]} is ready! Join <#{random.choice(self.game_channel_ids)}> and roll now.")
 
 async def setup(bot: commands.Bot):
     await bot.add_cog(Tasks(bot))

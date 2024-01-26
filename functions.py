@@ -5,7 +5,11 @@ from motor.motor_asyncio import (
     AsyncIOMotorCollection,
 )
 
-from datetime import date
+from datetime import (
+    date,
+    timedelta
+)
+
 from dotenv import load_dotenv
 from typing import Any
 
@@ -56,10 +60,12 @@ USER_BASE: dict[str, Any] = {
     "gifts_given": 0
 }
 
-COOLDOWN_BASE: dict[str, int] = {
-    "roll": 600,
-    "claim": 180,
-    "daily": 82800
+COOLDOWN_BASE: dict[str, tuple[str, int]] = {
+    "roll": ("🎲", 600),
+    "claim": ("🎮", 180),
+    "daily": ("📅", 82800),
+    "match_game": ("🃏", 0),
+    "quiz_game": ("💯", 600)
 }
 
 def open_json(path: str) -> dict:
@@ -130,6 +136,17 @@ def clean_text(input_text: str, allow_spaces: bool = True, convert_to_lower: boo
         cleaned_text = cleaned_text.lower()
     
     return cleaned_text
+
+def get_week_unix_timestamps() -> tuple[float, float]:
+    today = date.today()
+
+    # Get the first day of this week (Monday)
+    start_of_this_week = today - timedelta(days=today.weekday())
+
+    # Get the first day of next week (next Monday)
+    start_of_next_week = start_of_this_week + timedelta(days=7)
+
+    return time.mktime(start_of_this_week.timetuple()), time.mktime(start_of_next_week.timetuple())
 
 def get_month_unix_timestamps() -> tuple[float, float]:
     today = date.today()

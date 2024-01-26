@@ -43,7 +43,7 @@ class RollButton(discord.ui.Button):
         actived_potions = func.get_potions(user.get("actived_potions", {}), POTIONS_BASE)
         await func.update_user(interaction.user.id, {
             "$push": {"cards": self.card.id},
-            "$set": {"cooldown.claim": time.time() + (func.COOLDOWN_BASE["claim"] * (1 - actived_potions.get("speed", 0)))},
+            "$set": {"cooldown.claim": time.time() + (func.COOLDOWN_BASE["claim"][1] * (1 - actived_potions.get("speed", 0)))},
             "$inc": {"exp": 10}
         })
         await func.update_card(self.card.id, {"$set": {"owner_id": interaction.user.id}})

@@ -37,7 +37,7 @@ class Potion(commands.Cog):
             time_reduce = iufi.POTIONS_BASE.get("speed").get("levels").get(level)
             for cooldown in user.get("cooldown", []):
                 if cooldown in ["daily", "match_game"]: continue
-                data["$set"][f"cooldown.{cooldown}"] = user.get("cooldown").get(cooldown, time.time()) - (func.COOLDOWN_BASE.get(cooldown) * time_reduce)
+                data["$set"][f"cooldown.{cooldown}"] = user.get("cooldown").get(cooldown, time.time()) - (func.COOLDOWN_BASE.get(cooldown)[1] * time_reduce)
 
         data["$inc"][f"potions.{potion_name}_{level}"] = -1
         data["$set"][f"actived_potions.{potion_name}_{level}"] = (expire := time.time() + potion_data.get("expiration"))
