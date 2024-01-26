@@ -56,7 +56,7 @@ QUESTION_RESPONSE_BASE: dict[str, dict[str, list]] = {
 }
 
 QUIZ_SETTINGS: dict[str, int] = {
-    "reset_price": 10
+    "reset_price": 15
 }
 
 class AnswerModal(discord.ui.Modal):
@@ -78,11 +78,12 @@ class AnswerModal(discord.ui.Modal):
         self.stop()
 
 class ResetAttemptView(discord.ui.View):
-    def __init__(self, ctx: commands.Context, user_data: dict[str, Any], timeout: float = 20):
+    def __init__(self, ctx: commands.Context, user_data: dict[str, Any], price: int, timeout: float = 20):
         super().__init__(timeout=timeout)
 
         self.ctx: commands.Context = ctx
         self.data: dict[str, Any] = user_data
+        self.price: int = price
         self.response: discord.Message = None
 
     async def on_timeout(self) -> None:
@@ -100,13 +101,13 @@ class ResetAttemptView(discord.ui.View):
 
     @discord.ui.button(label="Buy", emoji="🛍️", style=discord.ButtonStyle.green)
     async def buy(self, interaction: discord.Interaction, button: discord.ui.Button) -> None:
-        if self.data.get("candies") < QUIZ_SETTINGS["reset_price"]:
+        if self.data.get("candies") < self.price:
             await interaction.response.send_message("You do not have enough candies to initiate the reset!", ephemeral=True)
             return await self.on_timeout()
         
         await func.update_user(self.ctx.author.id, {
             "$set": {"cooldown.quiz_game": 0},
-            "$inc": {"candies": -QUIZ_SETTINGS["reset_price"]}
+            "$inc": {"candies": -self.price}
         })
         
         if self.response:

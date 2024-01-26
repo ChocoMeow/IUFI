@@ -55,9 +55,7 @@ USER_BASE: dict[str, Any] = {
     "profile": {
         "bio": "",
         "main": ""
-    },
-    "gifts": 0,
-    "gifts_given": 0
+    }
 }
 
 COOLDOWN_BASE: dict[str, tuple[str, int]] = {
