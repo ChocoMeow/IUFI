@@ -263,7 +263,7 @@ class Profile(commands.Cog):
                 emoji, _ = iufi.TIERS_BASE.get(tier)
                 embed.description += f"{emoji} {tier.title() + ' Rolls':<18} x{count}\n"
 
-        embed.description += f"{'🎁 Gifts':<20} x{user.get('gifts', 0)}\n\n"
+        embed.description += f"\n\n"
 
         potions_data: dict[str, int] = user.get("potions", {})
         potions = ("\n".join(
