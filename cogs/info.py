@@ -26,7 +26,7 @@ class Info(commands.Cog):
 
         description = ""
         for index, user in enumerate(users):
-            level, exp = func.calculate_level(user["exp"])
+            level, _ = func.calculate_level(user["exp"])
             member = self.bot.get_user(user['_id'])
 
             if member:
@@ -106,7 +106,7 @@ class Info(commands.Cog):
             member = self.bot.get_user(user['_id'])
             if member:
                 rank = iufi.QuestionPool.get_rank(game_state['points'])
-                description += f"<:{rank[0]}:{rank[1]}> `{member.display_name:<14} {game_state['points']:<4} 🔥`\n"
+                description += f"<:{rank[0]}:{rank[1]}> `{member.display_name:<14} {game_state['points']:<6} 🔥`\n"
         
         if not description:
             description = "The leaderboard is currently empty."

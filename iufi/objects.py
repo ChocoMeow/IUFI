@@ -450,7 +450,7 @@ class Question:
         else:
             self._average_time = ((self._average_time * self.total) + time) / (self.total + 1)
 
-    def update_user(self, user_id: int, answer: str, response_time: float, is_correct: bool) -> None:
+    def update_user(self, user_id: int, answer: str, response_time: float, is_correct: bool = None) -> None:
         user_id = str(user_id)
 
         if user_id not in self._records:

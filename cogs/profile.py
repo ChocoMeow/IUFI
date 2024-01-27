@@ -256,7 +256,7 @@ class Profile(commands.Cog):
         """Shows the items that you own."""
         user = await func.get_user(ctx.author.id)
         embed = discord.Embed(title=f"🎒 {ctx.author.display_name}'s Inventory", color=0x5cb045)
-        embed.description = f"```{'🍬 Starcandies':<21} x{user['candies']}\n"
+        embed.description = f"```{'🍬 Starcandies':<20} x{user['candies']}\n"
 
         for tier, count in user.get("roll").items():
             if count > 0 and tier in iufi.TIERS_BASE.keys():
@@ -267,7 +267,7 @@ class Profile(commands.Cog):
 
         potions_data: dict[str, int] = user.get("potions", {})
         potions = ("\n".join(
-            [f"{potion.split('_')[0].title() + ' ' + potion.split('_')[1].upper() + ' Potion':22} x{amount}"
+            [f"{potion.split('_')[0].title() + ' ' + potion.split('_')[1].upper() + ' Potion':21} x{amount}"
             for potion, amount in potions_data.items() if amount]
         ) if sum(potions_data.values()) else "Potion not found!")
 

@@ -213,7 +213,7 @@ class QuizView(discord.ui.View):
             rank_list = list(RANK_BASE.keys())
 
             if rank[0] in rank_list[rank_list.index(highest_rank[0]) + 1:]:
-                embed.description += f"\n<:{rank[0]}:{rank[1]}> {rank[0].title()} Promotion Rewards```"
+                embed.description += f"\n<:{rank[0]}:{rank[1]}> {rank[0].title()} **Promotion Rewards**```"
                 for index, reward in RANK_BASE[rank[0]]["rewards"].items():
                     if isinstance(reward, list):
                         reward = choice(reward)
@@ -230,7 +230,7 @@ class QuizView(discord.ui.View):
                         embed.description += f"{'🍬 Candy':<18} x{amount}\n"
                     
                     elif reward_name[0] == "roll":
-                        roll_data = TIERS_BASE.get(reward_name[1])[0]
+                        roll_data = TIERS_BASE.get(reward_name[1])
                         embed.description += f"{roll_data[0]} {roll_data[1]:<16} +{amount}\n"
 
                     elif reward_name[0] == "exp":
@@ -251,7 +251,7 @@ class QuizView(discord.ui.View):
         question: Question = self.currect_question
         best_record = question.best_record()
         
-        record_msg = f"*Best Record: <@{best_record[0]}> (`{best_record[1]}s`)*\n" if best_record else ""
+        record_msg = f"**Best Record: <@{best_record[0]}> (`{best_record[1]}s`)**\n" if best_record else ""
         embed = discord.Embed(title=f"Question {self.current + 1} out of {len(self.questions)}", color=QUIZ_LEVEL_BASE.get(question.level)[1][2])
         embed.description = f"**Answer Time: <t:{round(time.time() + question.average_time)}:R>**\n{record_msg}```{question.question}```"
         if question.attachment:
@@ -316,7 +316,7 @@ class QuizView(discord.ui.View):
         used_time = time.time() - self._answering_time
         self._average_time.append(used_time)
         _next = f"<t:{round(time.time() + self._delay_between_questions)}:R>"
-        
+
         if self._timeout < time.time():
             question.update_average_time(question.average_time * (1 + .1))
             msg = self.gen_response().format(next=_next)
@@ -327,8 +327,8 @@ class QuizView(discord.ui.View):
             msg = self.gen_response(correct).format(time=f"`{func.convert_seconds(used_time)}`", correct_answer=f"`{self.currect_question.answers[0]}`", next=_next)
             self._results[self.current] = correct
             question.update_average_time(used_time)
+            question.update_user(self.author.id, modal.answer, used_time, correct)
 
-        question.update_user(self.author.id, modal.answer, used_time, correct)
         message: discord.Message = await interaction.followup.send(msg, ephemeral=True)
         await message.delete(delay=self._delay_between_questions)
         return await self.next_question()
