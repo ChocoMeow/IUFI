@@ -5,7 +5,11 @@ from discord.ext import commands
 from random import choice
 from iufi import (
     Question,
-    QUIZ_LEVEL_BASE
+    QuestionPool as QP,
+    TIERS_BASE,
+    POTIONS_BASE,
+    QUIZ_LEVEL_BASE,
+    RANK_BASE
 )
 
 from typing import Any
@@ -56,7 +60,16 @@ QUESTION_RESPONSE_BASE: dict[str, dict[str, list]] = {
 }
 
 QUIZ_SETTINGS: dict[str, int] = {
-    "reset_price": 15
+    "reset_price": 30,
+    "default": {
+        "points": 0,
+        "last_update": 0,
+        "correct": 0,
+        "wrong": 0,
+        "timeout": 0,
+        "average_time": 0,
+        "highest_points": 0
+    }
 }
 
 class AnswerModal(discord.ui.Modal):
@@ -156,24 +169,22 @@ class QuizView(discord.ui.View):
         self._ended_time = time.time()
         summary, total_points = self.cal_results()
         average_time = sum(self._average_time) / len(self.questions)
+        query = {}
+        new_record = False
 
         user = await func.get_user(self.author.id)
-        state = user.get("game_state", {}).get("quiz_game", {
-            "points": 0,
-            "last_update": 0,
-            "correct": 0,
-            "wrong": 0,
-            "timeout": 0,
-            "average_time": 0
-        })
+        state = user.get("game_state", {}).get("quiz_game", QUIZ_SETTINGS["default"])
 
-        start_date, end_date = func.get_month_unix_timestamps()
-        if not (start_date <= state["last_update"] <= end_date):
-            state["points"] = 0
+        start_time, end_time = func.get_month_unix_timestamps()
+        if not (start_time <= state["last_update"] <= end_time):
+            state["points"], state["highest_points"] = 0, 0
 
-        # Increase points by total_points and ensure it's not less than 0
-        state["points"] += total_points
-        state["points"] = max(0, state["points"])
+        # Increase points by total_points and ensure it's not less than 0 and update the highest_points
+        if state["points"] > state["highest_points"]:
+            state["highest_points"] = state["points"]
+            new_record = True
+
+        state["points"] = max(0, state["points"] + total_points)
 
         # Update the last update time
         state["last_update"] = time.time()
@@ -186,6 +197,7 @@ class QuizView(discord.ui.View):
         # Calculate the new average time
         total_average_time = state["correct"] + state["wrong"] + state["timeout"]
         state["average_time"] = round(((total_average_time * state["average_time"]) + average_time) / (total_average_time + 1), 1) if state["average_time"] else average_time
+        query["$set"] = {"game_state.quiz_game": state}
 
         embed = discord.Embed(title="Quiz Result", color=discord.Color.random())
         embed.description = f"```{summary}```" \
@@ -193,7 +205,43 @@ class QuizView(discord.ui.View):
                             f"{'🕘 Avg Time:':<12} {func.convert_seconds(average_time)} {'🔺' if average_time < state['average_time'] else '🔻'}\n" \
                             f"{'🔥 Points:':<12} {state['points']} ({'+' if total_points >= 0 else '-'}{abs(total_points)})```"
 
-        await func.update_user(self.author.id, {"$set": {"game_state.quiz_game": state}})
+        if new_record:
+            rank: tuple[str, int] = QP.get_rank(state["points"])
+            highest_rank: tuple[str, int] = QP.get_rank(state["highest_points"])
+            rank_list = list(RANK_BASE.keys())
+
+            if rank[0] in rank_list[rank_list.index(highest_rank[0]) + 1:]:
+                embed.description += f"\n<:{rank[0]}:{rank[1]}> {rank[0].title()} Promotion Rewards```"
+                for index, reward in RANK_BASE[rank[0]]["rewards"].items():
+                    if isinstance(reward, list):
+                        reward = choice(reward)
+                    
+                    reward_name, amount = reward
+                    if "$inc" not in query:
+                        query["$inc"] = {}
+
+                    query["$inc"][reward_name] = amount
+                    reward_name = reward_name.split(".")
+
+                    embed.description += f"{index}. "
+                    if reward_name[0] == "candies":
+                        embed.description += f"{'🍬 Candy':<18} x{amount}\n"
+                    
+                    elif reward_name[0] == "roll":
+                        roll_data = TIERS_BASE.get(reward_name[1])[0]
+                        embed.description += f"{roll_data[0]} {roll_data[1]:<16} +{amount}\n"
+
+                    elif reward_name[0] == "exp":
+                        embed.description += f"{'⚔️ Exp':<19} +{amount}\n"
+
+                    else:
+                        reward_name = reward_name[1].split("_")
+                        potion_data = POTIONS_BASE.get(reward_name[0])
+                        embed.description += f"{potion_data.get('emoji') + ' ' + reward_name[0].title() + ' ' + reward_name[1].upper() + ' Potion':<18} x{amount}\n"
+
+                embed.description += "```"
+
+        await func.update_user(self.author.id, query)
         await self.response.edit(content="This quiz has expired.", embed=embed, view=None)
         self.stop()
         

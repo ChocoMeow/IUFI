@@ -71,17 +71,16 @@ RANK_BASE: dict[str, dict[str, Any]] = {
         "emoji_id": "1173065442009555096",
         "points": 0,
         "questions": [('easy', 5)],
-        "rewards": {
-            "candies": 30
-        }
+        "rewards": {}
     },
     "bronze": {
         "emoji_id": "1173063915098345472",
         "points": 10,
         "questions": [('easy', 4), ('medium', 1)],
         "rewards": {
-            1: ("candies", 50),
-            2: [("potions.speed_ii", 1), ("potions.luck_ii", 1)],
+            1: ("exp", 50),
+            2: ("candies", 50),
+            3: [("potions.speed_ii", 1), ("potions.luck_ii", 1)],
         }
     },
     "silver": {
@@ -89,9 +88,10 @@ RANK_BASE: dict[str, dict[str, Any]] = {
         "points": 25,
         "questions": [('easy', 3), ('medium', 2)],
         "rewards": {
-            1: ("candies", 80),
-            2: ("roll.epic", 1),
-            3: [("potions.speed_iii", 1), ("potions.luck_iii", 1)],
+            1: ("exp", 70),
+            2: ("candies", 80),
+            3: ("roll.epic", 1),
+            4: [("potions.speed_iii", 1), ("potions.luck_iii", 1)],
         }
     },
     "gold": {
@@ -99,9 +99,10 @@ RANK_BASE: dict[str, dict[str, Any]] = {
         "points": 60,
         "questions": [('easy', 2), ('medium', 3)],
         "rewards": {
-            1: ("candies", 80),
-            2: ("roll.epic", 1),
-            3: [("potions.speed_iii", 1), ("potions.luck_iii", 1)],
+            1: ("exp", 90),
+            2: ("candies", 80),
+            3: ("roll.epic", 1),
+            4: [("potions.speed_iii", 1), ("potions.luck_iii", 1)],
         }
     },
     "platinum": {
@@ -109,9 +110,10 @@ RANK_BASE: dict[str, dict[str, Any]] = {
         "points": 100,
         "questions": [('easy', 1), ('medium', 4)],
         "rewards": {
-            1: ("candies", 100),
-            2: ("roll.epic", 1),
-            3: [("potions.speed_iii", 1), ("potions.luck_iii", 1)],
+            1: ("exp", 110),
+            2: ("candies", 100),
+            3: ("roll.epic", 1),
+            4: [("potions.speed_iii", 1), ("potions.luck_iii", 1)],
         }
     },
     "diamond": {
@@ -119,9 +121,13 @@ RANK_BASE: dict[str, dict[str, Any]] = {
         "points": 200,
         "questions": [('medium', 5)],
         "rewards": {
-            1: ("candies", 150),
-            2: ("roll.epic", 2),
-            3: [("potions.speed_iii", 1), ("potions.luck_iii", 1)],
+            1: ("exp", 130),
+            2: ("candies", 150),
+            3: ("roll.epic", 2),
+            4: [("potions.speed_iii", 1), ("potions.luck_iii", 1)],
+        },
+        "monthly_rewards": {
+            1: ("discord.role", 1200337560665341952)
         }
     },
     "master": {
@@ -129,10 +135,14 @@ RANK_BASE: dict[str, dict[str, Any]] = {
         "points": 350,
         "questions": [('medium', 3), ('hard', 2)],
         "rewards": {
-            1: ("candies", 200),
-            2: ("roll.epic", 1),
-            3: ("roll.legendary", 1),
-            4: [("potions.speed_iii", 1), ("potions.luck_iii", 1)],
+            1: ("exp", 150),
+            2: ("candies", 200),
+            3: ("roll.epic", 1),
+            4: ("roll.legendary", 1),
+            5: [("potions.speed_iii", 1), ("potions.luck_iii", 1)],
+        },
+        "monthly_rewards": {
+            1: ("discord.role", 1200337519909273650)
         }
     },
     "challeneger": {
@@ -140,10 +150,11 @@ RANK_BASE: dict[str, dict[str, Any]] = {
         "points": 500,
         "questions": [('medium', 2), ('hard', 3)],
         "rewards": {
-            1: ("candies", 400),
-            2: ("roll.epic", 1),
-            3: ("roll.legendary", 1),
-            4: [("potions.speed_iii", 1), ("potions.luck_iii", 1)],
+            1: ("exp", 200),
+            2: ("candies", 400),
+            3: ("roll.epic", 1),
+            4: ("roll.legendary", 1),
+            5: [("potions.speed_iii", 1), ("potions.luck_iii", 1)],
         }
     }
 }
