@@ -70,12 +70,14 @@ RANK_BASE: dict[str, dict[str, Any]] = {
     "milk": {
         "emoji_id": "1173065442009555096",
         "points": 0,
+        "discord_role": None,
         "questions": [('easy', 5)],
         "rewards": {}
     },
     "bronze": {
         "emoji_id": "1173063915098345472",
         "points": 10,
+        "discord_role": None,
         "questions": [('easy', 4), ('medium', 1)],
         "rewards": {
             1: ("exp", 50),
@@ -86,6 +88,7 @@ RANK_BASE: dict[str, dict[str, Any]] = {
     "silver": {
         "emoji_id": "1173063924116095087",
         "points": 25,
+        "discord_role": None,
         "questions": [('easy', 3), ('medium', 2)],
         "rewards": {
             1: ("exp", 70),
@@ -97,6 +100,7 @@ RANK_BASE: dict[str, dict[str, Any]] = {
     "gold": {
         "emoji_id": "1173063917614927975",
         "points": 60,
+        "discord_role": None,
         "questions": [('easy', 2), ('medium', 3)],
         "rewards": {
             1: ("exp", 90),
@@ -108,6 +112,7 @@ RANK_BASE: dict[str, dict[str, Any]] = {
     "platinum": {
         "emoji_id": "1173063922564218961",
         "points": 100,
+        "discord_role": None,
         "questions": [('easy', 1), ('medium', 4)],
         "rewards": {
             1: ("exp", 110),
@@ -119,20 +124,19 @@ RANK_BASE: dict[str, dict[str, Any]] = {
     "diamond": {
         "emoji_id": "1173064418075099167",
         "points": 200,
+        "discord_role": None,
         "questions": [('medium', 5)],
         "rewards": {
             1: ("exp", 130),
             2: ("candies", 150),
             3: ("roll.epic", 2),
             4: [("potions.speed_iii", 1), ("potions.luck_iii", 1)],
-        },
-        "monthly_rewards": {
-            1: ("discord.role", 1200337560665341952)
         }
     },
     "master": {
         "emoji_id": "1173063919846293535",
         "points": 350,
+        "discord_role": None,
         "questions": [('medium', 3), ('hard', 2)],
         "rewards": {
             1: ("exp", 150),
@@ -141,13 +145,11 @@ RANK_BASE: dict[str, dict[str, Any]] = {
             4: ("roll.legendary", 1),
             5: [("potions.speed_iii", 1), ("potions.luck_iii", 1)],
         },
-        "monthly_rewards": {
-            1: ("discord.role", 1200337519909273650)
-        }
     },
     "challeneger": {
         "emoji_id": "1173064415453663242",
         "points": 500,
+        "discord_role": None,
         "questions": [('medium', 2), ('hard', 3)],
         "rewards": {
             1: ("exp", 200),
@@ -451,12 +453,14 @@ class Question:
             self._average_time = ((self._average_time * self.total) + time) / (self.total + 1)
 
     def update_user(self, user_id: int, answer: str, response_time: float, is_correct: bool = None) -> None:
-        user_id = str(user_id)
+        if not self.is_updated:
+            self.is_updated = True
 
+        user_id = str(user_id)
         if user_id not in self._records:
             self._records[user_id] = {
                 "answers": [],
-                "fastest_response_time": 0.0
+                "fastest_response_time": round(response_time, 1)
             }
 
         user_record = self._records[user_id]

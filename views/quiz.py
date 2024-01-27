@@ -213,7 +213,7 @@ class QuizView(discord.ui.View):
             rank_list = list(RANK_BASE.keys())
 
             if rank[0] in rank_list[rank_list.index(highest_rank[0]) + 1:]:
-                embed.description += f"\n<:{rank[0]}:{rank[1]}> {rank[0].title()} **Promotion Rewards**```"
+                embed.description += f"\n<:{rank[0]}:{rank[1]}> **{rank[0].title()} Promotion Rewards**```"
                 for index, reward in RANK_BASE[rank[0]]["rewards"].items():
                     if isinstance(reward, list):
                         reward = choice(reward)
