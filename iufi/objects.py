@@ -405,6 +405,7 @@ class Question:
         num_wrong: int = 0,
         average_time: float = 0.0,
         attachment: str = None,
+        records: dict | None = None,
         tips: str = "",
         default_level: str = None
     ):
@@ -417,6 +418,7 @@ class Question:
         self._wrong: int = num_wrong
         self._average_time: float = average_time
         self._default_level: str = default_level
+        self._records: dict | None = records if records else {}
 
         self.is_updated: bool = False
 
@@ -448,6 +450,27 @@ class Question:
         else:
             self._average_time = ((self._average_time * self.total) + time) / (self.total + 1)
 
+    def update_user(self, user_id: int, answer: str, response_time: float, is_correct: bool) -> None:
+        user_id = str(user_id)
+
+        if user_id not in self._records:
+            self._records[user_id] = {
+                "answers": [],
+                "fastest_response_time": 0.0
+            }
+
+        user_record = self._records[user_id]
+        user_record["answers"].append(answer)
+
+        if is_correct:
+            user_record["fastest_response_time"] = min(user_record["fastest_response_time"], round(response_time, 1))
+
+    def best_record(self) -> tuple[str, float] | None:
+        sorted_records = sorted(self._records.items(), key=lambda item: item[1]["fastest_response_time"])
+
+        # Return the user ID and fastest_response_time of the first record
+        return (sorted_records[0][0], sorted_records[0][1]["fastest_response_time"]) if sorted_records else None 
+    
     def toDict(self) -> dict:
         if self.is_updated:
             self.is_updated = False
@@ -459,6 +482,7 @@ class Question:
             "num_wrong": self._wrong,
             "average_time": self.average_time,
             "attachment": self.attachment,
+            "records": self._records,
             "default_level": self._default_level
         }
     

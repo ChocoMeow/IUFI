@@ -247,9 +247,11 @@ class QuizView(discord.ui.View):
         
     def build_embed(self) -> discord.Embed:
         question: Question = self.currect_question
-
+        best_record = question.best_record()
+        
+        record_msg = f"*Best Record: <@{best_record[0]}> (`{best_record[1]}s`)*\n" if best_record else ""
         embed = discord.Embed(title=f"Question {self.current + 1} out of {len(self.questions)}", color=QUIZ_LEVEL_BASE.get(question.level)[1][2])
-        embed.description = f"**Answer Time: <t:{round(time.time() + question.average_time)}:R>**\n```{question.question}```"
+        embed.description = f"**Answer Time: <t:{round(time.time() + question.average_time)}:R>**\n{record_msg}```{question.question}```"
         if question.attachment:
             embed.set_image(url=question.attachment)
 
@@ -324,6 +326,7 @@ class QuizView(discord.ui.View):
             self._results[self.current] = correct
             question.update_average_time(used_time)
 
+        question.update_user(self.author.id, modal.answer, used_time, correct)
         message: discord.Message = await interaction.followup.send(msg, ephemeral=True)
         await message.delete(delay=self._delay_between_questions)
         return await self.next_question()
