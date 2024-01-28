@@ -170,7 +170,7 @@ class QuizView(discord.ui.View):
         
         self._ended_time = time.time()
         summary, total_points = self.cal_results()
-        average_time = sum(self._average_time) / len(self.questions)
+        average_time = sum(self._average_time) / (len(self.questions) - self._results.count(None))
         query = {}
         new_record = False
 

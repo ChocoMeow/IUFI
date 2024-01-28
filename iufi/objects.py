@@ -464,7 +464,8 @@ class Question:
             }
 
         user_record = self._records[user_id]
-        user_record["answers"].append(answer)
+        if answer not in user_record["answers"]:
+            user_record["answers"].append(answer)
 
         if is_correct:
             user_record["fastest_response_time"] = min(user_record["fastest_response_time"], round(response_time, 1))
