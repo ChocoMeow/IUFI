@@ -1,4 +1,4 @@
-import discord, time, asyncio
+import discord, time, asyncio, copy
 import functions as func
 
 from discord.ext import commands
@@ -175,7 +175,7 @@ class QuizView(discord.ui.View):
         new_record = False
 
         user = await func.get_user(self.author.id)
-        state = user.get("game_state", {}).get("quiz_game", QUIZ_SETTINGS["default"])
+        state = user.get("game_state", {}).get("quiz_game", copy.deepcopy(QUIZ_SETTINGS["default"]))
 
         start_time, end_time = func.get_month_unix_timestamps()
         if not (start_time <= state["last_update"] <= end_time):

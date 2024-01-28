@@ -79,7 +79,7 @@ class Tasks(commands.Cog):
                 continue
 
             cd: dict[str, float] = doc["cooldown"]
-            for name, (emoji, cd) in func.COOLDOWN_BASE.items():
+            for name, (emoji, _) in func.COOLDOWN_BASE.items():
                 if name != "claim":
                     await self.check_and_schedule(user, current_time, cd.get(name, 0), f"{emoji} Your {name.split('_')[0]} is ready! Join <#{random.choice(self.game_channel_ids)}> and roll now.")
 
