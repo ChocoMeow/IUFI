@@ -1,8 +1,13 @@
-import os, time, copy
+import os, time, copy, json
 
 from motor.motor_asyncio import (
     AsyncIOMotorClient,
     AsyncIOMotorCollection,
+)
+
+from datetime import (
+    date,
+    timedelta
 )
 
 from dotenv import load_dotenv
@@ -28,7 +33,6 @@ DAILY_QUEST_DB: AsyncIOMotorCollection = None
 
 USERS_BUFFER: dict[int, dict[str, Any]] = {}
 DAILY_QUEST_BUFFER: dict[int, dict[str, Any]] = {}
-COOLDOWN: dict[int, dict[str, float]] = {}
 MAX_CARDS: int = 100
 DEAFAULT_EXP = 100
 
@@ -53,21 +57,13 @@ USER_BASE: dict[str, Any] = {
     "profile": {
         "bio": "",
         "main": ""
-    },
-    "gifts": 0,
-    "gifts_given": 0
+    }
 }
 
 DAILY_QUEST_BASE: dict[str, Any] = {
     "claimed": 0,
     "next_reset_at": 0,
     "quests": []
-}
-
-COOLDOWN_BASE: dict[str, int] = {
-    "roll": 600,
-    "claim": 180,
-    "daily": 82800,
 }
 
 DAILY_QUESTS = [
@@ -131,6 +127,31 @@ def clean_text(input_text: str, allow_spaces: bool = True, convert_to_lower: boo
         cleaned_text = cleaned_text.lower()
     
     return cleaned_text
+
+def get_week_unix_timestamps() -> tuple[float, float]:
+    today = date.today()
+
+    # Get the first day of this week (Monday)
+    start_of_this_week = today - timedelta(days=today.weekday())
+
+    # Get the first day of next week (next Monday)
+    start_of_next_week = start_of_this_week + timedelta(days=7)
+
+    return time.mktime(start_of_this_week.timetuple()), time.mktime(start_of_next_week.timetuple())
+
+def get_month_unix_timestamps() -> tuple[float, float]:
+    today = date.today()
+
+    # Get the first day of this month
+    start_of_this_month = date(today.year, today.month, 1)
+    
+    # Get the first day of next month
+    if today.month == 12:
+        start_of_next_month = date(today.year + 1, 1, 1)
+    else:
+        start_of_next_month = date(today.year, today.month + 1, 1)
+
+    return time.mktime(start_of_this_month.timetuple()), time.mktime(start_of_next_month.timetuple())
 
 def match_string(input_string: str, word_list: list[str]) -> str:
     for word in word_list:

@@ -13,6 +13,7 @@ class IUFI(commands.Bot):
         super().__init__(*args, **kwargs)
 
         self.iufi: iufi.CardPool = iufi.CardPool()
+        self.questions: iufi.QuestionPool = iufi.QuestionPool()
 
     async def on_message(self, message: discord.Message, /) -> None:
         if message.author.bot or not message.guild:
@@ -89,6 +90,10 @@ class IUFI(commands.Bot):
 
                         print(f"Added New Image {new_image}({category}) -> ID: {card_id}")
 
+        questions = func.open_json("questions.json")
+        for _, data in questions.items():
+            iufi.QuestionPool.add_question(iufi.Question(**data))
+
         for module in os.listdir(os.path.join(func.ROOT_DIR, 'cogs')):
             if module.endswith(".py"):
                 await self.load_extension(f"cogs.{module[:-3]}")
@@ -101,6 +106,7 @@ class IUFI(commands.Bot):
         print("------------------")
         print(f"Discord Version: {discord.__version__}")
         print(f"Loaded {len(self.iufi._cards)} images")
+        print(f"Loaded {len(self.questions._questions)} questions")
 
     async def on_command_error(self, ctx: commands.Context, exception, /) -> None:
         error = getattr(exception, 'original', exception)

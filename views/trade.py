@@ -11,8 +11,8 @@ class TradeView(discord.ui.View):
             card: Card,
             candies: int,
             timeout: float | None = 43_200,
-            
         ) -> None:
+        
         super().__init__(timeout=timeout)
 
         self.seller: discord.Member = seller
@@ -84,4 +84,3 @@ class TradeView(discord.ui.View):
         if interaction.user == self.seller:
             await self.on_timeout()
             self.stop()
-

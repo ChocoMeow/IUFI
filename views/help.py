@@ -16,7 +16,8 @@ class HelpView(discord.ui.View):
 
         self.add_item(discord.ui.Button(label='Github', emoji=':github:1098265017268322406', url='https://github.com/ChocoMeow/IUFI'))
         self.add_item(discord.ui.Button(label='Beginner Guide', emoji='📗', url='https://docs.google.com/document/d/1VAD20wZQ56S_wDeMJlwIKn_jImIPuxh2lgy1fn17z0c/edit'))
-    
+        self.add_item(discord.ui.Button(label='Donate', emoji='🎁', url='https://ko-fi.com/chocoo'))
+        
     async def on_error(self, error, item, interaction) -> None:
         return
 

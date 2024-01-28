@@ -1,4 +1,4 @@
-import discord
+import discord, iufi
 import functions as func
 
 from discord.ext import commands
@@ -24,13 +24,18 @@ class Info(commands.Cog):
         embed = discord.Embed(title="🏆   IUFI Leaderboard", color=discord.Color.random())
         embed.description = f"Your current position is `{await func.USERS_DB.count_documents({'exp': {'$gt': user.get('exp', 0)}}) + 1}`\n```"
 
+        description = ""
         for index, user in enumerate(users):
-            level, exp = func.calculate_level(user["exp"])
+            level, _ = func.calculate_level(user["exp"])
             member = self.bot.get_user(user['_id'])
 
             if member:
-                embed.description += f"{LEADERBOARD_EMOJIS[index if index <= 2 else 3]} {member.display_name:<15} {level:>4} ⚔️\n"
-        embed.description += "```"
+                description += f"{LEADERBOARD_EMOJIS[index if index <= 2 else 3]} {member.display_name:<15} {level:>4} ⚔️\n"
+        
+        if not description:
+            description = "The leaderboard is currently empty."
+
+        embed.description = f"```{description}```"
         embed.set_thumbnail(url=icon.url if (icon := ctx.guild.icon) else None)
 
         await ctx.reply(embed=embed)
@@ -67,15 +72,47 @@ class Info(commands.Cog):
         embed = discord.Embed(title=f"🏆   Level {level} Matching Game Leaderboard", color=discord.Color.random())
         embed.description = (f"Your current position is `{better_states + 1}`" if user else "You haven't play any match game!") + "\n```"
 
+        description = ""
         for index, user in enumerate(users):
-            game_state: dict[str, float | int] = user.get("game_state", {}).get("match_game", {}).get(level, {"matched": 0, "click_left": 0, "finished_time": 0})
+            game_state: dict[str, float | int] = user.get("game_state", {}).get("match_game", {}).get(level)
+            if not game_state:
+                continue
+
             member = self.bot.get_user(user['_id'])
-
             if member:
-                embed.description += f"{LEADERBOARD_EMOJIS[index if index <= 2 else 3]} {member.display_name:<14} 🃏{game_state['matched']:<2} 🕒{func.convert_seconds(game_state['finished_time']):<10}\n"
-        embed.description += "```"
-        embed.set_thumbnail(url=icon.url if (icon := ctx.guild.icon) else None)
+                description += f"{LEADERBOARD_EMOJIS[index if index <= 2 else 3]} {member.display_name:<14} 🃏{game_state['matched']:<2} 🕒{func.convert_seconds(game_state['finished_time']):<10}\n"
+        
+        if not description:
+            description = "The leaderboard is currently empty."
 
+        embed.description = f"```{description}```"
+        embed.set_thumbnail(url=icon.url if (icon := ctx.guild.icon) else None)
+        await ctx.reply(embed=embed)
+    
+    @leaderboard.command(aliases=["q"])
+    async def quiz(self, ctx: commands.Context):
+        """Shows the IUFI Quiz leaderboard."""
+        start_time, end_time = func.get_month_unix_timestamps()
+        users = await func.USERS_DB.find({f"game_state.quiz_game.last_update": {"$gt":start_time, "$lte":end_time}}).sort(f"game_state.quiz_game.points", -1).limit(10).to_list(10)
+
+        embed = discord.Embed(title=f"🏆   Quiz Leaderboard", color=discord.Color.random())
+
+        description = ""
+        for user in users:
+            game_state: dict[str, float | int] = user.get("game_state", {}).get("quiz_game")
+            if not game_state:
+                continue
+
+            member = self.bot.get_user(user['_id'])
+            if member:
+                rank = iufi.QuestionPool.get_rank(game_state['points'])
+                description += f"<:{rank[0]}:{rank[1]}> `{member.display_name:<14} {game_state['points']:<6} 🔥`\n"
+        
+        if not description:
+            description = "The leaderboard is currently empty."
+
+        embed.description = f"The next reset is <t:{int(end_time)}:R>\n{description}"
+        embed.set_thumbnail(url=icon.url if (icon := ctx.guild.icon) else None)
         await ctx.reply(embed=embed)
 
     @commands.command(aliases=["h"])

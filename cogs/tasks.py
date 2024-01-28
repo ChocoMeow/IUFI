@@ -11,10 +11,12 @@ class Tasks(commands.Cog):
 
         self.cache_clear.start()
         self.reminder.start()
+        # self.quiz_timer.start()
 
     def cog_unload(self):
         self.cache_clear.cancel()
         self.reminder.cancel()
+        self.quiz_timer.cancel()
     
     async def schedule_message(self, user: discord.User, wait_time: int, message: str) -> None:
         await asyncio.sleep(wait_time)
@@ -27,23 +29,47 @@ class Tasks(commands.Cog):
         if 0 <= (cd := round(cd_time - current_time)) <= 600:
             self.bot.loop.create_task(self.schedule_message(user, cd, message))
 
-    @tasks.loop(hours=2.0)
+    async def distribute_monthly_quiz_rewards(self) -> None:
+        start_time, end_time = func.get_month_unix_timestamps()
+
+        guild: discord.Guild = self.bot.get_guild(214199357170253834)
+        if not guild:
+            return
+        
+        roles: dict[str, discord.Role] = {
+            rank: guild.get_role(data["discord_role"])
+            for rank, data in iufi.RANK_BASE.items() if data["discord_role"]
+        }
+        for role in roles.values():
+            for member in role.members:
+                await member.remove_roles(role)
+
+        users = func.USERS_DB.find({f"game_state.quiz_game.last_update": {"$gt":start_time, "$lte":end_time}})
+        async for user in users:
+            user = guild.get_member(user["_id"])
+            if user:
+                rank = iufi.QuestionPool.get_rank(user["game_state"]["quiz_game"]["points"])[0]
+                await user.add_roles(roles[rank])
+
+    @tasks.loop(hours=1.0)
     async def cache_clear(self):
         func.USERS_BUFFER.clear()
 
-        iufi.CardPool.search_image = None
         for card in iufi.CardPool._cards.values():
             card._image = None
 
+        questions = {f"{i}": q.toDict() for i, q in enumerate(iufi.QuestionPool._questions, start=1) if q.is_updated}
+        if questions:
+            func.update_json("questions.json", questions)
+        
     @tasks.loop(minutes=10.0)
     async def reminder(self) -> None:
         time_range = {"$gt": (current_time := time.time()), "$lt": current_time + 600}
         query = {"$and":[
             {"reminder": True},
             {"$or": [
-                {"cooldown.roll": time_range},
-                {"cooldown.daily": time_range},
-                {"cooldown.match_game": time_range}
+                {f"cooldown.{name}": time_range}
+                for name in func.COOLDOWN_BASE.keys() if name != "claim"
             ]}
         ]}
 
@@ -53,9 +79,15 @@ class Tasks(commands.Cog):
                 continue
 
             cd: dict[str, float] = doc["cooldown"]
-            await self.check_and_schedule(user, current_time, cd.get("roll", 0), f"🎲 Your roll is ready! Join <#{random.choice(self.game_channel_ids)}> and roll now.")
-            await self.check_and_schedule(user, current_time, cd.get("daily", 0), f"📅 Your daily is ready! Join <#{random.choice(self.game_channel_ids)}> and claim your daily.")
-            await self.check_and_schedule(user, current_time, cd.get("match_game", 0), f"🃏 Your game is ready! Join <#{random.choice(self.game_channel_ids)}> and play now.")
+            for name, (emoji, cd) in func.COOLDOWN_BASE.items():
+                if name != "claim":
+                    await self.check_and_schedule(user, current_time, cd.get(name, 0), f"{emoji} Your {name.split('_')[0]} is ready! Join <#{random.choice(self.game_channel_ids)}> and roll now.")
+
+    @tasks.loop(minutes=10.0)
+    async def quiz_timer(self) -> None:
+        _, end_time = func.get_month_unix_timestamps()
+        if end_time - time.time() <= 600:
+            self.bot.loop.create_task(self.distribute_monthly_quiz_rewards())
 
 async def setup(bot: commands.Bot):
     await bot.add_cog(Tasks(bot))

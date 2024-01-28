@@ -4,7 +4,8 @@ import functions as func
 from discord.ext import commands
 from views import (
     CollectionView,
-    PhotoCardView
+    PhotoCardView,
+    GAME_SETTINGS
 )
 
 DAILY_ROWS: list[str] = ["🟥", "🟧", "🟨", "🟩", "🟦", "🟪"]
@@ -22,7 +23,7 @@ class Profile(commands.Cog):
         self.bot = bot
         self.emoji = "👤"
         self.invisible = False
-        
+
     @commands.command(aliases=["p"])
     async def profile(self, ctx: commands.Context, member: discord.Member = None):
         """Shows the profile of a member. If called without a member, shows your own profile."""
@@ -33,13 +34,29 @@ class Profile(commands.Cog):
         level, exp = func.calculate_level(user['exp'])
         bio = user.get('profile', {}).get('bio', 'Empty Bio')
 
+        quiz_stats = user.get("game_state", {}).get("quiz_game", {
+            "points": 0,
+            "correct": 0,
+            "wrong": 0,
+            "timeout": 0,
+            "average_time": 0
+        })
+
+        card_match_stats = user.get("game_state", {}).get("match_game", {})
+
+        total_questions = quiz_stats["wrong"] + quiz_stats["timeout"]
+        rank_name, rank_emoji = iufi.QuestionPool.get_rank(quiz_stats["points"])
+
         embed = discord.Embed(title=f"👤 {member.display_name}'s Profile", color=discord.Color.random())
-        embed.description = f"```{bio}```\n" if bio else ""
-        embed.description += f"```📙 Photocards: {len(user.get('cards', []))}/{func.MAX_CARDS}\n⚔️ Level: {level} ({(exp/func.DEAFAULT_EXP)*100:.1f}%)```"
-        
+        embed.description = f"```{bio}```" if bio else ""
+        embed.description += f"```📙 Photocards: {len(user.get('cards', []))}/{func.MAX_CARDS}\n⚔️ Level: {level} ({(exp/func.DEAFAULT_EXP)*100:.1f}%)```\u200b"
+
+        embed.add_field(name="Ranked Stats:", value=f"> <:{rank_name}:{rank_emoji}> {rank_name.title()} (`{quiz_stats['points']}`)\n> 🎯 K/DA: `{round(quiz_stats['correct'] / total_questions, 1) if total_questions else 0}` (C: `{quiz_stats['correct']}` | W: `{quiz_stats['wrong'] + quiz_stats['timeout']}`)\n> 🕒 Average Time: `{func.convert_seconds(quiz_stats['average_time'])}`", inline=True)
+        embed.add_field(name="Card Match Stats:", value="\n".join(f"> {DAILY_ROWS[int(level) - 4]} **Level {level}**: " + (f"🃏 `{stats.get('matched', 0)}` 🕒 `{func.convert_seconds(stats.get('finished_time'))}`" if (stats := card_match_stats.get(level)) else "Not attempt yet") for level in GAME_SETTINGS.keys()), inline=True)
+
         card = iufi.CardPool.get_card(user["profile"]["main"])
         if card and card.owner_id == user["_id"]:
-            embed.set_image(url=f"attachment://image.{card.format}")
+            embed.set_thumbnail(url=f"attachment://image.{card.format}")
             return await ctx.reply(file=discord.File(await asyncio.to_thread(card.image_bytes), filename=f"image.{card.format}"), embed=embed)
         
         await ctx.reply(embed=embed)
@@ -203,7 +220,7 @@ class Profile(commands.Cog):
         
         reward = {"candies": 5} if claimed % 5 else {WEEKLY_REWARDS[(claimed//5) - 1][1]: WEEKLY_REWARDS[(claimed//5) - 1][2]}
         await func.update_user(ctx.author.id, {
-            "$set": {"claimed": claimed, "cooldown.daily": time.time() + func.COOLDOWN_BASE["daily"]},
+            "$set": {"claimed": claimed, "cooldown.daily": time.time() + func.COOLDOWN_BASE["daily"][1]},
             "$inc": reward
         })
 
@@ -239,14 +256,14 @@ class Profile(commands.Cog):
         """Shows the items that you own."""
         user = await func.get_user(ctx.author.id)
         embed = discord.Embed(title=f"🎒 {ctx.author.display_name}'s Inventory", color=0x5cb045)
-        embed.description = f"```{'🍬 Starcandies':<21} x{user['candies']}\n"
+        embed.description = f"```{'🍬 Starcandies':<20} x{user['candies']}\n"
 
         for tier, count in user.get("roll").items():
             if count > 0 and tier in iufi.TIERS_BASE.keys():
                 emoji, _ = iufi.TIERS_BASE.get(tier)
                 embed.description += f"{emoji} {tier.title() + ' Rolls':<18} x{count}\n"
 
-        embed.description += f"{'🎁 Gifts':<20} x{user.get('gifts', 0)}\n\n"
+        embed.description += f"\n\n"
 
         potions_data: dict[str, int] = user.get("potions", {})
         potions = ("\n".join(
