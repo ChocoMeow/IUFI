@@ -83,7 +83,7 @@ class AnswerModal(discord.ui.Modal):
                 placeholder=question.question if len(question.question) <= 100 else question.question[:97] + "...",
                 min_length=1,
                 max_length=100,
-                style=discord.TextStyle.long,
+                style=discord.TextStyle.short,
             )
         )
 
