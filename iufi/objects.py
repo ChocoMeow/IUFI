@@ -1,13 +1,15 @@
 from __future__ import annotations
 
-import random, os, asyncio
+import random, os, asyncio, Levenshtein
 import functions as func
 
 from PIL import Image, ImageDraw, ImageSequence
 from io import BytesIO
-from typing import TYPE_CHECKING
+from difflib import SequenceMatcher
+from typing import TYPE_CHECKING, Any
 
-from .exceptions import IUFIException, ImageLoadError
+from .exceptions import ImageLoadError, IUFIException
+
 if TYPE_CHECKING:
     from .pool import CardPool
 
@@ -33,7 +35,8 @@ FRAMES_BASE: dict[str, tuple[str, str]] = {
     "lilac": ("💐", 60),
     "palette": ("🎨", 60),
     "starfish": ("🍥", 60),
-    "cactus": ("🌵", 60)
+    "cactus": ("🌵", 60),
+    "snow": ("❄️", 60)
 }
 
 POTIONS_BASE: dict[str, str | dict[str, float]] = {
@@ -53,6 +56,107 @@ POTIONS_BASE: dict[str, str | dict[str, float]] = {
             "i": 3,
             "ii": 4,
             "iii": 6
+        }
+    }
+}
+
+QUIZ_LEVEL_BASE: dict[str, tuple[int, tuple[int, int, hex]]] = {
+    "easy": (10, (1, 1, 0x7CD74B)),
+    "medium": (20, (3, 2, 0xF9E853)),
+    "hard": (30, (5, 3, 0xD75C4B))
+}
+
+RANK_BASE: dict[str, dict[str, Any]] = {
+    "milk": {
+        "emoji_id": "1173065442009555096",
+        "points": 0,
+        "discord_role": None,
+        "questions": [('easy', 5)],
+        "rewards": {}
+    },
+    "bronze": {
+        "emoji_id": "1173063915098345472",
+        "points": 10,
+        "discord_role": None,
+        "questions": [('easy', 4), ('medium', 1)],
+        "rewards": {
+            1: ("exp", 50),
+            2: ("candies", 50),
+            3: [("potions.speed_ii", 1), ("potions.luck_ii", 1)],
+        }
+    },
+    "silver": {
+        "emoji_id": "1173063924116095087",
+        "points": 25,
+        "discord_role": None,
+        "questions": [('easy', 3), ('medium', 2)],
+        "rewards": {
+            1: ("exp", 70),
+            2: ("candies", 80),
+            3: ("roll.epic", 1),
+            4: [("potions.speed_iii", 1), ("potions.luck_iii", 1)],
+        }
+    },
+    "gold": {
+        "emoji_id": "1173063917614927975",
+        "points": 60,
+        "discord_role": None,
+        "questions": [('easy', 2), ('medium', 3)],
+        "rewards": {
+            1: ("exp", 90),
+            2: ("candies", 80),
+            3: ("roll.epic", 1),
+            4: [("potions.speed_iii", 1), ("potions.luck_iii", 1)],
+        }
+    },
+    "platinum": {
+        "emoji_id": "1173063922564218961",
+        "points": 100,
+        "discord_role": None,
+        "questions": [('easy', 1), ('medium', 4)],
+        "rewards": {
+            1: ("exp", 110),
+            2: ("candies", 100),
+            3: ("roll.epic", 1),
+            4: [("potions.speed_iii", 1), ("potions.luck_iii", 1)],
+        }
+    },
+    "diamond": {
+        "emoji_id": "1173064418075099167",
+        "points": 200,
+        "discord_role": None,
+        "questions": [('medium', 5)],
+        "rewards": {
+            1: ("exp", 130),
+            2: ("candies", 150),
+            3: ("roll.epic", 2),
+            4: [("potions.speed_iii", 1), ("potions.luck_iii", 1)],
+        }
+    },
+    "master": {
+        "emoji_id": "1173063919846293535",
+        "points": 350,
+        "discord_role": None,
+        "questions": [('medium', 3), ('hard', 2)],
+        "rewards": {
+            1: ("exp", 150),
+            2: ("candies", 200),
+            3: ("roll.epic", 1),
+            4: ("roll.legendary", 1),
+            5: [("potions.speed_iii", 1), ("potions.luck_iii", 1)],
+        },
+    },
+    "challeneger": {
+        "emoji_id": "1173064415453663242",
+        "points": 500,
+        "discord_role": None,
+        "questions": [('medium', 2), ('hard', 3)],
+        "rewards": {
+            1: ("exp", 200),
+            2: ("candies", 400),
+            3: ("roll.epic", 1),
+            4: ("roll.legendary", 1),
+            5: [("potions.speed_iii", 1), ("potions.luck_iii", 1)],
         }
     }
 }
@@ -293,3 +397,135 @@ class TempCard(CardObject):
     @property
     def is_gif(self) -> bool:
         return isinstance(self.image, list)
+
+class Question:
+    def __init__(
+        self,
+        question: str,
+        answers: list[str],
+        num_correct: int = 0,
+        num_wrong: int = 0,
+        average_time: float = 0.0,
+        attachment: str = None,
+        records: dict | None = None,
+        tips: str = "",
+        default_level: str = None
+    ):
+        self.question: str = question
+        self.answers: list[str] = answers
+        self.attachment: str | None = attachment
+        self.tips: str = tips
+
+        self._correct: int = num_correct
+        self._wrong: int = num_wrong
+        self._average_time: float = average_time
+        self._default_level: str = default_level
+        self._records: dict | None = records if records else {}
+
+        self.is_updated: bool = False
+
+    def check_answer(self, answer: str, threshold: float = .75) -> bool:
+        answer = answer.lower()
+        for model_answer in self.answers:
+
+            model_answer = model_answer.lower()
+
+            string1 = set(model_answer.split())
+            string2 = set(answer.split())
+            jac_similarity = len(string1 & string2) / len(string1 | string2)
+
+            string1 = model_answer.replace(" ", "")
+            string2 = answer.replace(" ", "")
+            lev_similarity = Levenshtein.ratio(string1, string2)
+            seq_similarity = SequenceMatcher(None, string1, string2).ratio()
+
+            if lev_similarity >= threshold or jac_similarity >= threshold or seq_similarity >= threshold:
+                return True
+        return False 
+
+    def update_average_time(self, time: float) -> None:
+        if not self.is_updated:
+            self.is_updated = True
+
+        if self.total >= 0:
+            self._average_time += time
+        else:
+            self._average_time = ((self._average_time * self.total) + time) / (self.total + 1)
+
+    def update_user(self, user_id: int, answer: str, response_time: float, is_correct: bool = None) -> None:
+        if not self.is_updated:
+            self.is_updated = True
+
+        user_id = str(user_id)
+        if user_id not in self._records:
+            self._records[user_id] = {
+                "answers": [],
+                "fastest_response_time": round(response_time, 1)
+            }
+
+        user_record = self._records[user_id]
+        if answer not in user_record["answers"]:
+            user_record["answers"].append(answer)
+
+        if is_correct:
+            user_record["fastest_response_time"] = min(user_record["fastest_response_time"], round(response_time, 1))
+
+    def best_record(self) -> tuple[str, float] | None:
+        sorted_records = sorted(self._records.items(), key=lambda item: item[1]["fastest_response_time"])
+
+        # Return the user ID and fastest_response_time of the first record
+        return (sorted_records[0][0], sorted_records[0][1]["fastest_response_time"]) if sorted_records else None 
+    
+    def toDict(self) -> dict:
+        if self.is_updated:
+            self.is_updated = False
+
+        return {
+            "question": self.question,
+            "answers": self.answers,
+            "num_correct": self._correct,
+            "num_wrong": self._wrong,
+            "average_time": self.average_time,
+            "attachment": self.attachment,
+            "records": self._records,
+            "default_level": self._default_level
+        }
+    
+    @property
+    def level(self) -> str:
+        if self._default_level:
+            return self._default_level
+        
+        if self.correct_rate >= 85 or self._wrong == 0:
+            return "easy"
+        elif self.correct_rate >= 40:
+            return "medium"
+        else:
+            return "hard"
+
+    @property
+    def average_time(self) -> float:
+        base_time = QUIZ_LEVEL_BASE.get(self.level)[0]
+
+        if not self._average_time:
+            return base_time
+        
+        return round((self._average_time + base_time) / 2, 1)
+
+    @property
+    def total(self) -> int:
+        return self._correct + self._wrong
+    
+    @property
+    def correct_rate(self) -> float:
+        total = self.total
+        if not total:
+            return 0
+        return round(self._correct / total, 2) * 100
+    
+    @property
+    def wrong_rate(self) -> float:
+        if self._wrong == 0:
+            return 0
+        
+        return 100 - self.correct_rate

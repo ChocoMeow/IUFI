@@ -2,8 +2,16 @@ import discord, iufi, time, asyncio
 import functions as func
 
 from discord.ext import commands
-
-from views import RollView, ShopView, MatchGame, GAME_SETTINGS
+from iufi.pool import QuestionPool as QP
+from views import (
+    RollView,
+    ShopView,
+    MatchGame,
+    QuizView,
+    ResetAttemptView,
+    GAME_SETTINGS,
+    QUIZ_SETTINGS
+)
 
 class Gameplay(commands.Cog):
     def __init__(self, bot: commands.Bot) -> None:
@@ -20,7 +28,7 @@ class Gameplay(commands.Cog):
 
         query = {}
         if not tier:
-            query["$set"] = {"cooldown.roll": time.time() + (func.COOLDOWN_BASE["roll"] * (1 - actived_potions.get("speed", 0)))}
+            query["$set"] = {"cooldown.roll": time.time() + (func.COOLDOWN_BASE["roll"][1] * (1 - actived_potions.get("speed", 0)))}
 
         else:
             tier = tier.lower()
@@ -59,7 +67,7 @@ class Gameplay(commands.Cog):
 
     @commands.command(aliases=["mg"])
     async def game(self, ctx: commands.Context, level: str):
-        """Matching game."""
+        """IUFI Matching game."""
         if level not in (levels := GAME_SETTINGS.keys()):
             return await ctx.reply(f"Invalid level selection! Please select a valid level: `{', '.join(levels)}`")
 
@@ -80,6 +88,42 @@ class Gameplay(commands.Cog):
         await view.end_game()
         await view.response.edit(view=view)
 
+    @commands.command(aliases=["q"])
+    async def quiz(self, ctx: commands.Context):
+        """IUFI Quiz"""
+        # Fetch the user data
+        user = await func.get_user(ctx.author.id)
+
+        # If the cooldown is still in effect, inform the user and exit
+        if (retry := user.get("cooldown", {}).setdefault("quiz_game", 0)) > time.time():
+            price = int(QUIZ_SETTINGS['reset_price'] * ((retry - time.time()) / 1000))
+            view = ResetAttemptView(ctx, user, price)
+            view.response = await ctx.reply(f"{ctx.author.mention} your quiz is <t:{round(retry)}:R>. If you’d like to bypass this cooldown, you can do so by paying `🍬 {price}` candies.", delete_after=20, view=view)
+            return 
+        
+        # Get the rank and questions for the user
+        rank = QP.get_question_distribution_by_rank(QP.get_rank(user.get("game_state", {}).get("quiz_game", {}).get("points", 0))[0])
+        questions = QP.get_question_by_rank(rank)
+
+        # If there are no questions, inform the user and exit
+        if not questions:
+            return await ctx.send("There are no questions for you right now! Please try again later.")
+
+        # Update the user's cooldown time
+        await func.update_user(ctx.author.id, {"$set": {"cooldown.quiz_game": time.time() + func.COOLDOWN_BASE["roll"][1]}})
+
+        # Create the quiz view and send the initial message
+        view = QuizView(ctx.author, questions)
+        view.response = await ctx.reply(
+            content=f"**This game ends** <t:{round(view._start_time + view.total_time)}:R>",
+            embed=view.build_embed(),
+            view=view
+        )
+
+        # Wait for the game to end
+        await asyncio.sleep(view.total_time)
+        await view.end_game()
+
     @commands.command(aliases=["cd"])
     async def cooldown(self, ctx: commands.Context):
         """Shows all your cooldowns."""
@@ -87,12 +131,10 @@ class Gameplay(commands.Cog):
 
         cooldown: dict[str, float] = user.get("cooldown", {})
         embed = discord.Embed(title=f"⏰ {ctx.author.display_name}'s Cooldowns", color=0x59b0c0)
-        embed.description = f"```🎲 Roll : {func.cal_retry_time(cooldown.get('roll', 0), 'Ready')}\n" \
-                            f"🎮 Claim: {func.cal_retry_time(cooldown.get('claim', 0), 'Ready')}\n" \
-                            f"📅 Daily: {func.cal_retry_time(cooldown.get('daily', 0), 'Ready')}\n" \
-                            f"🃏 Game : {func.cal_retry_time(cooldown.get('match_game', 0), 'Ready')}\n" \
-                            f"🔔 Reminder: {'On' if user.get('reminder', False) else 'Off'}\n\n" \
-                            f"Potion Time Left:\n"
+        embed.description = "```" + "".join(f"{emoji} {name.split('_')[0].title():<5}: {func.cal_retry_time(cooldown.get(name, 0), 'Ready')}\n" for name, (emoji, cd) in func.COOLDOWN_BASE.items())
+        
+        embed.description += f"🔔 Reminder: {'On' if user.get('reminder', False) else 'Off'}\n\n" \
+                             f"Potion Time Left:\n"
 
         potion_status = "\n".join(
             [f"{data['emoji']} {potion.title():<5} {data['level'].upper():<3}: {func.cal_retry_time(data['expiration'])}"
