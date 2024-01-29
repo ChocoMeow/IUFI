@@ -1,4 +1,5 @@
 import os, time, copy, json
+from enum import Enum
 
 from motor.motor_asyncio import (
     AsyncIOMotorClient,
@@ -66,6 +67,15 @@ DAILY_QUEST_BASE: dict[str, Any] = {
     "quests": []
 }
 
+class DailyQuestIds(Enum):
+    ROLL = 0
+    COLLECT = 1
+    MATCH = 2
+    BUY = 3
+    TRADE = 4
+    USE = 5
+
+#id, name, description, reward quantity, reward emoji, max_progress
 DAILY_QUESTS = [
             [0, 'Roll 5 times', 'Do "qr" or any other rolls five times', 10, '🍬', 5],
             [1, 'Collect Epic+ card', 'Collect a photocard whose rarity is above or equal to Epic by rolling', 20, '🍬',
@@ -75,6 +85,32 @@ DAILY_QUESTS = [
             [4, "Trade 1 photocard", "Buy or sell a photocard", 10, '🍬', 1],
             [5, "Use 1 potion", "Use a potion", 10, '🍬', 1],
         ]
+
+COOLDOWN_BASE: dict[str, tuple[str, int]] = {
+    "roll": ("🎲", 600),
+    "claim": ("🎮", 180),
+    "daily": ("📅", 82800),
+    "match_game": ("🃏", 0),
+    "quiz_game": ("💯", 600)
+}
+
+def open_json(path: str) -> dict:
+    try:
+        with open(os.path.join(ROOT_DIR, path), encoding="utf8") as json_file:
+            return json.load(json_file)
+    except:
+        return {}
+
+
+def update_json(path: str, new_data: dict) -> None:
+    data = open_json(path)
+    if not data:
+        return
+
+    data.update(new_data)
+
+    with open(os.path.join(ROOT_DIR, path), "w") as json_file:
+        json.dump(data, json_file, indent=4)
 
 def cal_retry_time(end_time: float, default: str = None) -> str | None:
     if end_time <= (current_time := time.time()):
@@ -117,15 +153,15 @@ def get_potions(potions: dict[str, float], base: dict[str, str | dict[str, float
 def clean_text(input_text: str, allow_spaces: bool = True, convert_to_lower: bool = False) -> str:
     if not input_text:
         return ""
-    
+
     cleaned_text = "".join(char for char in input_text if char.isalnum() or char.isspace())
-    
+
     if not allow_spaces:
         cleaned_text = "".join(char for char in cleaned_text if char != " ")
-    
+
     if convert_to_lower:
         cleaned_text = cleaned_text.lower()
-    
+
     return cleaned_text
 
 def get_week_unix_timestamps() -> tuple[float, float]:
