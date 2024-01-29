@@ -182,11 +182,11 @@ class QuizView(discord.ui.View):
             state["points"], state["highest_points"] = 0, 0
 
         # Increase points by total_points and ensure it's not less than 0 and update the highest_points
-        if state["points"] > state["highest_points"]:
+        old_highest_points = state["highest_points"]
+        state["points"] = max(0, state["points"] + total_points)
+        if state["points"] > old_highest_points:
             state["highest_points"] = state["points"]
             new_record = True
-
-        state["points"] = max(0, state["points"] + total_points)
 
         # Update the last update time
         state["last_update"] = time.time()
@@ -209,7 +209,7 @@ class QuizView(discord.ui.View):
 
         if new_record:
             rank: tuple[str, int] = QP.get_rank(state["points"])
-            highest_rank: tuple[str, int] = QP.get_rank(state["highest_points"])
+            highest_rank: tuple[str, int] = QP.get_rank(old_highest_points)
             rank_list = list(RANK_BASE.keys())
 
             if rank[0] in rank_list[rank_list.index(highest_rank[0]) + 1:]:
@@ -231,7 +231,7 @@ class QuizView(discord.ui.View):
                     
                     elif reward_name[0] == "roll":
                         roll_data = TIERS_BASE.get(reward_name[1])
-                        embed.description += f"{roll_data[0]} {roll_data[1]:<16} +{amount}\n"
+                        embed.description += f"{roll_data[0]} {reward_name[1].title():<16} +{amount}\n"
 
                     elif reward_name[0] == "exp":
                         embed.description += f"{'⚔️ Exp':<19} +{amount}\n"
