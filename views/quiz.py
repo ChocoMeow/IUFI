@@ -257,7 +257,7 @@ class QuizView(discord.ui.View):
         if question.attachment:
             embed.set_image(url=question.attachment)
 
-        embed.set_footer(text=f"Correct: {question.correct_rate}% | Wrong: {question.wrong_rate}%")
+        embed.set_footer(text=f"Correct: {question.correct_rate:.1f}% | Wrong: {question.wrong_rate:.1f}%")
 
         self._timeout = self._answering_time + question.average_time
         return embed

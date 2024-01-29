@@ -22,7 +22,7 @@ class Info(commands.Cog):
         users = await func.USERS_DB.find().sort("exp", -1).limit(10).to_list(10)
 
         embed = discord.Embed(title="🏆   IUFI Leaderboard", color=discord.Color.random())
-        embed.description = f"Your current position is `{await func.USERS_DB.count_documents({'exp': {'$gt': user.get('exp', 0)}}) + 1}`\n```"
+        embed.description = f"**Your current position is `{await func.USERS_DB.count_documents({'exp': {'$gt': user.get('exp', 0)}}) + 1}`**\n"
 
         description = ""
         for index, user in enumerate(users):
@@ -35,7 +35,7 @@ class Info(commands.Cog):
         if not description:
             description = "The leaderboard is currently empty."
 
-        embed.description = f"```{description}```"
+        embed.description += f"```{description}```"
         embed.set_thumbnail(url=icon.url if (icon := ctx.guild.icon) else None)
 
         await ctx.reply(embed=embed)
@@ -70,7 +70,7 @@ class Info(commands.Cog):
         }) if user else 0
         
         embed = discord.Embed(title=f"🏆   Level {level} Matching Game Leaderboard", color=discord.Color.random())
-        embed.description = (f"Your current position is `{better_states + 1}`" if user else "You haven't play any match game!") + "\n```"
+        embed.description = (f"**Your current position is `{better_states + 1}`**" if user else "**You haven't play any match game!**") + "\n"
 
         description = ""
         for index, user in enumerate(users):
@@ -85,7 +85,7 @@ class Info(commands.Cog):
         if not description:
             description = "The leaderboard is currently empty."
 
-        embed.description = f"```{description}```"
+        embed.description += f"```{description}```"
         embed.set_thumbnail(url=icon.url if (icon := ctx.guild.icon) else None)
         await ctx.reply(embed=embed)
     
