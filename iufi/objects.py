@@ -459,8 +459,7 @@ class Question:
         user_id = str(user_id)
         if user_id not in self._records:
             self._records[user_id] = {
-                "answers": [],
-                "fastest_response_time": None
+                "answers": []
             }
 
         user_record = self._records[user_id]
@@ -471,7 +470,7 @@ class Question:
             user_record["fastest_response_time"] = min(user_record.get("fastest_response_time", float("inf")), round(response_time, 1))
 
     def best_record(self) -> tuple[str, float] | None:
-        sorted_records = sorted((item for item in self._records.items() if item[1]["fastest_response_time"] is not None), key=lambda item: item[1]["fastest_response_time"])
+        sorted_records = sorted((item for item in self._records.items() if item[1].get("fastest_response_time")), key=lambda item: item[1]["fastest_response_time"])
 
         # Return the user ID and fastest_response_time of the first record
         return (sorted_records[0][0], sorted_records[0][1]["fastest_response_time"]) if sorted_records else None
