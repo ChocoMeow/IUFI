@@ -460,7 +460,7 @@ class Question:
         if user_id not in self._records:
             self._records[user_id] = {
                 "answers": [],
-                "fastest_response_time": 9999
+                "fastest_response_time": None
             }
 
         user_record = self._records[user_id]
@@ -468,13 +468,13 @@ class Question:
             user_record["answers"].append(answer)
 
         if is_correct:
-            user_record["fastest_response_time"] = min(user_record["fastest_response_time"], round(response_time, 1))
+            user_record["fastest_response_time"] = min(user_record.get("fastest_response_time", float("inf")), round(response_time, 1))
 
     def best_record(self) -> tuple[str, float] | None:
-        sorted_records = sorted(self._records.items(), key=lambda item: item[1]["fastest_response_time"])
+        sorted_records = sorted((item for item in self._records.items() if item[1]["fastest_response_time"] is not None), key=lambda item: item[1]["fastest_response_time"])
 
         # Return the user ID and fastest_response_time of the first record
-        return (sorted_records[0][0], sorted_records[0][1]["fastest_response_time"]) if sorted_records and sorted_records[0][1]["fastest_response_time"] != 9999 else None
+        return (sorted_records[0][0], sorted_records[0][1]["fastest_response_time"]) if sorted_records else None
     
     def toDict(self) -> dict:
         if self.is_updated:
