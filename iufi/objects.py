@@ -460,7 +460,7 @@ class Question:
         if user_id not in self._records:
             self._records[user_id] = {
                 "answers": [],
-                "fastest_response_time": round(response_time, 1)
+                "fastest_response_time": 9999
             }
 
         user_record = self._records[user_id]
@@ -474,7 +474,7 @@ class Question:
         sorted_records = sorted(self._records.items(), key=lambda item: item[1]["fastest_response_time"])
 
         # Return the user ID and fastest_response_time of the first record
-        return (sorted_records[0][0], sorted_records[0][1]["fastest_response_time"]) if sorted_records else None 
+        return (sorted_records[0][0], sorted_records[0][1]["fastest_response_time"]) if sorted_records and sorted_records[0][1]["fastest_response_time"] != 9999 else None
     
     def toDict(self) -> dict:
         if self.is_updated:
