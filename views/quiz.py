@@ -179,7 +179,7 @@ class QuizView(discord.ui.View):
 
         start_time, end_time = func.get_month_unix_timestamps()
         if not (start_time <= state["last_update"] <= end_time):
-            state["points"], state["highest_points"] = 0, 0
+            state = copy.deepcopy(QUIZ_SETTINGS["default"])
 
         # Increase points by total_points and ensure it's not less than 0 and update the highest_points
         old_highest_points = state["highest_points"]
