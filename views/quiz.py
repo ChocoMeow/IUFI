@@ -1,4 +1,4 @@
-import discord, time, asyncio
+import discord, time, asyncio, copy
 import functions as func
 
 from discord.ext import commands
@@ -82,8 +82,8 @@ class AnswerModal(discord.ui.Modal):
                 label="Answer",
                 placeholder=question.question if len(question.question) <= 100 else question.question[:97] + "...",
                 min_length=1,
-                max_length=100,
-                style=discord.TextStyle.long,
+                max_length=50,
+                style=discord.TextStyle.short,
             )
         )
 
@@ -170,23 +170,23 @@ class QuizView(discord.ui.View):
         
         self._ended_time = time.time()
         summary, total_points = self.cal_results()
-        average_time = sum(self._average_time) / len(self.questions)
+        average_time = sum(self._average_time) / (len(self.questions) - self._results.count(None))
         query = {}
         new_record = False
 
         user = await func.get_user(self.author.id)
-        state = user.get("game_state", {}).get("quiz_game", QUIZ_SETTINGS["default"])
+        state = user.get("game_state", {}).get("quiz_game", copy.deepcopy(QUIZ_SETTINGS["default"]))
 
         start_time, end_time = func.get_month_unix_timestamps()
         if not (start_time <= state["last_update"] <= end_time):
-            state["points"], state["highest_points"] = 0, 0
+            state = copy.deepcopy(QUIZ_SETTINGS["default"])
 
         # Increase points by total_points and ensure it's not less than 0 and update the highest_points
-        if state["points"] > state["highest_points"]:
+        old_highest_points = state["highest_points"]
+        state["points"] = max(0, state["points"] + total_points)
+        if state["points"] > old_highest_points:
             state["highest_points"] = state["points"]
             new_record = True
-
-        state["points"] = max(0, state["points"] + total_points)
 
         # Update the last update time
         state["last_update"] = time.time()
@@ -209,7 +209,7 @@ class QuizView(discord.ui.View):
 
         if new_record:
             rank: tuple[str, int] = QP.get_rank(state["points"])
-            highest_rank: tuple[str, int] = QP.get_rank(state["highest_points"])
+            highest_rank: tuple[str, int] = QP.get_rank(old_highest_points)
             rank_list = list(RANK_BASE.keys())
 
             if rank[0] in rank_list[rank_list.index(highest_rank[0]) + 1:]:
@@ -227,14 +227,14 @@ class QuizView(discord.ui.View):
 
                     embed.description += f"{index}. "
                     if reward_name[0] == "candies":
-                        embed.description += f"{'🍬 Candy':<18} x{amount}\n"
+                        embed.description += f"{'🍬 Candies':<18} x{amount}\n"
                     
                     elif reward_name[0] == "roll":
                         roll_data = TIERS_BASE.get(reward_name[1])
-                        embed.description += f"{roll_data[0]} {roll_data[1]:<16} +{amount}\n"
+                        embed.description += f"{roll_data[0]} {reward_name[1].title() + 'Roll':<16} x{amount}\n"
 
                     elif reward_name[0] == "exp":
-                        embed.description += f"{'⚔️ Exp':<19} +{amount}\n"
+                        embed.description += f"{'⚔️ Exp':<19} x{amount}\n"
 
                     else:
                         reward_name = reward_name[1].split("_")
@@ -257,7 +257,7 @@ class QuizView(discord.ui.View):
         if question.attachment:
             embed.set_image(url=question.attachment)
 
-        embed.set_footer(text=f"Correct: {question.correct_rate}% | Wrong: {question.wrong_rate}%")
+        embed.set_footer(text=f"Correct: {question.correct_rate:.1f}% | Wrong: {question.wrong_rate:.1f}%")
 
         self._timeout = self._answering_time + question.average_time
         return embed

@@ -197,10 +197,10 @@ class MatchGame(discord.ui.View):
 
             rewards += ("✅" if is_matched else "⬛") + f"  {matched:<3}"
             if reward_name[0] == "candies":
-                rewards += f"    {'🍬 Candy':<18} x{amount}\n"
+                rewards += f"    {'🍬 Candies':<18} x{amount}\n"
             
             elif reward_name[0] == "exp":
-                rewards += f"    {'⚔️ Exp':<19} +{amount}\n"
+                rewards += f"    {'⚔️ Exp':<19} x{amount}\n"
 
             else:
                 reward_name = reward_name[1].split("_")

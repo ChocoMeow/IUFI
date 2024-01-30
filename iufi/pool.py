@@ -14,11 +14,11 @@ from .exceptions import DuplicatedCardError, DuplicatedTagError
 
 DROP_RATES = {
     'common': .9,
-    'rare': .08,
-    'epic': .007,
-    'legendary': .003,
-    'mystic': .001,
-    "celestial": .0005
+    'rare': .05,
+    'epic': .003,
+    'legendary': .001,
+    'mystic': .0005,
+    "celestial": .0001
 }
 
 class CardPool:
