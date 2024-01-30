@@ -11,12 +11,10 @@ class Tasks(commands.Cog):
 
         self.cache_clear.start()
         self.reminder.start()
-        # self.quiz_timer.start()
 
     def cog_unload(self):
         self.cache_clear.cancel()
         self.reminder.cancel()
-        self.quiz_timer.cancel()
     
     async def schedule_message(self, user: discord.User, wait_time: int, message: str) -> None:
         await asyncio.sleep(wait_time)
@@ -31,7 +29,9 @@ class Tasks(commands.Cog):
 
     async def distribute_monthly_quiz_rewards(self) -> None:
         start_time, end_time = func.get_month_unix_timestamps()
-
+        if end_time - time.time() > 86_400:
+            return
+        
         guild: discord.Guild = self.bot.get_guild(214199357170253834)
         if not guild:
             return
@@ -49,7 +49,8 @@ class Tasks(commands.Cog):
             user = guild.get_member(user["_id"])
             if user:
                 rank = iufi.QuestionPool.get_rank(user["game_state"]["quiz_game"]["points"])[0]
-                await user.add_roles(roles[rank])
+                if rank:
+                    await user.add_roles(roles[rank])
 
     @tasks.loop(hours=1.0)
     async def cache_clear(self):
@@ -62,6 +63,8 @@ class Tasks(commands.Cog):
         if questions:
             func.update_json("questions.json", questions)
         
+        self.bot.loop.create_task(self.distribute_monthly_quiz_rewards())
+
     @tasks.loop(minutes=10.0)
     async def reminder(self) -> None:
         time_range = {"$gt": (current_time := time.time()), "$lt": current_time + 600}
@@ -81,13 +84,7 @@ class Tasks(commands.Cog):
             cd: dict[str, float] = doc["cooldown"]
             for name, (emoji, _) in func.COOLDOWN_BASE.items():
                 if name != "claim":
-                    await self.check_and_schedule(user, current_time, cd.get(name, 0), f"{emoji} Your {name.split('_')[0]} is ready! Join <#{random.choice(self.game_channel_ids)}> and roll now.")
-
-    @tasks.loop(minutes=10.0)
-    async def quiz_timer(self) -> None:
-        _, end_time = func.get_month_unix_timestamps()
-        if end_time - time.time() <= 600:
-            self.bot.loop.create_task(self.distribute_monthly_quiz_rewards())
+                    await self.check_and_schedule(user, current_time, cd.get(name, 0), f"{emoji} Your {name.split('_')[0]} is ready! Join <#{random.choice(self.game_channel_ids)}> and roll now.")        
 
 async def setup(bot: commands.Bot):
     await bot.add_cog(Tasks(bot))

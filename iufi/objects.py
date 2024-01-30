@@ -136,7 +136,7 @@ RANK_BASE: dict[str, dict[str, Any]] = {
     "master": {
         "emoji_id": "1173063919846293535",
         "points": 350,
-        "discord_role": None,
+        "discord_role": 1201455425820827708,
         "questions": [('medium', 3), ('hard', 2)],
         "rewards": {
             1: ("exp", 150),
@@ -149,7 +149,7 @@ RANK_BASE: dict[str, dict[str, Any]] = {
     "challeneger": {
         "emoji_id": "1173064415453663242",
         "points": 500,
-        "discord_role": None,
+        "discord_role": 1201455425820827708,
         "questions": [('medium', 2), ('hard', 3)],
         "rewards": {
             1: ("exp", 200),
