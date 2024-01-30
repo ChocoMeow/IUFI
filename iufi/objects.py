@@ -146,7 +146,7 @@ RANK_BASE: dict[str, dict[str, Any]] = {
             5: [("potions.speed_iii", 1), ("potions.luck_iii", 1)],
         },
     },
-    "challeneger": {
+    "challenger": {
         "emoji_id": "1173064415453663242",
         "points": 500,
         "discord_role": 1201455425820827708,

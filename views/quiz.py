@@ -231,7 +231,7 @@ class QuizView(discord.ui.View):
                     
                     elif reward_name[0] == "roll":
                         roll_data = TIERS_BASE.get(reward_name[1])
-                        embed.description += f"{roll_data[0]} {reward_name[1].title() + 'Roll':<16} x{amount}\n"
+                        embed.description += f"{roll_data[0]} {reward_name[1].title() + ' Roll':<16} x{amount}\n"
 
                     elif reward_name[0] == "exp":
                         embed.description += f"{'⚔️ Exp':<19} x{amount}\n"
