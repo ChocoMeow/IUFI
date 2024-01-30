@@ -96,7 +96,7 @@ class Gameplay(commands.Cog):
 
         # If the cooldown is still in effect, inform the user and exit
         if (retry := user.get("cooldown", {}).setdefault("quiz_game", 0)) > time.time():
-            price = int(QUIZ_SETTINGS['reset_price'] * ((retry - time.time()) / 1000))
+            price = max(5, int(QUIZ_SETTINGS['reset_price'] * ((retry - time.time()) / func.COOLDOWN_BASE["quiz_game"][1])))
             view = ResetAttemptView(ctx, user, price)
             view.response = await ctx.reply(f"{ctx.author.mention} your quiz is <t:{round(retry)}:R>. If you’d like to bypass this cooldown, you can do so by paying `🍬 {price}` candies.", delete_after=20, view=view)
             return 
