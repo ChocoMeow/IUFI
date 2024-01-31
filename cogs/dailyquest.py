@@ -26,7 +26,7 @@ class DailyQuest(commands.Cog):
         embed = discord.Embed(title="🍬 Daily Quests", color=0x949fb8)
         embed.description = "```"
         for i in quests:
-            quest_data = self.DAILY_QUESTS[i[0]]
+            quest_data = func.get_daily_quest_by_id(i[0])
             embed.description += f"{quest_data[1]} - {i[1]}/{quest_data[5]} {quest_data[4]}"
             if i[1] >= quest_data[5]:
                 embed.description += " ✅"

@@ -63,7 +63,7 @@ class Gameplay(commands.Cog):
         )
         
         await func.update_user(ctx.author.id, query)
-        await func.add_quest_progress(ctx.author.id, 0, 1)
+        await func.add_daily_quest_progress(ctx.author.id, 0, 1)
         await view.timeout_count()
 
     @commands.command(aliases=["mg"])

@@ -1,5 +1,6 @@
 import discord, asyncio, time
 import functions as func
+import iufi
 
 from iufi import (
     Card,
@@ -141,7 +142,7 @@ class MatchGame(discord.ui.View):
         self._need_wait: bool = False
         self.clicked: int = 0
         self._last_clicked: discord.ui.Button = None
-        self.covered_card: TempCard = TempCard(f"cover/level{self._level}.jpg")
+        self.covered_card: TempCard = TempCard(iufi.get_match_game_cover(level))
 
         cards: list[Card] = CardPool.roll(self._cards, avoid=["celestial"])
         cards.extend(cards)
@@ -231,7 +232,7 @@ class MatchGame(discord.ui.View):
             }
 
         await func.update_user(self.author.id, update_data)
-        await func.add_quest_progress(self.author.id, 2, 1)
+        await func.add_daily_quest_progress(self.author.id, 2, 1)
         await self.response.channel.send(content=f"<@{self.author.id}>", embed=embed)
         self.stop()
         

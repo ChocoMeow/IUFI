@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 import random, os, asyncio, Levenshtein
+from enum import Enum
+
 import functions as func
 
 from PIL import Image, ImageDraw, ImageSequence
@@ -528,3 +530,55 @@ class Question:
             return 0
         
         return 100 - self.correct_rate
+
+class DailyQuestIds(Enum):
+    ROLL = 0
+    COLLECT_EPIC_CARD = 1
+    MATCH_GAME = 2
+    BUY_ITEM = 3
+    TRADE = 4
+    USE_POTION = 5
+    PLAY_QUIZ = 6
+    COLLECT_LEGENDARY_CARD = 7
+
+class Quest:
+    def __init__(
+        self,
+        id: DailyQuestIds,
+        name: str,
+        description: str,
+        reward: str,
+        reward_emoji: str,
+        required_progress: int,
+        is_active: bool = True
+    ):
+        self.id: DailyQuestIds = id
+        self.name: str = name
+        self.description: str = description
+        self.reward: str = reward
+        self.reward_emoji: str = reward_emoji
+        self.required_progress: int = required_progress
+        self.is_active: bool = is_active
+
+    def toDict(self) -> dict:
+        return {
+            "name": self.name,
+            "description": self.description,
+            "reward": self.reward,
+            "reward_emoji": self.reward_emoji,
+            "required_progress": self.required_progress,
+            "is_active": self.is_active
+        }
+
+    @property
+    def display_name(self) -> str:
+        return f"{self.name}"
+
+    @property
+    def display_description(self) -> str:
+        return f"{self.description}"
+
+    @property
+    def display_reward(self) -> str:
+        return f"{self.reward}{self.reward_emoji}"
+

@@ -31,9 +31,11 @@ MONGO_DB: AsyncIOMotorClient = None
 USERS_DB: AsyncIOMotorCollection = None
 CARDS_DB: AsyncIOMotorCollection = None
 DAILY_QUEST_DB: AsyncIOMotorCollection = None
+COUPLE_DB: AsyncIOMotorCollection = None
 
 USERS_BUFFER: dict[int, dict[str, Any]] = {}
 DAILY_QUEST_BUFFER: dict[int, dict[str, Any]] = {}
+COUPLE_BUFFER: dict[int, dict[str, Any]] = {}
 MAX_CARDS: int = 100
 DEAFAULT_EXP = 100
 
@@ -58,6 +60,9 @@ USER_BASE: dict[str, Any] = {
     "profile": {
         "bio": "",
         "main": ""
+    },
+    "event_items": {
+      "rose": 0,
     }
 }
 
@@ -67,24 +72,38 @@ DAILY_QUEST_BASE: dict[str, Any] = {
     "quests": []
 }
 
+COUPLE_BASE: dict[str, Any] = {
+    "next_reset_at": 0,
+    "quests": [],
+    "partner_1": 0,
+    "partner_2": 0,
+    "date_partnered": 0,
+    "score": 0,
+}
+
 class DailyQuestIds(Enum):
     ROLL = 0
-    COLLECT = 1
-    MATCH = 2
-    BUY = 3
+    COLLECT_EPIC_CARD = 1
+    MATCH_GAME = 2
+    BUY_ITEM = 3
     TRADE = 4
-    USE = 5
+    USE_POTION = 5
+    PLAY_QUIZ = 6
+    COLLECT_LEGENDARY_CARD = 7
 
 #id, name, description, reward quantity, reward emoji, max_progress
 DAILY_QUESTS = [
-            [0, 'Roll 5 times', 'Do "qr" or any other rolls five times', 10, '🍬', 5],
-            [1, 'Collect Epic+ card', 'Collect a photocard whose rarity is above or equal to Epic by rolling', 20, '🍬',
-             1],
-            [2, "Play 1 Matching Game", "Play a matching game of any level (qmg)", 10, '🍬', 1],
-            [3, "Buy 1 Item", "Buy an item from the shop.", 10, '🍬', 1],
-            [4, "Trade 1 photocard", "Buy or sell a photocard", 10, '🍬', 1],
-            [5, "Use 1 potion", "Use a potion", 10, '🍬', 1],
+            [DailyQuestIds.ROLL, 'Roll 5 times', 'Do "qr" or any other rolls five times', 10, '🍬', 5],
+            [DailyQuestIds.COLLECT_EPIC_CARD, 'Collect Epic+ card', 'Collect a photocard whose rarity is above or equal to Epic '
+                                                          'by rolling', 20, '🍬', 1],
+            [DailyQuestIds.MATCH_GAME, "Play 1 Matching Game", "Play a matching game of any level (qmg)", 10, '🍬', 1],
+            [DailyQuestIds.BUY_ITEM, "Buy 1 Item", "Buy an item from the shop.", 10, '🍬', 1],
+            [DailyQuestIds.TRADE, "Trade 1 photocard", "Buy or sell a photocard", 10, '🍬', 1],
+            [DailyQuestIds.USE_POTION, "Use 1 potion", "Use a potion", 10, '🍬', 1],
+            [DailyQuestIds.PLAY_QUIZ, "Play 1 Quiz", "Play a quiz", 10, '🍬', 1],
         ]
+
+COUPLE_QUESTS = {}
 
 COOLDOWN_BASE: dict[str, tuple[str, int]] = {
     "roll": ("🎲", 600),
@@ -180,7 +199,7 @@ def get_month_unix_timestamps() -> tuple[float, float]:
 
     # Get the first day of this month
     start_of_this_month = date(today.year, today.month, 1)
-    
+
     # Get the first day of next month
     if today.month == 12:
         start_of_next_month = date(today.year + 1, 1, 1)
@@ -259,6 +278,7 @@ async def get_daily_quest(user_id: int, *, insert: bool = True) -> dict[str, Any
         daily_quest = DAILY_QUEST_BUFFER[user_id] = daily_quest if daily_quest else copy.deepcopy(DAILY_QUEST_BASE) | {"_id": user_id}
     return daily_quest
 
+
 async def update_daily_quest(user_id: int, data: dict) -> None:
     daily_quest = await get_daily_quest(user_id)
     for mode, action in data.items():
@@ -292,7 +312,7 @@ async def update_daily_quest(user_id: int, data: dict) -> None:
             else:
                 raise ValueError(f"Invalid mode: {mode}")
 
-async def add_quest_progress(user_id: int, quest_id: int, progress: int) -> None:
+async def add_daily_quest_progress(user_id: int, quest_id: int, progress: int) -> None:
     daily_quest = await get_daily_quest(user_id)
     can_update = False
     for quest in daily_quest["quests"]:
@@ -304,3 +324,68 @@ async def add_quest_progress(user_id: int, quest_id: int, progress: int) -> None
             break
     if can_update:
         await update_daily_quest(user_id, {"$set": {"quests": daily_quest["quests"]}})
+
+def get_daily_quest_by_id(quest_id):
+    for quest in DAILY_QUESTS:
+        if quest[0] == quest_id:
+            return quest
+    return None
+
+def get_couple_quest_by_id(quest_id):
+    for quest in COUPLE_QUESTS:
+        if quest[0] == quest_id:
+            return quest
+    return None
+
+
+async def get_couple_data(partner_id: int) -> dict[str, Any]:
+    couple_data = COUPLE_BUFFER.get(partner_id)
+    if not couple_data:
+        couple_data = COUPLE_BUFFER[partner_id] = await COUPLE_DB.find_one({"_id": partner_id})
+    return couple_data
+
+async def make_couple(partner_1: int, partner_2: int) -> None:
+    couple_data = COUPLE_BASE
+    couple_data["partner_1"] = partner_1
+    couple_data["partner_2"] = partner_2
+    couple_data["date_partnered"] = time.time()
+    couple_id = await COUPLE_DB.insert_one(couple_data)
+    COUPLE_BUFFER[couple_id] = couple_data
+    await update_user(partner_1, {"$set": {"couple_id": couple_id}})
+    await update_user(partner_2, {"$set": {"couple_id": couple_id}})
+
+
+async def update_couple(couple_id: int, data: dict) -> None:
+    couple = await get_couple_data(couple_id)
+    for mode, action in data.items():
+        for key, value in action.items():
+            cursors = key.split(".")
+
+            nested_couple = couple
+            for c in cursors[:-1]:
+                nested_couple = nested_couple.setdefault(c, {})
+
+            if mode == "$set":
+                try:
+                    nested_couple[cursors[-1]] = value
+                except TypeError:
+                    nested_couple[int(cursors[-1])] = value
+
+            elif mode == "$unset":
+                nested_couple.pop(cursors[-1], None)
+
+            elif mode == "$inc":
+                nested_couple[cursors[-1]] = nested_couple.get(cursors[-1], 0) + value
+
+            elif mode == "$push":
+                nested_couple.setdefault(cursors[-1], []).extend(value.get("$in", []) if isinstance(value, dict) else [value])
+
+            elif mode == "$pull":
+                if cursors[-1] in nested_couple:
+                    value = value.get("$in", []) if isinstance(value, dict) else [value]
+                    nested_couple[cursors[-1]] = [item for item in nested_couple[cursors[-1]] if item not in value]
+
+            else:
+                raise ValueError(f"Invalid mode: {mode}")
+
+    await COUPLE_DB.update_one({"_id": couple_id}, data)
