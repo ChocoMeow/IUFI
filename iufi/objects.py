@@ -18,8 +18,8 @@ TIERS_BASE: dict[str, tuple[str, int]] = {
     "rare": ("🌸", 10),
     "epic": ("💎", 40),
     "legendary": ("👑", 100),
-    "mystic": ("🦄", 500),
-    "celestial": ("💫", 1000)
+    "mystic": ("🦄", 250),
+    "celestial": ("💫", 400)
 }
 
 FRAMES_BASE: dict[str, tuple[str, str]] = {

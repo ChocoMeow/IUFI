@@ -29,7 +29,7 @@ class Tasks(commands.Cog):
 
     async def distribute_monthly_quiz_rewards(self) -> None:
         start_time, end_time = func.get_month_unix_timestamps()
-        if end_time - time.time() > 86_400:
+        if end_time - time.time() > 3_600:
             return
         
         guild: discord.Guild = self.bot.get_guild(214199357170253834)
@@ -45,10 +45,10 @@ class Tasks(commands.Cog):
                 await member.remove_roles(role)
 
         users = func.USERS_DB.find({f"game_state.quiz_game.last_update": {"$gt":start_time, "$lte":end_time}})
-        async for user in users:
-            user = guild.get_member(user["_id"])
+        async for user_data in users:
+            user = guild.get_member(user_data["_id"])
             if user:
-                rank = iufi.QuestionPool.get_rank(user["game_state"]["quiz_game"]["points"])[0]
+                rank = iufi.QuestionPool.get_rank(user_data["game_state"]["quiz_game"]["points"])[0]
                 if rank:
                     await user.add_roles(roles[rank])
 
