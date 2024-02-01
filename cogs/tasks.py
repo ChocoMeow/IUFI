@@ -49,7 +49,7 @@ class Tasks(commands.Cog):
             user = guild.get_member(user_data["_id"])
             if user:
                 rank = iufi.QuestionPool.get_rank(user_data["game_state"]["quiz_game"]["points"])[0]
-                if rank:
+                if rank in roles.keys() and roles[rank] is not None:
                     await user.add_roles(roles[rank])
 
     @tasks.loop(hours=1.0)
