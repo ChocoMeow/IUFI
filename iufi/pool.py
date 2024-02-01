@@ -5,7 +5,7 @@ import os
 import re
 import aiohttp
 
-from discord import Client
+from discord.ext import commands
 from typing import Dict, Optional, TYPE_CHECKING, Union
 from urllib.parse import quote
 
@@ -16,6 +16,7 @@ if TYPE_CHECKING:
     from .player import Player
 
 from random import (
+    choice,
     choices,
     sample,
     shuffle
@@ -208,14 +209,13 @@ class QuestionPool:
 class Node:
     """The base class for a node. 
        This node object represents a Lavalink node. 
-       To enable Spotify searching, pass in a proper Spotify Client ID and Spotify Client Secret
     """
 
     def __init__(
         self,
         *,
         pool,
-        bot: Client,
+        bot: commands.Bot,
         host: str,
         port: int,
         password: str,
@@ -226,7 +226,7 @@ class Node:
         resume_key: Optional[str] = None
 
     ):
-        self._bot: Client = bot
+        self._bot: commands.Bot = bot
         self._host: str = host
         self._port: int = port
         self._pool: NodePool = pool
@@ -235,18 +235,17 @@ class Node:
         self._heartbeat: int = heartbeat
         self._secure: bool = secure
        
-        self._websocket_uri = f"{'wss' if self._secure else 'ws'}://{self._host}:{self._port}/" + NODE_VERSION + "/websocket"
-        self._rest_uri = f"{'https' if self._secure else 'http'}://{self._host}:{self._port}"
+        self._websocket_uri: str = f"{'wss' if self._secure else 'ws'}://{self._host}:{self._port}/" + NODE_VERSION + "/websocket"
+        self._rest_uri: str = f"{'https' if self._secure else 'http'}://{self._host}:{self._port}"
 
-        self._session = session or aiohttp.ClientSession()
+        self._session: aiohttp.ClientSession = session or aiohttp.ClientSession()
         self._websocket: aiohttp.ClientWebSocketResponse = None
         self._task: asyncio.Task = None
 
-        self.resume_key = resume_key or str(os.urandom(8).hex())
+        self.resume_key: str = resume_key or str(os.urandom(8).hex())
 
-        self._session_id = None
-        self._metadata = None
-        self._available = None
+        self._session_id: str = None
+        self._available: bool = None
 
         self._headers = {
             "Authorization": self._password,
@@ -258,7 +257,7 @@ class Node:
         self._players: Dict[int, Player] = {}
         self._bot.add_listener(self._update_handler, "on_socket_response")
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return (
             f"<IUFI.node ws_uri={self._websocket_uri} rest_uri={self._rest_uri} "
             f"player_count={len(self._players)}>"
@@ -281,7 +280,7 @@ class Node:
         return self._players
 
     @property
-    def bot(self) -> Client:
+    def bot(self) -> commands.Bot:
         """Property which returns the discord.py client linked to this node"""
         return self._bot
 
@@ -291,11 +290,11 @@ class Node:
         return len(self.players)
 
     @property
-    def pool(self):
+    def pool(self) -> NodePool:
         """Property which returns the pool this node is apart of"""
         return self._pool
 
-    async def _update_handler(self, data: dict):
+    async def _update_handler(self, data: dict) -> None:
         await self._bot.wait_until_ready()
 
         if not data:
@@ -320,7 +319,7 @@ class Node:
             except KeyError:
                 return
 
-    async def _listen(self):
+    async def _listen(self) -> None:
         backoff = ExponentialBackoff(base=7)    
 
         while True:
@@ -342,7 +341,7 @@ class Node:
             else:
                 self._bot.loop.create_task(self._handle_payload(msg.json()))
 
-    async def _handle_payload(self, data: dict):
+    async def _handle_payload(self, data: dict) -> None:
         op = data.get("op", None)
         if not op:
             return
@@ -363,25 +362,28 @@ class Node:
         elif op == "playerUpdate":
             await player._update_state(data)
 
-    async def send(self, method: int, 
-                   guild_id: Union[str, int] = None, 
-                   query: str = None, 
-                   data: Union[dict, str] = {}):
-        
+    async def send(
+        self, method: int, 
+        guild_id: Union[str, int] = None, 
+        query: str = None, 
+        data: Union[dict, str] = None
+    ) -> dict:
         if not self._available:
             raise IUFIException(
                 f"The node '{self._identifier}' is unavailable."
             )
         
-        uri: str =  f"{self._rest_uri}/{NODE_VERSION}" \
-                    f"/sessions/{self._session_id}/players" \
-                    f"/{guild_id}" if guild_id else "" \
-                    f"?{query}" if query else ""
+        uri: str = f"{self._rest_uri}/{NODE_VERSION}" \
+                   f"/sessions/{self._session_id}/players" \
+                   f"/{guild_id}" if guild_id else "" \
+                   f"?{query}" if query else ""
         
-        async with self._session.request(method=CALL_METHOD[method],
-                                         url=uri,
-                                         headers={"Authorization": self._password},
-                                         json=data) as resp:
+        async with self._session.request(
+            method=CALL_METHOD[method],
+            url=uri,
+            headers={"Authorization": self._password},
+            json=data if data else {}
+        ) as resp:
             if resp.status >= 300:
                 raise IUFIException(f"Getting errors from Lavalink REST api")
             
@@ -390,13 +392,12 @@ class Node:
 
             return await resp.json()
         
-    def get_player(self, guild_id: int):
+    def get_player(self, guild_id: int) -> Optional[Player]:
         """Takes a guild ID as a parameter. Returns a IUFI Player object."""
         return self._players.get(guild_id, None)
 
-    async def connect(self):
+    async def connect(self) -> None:
         """Initiates a connection with a Lavalink node and adds it to the node pool."""
-
         try:
             self._websocket = await self._session.ws_connect(
                 self._websocket_uri, headers=self._headers, heartbeat=self._heartbeat
@@ -425,7 +426,7 @@ class Node:
 
         return self
               
-    async def disconnect(self):
+    async def disconnect(self) -> None:
         """Disconnects a connected Lavalink node and removes it from the node pool.
            This also destroys any players connected to the node.
         """
@@ -437,7 +438,7 @@ class Node:
         self._available = False
         self._task.cancel()
 
-    async def reconnect(self):
+    async def reconnect(self) -> None:
         await asyncio.sleep(10)
         for player in self.players.copy().values():
             try:
@@ -458,7 +459,7 @@ class Node:
         query: str,
         *,
         search_type: str = "ytsearch"
-    ):
+    ) -> Optional[Union[Playlist, Track]]:
         """Fetches tracks from the node's REST api to parse into Lavalink.
 
            You can also pass in a discord.py Context object to get a
@@ -518,8 +519,9 @@ class NodePool:
     """
 
     _nodes: dict[str, Node] = {}
+    _questions: Playlist = None
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return f"<IUFI.NodePool node_count={self.node_count}>"
 
     @property
@@ -528,9 +530,21 @@ class NodePool:
         return self._nodes
 
     @property
-    def node_count(self):
+    def node_count(self) -> int:
         return len(self._nodes.values())
 
+    @classmethod
+    async def fetch_question(cls) -> None:
+        node = cls.get_node()
+        cls._questions = await node.get_tracks("https://www.youtube.com/playlist?list=PLhKSPhxqvGkOuFPbkC7oJjy2ULXmVV-X9")
+
+    @classmethod
+    async def get_question(cls) -> Track:
+        if not cls._questions:
+            await cls.fetch_question()
+        
+        return choice(cls._questions.tracks)
+    
     @classmethod
     def get_node(cls, *, identifier: str = None) -> Node:
         """Fetches a node from the node pool using it's identifier.
@@ -552,7 +566,7 @@ class NodePool:
     async def create_node(
         cls,
         *,
-        bot: Client,
+        bot: commands.Bot,
         host: str,
         port: str,
         password: str,

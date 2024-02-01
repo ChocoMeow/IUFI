@@ -568,6 +568,24 @@ class Track:
         self.is_seekable: bool = info.get("isSeekable", True)
         self.position: int = info.get("position", 0)
 
+    def check_answer(self, answer: str, threshold: float = .75) -> bool:
+        answer = answer.lower()
+        title = re.sub(r"\(.*?\)|\[.*?\]", "", self.title.lower())
+
+        string1 = set(title.split())
+        string2 = set(answer.split())
+        jac_similarity = len(string1 & string2) / len(string1 | string2)
+
+        string1 = title.replace(" ", "")
+        string2 = answer.replace(" ", "")
+        lev_similarity = Levenshtein.ratio(string1, string2)
+        seq_similarity = SequenceMatcher(None, string1, string2).ratio()
+
+        if lev_similarity >= threshold or jac_similarity >= threshold or seq_similarity >= threshold:
+            return True
+        return False 
+
+
     def __eq__(self, other) -> bool:
         if not isinstance(other, Track):
             return False

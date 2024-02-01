@@ -106,9 +106,6 @@ class Player(VoiceProtocol):
 
         self._voice_state: dict = {}
 
-        self.controller: Message = None
-        self.updating: bool = False
-
         self.skip_votes = set()
 
     def __repr__(self):
@@ -178,7 +175,7 @@ class Player(VoiceProtocol):
         """
         return self.guild.id not in self._node._players
 
-    def required(self, leave=False):
+    def required(self, leave = False) -> int:
         required = ceil((len(self.channel.members) - 1) / 2.5)
         if leave:
             if len(self.channel.members) == 3:
@@ -186,7 +183,7 @@ class Player(VoiceProtocol):
         
         return required
     
-    def is_user_join(self, user: Member):
+    def is_user_join(self, user: Member) -> bool:
         if user not in self.channel.members:
             if not user.guild_permissions.manage_guild:
                 return False        
@@ -205,7 +202,7 @@ class Player(VoiceProtocol):
         self._is_connected = state.get("connected")
         self._last_position = state.get("position")
 
-    async def _dispatch_voice_update(self, voice_data: Dict[str, Any]):
+    async def _dispatch_voice_update(self, voice_data: Dict[str, Any]) -> None:
         if {"sessionId", "event"} != self._voice_state.keys():
             return
 
@@ -218,11 +215,11 @@ class Player(VoiceProtocol):
             }}
         )
 
-    async def on_voice_server_update(self, data: dict):
+    async def on_voice_server_update(self, data: dict) -> None:
         self._voice_state.update({"event": data})
         await self._dispatch_voice_update(self._voice_state)
 
-    async def on_voice_state_update(self, data: dict):
+    async def on_voice_state_update(self, data: dict) -> None:
         self._voice_state.update({"sessionId": data.get("session_id")})
 
         if not (channel_id := data.get("channel_id")):
@@ -237,7 +234,7 @@ class Player(VoiceProtocol):
 
         await self._dispatch_voice_update({**self._voice_state, "event": data})
 
-    async def _dispatch_event(self, data: dict):
+    async def _dispatch_event(self, data: dict) -> None:
         event_type = data.get("type")
         event: IUFIMusicEvent = getattr(musicevents, event_type)(data, self)
 
@@ -249,7 +246,7 @@ class Player(VoiceProtocol):
         if isinstance(event, TrackStartEvent):
             self._ending_track = self._current
 
-    async def do_next(self):
+    async def do_next(self) -> None:
         if self.is_playing or not self.channel:
             return
         
@@ -263,60 +260,33 @@ class Player(VoiceProtocol):
         if not self.guild.me.voice:
             await self.connect(timeout=0.0, reconnect=True)
         
+        track: Track = await self._node.pool.get_question()
+        print(f"Now is playing: {track.title}")
+        await self.play(track, ignore_if_playing=True)
+
         self.skip_votes.clear()
 
-    async def invoke_controller(self):
-        if self.updating or not self.channel:
+    async def invoke_controller(self) -> None:
+        if not self.channel:
             return
         
-        self.updating = True
+        await self.context.channel.send(embed=self.build_embed())
 
-        if not self.controller:
-            try:
-                self.controller = await self.context.channel.send(embed=await self.build_embed())
-            except:
-                pass
+    def build_embed(self) -> Embed:
+        current: Track = self._current
+        if not current:
+            return
+        
+        embed = Embed(title=current.title, url=current.uri)
+        embed.description = "```💽 Album: -----\n✅ Correct: ---\n⏱ Median: ----\n🏅 Record: ----s (------)```"
 
-        elif not await self.is_position_fresh():
-            try:
-                await self.controller.delete()
-            except:
-                ui.View.from_message(self.controller).stop()
-            try:
-                self.controller = await self.context.channel.send(embed= await self.build_embed())
-            except:
-                pass
-        else:
-            embed = await self.build_embed()
-            if embed:
-                try:
-                    await self.controller.edit(embed=embed)
-                except:
-                    pass
-          
-        self.updating = False
-
-    async def build_embed(self) -> Embed:
-        embed = Embed()
+        if current.thumbnail:
+            embed.set_thumbnail(url=current.thumbnail)
 
         return embed
 
-    async def is_position_fresh(self):
-        try:
-            async for message in self.context.channel.history(limit=5):
-                if message.id == self.controller.id:
-                    return True
-        except:
-            pass
-
-        return False
     
     async def teardown(self):
-        try:
-            await self.controller.delete()
-        except:
-            pass
-
         try:
             await self.destroy()
         except:
@@ -385,7 +355,7 @@ class Player(VoiceProtocol):
             return track
             
         data = {
-            "encodedTrack": track.original.track_id if track.original else track.track_id,
+            "encodedTrack": track.track_id,
             "position": str(start)
         }
 
