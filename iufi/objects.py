@@ -20,8 +20,8 @@ TIERS_BASE: dict[str, tuple[str, int]] = {
     "rare": ("🌸", 10),
     "epic": ("💎", 40),
     "legendary": ("👑", 100),
-    "mystic": ("🦄", 500),
-    "celestial": ("💫", 1000)
+    "mystic": ("🦄", 250),
+    "celestial": ("💫", 400)
 }
 
 FRAMES_BASE: dict[str, tuple[str, str]] = {
@@ -138,7 +138,7 @@ RANK_BASE: dict[str, dict[str, Any]] = {
     "master": {
         "emoji_id": "1173063919846293535",
         "points": 350,
-        "discord_role": None,
+        "discord_role": 1201455425820827708,
         "questions": [('medium', 3), ('hard', 2)],
         "rewards": {
             1: ("exp", 150),
@@ -148,10 +148,10 @@ RANK_BASE: dict[str, dict[str, Any]] = {
             5: [("potions.speed_iii", 1), ("potions.luck_iii", 1)],
         },
     },
-    "challeneger": {
+    "challenger": {
         "emoji_id": "1173064415453663242",
         "points": 500,
-        "discord_role": None,
+        "discord_role": 1201455425820827708,
         "questions": [('medium', 2), ('hard', 3)],
         "rewards": {
             1: ("exp", 200),
@@ -528,7 +528,6 @@ class Question:
     def wrong_rate(self) -> float:
         if self._wrong == 0:
             return 0
-        
         return 100 - self.correct_rate
 
 class DailyQuestIds(Enum):
