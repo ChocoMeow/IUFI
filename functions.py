@@ -103,7 +103,16 @@ DAILY_QUESTS = [
             [DailyQuestIds.PLAY_QUIZ, "Play 1 Quiz", "Play a quiz", 10, '🍬', 1],
         ]
 
-COUPLE_QUESTS = {}
+COUPLE_QUESTS = [
+    [DailyQuestIds.ROLL, 'Roll 20 times', 'Do "qr" or any other rolls twenty times', 10, '🍬', 20],
+    [DailyQuestIds.COLLECT_LEGENDARY_CARD, 'Collect Legendary card', 'Collect a photocard whose rarity is above or equal to Legendary '
+                                                                     'by rolling', 20, '🍬', 1],
+    [DailyQuestIds.MATCH_GAME, "Play 5 Matching Game", "Play a matching game of any level (qmg)", 10, '🍬', 5],
+    [DailyQuestIds.BUY_ITEM, "Buy 5 Items", "Buy an item from the shop.", 10, '🍬', 5],
+    [DailyQuestIds.TRADE, "Trade 5 photocard", "Buy or sell a photocard", 10, '🍬', 5],
+    [DailyQuestIds.USE_POTION, "Use 5 potion", "Use a potion", 10, '🍬', 5],
+    [DailyQuestIds.PLAY_QUIZ, "Play 5 Quiz", "Play a quiz", 10, '🍬', 5],
+]
 
 COOLDOWN_BASE: dict[str, tuple[str, int]] = {
     "roll": ("🎲", 600),

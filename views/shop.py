@@ -1,13 +1,22 @@
 import discord
 import functions as func
 
-from iufi import TIERS_BASE
+from iufi import TIERS_BASE, events
 
 SHOP_BASE: list[tuple[str, str, int]] = [
     (TIERS_BASE.get("rare")[0], "roll.rare", 30),
     (TIERS_BASE.get("epic")[0], "roll.epic", 100),
     (TIERS_BASE.get("legendary")[0], "roll.legendary", 250)
 ]
+
+VALENTINE_ITEMS: list[tuple[str, str, int]] = [
+    ("🌹", "event_items.rose", 10),
+    ("📝", "event_items.card", 10),
+    ("💍", "event_items.ring", 100),
+]
+
+if events.is_valentines_day():
+    SHOP_BASE.extend(VALENTINE_ITEMS)
 
 class QuantityModal(discord.ui.Modal):
     def __init__(self, *args, **kwargs) -> None:
