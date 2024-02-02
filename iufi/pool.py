@@ -37,12 +37,12 @@ from .exceptions import IUFIException, DuplicatedCardError, DuplicatedTagError
 # )
 
 DROP_RATES = {
-    'common': .9,
+    'common': .93,
     'rare': .05,
     'epic': .003,
-    'legendary': .001,
-    'mystic': .0005,
-    "celestial": .0001
+    'legendary': .0008,
+    'mystic': .0001,
+    "celestial": .00005
 }
 
 URL_REGEX = re.compile(
