@@ -167,6 +167,12 @@ RANK_BASE: dict[str, dict[str, Any]] = {
     }
 }
 
+TRACK_BASE: dict[str, Any] = {
+    "correct": 0,
+    "wrong": 0,
+    "average_time": 0
+}
+
 class CardObject:
     __slots__ = ("_image")
 
@@ -567,6 +573,8 @@ class Track:
         self.is_stream: bool = info.get("isStream", False)
         self.is_seekable: bool = info.get("isSeekable", True)
         self.position: int = info.get("position", 0)
+
+        self.db_data: Optional[dict] = None
 
     def check_answer(self, answer: str, threshold: float = .75) -> bool:
         answer = answer.lower()

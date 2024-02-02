@@ -29,8 +29,7 @@ from asyncio import sleep
 from typing import (
     Any,
     Dict,
-    Optional,
-    Union
+    Optional
 )
 
 from discord import (
@@ -38,10 +37,10 @@ from discord import (
     VoiceChannel,
     VoiceProtocol,
     Member,
-    ui,
+    TextChannel,
+    Embed,
     Message,
-    Interaction,
-    Embed
+    Color
 )
 
 from discord.ext import commands
@@ -52,19 +51,7 @@ from .exceptions import IUFIException
 from .objects import Track
 from .pool import Node, NodePool
 from .musicevents import IUFIMusicEvent, TrackEndEvent, TrackStartEvent
-
-async def connect_channel(ctx: commands.Context, channel: VoiceChannel = None):
-    try:
-        channel = channel or ctx.author.voice.channel
-    except:
-        raise IUFIException("No voice channel to connect. Please either provide one or join one.")
-
-    check = channel.permissions_for(ctx.guild.me)
-    if check.connect == False or check.speak == False:
-        raise IUFIException("Sorry! i don't have permissions to join or speak in your voice channel.")
-
-    player: Player = await channel.connect(cls=Player(ctx.bot, channel, ctx))
-    return player
+import functions as func
 
 class Player(VoiceProtocol):
     """The base player class for IUFI.
@@ -84,14 +71,12 @@ class Player(VoiceProtocol):
         self, 
         client: Optional[commands.Bot] = None, 
         channel: Optional[VoiceChannel] = None, 
-        ctx: Union[commands.Context, Interaction] = None,
     ):
         self._bot: commands.Bot = client
-        self.context = ctx
+        self.text_channel: Optional[TextChannel] = self.bot.get_channel(func.MUSIC_TEXT_CHANNEL)
         self.channel: VoiceChannel = channel
+        self.message: Optional[Message] = None
         self._guild = channel.guild if channel else None
-
-        self._volume: int = 100
 
         self._node = NodePool.get_node()
         self._current: Track = None
@@ -105,6 +90,7 @@ class Player(VoiceProtocol):
         self._ending_track: Optional[Track] = None
 
         self._voice_state: dict = {}
+        self.guesser: Optional[Member] = None
 
         self.skip_votes = set()
 
@@ -246,12 +232,27 @@ class Player(VoiceProtocol):
         if isinstance(event, TrackStartEvent):
             self._ending_track = self._current
 
+    async def check_answer(self, message: Message) -> None:
+        if not self.guesser and self.current:
+            return
+        
+        if self.current.check_answer(message.content):
+            self.guesser = message.author
+            await self.invoke_controller()
+            await sleep(10)
+            await self.stop()
+
+        else:
+            ...
+
     async def do_next(self) -> None:
         if self.is_playing or not self.channel:
             return
         
         if self._paused:
             self._paused = False
+
+        self.guesser = None
 
         if self._track_is_stuck:
             await sleep(10)
@@ -261,32 +262,62 @@ class Player(VoiceProtocol):
             await self.connect(timeout=0.0, reconnect=True)
         
         track: Track = await self._node.pool.get_question()
-        print(f"Now is playing: {track.title}")
         await self.play(track, ignore_if_playing=True)
-
+        print(track.title)
+        await self.invoke_controller()
         self.skip_votes.clear()
 
     async def invoke_controller(self) -> None:
-        if not self.channel:
+        if not self.channel or not self.text_channel:
             return
         
-        await self.context.channel.send(embed=self.build_embed())
+        embed = self.build_embed()
+        if not self.message:
+            self.message = await self.text_channel.send(embed=embed)
+
+        elif not await self.is_position_fresh():
+            await self.message.delete()
+            self.message = await self.text_channel.send(embed=embed)
+
+        else:
+            await self.message.edit(embed=embed)
 
     def build_embed(self) -> Embed:
         current: Track = self._current
         if not current:
             return
         
-        embed = Embed(title=current.title, url=current.uri)
-        embed.description = "```💽 Album: -----\n✅ Correct: ---\n⏱ Median: ----\n🏅 Record: ----s (------)```"
+        if not self.guesser:
+            title = "What song do you think is on right now?"
+            description = "```📀 Song Title: ???\n✅ Correct: ??%\n⏱ Median: ??s\n🏅 Record: ??:??s (????)```"
+            thumbnail = "https://cdn.discordapp.com/attachments/1183364758175498250/1202590915093467208/74961f7708c7871fed5c7bee00e76418.png"
+        
+        else:
+            title = f"{self.guesser.display_name}, You guessed it right!"
+            description = f"To hear more: [Click Me]({current.uri})\n```📀 Song Title: {current.title}\n\n✅ Correct: 0%\n⏱ Median: 5s\n🏅 Record: 5.2s (No One)```"
+            thumbnail = current.thumbnail
 
-        if current.thumbnail:
-            embed.set_thumbnail(url=current.thumbnail)
+        embed = Embed(title=title, description=description, color=Color.random())
+        embed.set_thumbnail(url=thumbnail)
 
         return embed
 
-    
+    async def is_position_fresh(self):
+        try:
+            async for message in self.text_channel.history(limit=5):
+                if message.id == self.message.id:
+                    return True
+        except:
+            pass
+
+        return False
+
     async def teardown(self):
+        try:
+            await self.message.delete()
+        except:
+            pass
+
         try:
             await self.destroy()
         except:

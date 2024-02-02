@@ -29,10 +29,14 @@ tokens: TOKEN = TOKEN()
 MONGO_DB: AsyncIOMotorClient = None
 USERS_DB: AsyncIOMotorCollection = None
 CARDS_DB: AsyncIOMotorCollection = None
+MUSIC_DB: AsyncIOMotorCollection = None
 
 USERS_BUFFER: dict[int, dict[str, Any]] = {}
 MAX_CARDS: int = 100
-DEAFAULT_EXP = 100
+DEAFAULT_EXP: int = 100
+MAIN_GUILD: int = 781828787352240129
+MUSIC_TEXT_CHANNEL: int = 1143735704778711120
+MUSIC_VOICE_CHANNEL: int = 781828787352240133
 
 USER_BASE: dict[str, Any] = {
     "candies": 0,

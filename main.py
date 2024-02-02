@@ -19,6 +19,11 @@ class IUFI(commands.Bot):
         if message.author.bot or not message.guild:
             return False
 
+        if message.channel.id == func.MUSIC_TEXT_CHANNEL:
+            player: iufi.Player = message.guild.voice_client
+            if player:
+                await player.check_answer(message)
+
         if message.channel.id == 1147547592469782548:
             emojis = ()
             for attachment in message.attachments:
@@ -60,6 +65,7 @@ class IUFI(commands.Bot):
         
         func.CARDS_DB = func.MONGO_DB[db_name]["cards"]
         func.USERS_DB = func.MONGO_DB[db_name]["users"]
+        func.MUSIC_DB = func.MONGO_DB[db_name]["musics"]
 
     async def setup_hook(self) -> None:
         await self.connect_db()

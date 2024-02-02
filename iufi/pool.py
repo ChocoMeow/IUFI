@@ -1,16 +1,20 @@
 from __future__ import annotations
 
-import asyncio
-import os
-import re
-import aiohttp
+import asyncio, os, re, aiohttp, copy
+import functions as func
 
 from discord.ext import commands
-from typing import Dict, Optional, TYPE_CHECKING, Union
 from urllib.parse import quote
-
-from .objects import Playlist, Track
+from .objects import Playlist, Track, TRACK_BASE
 from .utils import ExponentialBackoff, NodeStats
+from collections import Counter
+
+from typing import (
+    Dict,
+    Optional,
+    TYPE_CHECKING,
+    Union
+)
 
 if TYPE_CHECKING:
     from .player import Player
@@ -21,7 +25,6 @@ from random import (
     sample,
     shuffle
 )
-from collections import Counter
 
 from .objects import (
     Card,
@@ -543,7 +546,14 @@ class NodePool:
         if not cls._questions:
             await cls.fetch_question()
         
-        return choice(cls._questions.tracks)
+        track: Track = choice(cls._questions.tracks)
+        if not track.db_data:
+            track_data = await func.MUSIC_DB.find_one({"_id": track.identifier})
+            if not track_data:
+                track_data = await func.MUSIC_DB.insert_one({ "_id": track.identifier, **TRACK_BASE})
+
+            track.db_data = track_data or copy.deepcopy(TRACK_BASE)
+        return track
     
     @classmethod
     def get_node(cls, *, identifier: str = None) -> Node:

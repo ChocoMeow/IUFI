@@ -32,7 +32,7 @@ class Tasks(commands.Cog):
         if end_time - time.time() > 3_600:
             return
         
-        guild: discord.Guild = self.bot.get_guild(214199357170253834)
+        guild: discord.Guild = self.bot.get_guild(func.MAIN_GUILD)
         if not guild:
             return
         
