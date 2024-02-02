@@ -1,5 +1,5 @@
 import os, time, copy, json
-from enum import Enum
+from enum import IntEnum
 
 from motor.motor_asyncio import (
     AsyncIOMotorClient,
@@ -61,9 +61,10 @@ USER_BASE: dict[str, Any] = {
         "bio": "",
         "main": ""
     },
-    "event_items": {
+    "event_item": {
       "rose": 0,
-    }
+    },
+    "couple_id": None
 }
 
 DAILY_QUEST_BASE: dict[str, Any] = {
@@ -81,7 +82,7 @@ COUPLE_BASE: dict[str, Any] = {
     "score": 0,
 }
 
-class DailyQuestIds(Enum):
+class DailyQuestIds(IntEnum):
     ROLL = 0
     COLLECT_EPIC_CARD = 1
     MATCH_GAME = 2
@@ -321,6 +322,8 @@ async def update_daily_quest(user_id: int, data: dict) -> None:
             else:
                 raise ValueError(f"Invalid mode: {mode}")
 
+    await DAILY_QUEST_DB.update_one({"_id": user_id}, data)
+
 async def add_daily_quest_progress(user_id: int, quest_id: int, progress: int) -> None:
     daily_quest = await get_daily_quest(user_id)
     can_update = False
@@ -347,10 +350,10 @@ def get_couple_quest_by_id(quest_id):
     return None
 
 
-async def get_couple_data(partner_id: int) -> dict[str, Any]:
-    couple_data = COUPLE_BUFFER.get(partner_id)
+async def get_couple_data(couple_id: int) -> dict[str, Any]:
+    couple_data = COUPLE_BUFFER.get(couple_id)
     if not couple_data:
-        couple_data = COUPLE_BUFFER[partner_id] = await COUPLE_DB.find_one({"_id": partner_id})
+        couple_data = COUPLE_BUFFER[couple_id] = await COUPLE_DB.find_one({"_id": couple_id})
     return couple_data
 
 async def make_couple(partner_1: int, partner_2: int) -> None:
@@ -359,6 +362,7 @@ async def make_couple(partner_1: int, partner_2: int) -> None:
     couple_data["partner_2"] = partner_2
     couple_data["date_partnered"] = time.time()
     couple_id = await COUPLE_DB.insert_one(couple_data)
+    couple_id = couple_id.inserted_id
     COUPLE_BUFFER[couple_id] = couple_data
     await update_user(partner_1, {"$set": {"couple_id": couple_id}})
     await update_user(partner_2, {"$set": {"couple_id": couple_id}})

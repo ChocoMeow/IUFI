@@ -22,8 +22,8 @@ class ProposeView(discord.ui.View):
     async def on_timeout(self) -> None:
         for child in self.children:
             child.disabled = True
-
         await self.message.edit(view=self)
+        self.stop()
 
     def build_embed(self) -> discord.Embed:
         embed = discord.Embed(title="💍 Propose", color=discord.Color.random())
@@ -45,11 +45,11 @@ class ProposeView(discord.ui.View):
             return await interaction.response.send_message("You can't accept your own proposal!", ephemeral=True)
 
         juliet_not_yet_data = await func.get_user(juliet_not_yet.id)
-        if juliet_not_yet_data.get("couple_id", 0) != 0:
+        if juliet_not_yet_data.get("couple_id"):
             return await interaction.response.send_message("You're already in a relationship.", ephemeral=True)
 
         romeo_data = await func.get_user(self.romeo.id)
-        if romeo_data.get("couple_id", 0) != 0:
+        if romeo_data.get("couple_id"):
             await interaction.response.send_message("The user is already in a relationship.", ephemeral=True)
             await self.on_timeout()
 

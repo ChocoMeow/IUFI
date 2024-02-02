@@ -21,18 +21,19 @@ class CoupleSystem(commands.Cog):
             return await ctx.reply("You can't propose to yourself.")
 
         user_data = await func.get_user(ctx.author.id)
-        if user_data.get("couple_id", 0) != 0:
+        if user_data.get("couple_id", None) is not None:
             return await ctx.reply("You're already in a relationship.")
-        if user_data.get("event_items").get("rose", 0) <= 0:
+        if user_data.get("event_item") is None or user_data.get("event_item").get("rose", 0) <= 0:
             return await ctx.reply("You don't have a rose.Don't worry, you can get one from the shop.")
 
         other_user_data = await func.get_user(user.id)
-        if other_user_data.get("couple_id", 0) != 0:
+        if other_user_data.get("couple_id", None) is not None:
             return await ctx.reply("The user is already in a relationship.")
 
-        await func.update_user(ctx.author.id, {"$inc": {"event_items.rose": -1}})
-        await ctx.reply(f"{ctx.author.mention} has proposed to {user.mention} with a rose!",
-                        view=ProposeView(ctx.author, user))
+        await func.update_user(ctx.author.id, {"$inc": {"event_item.rose": -1}})
+        view = ProposeView(ctx.author, user)
+        view.message = await ctx.reply(f"{ctx.author.mention} has proposed to {user.mention} with a rose!",
+                                       view=view)
 
 
 async def setup(bot: commands.Bot) -> None:
