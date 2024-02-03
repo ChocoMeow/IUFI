@@ -20,7 +20,7 @@ def is_valentines_day():
 
 def get_match_game_cover(level: str):
     if is_valentines_day():
-        return f"cover/{valentines_day['folder']}/level{level}.jpg"
+        return f"cover/{valentines_day['folder']}/level{level}.png"
     else:
         return f"cover/level{level}.jpg"
 
