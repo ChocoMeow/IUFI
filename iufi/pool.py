@@ -550,9 +550,10 @@ class NodePool:
         if not track.db_data:
             track_data = await func.MUSIC_DB.find_one({"_id": track.identifier})
             if not track_data:
-                track_data = await func.MUSIC_DB.insert_one({ "_id": track.identifier, **TRACK_BASE})
+                await func.MUSIC_DB.insert_one({ "_id": track.identifier, **TRACK_BASE})
 
             track.db_data = track_data or copy.deepcopy(TRACK_BASE)
+            
         return track
     
     @classmethod

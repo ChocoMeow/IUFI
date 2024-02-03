@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-import random, os, asyncio, Levenshtein, re
+import random, os, asyncio, Levenshtein, re, discord
 import functions as func
 
 from PIL import Image, ImageDraw, ImageSequence
@@ -170,7 +170,11 @@ RANK_BASE: dict[str, dict[str, Any]] = {
 TRACK_BASE: dict[str, Any] = {
     "correct": 0,
     "wrong": 0,
-    "average_time": 0
+    "average_time": 0,
+    "best_record": {
+        "member": None,
+        "time": None
+    }
 }
 
 class CardObject:
@@ -584,6 +588,7 @@ class Track:
         self.position: int = info.get("position", 0)
 
         self.db_data: Optional[dict] = None
+        self.is_updated: bool = False
 
     def check_answer(self, answer: str, threshold: float = .75) -> bool:
         answer = answer.lower()
@@ -601,8 +606,47 @@ class Track:
         if lev_similarity >= threshold or jac_similarity >= threshold or seq_similarity >= threshold:
             return True
         return False 
+    
+    def update_state(self, member: discord.Member, time_used: float, result: bool) -> None:
+        self.is_updated = True
 
+        if self.total >= 0:
+            self.db_data["average_time"] += time_used
+        else:
+            self.db_data["average_time"] = ((self.db_data["average_time"] * self.total) + time_used) / (self.total + 1)
 
+        current_best_time = self.db_data["best_record"]["time"]
+        if result and (current_best_time is None or current_best_time > time_used):
+            self.db_data["best_record"]["member"] = member.id
+            self.db_data["best_record"]["time"] = time_used
+
+        key = "correct" if result else "wrong"
+        self.db_data[key] = self.db_data.get(key, 0) + 1
+    
+    @property
+    def total(self) -> int:
+        return self.db_data["correct"] + self.db_data["wrong"]
+    
+    @property
+    def average_time(self) -> float:
+        return self.db_data["average_time"]
+    
+    @property
+    def correct_rate(self) -> float:
+        total = self.total
+        if not total:
+            return 0
+        return round(self.db_data["correct"] / total, 2) * 100
+    
+    @property
+    def wrong_rate(self) -> float:
+        return 100 - self.correct_rate
+
+    @property
+    def best_record(self) -> tuple[int, float]:
+        br = self.db_data["best_record"]
+        return br["member"], br["time"]
+    
     def __eq__(self, other) -> bool:
         if not isinstance(other, Track):
             return False

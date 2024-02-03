@@ -91,31 +91,6 @@ class Info(commands.Cog):
     
     @leaderboard.command(aliases=["q"])
     async def quiz(self, ctx: commands.Context):
-        """Shows the IUFI Music leaderboard."""
-        users = await func.USERS_DB.find().sort("game_state.music_game.points", -1).limit(10).to_list(10)
-
-        embed = discord.Embed(title="🏆   Music Leaderboard", color=discord.Color.random())
-        
-        description = ""
-        for index, user_data in enumerate(users):
-            game_state: dict[str, float | int] = user_data.get("game_state", {}).get("music_game", {})
-            if not game_state:
-                continue
-
-            member = self.bot.get_user(user_data['_id'])
-            if member:
-                description += f"{LEADERBOARD_EMOJIS[index if index <= 2 else 3]} {member.display_name:<15} {user_data['game_state']['music_game']['points']:>4} ⚔️\n"
-        
-        if not description:
-            description = "The leaderboard is currently empty."
-
-        embed.description += f"```{description}```"
-        embed.set_thumbnail(url=icon.url if (icon := ctx.guild.icon) else None)
-
-        await ctx.reply(embed=embed)
-
-    @leaderboard.command(aliases=["m"])
-    async def music(self, ctx: commands.Context):
         """Shows the IUFI Quiz leaderboard."""
         start_time, end_time = func.get_month_unix_timestamps()
         users = await func.USERS_DB.find({f"game_state.quiz_game.last_update": {"$gt":start_time, "$lte":end_time}}).sort(f"game_state.quiz_game.points", -1).limit(10).to_list(10)
@@ -138,6 +113,31 @@ class Info(commands.Cog):
 
         embed.description = f"The next reset is <t:{int(end_time)}:R>\n{description}"
         embed.set_thumbnail(url=icon.url if (icon := ctx.guild.icon) else None)
+        await ctx.reply(embed=embed)
+
+    @leaderboard.command(aliases=["m"])
+    async def music(self, ctx: commands.Context):
+        """Shows the IUFI Music leaderboard."""
+        users = await func.USERS_DB.find().sort("game_state.music_game.points", -1).limit(10).to_list(10)
+
+        embed = discord.Embed(title="🏆   Music Leaderboard", color=discord.Color.random())
+        
+        description = ""
+        for index, user_data in enumerate(users):
+            game_state: dict[str, float | int] = user_data.get("game_state", {}).get("music_game", {})
+            if not game_state:
+                continue
+
+            member = self.bot.get_user(user_data['_id'])
+            if member:
+                description += f"{LEADERBOARD_EMOJIS[index if index <= 2 else 3]} {member.display_name:<15} {user_data['game_state']['music_game']['points']:>4} ♭\n"
+        
+        if not description:
+            description = "The leaderboard is currently empty."
+
+        embed.description = f"```{description}```"
+        embed.set_thumbnail(url=icon.url if (icon := ctx.guild.icon) else None)
+
         await ctx.reply(embed=embed)
 
     @commands.command(aliases=["h"])

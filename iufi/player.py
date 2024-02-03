@@ -88,6 +88,7 @@ class Player(VoiceProtocol):
         self._last_position: int = 0
         self._last_update: int = 0
         self._ending_track: Optional[Track] = None
+        self.time_used: Optional[float] = None
 
         self._voice_state: dict = {}
         self.guesser: Optional[Member] = None
@@ -233,17 +234,21 @@ class Player(VoiceProtocol):
             self._ending_track = self._current
 
     async def check_answer(self, message: Message) -> None:
-        if not self.guesser and self.current:
+        if self.guesser and self.current:
             return
         
-        if self.current.check_answer(message.content):
+        time_used = time.time() - self.time_used
+        result = self.current.check_answer(message.content)
+        self.current.update_state(message.author, time_used, result)
+        
+        if result:
             self.guesser = message.author
             await self.invoke_controller()
+            points = 2 + (1 if time_used < self.current.average_time else -1)
+            await func.update_user(message.author.id, {"$inc": {"game_state.music_game.points": points}})
+
             await sleep(10)
             await self.stop()
-
-        else:
-            ...
 
     async def do_next(self) -> None:
         if self.is_playing or not self.channel:
@@ -265,6 +270,8 @@ class Player(VoiceProtocol):
         await self.play(track, ignore_if_playing=True)
         print(track.title)
         await self.invoke_controller()
+        self.time_used = time.time()
+
         self.skip_votes.clear()
 
     async def invoke_controller(self) -> None:
@@ -293,8 +300,10 @@ class Player(VoiceProtocol):
             thumbnail = "https://cdn.discordapp.com/attachments/1183364758175498250/1202590915093467208/74961f7708c7871fed5c7bee00e76418.png"
         
         else:
+            member_id, best_time = current.best_record
+            member_name = member.display_name if (member := self.guild.get_member(member_id)) else "???"
             title = f"{self.guesser.display_name}, You guessed it right!"
-            description = f"To hear more: [Click Me]({current.uri})\n```📀 Song Title: {current.title}\n\n✅ Correct: 0%\n⏱ Median: 5s\n🏅 Record: 5.2s (No One)```"
+            description = f"**To hear more: [Click Me]({current.uri})**\n```📀 Song Title: {current.title}\n\n✅ Correct: {current.correct_rate}%\n⏱ Avg Time: {current.average_time:.1f}s\n🏅 Record: {member_name}s ({func.convert_seconds(best_time)})```"
             thumbnail = current.thumbnail
 
         embed = Embed(title=title, description=description, color=Color.random())
