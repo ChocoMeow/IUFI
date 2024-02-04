@@ -21,7 +21,8 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 """
 
-import time
+import time, discord
+import functions as func
 
 from math import ceil
 from asyncio import sleep
@@ -40,7 +41,7 @@ from discord import (
     TextChannel,
     Embed,
     Message,
-    Color
+    Color,
 )
 
 from discord.ext import commands
@@ -51,7 +52,41 @@ from .exceptions import IUFIException
 from .objects import Track
 from .pool import Node, NodePool
 from .musicevents import IUFIMusicEvent, TrackEndEvent, TrackStartEvent
-import functions as func
+
+class InteractionView(discord.ui.View):
+    def __init__(self, player, timeout: float = None) -> None:
+        super().__init__(timeout=timeout)
+
+        self.player: Player = player
+        self.likes: list[int] = []
+
+    def update_btn(self, btn_name: str, disabled: bool) -> None:
+        for child in self.children:
+            if child.label == btn_name:
+                child.disabled = disabled
+                return
+
+    async def interaction_check(self, interaction: discord.Interaction) -> bool:
+        if interaction.user not in self.player.channel.members:
+            await interaction.response.send_message(f"Join {self.player.channel.mention} to play IUFI Music!", ephemeral=True)
+            return False
+        return True
+    
+    @discord.ui.button(emoji="❤️")
+    async def love(self, interaction: discord.Interaction, button: discord.ui.Button):
+        if interaction.user.id in self.likes:
+            self.likes.append(interaction.user.id)
+            return await interaction.response.send_message("You have already liked this song!", ephemeral=True)
+        
+        await interaction.response.defer()
+        current = self.player.current
+        if current:
+            current.db_data["likes"] += 1
+
+    @discord.ui.button(label="Skip", emoji="⏭️")
+    async def skip(self, interaction: discord.Interaction, button: discord.ui.Button):
+        await interaction.response.defer()
+        await self.player.stop()
 
 class Player(VoiceProtocol):
     """The base player class for IUFI.
@@ -268,10 +303,9 @@ class Player(VoiceProtocol):
         
         track: Track = await self._node.pool.get_question()
         await self.play(track, ignore_if_playing=True)
-        print(track.title)
         await self.invoke_controller()
-        self.time_used = time.time()
 
+        self.time_used = time.time()
         self.skip_votes.clear()
 
     async def invoke_controller(self) -> None:
@@ -279,15 +313,18 @@ class Player(VoiceProtocol):
             return
         
         embed = self.build_embed()
+        view = InteractionView(self)
+        view.update_btn("Skip", self.guesser is not None)
+        
         if not self.message:
-            self.message = await self.text_channel.send(embed=embed)
+            self.message = await self.text_channel.send(embed=embed, view=view)
 
         elif not await self.is_position_fresh():
             await self.message.delete()
-            self.message = await self.text_channel.send(embed=embed)
+            self.message = await self.text_channel.send(embed=embed, view=view)
 
         else:
-            await self.message.edit(embed=embed)
+            await self.message.edit(embed=embed, view=view)
 
     def build_embed(self) -> Embed:
         current: Track = self._current
@@ -303,7 +340,7 @@ class Player(VoiceProtocol):
             member_id, best_time = current.best_record
             member_name = member.display_name if (member := self.guild.get_member(member_id)) else "???"
             title = f"{self.guesser.display_name}, You guessed it right!"
-            description = f"**To hear more: [Click Me]({current.uri})**\n```📀 Song Title: {current.title}\n\n✅ Correct: {current.correct_rate}%\n⏱ Avg Time: {current.average_time:.1f}s\n🏅 Record: {member_name}s ({func.convert_seconds(best_time)})```"
+            description = f"**To hear more: [Click Me]({current.uri})**\n```📀 Song Title: {current.title}\n\n✅ Correct: {current.correct_rate}%\n🕓 Avg Time: {current.average_time:.1f}s\n🏅 Record: {member_name}s ({func.convert_seconds(best_time)})```"
             thumbnail = current.thumbnail
 
         embed = Embed(title=title, description=description, color=Color.random())

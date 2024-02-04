@@ -130,7 +130,7 @@ class Info(commands.Cog):
 
             member = self.bot.get_user(user_data['_id'])
             if member:
-                description += f"{LEADERBOARD_EMOJIS[index if index <= 2 else 3]} {member.display_name:<15} {user_data['game_state']['music_game']['points']:>4} ♭\n"
+                description += f"{LEADERBOARD_EMOJIS[index if index <= 2 else 3]} {member.display_name:<15} {user_data['game_state']['music_game']['points']:>4} 𝄞\n"
         
         if not description:
             description = "The leaderboard is currently empty."

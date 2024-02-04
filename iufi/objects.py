@@ -171,6 +171,7 @@ TRACK_BASE: dict[str, Any] = {
     "correct": 0,
     "wrong": 0,
     "average_time": 0,
+    "likes": 0,
     "best_record": {
         "member": None,
         "time": None
