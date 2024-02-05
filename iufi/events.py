@@ -34,6 +34,6 @@ def get_main_currency_emoji() -> str:
 
 def get_main_currency_name() -> str:
     if is_valentines_day():
-        return "Chocolates"
+        return "Choco"
     else:
         return "Candies"

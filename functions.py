@@ -108,14 +108,14 @@ DAILY_QUESTS = [
         ]
 
 COUPLE_QUESTS = [
-    [DailyQuestIds.ROLL, 'Roll 20 times', 'Do "qr" or any other rolls twenty times', 10, f'{iufi.get_main_currency_emoji()}', 20, 'candies'],
+    [DailyQuestIds.ROLL, 'Roll 100 times', 'Do "qr" or any other rolls twenty times', 1, f'👑', 20, 'roll.legendary'],
     [DailyQuestIds.COLLECT_LEGENDARY_CARD, 'Collect Legendary card', 'Collect a photocard whose rarity is above or equal to Legendary '
                                                                      'by rolling', 20, f'{iufi.get_main_currency_emoji()}', 1, 'candies'],
-    [DailyQuestIds.MATCH_GAME, "Play 5 Matching Game", "Play a matching game of any level (qmg)", 10, f'{iufi.get_main_currency_emoji()}', 5, 'candies'],
-    [DailyQuestIds.BUY_ITEM, "Buy 5 Items", "Buy an item from the shop.", 10, f'{iufi.get_main_currency_emoji()}', 5, 'candies'],
-    [DailyQuestIds.TRADE, "Trade 5 photocard", "Buy or sell a photocard", 10, f'{iufi.get_main_currency_emoji()}', 5, 'candies'],
-    [DailyQuestIds.USE_POTION, "Use 5 potion", "Use a potion", 10, f'{iufi.get_main_currency_emoji()}', 5, 'candies'],
-    [DailyQuestIds.PLAY_QUIZ, "Play 5 Quiz", "Play a quiz", 10, f'{iufi.get_main_currency_emoji()}', 5, 'candies'],
+    [DailyQuestIds.MATCH_GAME, "Play 10 Matching Game", "Play a matching game of any level (qmg)", 30, f'{iufi.get_main_currency_emoji()}', 5, 'candies'],
+    [DailyQuestIds.BUY_ITEM, "Buy 5 Items", "Buy an item from the shop.", 30, f'{iufi.get_main_currency_emoji()}', 5, 'candies'],
+    [DailyQuestIds.TRADE, "Trade 5 photocard", "Buy or sell a photocard", 15, f'{iufi.get_main_currency_emoji()}', 5, 'candies'],
+    [DailyQuestIds.USE_POTION, "Use 5 potion", "Use a potion", 1, f'🌸', 5, 'roll.rare'],
+    [DailyQuestIds.PLAY_QUIZ, "Play 10 Quiz", "Play a quiz", 1, f'💎', 10, 'roll.epic'],
 ]
 
 COOLDOWN_BASE: dict[str, tuple[str, int]] = {
