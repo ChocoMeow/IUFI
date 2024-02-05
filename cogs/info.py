@@ -114,6 +114,26 @@ class Info(commands.Cog):
         embed.description = f"The next reset is <t:{int(end_time)}:R>\n{description}"
         embed.set_thumbnail(url=icon.url if (icon := ctx.guild.icon) else None)
         await ctx.reply(embed=embed)
+    @leaderboard.command(aliases=["c"])
+    async def couple(self, ctx: commands.Context):
+        """Shows the IUFI Best Couple leaderboard."""
+        couples = await func.COUPLE_DB.find().sort("score", -1).limit(10).to_list(10)
+
+        embed = discord.Embed(title="❤️  Best Couple Leaderboard", color=discord.Color.red())
+        description = ""
+
+        for index,couple in enumerate(couples):
+            partner1 = self.bot.get_user(couple["partner_1"])
+            partner2 = self.bot.get_user(couple["partner_2"])
+            if partner1 and partner2:
+                description += f"{LEADERBOARD_EMOJIS[index if index <= 2 else 3]} {partner1.display_name} & {partner2.display_name}    {couple['score']} ❤️\n"
+
+        if not description:
+            description = "The leaderboard is currently empty."
+
+        embed.description = f"```{description}```"
+        embed.set_thumbnail(url=icon.url if (icon := ctx.guild.icon) else None)
+        await ctx.reply(embed=embed)
 
     @commands.command(aliases=["h"])
     async def help(self, ctx: commands.Context, *, command: str = None):
