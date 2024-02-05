@@ -3,6 +3,8 @@ import functions as func
 
 from discord.ext import commands
 from random import choice
+
+import iufi
 from iufi import (
     Question,
     QuestionPool as QP,
@@ -227,7 +229,7 @@ class QuizView(discord.ui.View):
 
                     embed.description += f"{index}. "
                     if reward_name[0] == "candies":
-                        embed.description += f"{'🍬 Candies':<18} x{amount}\n"
+                        embed.description += f"{f'{iufi.get_main_currency_emoji()} {iufi.get_main_currency_name()}':<18} x{amount}\n"
                     
                     elif reward_name[0] == "roll":
                         roll_data = TIERS_BASE.get(reward_name[1])

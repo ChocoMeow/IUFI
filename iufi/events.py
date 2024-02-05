@@ -14,14 +14,26 @@ EVENT_CONFIG: dict[str, dict[str, str | datetime.datetime]] = {
 valentines_day = EVENT_CONFIG["valentines_day"]
 
 
-def is_valentines_day():
+def is_valentines_day() -> bool:
     return valentines_day["start_date"] <= datetime.datetime.now() <= valentines_day["end_date"]
 
 
-def get_match_game_cover(level: str):
+def get_match_game_cover(level: str) -> str:
     if is_valentines_day():
         return f"cover/{valentines_day['folder']}/level{level}.png"
     else:
         return f"cover/level{level}.jpg"
 
 
+def get_main_currency_emoji() -> str:
+    if is_valentines_day():
+        return "🍫"
+    else:
+        return "🍬"
+
+
+def get_main_currency_name() -> str:
+    if is_valentines_day():
+        return "Chocolates"
+    else:
+        return "Candies"

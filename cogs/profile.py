@@ -10,11 +10,11 @@ from views import (
 
 DAILY_ROWS: list[str] = ["🟥", "🟧", "🟨", "🟩", "🟦", "🟪"]
 WEEKLY_REWARDS: list[tuple[str, str, int]] = [
-    ("🍬", "candies", 50),
+    (f'{iufi.get_main_currency_emoji()}', "candies", 50),
     (iufi.TIERS_BASE.get("rare")[0], "roll.rare", 1),
-    ("🍬", "candies", 100),
+    (f'{iufi.get_main_currency_emoji()}', "candies", 100),
     (iufi.TIERS_BASE.get("epic")[0], "roll.epic", 1),
-    ("🍬", "candies", 500),
+    (f'{iufi.get_main_currency_emoji()}', "candies", 500),
     (iufi.TIERS_BASE.get("legendary")[0], "roll.legendary", 1),
 ]
 
@@ -225,7 +225,7 @@ class Profile(commands.Cog):
         })
 
         embed = discord.Embed(title="📅   Daily Reward", color=discord.Color.random())
-        embed.description = f"Daily reward claimed! + {'🍬 5' if claimed % 5 else f'{WEEKLY_REWARDS[(claimed//5) - 1][0]} {WEEKLY_REWARDS[(claimed//5) - 1][2]}'}"
+        embed.description = f"Daily reward claimed! + {f'{iufi.get_main_currency_emoji()} 5' if claimed % 5 else f'{WEEKLY_REWARDS[(claimed//5) - 1][0]} {WEEKLY_REWARDS[(claimed//5) - 1][2]}'}"
         embed.set_thumbnail(url=ctx.author.display_avatar.url)
 
         value = "```"
@@ -256,7 +256,7 @@ class Profile(commands.Cog):
         """Shows the items that you own."""
         user = await func.get_user(ctx.author.id)
         embed = discord.Embed(title=f"🎒 {ctx.author.display_name}'s Inventory", color=0x5cb045)
-        embed.description = f"```{'🍬 Starcandies':<20} x{user['candies']}\n"
+        embed.description = f"```{f'{iufi.get_main_currency_emoji()} {iufi.get_main_currency_name()}':<20} x{user['candies']}\n"
 
         for tier, count in user.get("roll").items():
             if count > 0 and tier in iufi.TIERS_BASE.keys():

@@ -1,5 +1,6 @@
 import discord
 import functions as func
+import iufi
 
 from iufi import Card
 
@@ -32,7 +33,7 @@ class TradeView(discord.ui.View):
         embed = discord.Embed(title="⤵️ Trade", color=discord.Color.random())
         embed.description = f"```Seller: {self.seller.display_name}\n" \
                             f"Buyer: {self.buyer.display_name if self.buyer else 'Anyone'}\n" \
-                            f"Candies: 🍬 {self.candies}\n\n" \
+                            f"{iufi.get_main_currency_name()}: {iufi.get_main_currency_emoji()} {self.candies}\n\n" \
                             f"{self.card.display_id}\n" \
                             f"{self.card.display_tag}\n" \
                             f"{self.card.display_frame}\n" \
@@ -73,7 +74,7 @@ class TradeView(discord.ui.View):
         await func.add_daily_quest_progress(self.seller.id, 4, 1)
 
         embed = discord.Embed(title="✅ Traded", color=discord.Color.random())
-        embed.description = f"```{self.card.display_id}\n🍬 - {self.candies}```"
+        embed.description = f"```{self.card.display_id}\n{iufi.get_main_currency_emoji()} - {self.candies}```"
 
         await self.on_timeout()
         await interaction.followup.send(content=f"{self.seller.mention}, {buyer.mention} has made a trade with you for the card!", embed=embed)

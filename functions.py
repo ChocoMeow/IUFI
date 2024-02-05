@@ -14,6 +14,8 @@ from datetime import (
 from dotenv import load_dotenv
 from typing import Any
 
+import iufi
+
 ROOT_DIR = os.path.dirname(os.path.abspath(__file__))
 
 class TOKEN:
@@ -95,25 +97,25 @@ class DailyQuestIds(IntEnum):
 
 #id, name, description, reward quantity, reward emoji, max_progress,reward_type
 DAILY_QUESTS = [
-            [DailyQuestIds.ROLL, 'Roll 5 times', 'Do "qr" or any other rolls five times', 10, '🍬', 5, 'candies'],
+            [DailyQuestIds.ROLL, 'Roll 5 times', 'Do "qr" or any other rolls five times', 10, f'{iufi.get_main_currency_emoji()}', 5, 'candies'],
             [DailyQuestIds.COLLECT_EPIC_CARD, 'Collect Epic+ card', 'Collect a photocard whose rarity is above or equal to Epic '
-                                                          'by rolling', 20, '🍬', 1, 'candies'],
-            [DailyQuestIds.MATCH_GAME, "Play 1 Matching Game", "Play a matching game of any level (qmg)", 10, '🍬', 1, 'candies'],
-            [DailyQuestIds.BUY_ITEM, "Buy 1 Item", "Buy an item from the shop.", 10, '🍬', 1, 'candies'],
-            [DailyQuestIds.TRADE, "Trade 1 photocard", "Buy or sell a photocard", 10, '🍬', 1, 'candies'],
-            [DailyQuestIds.USE_POTION, "Use 1 potion", "Use a potion", 10, '🍬', 1, 'candies'],
-            [DailyQuestIds.PLAY_QUIZ, "Play 1 Quiz", "Play a quiz", 10, '🍬', 1, 'candies'],
+                                                          'by rolling', 20, f'{iufi.get_main_currency_emoji()}', 1, 'candies'],
+            [DailyQuestIds.MATCH_GAME, "Play 1 Matching Game", "Play a matching game of any level (qmg)", 10, f'{iufi.get_main_currency_emoji()}', 1, 'candies'],
+            [DailyQuestIds.BUY_ITEM, "Buy 1 Item", "Buy an item from the shop.", 10, f'{iufi.get_main_currency_emoji()}', 1, 'candies'],
+            [DailyQuestIds.TRADE, "Trade 1 photocard", "Buy or sell a photocard", 10, f'{iufi.get_main_currency_emoji()}', 1, 'candies'],
+            [DailyQuestIds.USE_POTION, "Use 1 potion", "Use a potion", 10, f'{iufi.get_main_currency_emoji()}', 1, 'candies'],
+            [DailyQuestIds.PLAY_QUIZ, "Play 1 Quiz", "Play a quiz", 10, f'{iufi.get_main_currency_emoji()}', 1, 'candies'],
         ]
 
 COUPLE_QUESTS = [
-    [DailyQuestIds.ROLL, 'Roll 20 times', 'Do "qr" or any other rolls twenty times', 10, '🍬', 20, 'candies'],
+    [DailyQuestIds.ROLL, 'Roll 20 times', 'Do "qr" or any other rolls twenty times', 10, f'{iufi.get_main_currency_emoji()}', 20, 'candies'],
     [DailyQuestIds.COLLECT_LEGENDARY_CARD, 'Collect Legendary card', 'Collect a photocard whose rarity is above or equal to Legendary '
-                                                                     'by rolling', 20, '🍬', 1, 'candies'],
-    [DailyQuestIds.MATCH_GAME, "Play 5 Matching Game", "Play a matching game of any level (qmg)", 10, '🍬', 5, 'candies'],
-    [DailyQuestIds.BUY_ITEM, "Buy 5 Items", "Buy an item from the shop.", 10, '🍬', 5, 'candies'],
-    [DailyQuestIds.TRADE, "Trade 5 photocard", "Buy or sell a photocard", 10, '🍬', 5, 'candies'],
-    [DailyQuestIds.USE_POTION, "Use 5 potion", "Use a potion", 10, '🍬', 5, 'candies'],
-    [DailyQuestIds.PLAY_QUIZ, "Play 5 Quiz", "Play a quiz", 10, '🍬', 5, 'candies'],
+                                                                     'by rolling', 20, f'{iufi.get_main_currency_emoji()}', 1, 'candies'],
+    [DailyQuestIds.MATCH_GAME, "Play 5 Matching Game", "Play a matching game of any level (qmg)", 10, f'{iufi.get_main_currency_emoji()}', 5, 'candies'],
+    [DailyQuestIds.BUY_ITEM, "Buy 5 Items", "Buy an item from the shop.", 10, f'{iufi.get_main_currency_emoji()}', 5, 'candies'],
+    [DailyQuestIds.TRADE, "Trade 5 photocard", "Buy or sell a photocard", 10, f'{iufi.get_main_currency_emoji()}', 5, 'candies'],
+    [DailyQuestIds.USE_POTION, "Use 5 potion", "Use a potion", 10, f'{iufi.get_main_currency_emoji()}', 5, 'candies'],
+    [DailyQuestIds.PLAY_QUIZ, "Play 5 Quiz", "Play a quiz", 10, f'{iufi.get_main_currency_emoji()}', 5, 'candies'],
 ]
 
 COOLDOWN_BASE: dict[str, tuple[str, int]] = {

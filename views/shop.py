@@ -1,5 +1,6 @@
 import discord
 import functions as func
+import iufi
 
 from iufi import TIERS_BASE, events
 
@@ -76,7 +77,7 @@ class Dropdown(discord.ui.Select):
                     await func.add_daily_quest_progress(interaction.user.id, 3, modal.quantity)
 
                     embed = discord.Embed(title="🛒 Shop Purchase", color=discord.Color.random())
-                    embed.description = f"```{item[0]} + {modal.quantity}\n🍬 - {price}```"
+                    embed.description = f"```{item[0]} + {modal.quantity}\n{iufi.get_main_currency_emoji()} - {price}```"
 
                     return await interaction.followup.send(content="", embed=embed)
 
@@ -100,10 +101,10 @@ class ShopView(discord.ui.View):
         user = await func.get_user(self.author.id)
 
         embed = discord.Embed(title="🛒 IUFI Shop", color=discord.Color.random())
-        embed.description = f"🍬 Starcandies: `{user.get('candies', 0)}`\n```"
+        embed.description = f"{iufi.get_main_currency_emoji()} {iufi.get_main_currency_name()}: `{user.get('candies', 0)}`\n```"
         
         for item in SHOP_BASE:
-            embed.description += f"{item[0]} {(item[1].split('.')[1].title() + ' ' + item[1].split('.')[0].title()).upper():<20} {item[2]:>3} 🍬\n"
+            embed.description += f"{item[0]} {(item[1].split('.')[1].title() + ' ' + item[1].split('.')[0].title()).upper():<20} {item[2]:>3} {iufi.get_main_currency_emoji()}\n"
         embed.description += "```"
         
         embed.set_thumbnail(url=self.author.display_avatar.url)
