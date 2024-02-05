@@ -92,27 +92,27 @@ class DailyQuestIds(IntEnum):
     PLAY_QUIZ = 6
     COLLECT_LEGENDARY_CARD = 7
 
-#id, name, description, reward quantity, reward emoji, max_progress
+#id, name, description, reward quantity, reward emoji, max_progress,reward_type
 DAILY_QUESTS = [
-            [DailyQuestIds.ROLL, 'Roll 5 times', 'Do "qr" or any other rolls five times', 10, '🍬', 5],
+            [DailyQuestIds.ROLL, 'Roll 5 times', 'Do "qr" or any other rolls five times', 10, '🍬', 5, 'candies'],
             [DailyQuestIds.COLLECT_EPIC_CARD, 'Collect Epic+ card', 'Collect a photocard whose rarity is above or equal to Epic '
-                                                          'by rolling', 20, '🍬', 1],
-            [DailyQuestIds.MATCH_GAME, "Play 1 Matching Game", "Play a matching game of any level (qmg)", 10, '🍬', 1],
-            [DailyQuestIds.BUY_ITEM, "Buy 1 Item", "Buy an item from the shop.", 10, '🍬', 1],
-            [DailyQuestIds.TRADE, "Trade 1 photocard", "Buy or sell a photocard", 10, '🍬', 1],
-            [DailyQuestIds.USE_POTION, "Use 1 potion", "Use a potion", 10, '🍬', 1],
-            [DailyQuestIds.PLAY_QUIZ, "Play 1 Quiz", "Play a quiz", 10, '🍬', 1],
+                                                          'by rolling', 20, '🍬', 1, 'candies'],
+            [DailyQuestIds.MATCH_GAME, "Play 1 Matching Game", "Play a matching game of any level (qmg)", 10, '🍬', 1, 'candies'],
+            [DailyQuestIds.BUY_ITEM, "Buy 1 Item", "Buy an item from the shop.", 10, '🍬', 1, 'candies'],
+            [DailyQuestIds.TRADE, "Trade 1 photocard", "Buy or sell a photocard", 10, '🍬', 1, 'candies'],
+            [DailyQuestIds.USE_POTION, "Use 1 potion", "Use a potion", 10, '🍬', 1, 'candies'],
+            [DailyQuestIds.PLAY_QUIZ, "Play 1 Quiz", "Play a quiz", 10, '🍬', 1, 'candies'],
         ]
 
 COUPLE_QUESTS = [
-    [DailyQuestIds.ROLL, 'Roll 20 times', 'Do "qr" or any other rolls twenty times', 10, '🍬', 20],
+    [DailyQuestIds.ROLL, 'Roll 20 times', 'Do "qr" or any other rolls twenty times', 10, '🍬', 20, 'candies'],
     [DailyQuestIds.COLLECT_LEGENDARY_CARD, 'Collect Legendary card', 'Collect a photocard whose rarity is above or equal to Legendary '
-                                                                     'by rolling', 20, '🍬', 1],
-    [DailyQuestIds.MATCH_GAME, "Play 5 Matching Game", "Play a matching game of any level (qmg)", 10, '🍬', 5],
-    [DailyQuestIds.BUY_ITEM, "Buy 5 Items", "Buy an item from the shop.", 10, '🍬', 5],
-    [DailyQuestIds.TRADE, "Trade 5 photocard", "Buy or sell a photocard", 10, '🍬', 5],
-    [DailyQuestIds.USE_POTION, "Use 5 potion", "Use a potion", 10, '🍬', 5],
-    [DailyQuestIds.PLAY_QUIZ, "Play 5 Quiz", "Play a quiz", 10, '🍬', 5],
+                                                                     'by rolling', 20, '🍬', 1, 'candies'],
+    [DailyQuestIds.MATCH_GAME, "Play 5 Matching Game", "Play a matching game of any level (qmg)", 10, '🍬', 5, 'candies'],
+    [DailyQuestIds.BUY_ITEM, "Buy 5 Items", "Buy an item from the shop.", 10, '🍬', 5, 'candies'],
+    [DailyQuestIds.TRADE, "Trade 5 photocard", "Buy or sell a photocard", 10, '🍬', 5, 'candies'],
+    [DailyQuestIds.USE_POTION, "Use 5 potion", "Use a potion", 10, '🍬', 5, 'candies'],
+    [DailyQuestIds.PLAY_QUIZ, "Play 5 Quiz", "Play a quiz", 10, '🍬', 5, 'candies'],
 ]
 
 COOLDOWN_BASE: dict[str, tuple[str, int]] = {
@@ -327,15 +327,41 @@ async def update_daily_quest(user_id: int, data: dict) -> None:
 async def add_daily_quest_progress(user_id: int, quest_id: int, progress: int) -> None:
     daily_quest = await get_daily_quest(user_id)
     can_update = False
+    process_reward = False
     for quest in daily_quest["quests"]:
         if quest[0] == quest_id and quest[1] < DAILY_QUESTS[quest_id][5]:
             quest[1] += progress
-            if quest[1] > DAILY_QUESTS[quest_id][5]:
+            if quest[1] >= DAILY_QUESTS[quest_id][5]:
                 quest[1] = DAILY_QUESTS[quest_id][5]
+                process_reward = True
             can_update = True
             break
     if can_update:
         await update_daily_quest(user_id, {"$set": {"quests": daily_quest["quests"]}})
+    if process_reward:
+        await update_user(user_id, {"$inc": {DAILY_QUESTS[quest_id][6]: DAILY_QUESTS[quest_id][3]}})
+    user = await get_user(user_id)
+    await add_couple_quest_progress(user["couple_id"], quest_id, progress)
+
+async def add_couple_quest_progress(couple_id: int, quest_id: int, progress: int) -> None:
+    couple_data = await get_couple_data(couple_id)
+    if not couple_data:
+        return
+    can_update = False
+    process_reward = False
+    for quest in couple_data["quests"]:
+        if quest[0] == quest_id and quest[1] < COUPLE_QUESTS[quest_id][5]:
+            quest[1] += progress
+            if quest[1] >= COUPLE_QUESTS[quest_id][5]:
+                quest[1] = COUPLE_QUESTS[quest_id][5]
+                process_reward = True
+            can_update = True
+            break
+    if can_update:
+        await update_couple(couple_id, {"$set": {"quests": couple_data["quests"]}})
+    if process_reward:
+        await update_user(couple_data["partner_1"], {"$inc": {COUPLE_QUESTS[quest_id][6]: COUPLE_QUESTS[quest_id][3]}})
+        await update_user(couple_data["partner_2"], {"$inc": {COUPLE_QUESTS[quest_id][6]: COUPLE_QUESTS[quest_id][3]}})
 
 def get_daily_quest_by_id(quest_id):
     for quest in DAILY_QUESTS:

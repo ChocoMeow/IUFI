@@ -10,8 +10,7 @@ SHOP_BASE: list[tuple[str, str, int]] = [
 ]
 
 VALENTINE_ITEMS: list[tuple[str, str, int]] = [
-    ("🌹", "event_item.rose", 10),
-    ("📝", "event_item.card", 10)
+    ("🌹", "event_item.rose", 10)
 ]
 
 if events.is_valentines_day():
