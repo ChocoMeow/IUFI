@@ -108,10 +108,10 @@ DAILY_QUESTS = [
         ]
 
 COUPLE_QUESTS = [
-    [DailyQuestIds.ROLL, 'Roll 100 times', 'Do "qr" or any other rolls twenty times', 1, f'👑', 20, 'roll.legendary'],
+    [DailyQuestIds.ROLL, 'Roll 100 times', 'Do "qr" or any other rolls twenty times', 1, f'👑', 100, 'roll.legendary'],
     [DailyQuestIds.COLLECT_LEGENDARY_CARD, 'Collect Legendary card', 'Collect a photocard whose rarity is above or equal to Legendary '
                                                                      'by rolling', 20, f'{iufi.get_main_currency_emoji()}', 1, 'candies'],
-    [DailyQuestIds.MATCH_GAME, "Play 10 Matching Game", "Play a matching game of any level (qmg)", 30, f'{iufi.get_main_currency_emoji()}', 5, 'candies'],
+    [DailyQuestIds.MATCH_GAME, "Play 10 Matching Game", "Play a matching game of any level (qmg)", 30, f'{iufi.get_main_currency_emoji()}', 10, 'candies'],
     [DailyQuestIds.BUY_ITEM, "Buy 5 Items", "Buy an item from the shop.", 30, f'{iufi.get_main_currency_emoji()}', 5, 'candies'],
     [DailyQuestIds.TRADE, "Trade 5 photocard", "Buy or sell a photocard", 15, f'{iufi.get_main_currency_emoji()}', 5, 'candies'],
     [DailyQuestIds.USE_POTION, "Use 5 potion", "Use a potion", 1, f'🌸', 5, 'roll.rare'],

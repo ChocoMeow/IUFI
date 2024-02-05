@@ -28,7 +28,7 @@ class DailyQuest(commands.Cog):
             quests = [[int(quests[0]), 0] for quests in quests] # [[id, progress], [id, progress], [id, progress]]
             await func.update_couple(user.get("couple_id"), {"$set": {"quests": quests, "next_reset_at": time.time() + self.COOLDOWN}})
         embed = discord.Embed(title="💑 Couple Quests", color=0x949fb8)
-        embed.description = "```"
+        embed.description = f"Quests resets <t:{int(couple_data.get('next_reset_at'))}:R> \n```"
         index = 1
         for i in quests:
             quest_data = func.get_couple_quest_by_id(i[0])
@@ -42,7 +42,7 @@ class DailyQuest(commands.Cog):
             embed.description += "\n"
             index += 1
         embed.description += "```"
-        embed.set_footer(text=f"Quests resets in {func.cal_retry_time(couple_data.get('next_reset_at'))}")
+        embed.set_footer(text="Completing each quest will reward you a ❤️ for couple leaderboard")
         await ctx.reply(embed=embed)
 
 
