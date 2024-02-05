@@ -379,7 +379,7 @@ class Card(CardObject):
         return f"🖼️ {FRAMES_BASE.get(self._frame)[0] if self._frame else '- '}"
 
     def __str__(self) -> str:
-        return f"{self._emoji} {self.id.zfill(5)}"
+        return f"{self._emoji} {self.id.zfill(5)} " + (f"({self.tag})" if self.tag else "")
 
 class TempCard(CardObject):
     def __init__(self, path: str) -> None:
