@@ -1,8 +1,13 @@
-import os, time, copy
+import os, time, copy, json
 
 from motor.motor_asyncio import (
     AsyncIOMotorClient,
     AsyncIOMotorCollection,
+)
+
+from datetime import (
+    date,
+    timedelta
 )
 
 from dotenv import load_dotenv
@@ -26,7 +31,6 @@ USERS_DB: AsyncIOMotorCollection = None
 CARDS_DB: AsyncIOMotorCollection = None
 
 USERS_BUFFER: dict[int, dict[str, Any]] = {}
-COOLDOWN: dict[int, dict[str, float]] = {}
 MAX_CARDS: int = 100
 DEAFAULT_EXP = 100
 
@@ -54,11 +58,30 @@ USER_BASE: dict[str, Any] = {
     }
 }
 
-COOLDOWN_BASE: dict[str, int] = {
-    "roll": 600,
-    "claim": 180,
-    "daily": 82800,
+COOLDOWN_BASE: dict[str, tuple[str, int]] = {
+    "roll": ("🎲", 600),
+    "claim": ("🎮", 180),
+    "daily": ("📅", 82800),
+    "match_game": ("🃏", 0),
+    "quiz_game": ("💯", 600)
 }
+
+def open_json(path: str) -> dict:
+    try:
+        with open(os.path.join(ROOT_DIR, path), encoding="utf8") as json_file:
+            return json.load(json_file)
+    except:
+        return {}
+    
+def update_json(path: str, new_data: dict) -> None:
+    data = open_json(path)
+    if not data:
+        return
+    
+    data.update(new_data)
+
+    with open(os.path.join(ROOT_DIR, path), "w") as json_file:
+        json.dump(data, json_file, indent=4)
 
 def cal_retry_time(end_time: float, default: str = None) -> str | None:
     if end_time <= (current_time := time.time()):
@@ -111,6 +134,37 @@ def clean_text(input_text: str, allow_spaces: bool = True, convert_to_lower: boo
         cleaned_text = cleaned_text.lower()
     
     return cleaned_text
+
+def get_week_unix_timestamps() -> tuple[float, float]:
+    today = date.today()
+
+    # Get the first day of this week (Monday)
+    start_of_this_week = today - timedelta(days=today.weekday())
+
+    # Get the first day of next week (next Monday)
+    start_of_next_week = start_of_this_week + timedelta(days=7)
+
+    return time.mktime(start_of_this_week.timetuple()), time.mktime(start_of_next_week.timetuple())
+
+def get_month_unix_timestamps() -> tuple[float, float]:
+    today = date.today()
+
+    # Get the first day of this month
+    start_of_this_month = date(today.year, today.month, 1)
+    
+    # Get the first day of next month
+    if today.month == 12:
+        start_of_next_month = date(today.year + 1, 1, 1)
+    else:
+        start_of_next_month = date(today.year, today.month + 1, 1)
+
+    return time.mktime(start_of_this_month.timetuple()), time.mktime(start_of_next_month.timetuple())
+
+def match_string(input_string: str, word_list: list[str]) -> str:
+    for word in word_list:
+        if word.startswith(input_string):
+            return word
+    return None
 
 async def get_user(user_id: int, *, insert: bool = True) -> dict[str, Any]:
     user = USERS_BUFFER.get(user_id)
