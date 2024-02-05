@@ -326,6 +326,10 @@ async def update_daily_quest(user_id: int, data: dict) -> None:
 
 async def add_daily_quest_progress(user_id: int, quest_id: int, progress: int) -> None:
     daily_quest = await get_daily_quest(user_id)
+    if not daily_quest:
+        user = await get_user(user_id)
+        await add_couple_quest_progress(user["couple_id"], quest_id, progress)
+        return
     can_update = False
     process_reward = False
     for quest in daily_quest["quests"]:

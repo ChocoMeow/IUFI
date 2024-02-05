@@ -14,8 +14,8 @@ class DailyQuest(commands.Cog):
         self.COUPLE_QUESTS = func.COUPLE_QUESTS
         self.COOLDOWN = 24 * 60 * 60
 
-    @commands.command(aliases=["dq"])
-    @commands.cooldown(1, 5, commands.BucketType.user)
+    #@commands.command(aliases=["dq"])
+    #@commands.cooldown(1, 5, commands.BucketType.user)
     async def dailyquest(self, ctx: commands.Context):
         """View your daily quests"""
         user_dq = await func.get_daily_quest(ctx.author.id)
