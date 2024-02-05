@@ -14,8 +14,6 @@ class IUFI(commands.Bot):
 
         self.iufi: iufi.CardPool = iufi.CardPool()
         self.questions: iufi.QuestionPool = iufi.QuestionPool()
-        self.daily_quests: iufi.QuestPool = iufi.QuestPool()
-        self.couple_quests: iufi.QuestPool = iufi.QuestPool()
 
     async def on_message(self, message: discord.Message, /) -> None:
         if message.author.bot or not message.guild:

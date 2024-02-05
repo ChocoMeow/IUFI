@@ -6,7 +6,7 @@ from random import (
 )
 from collections import Counter
 
-from .objects import Card, Question, QUIZ_LEVEL_BASE, RANK_BASE, Quest, DailyQuestIds
+from .objects import Card, Question, QUIZ_LEVEL_BASE, RANK_BASE
 from .exceptions import DuplicatedCardError, DuplicatedTagError
 # from .deepsearch import (
 #     Load_Data,
@@ -175,22 +175,3 @@ class QuestionPool:
         
         return questions
 
-
-class QuestPool:
-    _quests: list[Quest] = []
-
-    @classmethod
-    def add_quest(cls, quest: Quest) -> None:
-        cls._quests.append(quest)
-
-    @classmethod
-    def remove_quest(cls, quest: Quest) -> None:
-        cls._quests.remove(quest)
-
-    @classmethod
-    def get_quest(cls, id: DailyQuestIds) -> Quest:
-        for quest in cls._quests:
-            if quest.id == id:
-                return quest
-
-        raise Exception(f"Quest {id} not found!")
