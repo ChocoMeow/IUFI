@@ -67,7 +67,7 @@ class Tasks(commands.Cog):
         if playlist:
             for track in playlist.tracks:
                 if track.is_updated:
-                    await func.MUSIC_DB.update_one({"_id": track.identifier}, track.db_data)
+                    await func.MUSIC_DB.update_one({"_id": track.identifier}, {"$set": track.db_data})
                     track.is_updated = False
 
         self.bot.loop.create_task(self.distribute_monthly_quiz_rewards())
