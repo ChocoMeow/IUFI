@@ -180,7 +180,9 @@ class Card(commands.Cog):
     async def convertmass(self, ctx: commands.Context, *, categorys: str):
         """Converts photocards that fit the given mode."""
         user = await func.get_user(ctx.author.id)
-        categories = [func.match_string(category.lower(), set(iufi.TIERS_BASE.keys()) | {"notag"}) for category in categorys.split(" ")]
+        category_list = categorys.split(" ")
+        categories = [func.match_string(category.lower(), set(iufi.TIERS_BASE.keys()) | {"notag"}) for category in category_list]
+        len_categories = len(category_list)
 
         if not user["cards"]:
             return await ctx.reply(f"**{ctx.author.mention} you have no photocards.**", delete_after=5)
@@ -189,7 +191,7 @@ class Card(commands.Cog):
         for card_id in user["cards"]:
             card = iufi.CardPool.get_card(card_id)
             if card:
-                if len(categorys) == 1 and "notag" in categorys and not card.tag:
+                if len_categories == 1 and "notag" in categorys and not card.tag:
                     converted_cards.append(card)
 
                 elif card.tier[1] in categories:
