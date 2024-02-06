@@ -84,7 +84,7 @@ COUPLE_BASE: dict[str, Any] = {
 }
 
 class DailyQuestIds(Enum):
-    ROLL = auto()
+    ROLL = 0
     COLLECT_EPIC_CARD = auto()
     MATCH_GAME = auto()
     BUY_ITEM = auto()
@@ -340,6 +340,7 @@ def get_daily_quest_by_id(quest_id):
     return None
 
 def get_couple_quest_by_id(quest_id):
+    quest_id = DailyQuestIds(quest_id)
     for quest in COUPLE_QUESTS:
         if quest[0] == quest_id:
             return quest
