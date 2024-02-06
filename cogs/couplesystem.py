@@ -20,7 +20,7 @@ class CoupleSystem(commands.Cog):
             return await ctx.reply("You can't propose to yourself.")
 
         user_data = await func.get_user(ctx.author.id)
-        if not user_data.get("couple_id"):
+        if user_data.get("couple_id"):
             return await ctx.reply("You're already in a relationship.")
         
         if not user_data.get("event_item") or user_data.get("event_item", {}).get("rose", 0) <= 0:

@@ -19,11 +19,6 @@ class QuantityModal(discord.ui.Modal):
         super().__init__(title="Enter your quantity", *args, **kwargs)
 
         self.quantity = 0
-        if events.is_valentines_day():
-            SHOP_BASE.extend(VALENTINE_ITEMS)
-        else:
-            for item in VALENTINE_ITEMS:
-                SHOP_BASE.remove(item)
 
         self.add_item(
             discord.ui.TextInput(
@@ -86,6 +81,12 @@ class Dropdown(discord.ui.Select):
 class ShopView(discord.ui.View):
     def __init__(self, author: discord.Member, timeout: float | None = 60):
         super().__init__(timeout=timeout)
+
+        if events.is_valentines_day():
+            SHOP_BASE.extend(VALENTINE_ITEMS)
+        else:
+            for item in VALENTINE_ITEMS:
+                SHOP_BASE.remove(item)
 
         self.add_item(Dropdown())
         self.author: discord.Member = author

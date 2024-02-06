@@ -93,6 +93,14 @@ class DailyQuestIds(Enum):
     PLAY_QUIZ = auto()
     COLLECT_LEGENDARY_CARD = auto()
 
+    def __new__(cls, value):
+        member = object.__new__(cls)
+        member._value_ = value
+        return member
+
+    def __int__(self):
+        return self.value
+
 #id, name, description, reward quantity, reward emoji, max_progress,reward_type
 DAILY_QUESTS = [
     [DailyQuestIds.ROLL, 'Roll 5 times', 'Do "qr" or any other rolls five times', 10, f'{iufi.get_main_currency_emoji()}', 5, 'candies'],
@@ -315,7 +323,8 @@ async def add_daily_quest_progress(user_id: int, quest_id: int, progress: int) -
     if process_reward:
         await update_user(user_id, {"$inc": {DAILY_QUESTS[quest_id][6]: DAILY_QUESTS[quest_id][3]}})
     user = await get_user(user_id)
-    await add_couple_quest_progress(user["couple_id"], quest_id, progress)
+    if user.get("couple_id"):
+        await add_couple_quest_progress(user["couple_id"], quest_id, progress)
 
 async def add_couple_quest_progress(couple_id: int, quest_id: int, progress: int) -> None:
     couple_data = await get_couple_data(couple_id)
@@ -353,12 +362,12 @@ async def reduce_partner_cooldown(user_id: int, couple_id: int, type: str) -> No
     if not couple_data:
         return
 
-    other_parnter = couple_data["partner_1"] if couple_data["partner_1"] == user_id else couple_data["partner_2"]
-    partner_data = await get_user(other_parnter)
+    other_partner = couple_data["partner_1"] if couple_data["partner_1"] != user_id else couple_data["partner_2"]
+    partner_data = await get_user(other_partner)
     if partner_data.get("cooldown", {}).get(type, 0) <= time.time():
         return
     
-    await update_user(other_parnter, {"$set": {f"cooldown.{type}": partner_data["cooldown"][type] - (COOLDOWN_BASE[type][1] // 2)}})
+    await update_user(other_partner, {"$set": {f"cooldown.{type}": partner_data["cooldown"][type] - (COOLDOWN_BASE[type][1] // 2)}})
 
 async def get_couple_data(couple_id: int) -> dict[str, Any]:
     couple_data = COUPLE_BUFFER.get(couple_id)
