@@ -388,7 +388,7 @@ async def get_couple_data(couple_id: int) -> dict[str, Any]:
     return couple_data
 
 async def make_couple(partner_1: int, partner_2: int) -> None:
-    couple_data = COUPLE_BASE
+    couple_data = copy.deepcopy(COUPLE_BASE)
     couple_data["partner_1"] = partner_1
     couple_data["partner_2"] = partner_2
     couple_data["date_partnered"] = time.time()

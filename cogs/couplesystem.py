@@ -1,9 +1,8 @@
-import iufi, time
-import functions as func
-from discord.ext import commands
 import discord
-from views import ProposeView
+import functions as func
 
+from discord.ext import commands
+from views import ProposeView
 
 class CoupleSystem(commands.Cog):
     def __init__(self, bot: commands.Bot) -> None:
@@ -21,10 +20,11 @@ class CoupleSystem(commands.Cog):
             return await ctx.reply("You can't propose to yourself.")
 
         user_data = await func.get_user(ctx.author.id)
-        if user_data.get("couple_id", None) is not None:
+        if not user_data.get("couple_id"):
             return await ctx.reply("You're already in a relationship.")
-        if user_data.get("event_item") is None or user_data.get("event_item").get("rose", 0) <= 0:
-            return await ctx.reply("You don't have a rose.Don't worry, you can get one from the shop.")
+        
+        if not user_data.get("event_item") or user_data.get("event_item", {}).get("rose", 0) <= 0:
+            return await ctx.reply("You don't have a rose. Don't worry, you can get one from the shop.")
 
         other_user_data = await func.get_user(user.id)
         if other_user_data.get("couple_id", None) is not None:
@@ -32,10 +32,7 @@ class CoupleSystem(commands.Cog):
 
         await func.update_user(ctx.author.id, {"$inc": {"event_item.rose": -1}})
         view = ProposeView(ctx.author, user)
-        view.message = await ctx.reply(f"{ctx.author.mention} has proposed to {user.mention} with a rose!",
-                                       view=view)
-
+        view.message = await ctx.reply(f"{ctx.author.mention} has proposed to {user.mention} with a rose!", view=view)
 
 async def setup(bot: commands.Bot) -> None:
-    if iufi.is_valentines_day():
-        await bot.add_cog(CoupleSystem(bot))
+    await bot.add_cog(CoupleSystem(bot))
