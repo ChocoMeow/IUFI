@@ -76,10 +76,10 @@ DAILY_QUEST_BASE: dict[str, Any] = {
 
 COUPLE_BASE: dict[str, Any] = {
     "next_reset_at": 0,
-    "quests": [],
-    "partner_1": 0,
-    "partner_2": 0,
     "date_partnered": 0,
+    "quests": [],
+    "partner_1": None,
+    "partner_2": None,
     "score": 0,
 }
 
@@ -319,26 +319,19 @@ async def add_daily_quest_progress(user_id: int, quest_id: int, progress: int) -
 
 async def add_couple_quest_progress(couple_id: int, quest_id: int, progress: int) -> None:
     couple_data = await get_couple_data(couple_id)
-    if not couple_data:
+    if not couple_data or couple_data.get("next_reset_at", 0) < time.time():
         return
-    if couple_data.get("next_reset_at", 0) < time.time():
-        return
-    can_update = False
-    process_reward = False
+
     for quest in couple_data["quests"]:
         if quest[0] == quest_id and quest[1] < COUPLE_QUESTS[quest_id][5]:
-            quest[1] += progress
-            if quest[1] >= COUPLE_QUESTS[quest_id][5]:
-                quest[1] = COUPLE_QUESTS[quest_id][5]
-                process_reward = True
-            can_update = True
+            quest[1] = min(quest[1] + progress, COUPLE_QUESTS[quest_id][5])
+            await update_couple(couple_id, {"$set": {"quests": couple_data["quests"]}})
+            
+            if quest[1] == COUPLE_QUESTS[quest_id][5]:
+                for partner in ["partner_1", "partner_2"]:
+                    await update_user(couple_data[partner], {"$inc": {COUPLE_QUESTS[quest_id][6]: COUPLE_QUESTS[quest_id][3]}})
+                await update_couple(couple_id, {"$inc": {"score": 1}})
             break
-    if can_update:
-        await update_couple(couple_id, {"$set": {"quests": couple_data["quests"]}})
-    if process_reward:
-        await update_user(couple_data["partner_1"], {"$inc": {COUPLE_QUESTS[quest_id][6]: COUPLE_QUESTS[quest_id][3]}})
-        await update_user(couple_data["partner_2"], {"$inc": {COUPLE_QUESTS[quest_id][6]: COUPLE_QUESTS[quest_id][3]}})
-        await update_couple(couple_id, {"$inc": {"score": 1}})
 
 def get_daily_quest_by_id(quest_id):
     for quest in DAILY_QUESTS:
@@ -352,34 +345,19 @@ def get_couple_quest_by_id(quest_id):
             return quest
     return None
 
-async def reduce_partner_roll_cooldown(user_id: int, couple_id : Any):
-    if not couple_id:
-        return
+async def reduce_partner_cooldown(user_id: int, couple_id: int, type: str) -> None:
+    if not couple_id: return
+    
     couple_data = await get_couple_data(couple_id)
     if not couple_data:
         return
-    partner_1 = couple_data["partner_1"]
-    partner_2 = couple_data["partner_2"]
-    other_partner = partner_1 if partner_1 != user_id else partner_2
-    other_partner_data = await get_user(other_partner)
-    if not other_partner_data or not other_partner_data.get("cooldown", {}).get("roll") or other_partner_data["cooldown"]["roll"] <= time.time():
-        return
-    await update_user(other_partner, {"$set": {"cooldown.roll": other_partner_data["cooldown"]["roll"] - (COOLDOWN_BASE["roll"][1] // 2)}})
 
-async def reduce_partner_quiz_cooldown(user_id: int, couple_id : Any):
-    if not couple_id:
+    other_parnter = couple_data["partner_1"] if couple_data["partner_1"] == user_id else couple_data["partner_2"]
+    partner_data = await get_user(other_parnter)
+    if partner_data.get("cooldown", {}).get(type, 0) <= time.time():
         return
-    couple_data = await get_couple_data(couple_id)
-    if not couple_data:
-        return
-    partner_1 = couple_data["partner_1"]
-    partner_2 = couple_data["partner_2"]
-    other_partner = partner_1 if partner_1 != user_id else partner_2
-    other_partner_data = await get_user(other_partner)
-    if not other_partner_data or not other_partner_data.get("cooldown", {}).get("quiz_game") or other_partner_data["cooldown"]["quiz_game"] <= time.time():
-        return
-
-    await update_user(other_partner, {"$set": {"cooldown.quiz_game": other_partner_data["cooldown"]["quiz_game"] - (COOLDOWN_BASE["quiz_game"][1] // 2)}})
+    
+    await update_user(other_parnter, {"$set": {f"cooldown.{type}": partner_data["cooldown"][type] - (COOLDOWN_BASE[type][1] // 2)}})
 
 async def get_couple_data(couple_id: int) -> dict[str, Any]:
     couple_data = COUPLE_BUFFER.get(couple_id)
@@ -388,13 +366,16 @@ async def get_couple_data(couple_id: int) -> dict[str, Any]:
     return couple_data
 
 async def make_couple(partner_1: int, partner_2: int) -> None:
-    couple_data = copy.deepcopy(COUPLE_BASE)
-    couple_data["partner_1"] = partner_1
-    couple_data["partner_2"] = partner_2
-    couple_data["date_partnered"] = time.time()
-    couple_id = await COUPLE_DB.insert_one(couple_data)
-    couple_id = couple_id.inserted_id
+    couple_data = {
+        **COUPLE_BASE,
+        "partner_1": partner_1,
+        "partner_2": partner_2,
+        "date_partnered": time.time()
+    }
+    couple_result = await COUPLE_DB.insert_one(couple_data)
+    couple_id = couple_result.inserted_id
     COUPLE_BUFFER[couple_id] = couple_data
+
     await update_user(partner_1, {"$set": {"couple_id": couple_id}})
     await update_user(partner_2, {"$set": {"couple_id": couple_id}})
 
