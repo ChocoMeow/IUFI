@@ -45,4 +45,4 @@ class DailyQuest(commands.Cog):
         await ctx.reply(embed=embed)
 
 async def setup(bot: commands.Bot) -> None:
-    await bot.add_cog(DailyQuest())
+    await bot.add_cog(DailyQuest(bot))
