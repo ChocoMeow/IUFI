@@ -22,8 +22,9 @@ class QuantityModal(discord.ui.Modal):
         if events.is_valentines_day():
             SHOP_BASE.extend(VALENTINE_ITEMS)
         else:
-            SHOP_BASE.remove(VALENTINE_ITEMS[0])
-            
+            for item in VALENTINE_ITEMS:
+                SHOP_BASE.remove(item)
+
         self.add_item(
             discord.ui.TextInput(
                 label="Quantity",
