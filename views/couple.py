@@ -67,5 +67,7 @@ class ProposeView(discord.ui.View):
             await interaction.followup.send(f"{self.romeo.mention}, has cancelled their proposal!")
         elif interaction.user == self.juliet_not_yet:
             await interaction.followup.send(f"{self.romeo.mention}, {self.juliet_not_yet.mention} has rejected your proposal!")
+        else:
+            return
 
         await self.on_timeout()
