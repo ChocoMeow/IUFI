@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import random, os, asyncio, Levenshtein
-from enum import Enum
 
 import functions as func
 

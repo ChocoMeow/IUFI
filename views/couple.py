@@ -1,15 +1,12 @@
 import discord
-from discord.ext import commands
 import functions as func
-from typing import Any
-
 
 class ProposeView(discord.ui.View):
     def __init__(
-            self,
-            romeo: discord.Member,
-            juliet_not_yet: discord.Member | None,
-            timeout: float | None = 43_200,
+        self,
+        romeo: discord.Member,
+        juliet_not_yet: discord.Member | None,
+        timeout: float | None = 43_200,
     ) -> None:
 
         super().__init__(timeout=timeout)
@@ -22,15 +19,13 @@ class ProposeView(discord.ui.View):
     async def on_timeout(self) -> None:
         for child in self.children:
             child.disabled = True
+
         await self.message.edit(view=self)
         self.stop()
 
     def build_embed(self) -> discord.Embed:
         embed = discord.Embed(title="💍 Propose", color=discord.Color.random())
-        if self.juliet_not_yet:
-            embed.description = f"{self.romeo.mention} is proposing to {self.juliet_not_yet.mention}!"
-        else:
-            embed.description = f"{self.romeo.mention} is proposing to anyone who is willing to accept!"
+        embed.description = f"{self.romeo.mention} is proposing to " + (f"{self.juliet_not_yet.mention}!" if self.juliet_not_yet else "anyone who is willing to accept!") 
         return embed
 
     @discord.ui.button(label='Accept', style=discord.ButtonStyle.green)
@@ -38,9 +33,8 @@ class ProposeView(discord.ui.View):
         juliet_not_yet = self.juliet_not_yet or interaction.user
 
         if interaction.user != juliet_not_yet:
-            return await interaction.response.send_message(f"This proposal is for {juliet_not_yet.mention}",
-                                                           ephemeral=True)
-
+            return await interaction.response.send_message(f"This proposal is for {juliet_not_yet.mention}", ephemeral=True)
+        
         if interaction.user == self.romeo:
             return await interaction.response.send_message("You can't accept your own proposal!", ephemeral=True)
 
@@ -61,8 +55,7 @@ class ProposeView(discord.ui.View):
         embed.description = f"{self.romeo.mention} and {juliet_not_yet.mention} are now in a relationship!"
 
         await self.on_timeout()
-        await interaction.followup.send(
-            content=f"{self.romeo.mention}, {juliet_not_yet.mention} has accepted your proposal!", embed=embed)
+        await interaction.followup.send(content=f"{self.romeo.mention}, {juliet_not_yet.mention} has accepted your proposal!", embed=embed)
 
     @discord.ui.button(label="Reject", style=discord.ButtonStyle.red)
     async def cancel(self, interaction: discord.Interaction, button: discord.ui.Button):

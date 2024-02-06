@@ -1,6 +1,5 @@
-import discord
+import discord, iufi
 import functions as func
-import iufi
 
 from iufi import Card
 

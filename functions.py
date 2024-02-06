@@ -1,5 +1,5 @@
-import os, time, copy, json
-from enum import IntEnum
+import os, time, copy, json, iufi
+from enum import Enum, auto
 
 from motor.motor_asyncio import (
     AsyncIOMotorClient,
@@ -13,8 +13,6 @@ from datetime import (
 
 from dotenv import load_dotenv
 from typing import Any
-
-import iufi
 
 ROOT_DIR = os.path.dirname(os.path.abspath(__file__))
 
@@ -85,32 +83,30 @@ COUPLE_BASE: dict[str, Any] = {
     "score": 0,
 }
 
-class DailyQuestIds(IntEnum):
-    ROLL = 0
-    COLLECT_EPIC_CARD = 1
-    MATCH_GAME = 2
-    BUY_ITEM = 3
-    TRADE = 4
-    USE_POTION = 5
-    PLAY_QUIZ = 6
-    COLLECT_LEGENDARY_CARD = 7
+class DailyQuestIds(Enum):
+    ROLL = auto()
+    COLLECT_EPIC_CARD = auto()
+    MATCH_GAME = auto()
+    BUY_ITEM = auto()
+    TRADE = auto()
+    USE_POTION = auto()
+    PLAY_QUIZ = auto()
+    COLLECT_LEGENDARY_CARD = auto()
 
 #id, name, description, reward quantity, reward emoji, max_progress,reward_type
 DAILY_QUESTS = [
-            [DailyQuestIds.ROLL, 'Roll 5 times', 'Do "qr" or any other rolls five times', 10, f'{iufi.get_main_currency_emoji()}', 5, 'candies'],
-            [DailyQuestIds.COLLECT_EPIC_CARD, 'Collect Epic+ card', 'Collect a photocard whose rarity is above or equal to Epic '
-                                                          'by rolling', 20, f'{iufi.get_main_currency_emoji()}', 1, 'candies'],
-            [DailyQuestIds.MATCH_GAME, "Play 1 Matching Game", "Play a matching game of any level (qmg)", 10, f'{iufi.get_main_currency_emoji()}', 1, 'candies'],
-            [DailyQuestIds.BUY_ITEM, "Buy 1 Item", "Buy an item from the shop.", 10, f'{iufi.get_main_currency_emoji()}', 1, 'candies'],
-            [DailyQuestIds.TRADE, "Trade 1 photocard", "Buy or sell a photocard", 10, f'{iufi.get_main_currency_emoji()}', 1, 'candies'],
-            [DailyQuestIds.USE_POTION, "Use 1 potion", "Use a potion", 10, f'{iufi.get_main_currency_emoji()}', 1, 'candies'],
-            [DailyQuestIds.PLAY_QUIZ, "Play 1 Quiz", "Play a quiz", 10, f'{iufi.get_main_currency_emoji()}', 1, 'candies'],
-        ]
+    [DailyQuestIds.ROLL, 'Roll 5 times', 'Do "qr" or any other rolls five times', 10, f'{iufi.get_main_currency_emoji()}', 5, 'candies'],
+    [DailyQuestIds.COLLECT_EPIC_CARD, 'Collect Epic+ card', 'Collect a photocard whose rarity is above or equal to Epic by rolling', 20, f'{iufi.get_main_currency_emoji()}', 1, 'candies'],
+    [DailyQuestIds.MATCH_GAME, "Play 1 Matching Game", "Play a matching game of any level (qmg)", 10, f'{iufi.get_main_currency_emoji()}', 1, 'candies'],
+    [DailyQuestIds.BUY_ITEM, "Buy 1 Item", "Buy an item from the shop.", 10, f'{iufi.get_main_currency_emoji()}', 1, 'candies'],
+    [DailyQuestIds.TRADE, "Trade 1 photocard", "Buy or sell a photocard", 10, f'{iufi.get_main_currency_emoji()}', 1, 'candies'],
+    [DailyQuestIds.USE_POTION, "Use 1 potion", "Use a potion", 10, f'{iufi.get_main_currency_emoji()}', 1, 'candies'],
+    [DailyQuestIds.PLAY_QUIZ, "Play 1 Quiz", "Play a quiz", 10, f'{iufi.get_main_currency_emoji()}', 1, 'candies'],
+]
 
 COUPLE_QUESTS = [
     [DailyQuestIds.ROLL, 'Roll 100 times', 'Do "qr" or any other rolls twenty times', 1, f'👑', 100, 'roll.legendary'],
-    [DailyQuestIds.COLLECT_LEGENDARY_CARD, 'Collect Legendary card', 'Collect a photocard whose rarity is above or equal to Legendary '
-                                                                     'by rolling', 20, f'{iufi.get_main_currency_emoji()}', 1, 'candies'],
+    [DailyQuestIds.COLLECT_LEGENDARY_CARD, 'Collect Legendary card', 'Collect a photocard whose rarity is above or equal to Legendary by rolling', 20, f'{iufi.get_main_currency_emoji()}', 1, 'candies'],
     [DailyQuestIds.MATCH_GAME, "Play 10 Matching Game", "Play a matching game of any level (qmg)", 30, f'{iufi.get_main_currency_emoji()}', 10, 'candies'],
     [DailyQuestIds.BUY_ITEM, "Buy 5 Items", "Buy an item from the shop.", 30, f'{iufi.get_main_currency_emoji()}', 5, 'candies'],
     [DailyQuestIds.TRADE, "Trade 5 photocard", "Buy or sell a photocard", 15, f'{iufi.get_main_currency_emoji()}', 5, 'candies'],
@@ -227,6 +223,40 @@ def match_string(input_string: str, word_list: list[str]) -> str:
             return word
     return None
 
+async def update_db(db: AsyncIOMotorCollection, tempStore: dict, filter: dict, data: dict) -> None:
+    for mode, action in data.items():
+        for key, value in action.items():
+            cursors = key.split(".")
+
+            nested_data = tempStore
+            for c in cursors[:-1]:
+                nested_data = nested_data.setdefault(c, {})
+
+            if mode == "$set":
+                try:
+                    nested_data[cursors[-1]] = value
+                except TypeError:
+                    nested_data[int(cursors[-1])] = value
+
+            elif mode == "$unset":
+                nested_data.pop(cursors[-1], None)
+
+            elif mode == "$inc":
+                nested_data[cursors[-1]] = nested_data.get(cursors[-1], 0) + value
+
+            elif mode == "$push":
+                nested_data.setdefault(cursors[-1], []).extend(value.get("$in", []) if isinstance(value, dict) else [value])
+
+            elif mode == "$pull":
+                if cursors[-1] in nested_data:
+                    value = value.get("$in", []) if isinstance(value, dict) else [value]
+                    nested_data[cursors[-1]] = [item for item in nested_data[cursors[-1]] if item not in value]
+
+            else:
+                raise ValueError(f"Invalid mode: {mode}")
+
+    await db.update_one(filter, data)
+
 async def get_user(user_id: int, *, insert: bool = True) -> dict[str, Any]:
     user = USERS_BUFFER.get(user_id)
     if not user:
@@ -239,38 +269,7 @@ async def get_user(user_id: int, *, insert: bool = True) -> dict[str, Any]:
 
 async def update_user(user_id: int, data: dict) -> None:
     user = await get_user(user_id)
-    for mode, action in data.items():
-        for key, value in action.items():
-            cursors = key.split(".")
-
-            nested_user = user
-            for c in cursors[:-1]:
-                nested_user = nested_user.setdefault(c, {})
-
-            if mode == "$set":
-                try:
-                    nested_user[cursors[-1]] = value
-                except TypeError:
-                    nested_user[int(cursors[-1])] = value
-
-            elif mode == "$unset":
-                nested_user.pop(cursors[-1], None)
-
-            elif mode == "$inc":
-                nested_user[cursors[-1]] = nested_user.get(cursors[-1], 0) + value
-
-            elif mode == "$push":
-                nested_user.setdefault(cursors[-1], []).extend(value.get("$in", []) if isinstance(value, dict) else [value])
-
-            elif mode == "$pull":
-                if cursors[-1] in nested_user:
-                    value = value.get("$in", []) if isinstance(value, dict) else [value]
-                    nested_user[cursors[-1]] = [item for item in nested_user[cursors[-1]] if item not in value]
-
-            else:
-                raise ValueError(f"Invalid mode: {mode}")
-
-    await USERS_DB.update_one({"_id": user_id}, data)
+    await update_db(USERS_DB, user, {"_id": user_id}, data)
 
 async def update_card(card_id: list[str] | str, data: dict, insert: bool = False) -> None:
     if insert:
@@ -291,41 +290,9 @@ async def get_daily_quest(user_id: int, *, insert: bool = True) -> dict[str, Any
         daily_quest = DAILY_QUEST_BUFFER[user_id] = daily_quest if daily_quest else copy.deepcopy(DAILY_QUEST_BASE) | {"_id": user_id}
     return daily_quest
 
-
 async def update_daily_quest(user_id: int, data: dict) -> None:
     daily_quest = await get_daily_quest(user_id)
-    for mode, action in data.items():
-        for key, value in action.items():
-            cursors = key.split(".")
-
-            nested_daily_quest = daily_quest
-            for c in cursors[:-1]:
-                nested_daily_quest = nested_daily_quest.setdefault(c, {})
-
-            if mode == "$set":
-                try:
-                    nested_daily_quest[cursors[-1]] = value
-                except TypeError:
-                    nested_daily_quest[int(cursors[-1])] = value
-
-            elif mode == "$unset":
-                nested_daily_quest.pop(cursors[-1], None)
-
-            elif mode == "$inc":
-                nested_daily_quest[cursors[-1]] = nested_daily_quest.get(cursors[-1], 0) + value
-
-            elif mode == "$push":
-                nested_daily_quest.setdefault(cursors[-1], []).extend(value.get("$in", []) if isinstance(value, dict) else [value])
-
-            elif mode == "$pull":
-                if cursors[-1] in nested_daily_quest:
-                    value = value.get("$in", []) if isinstance(value, dict) else [value]
-                    nested_daily_quest[cursors[-1]] = [item for item in nested_daily_quest[cursors[-1]] if item not in value]
-
-            else:
-                raise ValueError(f"Invalid mode: {mode}")
-
-    await DAILY_QUEST_DB.update_one({"_id": user_id}, data)
+    await update_db(DAILY_QUEST_DB, daily_quest, {"_id": user_id}, data)
 
 async def add_daily_quest_progress(user_id: int, quest_id: int, progress: int) -> None:
     daily_quest = await get_daily_quest(user_id)
@@ -431,38 +398,6 @@ async def make_couple(partner_1: int, partner_2: int) -> None:
     await update_user(partner_1, {"$set": {"couple_id": couple_id}})
     await update_user(partner_2, {"$set": {"couple_id": couple_id}})
 
-
 async def update_couple(couple_id: int, data: dict) -> None:
     couple = await get_couple_data(couple_id)
-    for mode, action in data.items():
-        for key, value in action.items():
-            cursors = key.split(".")
-
-            nested_couple = couple
-            for c in cursors[:-1]:
-                nested_couple = nested_couple.setdefault(c, {})
-
-            if mode == "$set":
-                try:
-                    nested_couple[cursors[-1]] = value
-                except TypeError:
-                    nested_couple[int(cursors[-1])] = value
-
-            elif mode == "$unset":
-                nested_couple.pop(cursors[-1], None)
-
-            elif mode == "$inc":
-                nested_couple[cursors[-1]] = nested_couple.get(cursors[-1], 0) + value
-
-            elif mode == "$push":
-                nested_couple.setdefault(cursors[-1], []).extend(value.get("$in", []) if isinstance(value, dict) else [value])
-
-            elif mode == "$pull":
-                if cursors[-1] in nested_couple:
-                    value = value.get("$in", []) if isinstance(value, dict) else [value]
-                    nested_couple[cursors[-1]] = [item for item in nested_couple[cursors[-1]] if item not in value]
-
-            else:
-                raise ValueError(f"Invalid mode: {mode}")
-
-    await COUPLE_DB.update_one({"_id": couple_id}, data)
+    await update_db(COUPLE_DB, couple, {"_id": couple_id}, data)

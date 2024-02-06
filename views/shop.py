@@ -14,15 +14,16 @@ VALENTINE_ITEMS: list[tuple[str, str, int]] = [
     ("🌹", "event_item.rose", 10)
 ]
 
-if events.is_valentines_day():
-    SHOP_BASE.extend(VALENTINE_ITEMS)
-
 class QuantityModal(discord.ui.Modal):
     def __init__(self, *args, **kwargs) -> None:
         super().__init__(title="Enter your quantity", *args, **kwargs)
 
         self.quantity = 0
-
+        if events.is_valentines_day():
+            SHOP_BASE.extend(VALENTINE_ITEMS)
+        else:
+            SHOP_BASE.remove(VALENTINE_ITEMS[0])
+            
         self.add_item(
             discord.ui.TextInput(
                 label="Quantity",

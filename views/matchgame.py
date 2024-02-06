@@ -1,6 +1,5 @@
-import discord, asyncio, time
+import discord, asyncio, time, iufi
 import functions as func
-import iufi
 
 from iufi import (
     Card,
