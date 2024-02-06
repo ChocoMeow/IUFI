@@ -38,6 +38,21 @@ class CoupleSystem(commands.Cog):
         view = ProposeView(ctx.author, user)
         view.message = await ctx.reply(f"{ctx.author.mention} has proposed to {user.mention} with a rose🌹!", view=view)
 
+    @commands.command(aliases=["opr"])
+    @commands.cooldown(1, 5, commands.BucketType.user)
+    async def openpropose(self, ctx: commands.Context):
+        """Open a proposal to anyone"""
+        user_data = await func.get_user(ctx.author.id)
+        if user_data.get("couple_id"):
+            return await ctx.reply("Cutie, You already got a player-two. No need for love triangles.")
+
+        if not user_data.get("event_item") or user_data.get("event_item", {}).get("rose", 0) <= 0:
+            return await ctx.reply("You don't have a rose. Don't worry, you can get one from the shop.")
+
+        await func.update_user(ctx.author.id, {"$inc": {"event_item.rose": -1}})
+        view = ProposeView(ctx.author, None)
+        view.message = await ctx.reply(f"🌹Proposal alert: {ctx.author.mention} is on the lookout for a player-two! Will you be the chosen one?", view=view)
+
     @commands.command(aliases=["cq"])
     @commands.cooldown(1, 5, commands.BucketType.user)
     async def couplequest(self, ctx: commands.Context):

@@ -36,15 +36,15 @@ class ProposeView(discord.ui.View):
             return await interaction.response.send_message(f"This proposal is for {juliet_not_yet.mention}", ephemeral=True)
         
         if interaction.user == self.romeo:
-            return await interaction.response.send_message("You can't accept your own proposal!", ephemeral=True)
+            return await interaction.response.send_message("Self-acceptance is important, but not in this case sweetheart!", ephemeral=True)
 
         juliet_not_yet_data = await func.get_user(juliet_not_yet.id)
         if juliet_not_yet_data.get("couple_id"):
-            return await interaction.response.send_message("You're already in a relationship.", ephemeral=True)
+            return await interaction.response.send_message("Oops! Looks like you've got a commitment buffer overflow. No room for another relationship!", ephemeral=True)
 
         romeo_data = await func.get_user(self.romeo.id)
         if romeo_data.get("couple_id"):
-            await interaction.response.send_message("The user is already in a relationship.", ephemeral=True)
+            await interaction.response.send_message("Sorry, someone else caught the user's attention. Looks like you're not Player 2 this time.", ephemeral=True)
             await self.on_timeout()
 
         await interaction.response.defer()
@@ -52,7 +52,7 @@ class ProposeView(discord.ui.View):
         await func.make_couple(self.romeo.id, juliet_not_yet.id)
 
         embed = discord.Embed(title="✅ Accepted", color=discord.Color.random())
-        embed.description = f"{self.romeo.mention} and {juliet_not_yet.mention} are now in a relationship!"
+        embed.description = f"{self.romeo.mention} and {juliet_not_yet.mention} are a couple now! 💞"
 
         await self.on_timeout()
         await interaction.followup.send(content=f"{self.romeo.mention}, {juliet_not_yet.mention} has accepted your proposal!", embed=embed)
@@ -64,7 +64,7 @@ class ProposeView(discord.ui.View):
             return
 
         if interaction.user == self.romeo:
-            await interaction.followup.send(f"{self.romeo.mention}, has cancelled their proposal!")
+            await interaction.followup.send(f"{self.romeo.mention} has cancelled their proposal!")
         elif interaction.user == self.juliet_not_yet:
             await interaction.followup.send(f"{self.romeo.mention}, {self.juliet_not_yet.mention} has rejected your proposal!")
         else:
