@@ -40,8 +40,8 @@ class CoupleSystem(commands.Cog):
 
     @commands.command(aliases=["opr"])
     @commands.cooldown(1, 5, commands.BucketType.user)
-    async def openpropose(self, ctx: commands.Context):
-        """Open a proposal to anyone"""
+    async def openproposal(self, ctx: commands.Context):
+        """Open proposal to anyone"""
         user_data = await func.get_user(ctx.author.id)
         if user_data.get("couple_id"):
             return await ctx.reply("Cutie, You already got a player-two. No need for love triangles.")
