@@ -145,7 +145,7 @@ class QuizView(discord.ui.View):
         self._timeout: float = None
         self._results: list[bool] = [None for _ in range(len(self.questions))]
         self._average_time: list[float] = []
-        self._delay_between_questions: int = 10
+        self._delay_between_questions: int = 5
 
         self.current: int = 0
         self.response: discord.Message = None

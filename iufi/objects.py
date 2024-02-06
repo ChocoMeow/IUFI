@@ -381,7 +381,7 @@ class Card(CardObject):
         return f"🖼️ {FRAMES_BASE.get(self._frame)[0] if self._frame else '- '}"
 
     def __str__(self) -> str:
-        return f"{self._emoji} {self.id.zfill(5)}"
+        return f"{self._emoji} {self.id.zfill(5)} " + (f"({self.tag})" if self.tag else "")
 
 class TempCard(CardObject):
     def __init__(self, path: str) -> None:
@@ -428,9 +428,15 @@ class Question:
 
     def check_answer(self, answer: str, threshold: float = .75) -> bool:
         answer = answer.lower()
+        is_number_or_date = self.is_number_or_date(answer)
         for model_answer in self.answers:
 
             model_answer = model_answer.lower()
+
+            if is_number_or_date:
+                if model_answer == answer:
+                    return True
+                continue
 
             string1 = set(model_answer.split())
             string2 = set(answer.split())
@@ -443,7 +449,10 @@ class Question:
 
             if lev_similarity >= threshold or jac_similarity >= threshold or seq_similarity >= threshold:
                 return True
-        return False 
+        return False
+
+    def is_number_or_date(self, answer: str) -> bool:
+        return answer.replace(" ", "").replace("/", "").replace(".", "").replace("-", "").isdigit()
 
     def update_average_time(self, time: float) -> None:
         if not self.is_updated:

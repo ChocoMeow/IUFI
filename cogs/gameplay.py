@@ -31,8 +31,7 @@ class Gameplay(commands.Cog):
             query["$set"] = {"cooldown.roll": time.time() + (func.COOLDOWN_BASE["roll"][1] * (1 - actived_potions.get("speed", 0)))}
 
         else:
-            tier = tier.lower()
-            tier = func.match_string(tier, iufi.TIERS_BASE.keys())
+            tier = func.match_string(tier.lower(), iufi.TIERS_BASE.keys())
             if not tier:
                 return await ctx.reply(f"Tier was not found. Please select a valid tier: `{', '.join(user.get('roll').keys())}`")
  

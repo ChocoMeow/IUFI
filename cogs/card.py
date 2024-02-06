@@ -177,10 +177,12 @@ class Card(commands.Cog):
             await view.message.edit(embed=embed, view=None)
     
     @commands.command(aliases=["cm"])
-    async def convertmass(self, ctx: commands.Context, category: str):
+    async def convertmass(self, ctx: commands.Context, *, categorys: str):
         """Converts photocards that fit the given mode."""
         user = await func.get_user(ctx.author.id)
-        category = category.lower()
+        category_list = categorys.split(" ")
+        categories = [func.match_string(category.lower(), set(iufi.TIERS_BASE.keys()) | {"notag"}) for category in category_list]
+        len_categories = len(category_list)
 
         if not user["cards"]:
             return await ctx.reply(f"**{ctx.author.mention} you have no photocards.**", delete_after=5)
@@ -189,11 +191,15 @@ class Card(commands.Cog):
         for card_id in user["cards"]:
             card = iufi.CardPool.get_card(card_id)
             if card:
-                if category == "notag" and not card.tag:
-                    pass
-                elif category != card.tier[1]:
-                    continue
-                converted_cards.append(card)
+                if len_categories == 1 and "notag" in categorys and not card.tag:
+                    converted_cards.append(card)
+
+                elif card.tier[1] in categories:
+                    if "notag" in categories:
+                        if not card.tag:
+                            converted_cards.append(card)
+                    else:
+                        converted_cards.append(card)
 
         card_ids = [card.id for card in converted_cards]
         candies = sum([card.cost for card in converted_cards])
