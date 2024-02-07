@@ -126,7 +126,8 @@ class Info(commands.Cog):
             partner1 = self.bot.get_user(couple["partner_1"])
             partner2 = self.bot.get_user(couple["partner_2"])
             if partner1 and partner2:
-                description += f"{LEADERBOARD_EMOJIS[index if index <= 2 else 3]} {partner1.display_name} & {partner2.display_name}    {couple['score']} ❤️\n"
+                name = f"{partner1.display_name} & {partner2.display_name}"
+                description += f"{LEADERBOARD_EMOJIS[index if index <= 2 else 3]} {name:<25} {couple['score']} ❤️\n"
 
         if not description:
             description = "The leaderboard is currently empty."
