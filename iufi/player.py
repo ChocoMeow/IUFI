@@ -21,7 +21,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 """
 
-import time, discord
+import time, discord, random
 import functions as func
 
 from math import ceil
@@ -279,7 +279,9 @@ class Player(VoiceProtocol):
         if result:
             self.guesser = message.author
             await self.invoke_controller()
-            points = 2 + (1 if time_used < self.current.average_time else -1)
+
+            at = self.current.average_time
+            points = 2 + (0 if at * (1 - .3) < time_used < at * (1 + .3) else 1 if time_used < at else -1)
             await func.update_user(message.author.id, {"$inc": {"game_state.music_game.points": points}})
 
             await sleep(10)
@@ -302,7 +304,9 @@ class Player(VoiceProtocol):
             await self.connect(timeout=0.0, reconnect=True)
         
         track: Track = await self._node.pool.get_question()
-        await self.play(track, ignore_if_playing=True)
+        start_time = random.uniform(track.length * .2, track.length * .8)
+
+        await self.play(track, start=start_time, ignore_if_playing=True)
         await self.invoke_controller()
 
         self.time_used = time.time()
