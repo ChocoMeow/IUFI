@@ -37,7 +37,12 @@ FRAMES_BASE: dict[str, tuple[str, str]] = {
     "palette": ("🎨", 60),
     "starfish": ("🍥", 60),
     "cactus": ("🌵", 60),
-    "snow": ("❄️", 60)
+    "snow": ("❄️", 60),
+    "candy": ("🍬", 60),
+    "chocolate": ("🍫", 60),
+    "kiss": ("💋", 60),
+    "bear": ("🧸", 60),
+    "heart": ("💗", 60),
 }
 
 POTIONS_BASE: dict[str, str | dict[str, float]] = {
