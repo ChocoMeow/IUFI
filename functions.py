@@ -332,14 +332,24 @@ async def add_couple_quest_progress(couple_id: int, quest_id: int, progress: int
     if not couple_data or couple_data.get("next_reset_at", 0) < time.time():
         return
 
+    current_quest = None
+
+    for quest in COUPLE_QUESTS:
+        if int(quest[0]) == quest_id:
+            current_quest = quest
+            break
+
+    if not current_quest:
+        return
+
     for quest in couple_data["quests"]:
-        if quest[0] == quest_id and quest[1] < COUPLE_QUESTS[quest_id][5]:
-            quest[1] = min(quest[1] + progress, COUPLE_QUESTS[quest_id][5])
+        if quest[0] == quest_id and quest[1] < current_quest[5]:
+            quest[1] = min(quest[1] + progress, current_quest[5])
             await update_couple(couple_id, {"$set": {"quests": couple_data["quests"]}})
             
-            if quest[1] == COUPLE_QUESTS[quest_id][5]:
+            if quest[1] == current_quest[5]:
                 for partner in ["partner_1", "partner_2"]:
-                    await update_user(couple_data[partner], {"$inc": {COUPLE_QUESTS[quest_id][6]: COUPLE_QUESTS[quest_id][3]}})
+                    await update_user(couple_data[partner], {"$inc": {current_quest[6]: current_quest[3]}})
                 await update_couple(couple_id, {"$inc": {"score": 1}})
             break
 
