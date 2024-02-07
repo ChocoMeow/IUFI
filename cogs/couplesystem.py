@@ -57,7 +57,7 @@ class CoupleSystem(commands.Cog):
         """View your couple quests"""
         user = await func.get_user(ctx.author.id)
         if not user.get("couple_id"):
-            return await ctx.reply("You're not in a relationship.")
+            return await ctx.reply("Sunshine, You need to be in a relationship to view couple quests.")
 
         couple_data = await func.get_couple_data(user.get("couple_id"))
         quests = couple_data.get("quests", {})
