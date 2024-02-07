@@ -71,7 +71,7 @@ class Dropdown(discord.ui.Select):
                         "$inc": {"candies": -price, item[1]: modal.quantity},
                     })
 
-                    await func.add_daily_quest_progress(interaction.user.id, 3, modal.quantity)
+                    # await func.add_daily_quest_progress(interaction.user.id, 3, modal.quantity)
 
                     embed = discord.Embed(title="🛒 Shop Purchase", color=discord.Color.random())
                     embed.description = f"```{item[0]} + {modal.quantity}\n{iufi.get_main_currency_emoji()} - {price}```"

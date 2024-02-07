@@ -62,7 +62,7 @@ class Gameplay(commands.Cog):
         )
         
         await func.update_user(ctx.author.id, query)
-        await func.add_daily_quest_progress(ctx.author.id, 0, 1)
+        # await func.add_daily_quest_progress(ctx.author.id, 0, 1)
         if iufi.is_valentines_day() and user.get("couple_id"):
             await func.reduce_partner_cooldown(ctx.author.id, user.get("couple_id"), "roll")
 
@@ -126,7 +126,7 @@ class Gameplay(commands.Cog):
         if iufi.is_valentines_day() and user.get("couple_id"):
             await func.reduce_partner_cooldown(ctx.author.id, user.get("couple_id"), "quiz_game")
 
-        await func.add_daily_quest_progress(ctx.author.id, 6, 1)
+        # await func.add_daily_quest_progress(ctx.author.id, 6, 1)
         # Wait for the game to end
         await asyncio.sleep(view.total_time)
         await view.end_game()

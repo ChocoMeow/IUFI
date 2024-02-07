@@ -70,9 +70,9 @@ class TradeView(discord.ui.View):
         await func.update_user(buyer.id, {"$push": {"cards": self.card.id}, "$inc": {"candies": -self.candies}})
         await func.update_card(self.card.id, {"$set": {"owner_id": buyer.id}})
 
-        if self.card.cost <= self.candies:
-            await func.add_daily_quest_progress(buyer.id, 4, 1)
-            await func.add_daily_quest_progress(self.seller.id, 4, 1)
+        # if self.card.cost <= self.candies:
+        #     await func.add_daily_quest_progress(buyer.id, 4, 1)
+        #     await func.add_daily_quest_progress(self.seller.id, 4, 1)
 
         embed = discord.Embed(title="✅ Traded", color=discord.Color.random())
         embed.description = f"```{self.card.display_id}\n{iufi.get_main_currency_emoji()} - {self.candies}```"

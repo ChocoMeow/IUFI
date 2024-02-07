@@ -1,4 +1,4 @@
-import discord
+import discord, time
 import functions as func
 
 class ProposeView(discord.ui.View):
@@ -49,7 +49,19 @@ class ProposeView(discord.ui.View):
 
         await interaction.response.defer()
 
-        await func.make_couple(self.romeo.id, juliet_not_yet.id)
+        # Create couple data into user profile
+        couple_data = {
+            **func.COUPLE_BASE,
+            "partner_1": self.romeo.id,
+            "partner_2": juliet_not_yet.id,
+            "date_partnered": time.time()
+        }
+        couple_result = await func.COUPLE_DB.insert_one(couple_data)
+        couple_id = couple_result.inserted_id
+        func.COUPLE_BUFFER[couple_id] = couple_data
+
+        for partner in ["partner_1", "partner_2"]:
+            await func.update_user(couple_data[partner], {"$set": {"couple_id": couple_id}})
 
         embed = discord.Embed(title="✅ Accepted", color=discord.Color.random())
         embed.description = f"{self.romeo.mention} and {juliet_not_yet.mention} are a couple now! 💞"

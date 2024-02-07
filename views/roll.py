@@ -47,8 +47,8 @@ class RollButton(discord.ui.Button):
             "$inc": {"exp": 10}
         })
         await func.update_card(self.card.id, {"$set": {"owner_id": interaction.user.id}})
-        if self.card.tier[1] == "legendary":
-            await func.add_daily_quest_progress(interaction.user.id, 1, 1)
+        # if self.card.tier[1] == "legendary":
+        #     await func.add_daily_quest_progress(interaction.user.id, 1, 1)
 
         await self.view.message.edit(view=self.view)
         await interaction.followup.send(f"{interaction.user.mention} has claimed ` {self.custom_id} | {self.card.display_id} | {self.card.tier[0]} | {self.card.display_stars} `")
