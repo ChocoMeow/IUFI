@@ -30,7 +30,7 @@ tokens: TOKEN = TOKEN()
 MONGO_DB: AsyncIOMotorClient = None
 USERS_DB: AsyncIOMotorCollection = None
 CARDS_DB: AsyncIOMotorCollection = None
-DAILY_QUEST_DB: AsyncIOMotorCollection = None
+#DAILY_QUEST_DB: AsyncIOMotorCollection = None
 COUPLE_DB: AsyncIOMotorCollection = None
 
 USERS_BUFFER: dict[int, dict[str, Any]] = {}
@@ -102,15 +102,15 @@ class DailyQuestIds(Enum):
         return self.value
 
 #id, name, description, reward quantity, reward emoji, max_progress,reward_type
-DAILY_QUESTS = [
-    [DailyQuestIds.ROLL, 'Roll 5 times', 'Do "qr" or any other rolls five times', 10, f'{iufi.get_main_currency_emoji()}', 5, 'candies'],
-    [DailyQuestIds.COLLECT_EPIC_CARD, 'Collect Epic+ card', 'Collect a photocard whose rarity is above or equal to Epic by rolling', 20, f'{iufi.get_main_currency_emoji()}', 1, 'candies'],
-    [DailyQuestIds.MATCH_GAME, "Play 1 Matching Game", "Play a matching game of any level (qmg)", 10, f'{iufi.get_main_currency_emoji()}', 1, 'candies'],
-    [DailyQuestIds.BUY_ITEM, "Buy 1 Item", "Buy an item from the shop.", 10, f'{iufi.get_main_currency_emoji()}', 1, 'candies'],
-    [DailyQuestIds.TRADE, "Trade 1 photocard", "Buy or sell a photocard", 10, f'{iufi.get_main_currency_emoji()}', 1, 'candies'],
-    [DailyQuestIds.USE_POTION, "Use 1 potion", "Use a potion", 10, f'{iufi.get_main_currency_emoji()}', 1, 'candies'],
-    [DailyQuestIds.PLAY_QUIZ, "Play 1 Quiz", "Play a quiz", 10, f'{iufi.get_main_currency_emoji()}', 1, 'candies'],
-]
+# DAILY_QUESTS = [
+#     [DailyQuestIds.ROLL, 'Roll 5 times', 'Do "qr" or any other rolls five times', 10, f'{iufi.get_main_currency_emoji()}', 5, 'candies'],
+#     [DailyQuestIds.COLLECT_EPIC_CARD, 'Collect Epic+ card', 'Collect a photocard whose rarity is above or equal to Epic by rolling', 20, f'{iufi.get_main_currency_emoji()}', 1, 'candies'],
+#     [DailyQuestIds.MATCH_GAME, "Play 1 Matching Game", "Play a matching game of any level (qmg)", 10, f'{iufi.get_main_currency_emoji()}', 1, 'candies'],
+#     [DailyQuestIds.BUY_ITEM, "Buy 1 Item", "Buy an item from the shop.", 10, f'{iufi.get_main_currency_emoji()}', 1, 'candies'],
+#     [DailyQuestIds.TRADE, "Trade 1 photocard", "Buy or sell a photocard", 10, f'{iufi.get_main_currency_emoji()}', 1, 'candies'],
+#     [DailyQuestIds.USE_POTION, "Use 1 potion", "Use a potion", 10, f'{iufi.get_main_currency_emoji()}', 1, 'candies'],
+#     [DailyQuestIds.PLAY_QUIZ, "Play 1 Quiz", "Play a quiz", 10, f'{iufi.get_main_currency_emoji()}', 1, 'candies'],
+# ]
 
 COUPLE_QUESTS = [
     [DailyQuestIds.ROLL, 'Roll 100 times', 'Do "qr" or any other rolls twenty times', 1, f'👑', 100, 'roll.legendary'],
@@ -288,43 +288,44 @@ async def update_card(card_id: list[str] | str, data: dict, insert: bool = False
 
     await CARDS_DB.update_one({"_id": card_id}, data)
 
-async def get_daily_quest(user_id: int, *, insert: bool = True) -> dict[str, Any]:
-    daily_quest = DAILY_QUEST_BUFFER.get(user_id)
-    if not daily_quest:
-        daily_quest = await DAILY_QUEST_DB.find_one({"_id": user_id})
-        if not daily_quest and insert:
-            await DAILY_QUEST_DB.insert_one({"_id": user_id, **DAILY_QUEST_BASE})
-
-        daily_quest = DAILY_QUEST_BUFFER[user_id] = daily_quest if daily_quest else copy.deepcopy(DAILY_QUEST_BASE) | {"_id": user_id}
-    return daily_quest
-
-async def update_daily_quest(user_id: int, data: dict) -> None:
-    daily_quest = await get_daily_quest(user_id)
-    await update_db(DAILY_QUEST_DB, daily_quest, {"_id": user_id}, data)
+# async def get_daily_quest(user_id: int, *, insert: bool = True) -> dict[str, Any]:
+#     daily_quest = DAILY_QUEST_BUFFER.get(user_id)
+#     if not daily_quest:
+#         daily_quest = await DAILY_QUEST_DB.find_one({"_id": user_id})
+#         if not daily_quest and insert:
+#             await DAILY_QUEST_DB.insert_one({"_id": user_id, **DAILY_QUEST_BASE})
+#
+#         daily_quest = DAILY_QUEST_BUFFER[user_id] = daily_quest if daily_quest else copy.deepcopy(DAILY_QUEST_BASE) | {"_id": user_id}
+#     return daily_quest
+#
+# async def update_daily_quest(user_id: int, data: dict) -> None:
+#     daily_quest = await get_daily_quest(user_id)
+#     await update_db(DAILY_QUEST_DB, daily_quest, {"_id": user_id}, data)
 
 async def add_daily_quest_progress(user_id: int, quest_id: int, progress: int) -> None:
-    daily_quest = await get_daily_quest(user_id)
-    if not daily_quest:
-        user = await get_user(user_id)
-        await add_couple_quest_progress(user["couple_id"], quest_id, progress)
-        return
-    can_update = False
-    process_reward = False
-    for quest in daily_quest["quests"]:
-        if quest[0] == quest_id and quest[1] < DAILY_QUESTS[quest_id][5]:
-            quest[1] += progress
-            if quest[1] >= DAILY_QUESTS[quest_id][5]:
-                quest[1] = DAILY_QUESTS[quest_id][5]
-                process_reward = True
-            can_update = True
-            break
-    if can_update:
-        await update_daily_quest(user_id, {"$set": {"quests": daily_quest["quests"]}})
-    if process_reward:
-        await update_user(user_id, {"$inc": {DAILY_QUESTS[quest_id][6]: DAILY_QUESTS[quest_id][3]}})
     user = await get_user(user_id)
     if user.get("couple_id"):
         await add_couple_quest_progress(user["couple_id"], quest_id, progress)
+    # daily_quest = await get_daily_quest(user_id)
+    # if not daily_quest:
+    #     return
+    # can_update = False
+    # process_reward = False
+    # for quest in daily_quest["quests"]:
+    #     if quest[0] == quest_id and quest[1] < DAILY_QUESTS[quest_id][5]:
+    #         quest[1] += progress
+    #         if quest[1] >= DAILY_QUESTS[quest_id][5]:
+    #             quest[1] = DAILY_QUESTS[quest_id][5]
+    #             process_reward = True
+    #         can_update = True
+    #         break
+    # if can_update:
+    #     await update_daily_quest(user_id, {"$set": {"quests": daily_quest["quests"]}})
+    # if process_reward:
+    #     await update_user(user_id, {"$inc": {DAILY_QUESTS[quest_id][6]: DAILY_QUESTS[quest_id][3]}})
+    # user = await get_user(user_id)
+    # if user.get("couple_id"):
+    #     await add_couple_quest_progress(user["couple_id"], quest_id, progress)
 
 async def add_couple_quest_progress(couple_id: int, quest_id: int, progress: int) -> None:
     couple_data = await get_couple_data(couple_id)
@@ -342,11 +343,11 @@ async def add_couple_quest_progress(couple_id: int, quest_id: int, progress: int
                 await update_couple(couple_id, {"$inc": {"score": 1}})
             break
 
-def get_daily_quest_by_id(quest_id):
-    for quest in DAILY_QUESTS:
-        if quest[0] == quest_id:
-            return quest
-    return None
+# def get_daily_quest_by_id(quest_id):
+#     for quest in DAILY_QUESTS:
+#         if quest[0] == quest_id:
+#             return quest
+#     return None
 
 def get_couple_quest_by_id(quest_id):
     quest_id = DailyQuestIds(quest_id)

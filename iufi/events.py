@@ -5,8 +5,8 @@ EVENT_CONFIG: dict[str, dict[str, str | datetime.datetime]] = {
     "valentines_day": {
         "name": "Valentine's Day",
         "description": "A day to celebrate love and affection",
-        "start_date": datetime.datetime(datetime.datetime.now().year, 1, 7),
-        "end_date": datetime.datetime(datetime.datetime.now().year, 2, 15),
+        "start_date": datetime.datetime(datetime.datetime.now().year, 2, 5),
+        "end_date": datetime.datetime(datetime.datetime.now().year, 2, 20),
         "folder": "valentines_day"
     }
 }

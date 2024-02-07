@@ -10,8 +10,6 @@ class CoupleSystem(commands.Cog):
         self.bot = bot
         self.emoji = "💞"
         self.invisible = False
-
-        self.COUPLE_QUESTS = func.COUPLE_QUESTS.copy()
         self.COOLDOWN = 24 * 60 * 60
 
     @commands.command(aliases=["pr"])
@@ -64,7 +62,7 @@ class CoupleSystem(commands.Cog):
         couple_data = await func.get_couple_data(user.get("couple_id"))
         quests = couple_data.get("quests", {})
         if not quests or couple_data.get("next_reset_at", 0) < time.time():
-            quests = random.sample(self.COUPLE_QUESTS, 3)
+            quests = random.sample(func.COUPLE_QUESTS, 3)
             quests = [[int(quests[0]), 0] for quests in quests]  # [[id, progress], [id, progress], [id, progress]]
             await func.update_couple(user.get("couple_id"),
                                      {"$set": {"quests": quests, "next_reset_at": time.time() + self.COOLDOWN}})
