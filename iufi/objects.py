@@ -1,17 +1,23 @@
 from __future__ import annotations
 
-import random, os, asyncio, Levenshtein
+import random, os, asyncio, Levenshtein, re, discord
 import functions as func
 
 from PIL import Image, ImageDraw, ImageSequence
 from io import BytesIO
 from difflib import SequenceMatcher
-from typing import TYPE_CHECKING, Any
+from typing import (
+    Optional,
+    TYPE_CHECKING,
+    Any
+)
 
 from .exceptions import ImageLoadError, IUFIException
 
 if TYPE_CHECKING:
     from .pool import CardPool
+
+YOUTUBE_REGEX = re.compile(r'(https?://)?(www\.)?youtube\.(com|nl)/watch\?v=([-\w]+)')
 
 TIERS_BASE: dict[str, tuple[str, int]] = {
     "common": ("🥬", 1),
@@ -158,6 +164,17 @@ RANK_BASE: dict[str, dict[str, Any]] = {
             4: ("roll.legendary", 1),
             5: [("potions.speed_iii", 1), ("potions.luck_iii", 1)],
         }
+    }
+}
+
+TRACK_BASE: dict[str, Any] = {
+    "correct": 0,
+    "wrong": 0,
+    "average_time": 0,
+    "likes": 0,
+    "best_record": {
+        "member": None,
+        "time": None
     }
 }
 
@@ -537,3 +554,133 @@ class Question:
             return 0
         
         return 100 - self.correct_rate
+
+class Track:
+    """The base track object. Returns critical track information needed for parsing by Lavalink.
+       You can also pass in commands.Context to get a discord.py Context object in your track.
+    """
+
+    def __init__(
+        self,
+        *,
+        track_id: str = None,
+        info: dict,
+        search_type: str = "ytsearch",
+    ):
+        self.track_id: str = track_id
+        self.info: dict = info
+
+        self.identifier: str = info.get("identifier")
+        self.title: str = info.get("title", "Unknown")
+        self.author: str = info.get("author", "Unknown")
+        self.uri: str = info.get("uri", "https://discord.com/application-directory/605618911471468554")
+        self.source: str = info.get("sourceName", "youtube")
+
+        self.original: Optional[Track] = self
+        self._search_type: str = search_type
+
+        self.thumbnail: str = info.get("artworkUrl")
+        if not self.thumbnail and YOUTUBE_REGEX.match(self.uri):
+            self.thumbnail = f"https://img.youtube.com/vi/{self.identifier}/maxresdefault.jpg"
+        
+        self.length: float = 3000 if self.source == "soundcloud" and "/preview/" in self.identifier else info.get("length")
+        self.is_stream: bool = info.get("isStream", False)
+        self.is_seekable: bool = info.get("isSeekable", True)
+        self.position: int = info.get("position", 0)
+
+        self.db_data: Optional[dict] = None
+        self.is_updated: bool = False
+
+    def check_answer(self, answer: str, threshold: float = .75) -> bool:
+        answer = answer.lower()
+        title = re.sub(r"\(.*?\)|\[.*?\]", "", self.title.lower())
+
+        string1 = set(title.split())
+        string2 = set(answer.split())
+        jac_similarity = len(string1 & string2) / len(string1 | string2)
+
+        string1 = title.replace(" ", "")
+        string2 = answer.replace(" ", "")
+        lev_similarity = Levenshtein.ratio(string1, string2)
+        seq_similarity = SequenceMatcher(None, string1, string2).ratio()
+
+        if lev_similarity >= threshold or jac_similarity >= threshold or seq_similarity >= threshold:
+            return True
+        return False 
+    
+    def update_state(self, member: discord.Member, time_used: float, result: bool) -> None:
+        self.is_updated = True
+
+        if self.total >= 0:
+            self.db_data["average_time"] += time_used
+        else:
+            self.db_data["average_time"] = ((self.db_data["average_time"] * self.total) + time_used) / (self.total + 1)
+
+        current_best_time = self.db_data["best_record"]["time"]
+        if result and (current_best_time is None or current_best_time > time_used):
+            self.db_data["best_record"]["member"] = member.id
+            self.db_data["best_record"]["time"] = time_used
+
+        key = "correct" if result else "wrong"
+        self.db_data[key] = self.db_data.get(key, 0) + 1
+    
+    @property
+    def total(self) -> int:
+        return self.db_data["correct"] + self.db_data["wrong"]
+    
+    @property
+    def average_time(self) -> float:
+        return self.db_data["average_time"]
+    
+    @property
+    def correct_rate(self) -> float:
+        total = self.total
+        if not total:
+            return 0
+        return round(self.db_data["correct"] / total, 2) * 100
+    
+    @property
+    def wrong_rate(self) -> float:
+        return 100 - self.correct_rate
+
+    @property
+    def best_record(self) -> tuple[int, float]:
+        br = self.db_data["best_record"]
+        return br["member"], br["time"]
+    
+    def __eq__(self, other) -> bool:
+        if not isinstance(other, Track):
+            return False
+
+        return other.track_id == self.track_id
+
+    def __str__(self) -> str:
+        return self.title
+
+    def __repr__(self) -> str:
+        return f"<IUFI.track title={self.title!r} uri=<{self.uri!r}> length={self.length}>"
+
+class Playlist:
+    """The base playlist object.
+       Returns critical playlist information needed for parsing by Lavalink.
+       You can also pass in commands.Context to get a discord.py Context object in your tracks.
+    """
+
+    def __init__(
+        self,
+        *,
+        playlist_info: dict,
+        tracks: list,
+    ):
+        self.playlist_info = playlist_info
+        self.name = playlist_info.get("name")        
+        self.tracks = [
+            Track(track_id=track["encoded"], info=track["info"])
+            for track in tracks
+        ]
+
+    def __str__(self) -> str:
+        return self.name
+
+    def __repr__(self) -> str:
+        return f"<Voicelink.playlist name={self.name!r} track_count={len(self.tracks)}>"

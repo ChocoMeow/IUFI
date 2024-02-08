@@ -32,7 +32,7 @@ class Tasks(commands.Cog):
         if end_time - time.time() > 3_600:
             return
         
-        guild: discord.Guild = self.bot.get_guild(214199357170253834)
+        guild: discord.Guild = self.bot.get_guild(func.MAIN_GUILD)
         if not guild:
             return
         
@@ -63,6 +63,13 @@ class Tasks(commands.Cog):
         if questions:
             func.update_json("questions.json", questions)
         
+        playlist = iufi.NodePool._questions
+        if playlist:
+            for track in playlist.tracks:
+                if track.is_updated:
+                    await func.MUSIC_DB.update_one({"_id": track.identifier}, {"$set": track.db_data})
+                    track.is_updated = False
+
         self.bot.loop.create_task(self.distribute_monthly_quiz_rewards())
 
     @tasks.loop(minutes=10.0)
