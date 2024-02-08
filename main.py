@@ -64,7 +64,8 @@ class IUFI(commands.Bot):
             raise Exception("Not able to connect MongoDB! Reason:", e)
         
         func.CARDS_DB = func.MONGO_DB[db_name]["cards"]
-        func.USERS_DB = func.MONGO_DB[db_name]["users"]
+        func.USERS_DB = func.CARDS_DBMONGO_DB[db_name]["users"]
+        func.QUESTIONS_DB = func.MONGO_DB[db_name]["questions"]
         func.MUSIC_DB = func.MONGO_DB[db_name]["musics"]
 
     async def setup_hook(self) -> None:
@@ -95,9 +96,8 @@ class IUFI(commands.Bot):
 
                         print(f"Added New Image {new_image}({category}) -> ID: {card_id}")
 
-        questions = func.open_json("questions.json")
-        for _, data in questions.items():
-            iufi.QuestionPool.add_question(iufi.Question(**data))
+        async for question_doc in func.QUESTIONS_DB.find():
+            iufi.QuestionPool.add_question(iufi.QuestionPool(**question_doc))
 
         for module in os.listdir(os.path.join(func.ROOT_DIR, 'cogs')):
             if module.endswith(".py"):

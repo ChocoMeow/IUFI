@@ -29,6 +29,7 @@ tokens: TOKEN = TOKEN()
 MONGO_DB: AsyncIOMotorClient = None
 USERS_DB: AsyncIOMotorCollection = None
 CARDS_DB: AsyncIOMotorCollection = None
+QUESTIONS_DB: AsyncIOMotorCollection = None
 MUSIC_DB: AsyncIOMotorCollection = None
 
 USERS_BUFFER: dict[int, dict[str, Any]] = {}

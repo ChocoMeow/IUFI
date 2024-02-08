@@ -56,13 +56,16 @@ class Tasks(commands.Cog):
     async def cache_clear(self):
         func.USERS_BUFFER.clear()
 
+        # Purging Cached Image Data
         for card in iufi.CardPool._cards.values():
             card._image = None
 
-        questions = {f"{i}": q.toDict() for i, q in enumerate(iufi.QuestionPool._questions, start=1) if q.is_updated}
-        if questions:
-            func.update_json("questions.json", questions)
+        # Syncing Question Data with Database
+        for q in iufi.QuestionPool._questions:
+            if q.is_updated:
+                await func.QUESTIONS_DB.update_one({"_id", q.id}, q.toDict())
         
+        # Syncing Music Data with Database
         playlist = iufi.NodePool._questions
         if playlist:
             for track in playlist.tracks:
@@ -70,19 +73,23 @@ class Tasks(commands.Cog):
                     await func.MUSIC_DB.update_one({"_id": track.identifier}, {"$set": track.db_data})
                     track.is_updated = False
 
+        # Verifying and Updating Quiz Reward Data in Database
         self.bot.loop.create_task(self.distribute_monthly_quiz_rewards())
 
     @tasks.loop(minutes=10.0)
     async def reminder(self) -> None:
+        # Querying the Game’s Ready Time for the Next 10 Minutes Range
         time_range = {"$gt": (current_time := time.time()), "$lt": current_time + 600}
-        query = {"$and":[
-            {"reminder": True},
-            {"$or": [
-                {f"cooldown.{name}": time_range}
-                for name in func.COOLDOWN_BASE.keys() if name != "claim"
+        query = {
+            "$and":[
+                {"reminder": True},
+                {"$or": [
+                    {f"cooldown.{name}": time_range}
+                    for name in func.COOLDOWN_BASE.keys() if name != "claim"
             ]}
         ]}
 
+        # Verifying and Dispatching Game Readiness Notification to Player
         async for doc in func.USERS_DB.find(query):
             user = self.bot.get_user(doc["_id"])
             if not user:
