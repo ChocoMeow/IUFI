@@ -418,6 +418,7 @@ class TempCard(CardObject):
 class Question:
     def __init__(
         self,
+        _id: int,
         question: str,
         answers: list[str],
         num_correct: int = 0,
@@ -428,6 +429,7 @@ class Question:
         tips: str = "",
         default_level: str = None
     ):
+        self.id = _id
         self.question: str = question
         self.answers: list[str] = answers
         self.attachment: str | None = attachment
