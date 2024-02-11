@@ -556,7 +556,7 @@ class ValentineCard:
         self.to_name: str = to_name
         self.message: str = message
 
-    async def generate_image(self) -> BytesIO:
+    def generate_image(self) -> BytesIO:
         try:
             img = Image.open(os.path.join(func.ROOT_DIR, "valentine", random.choice(VALENTINE_CARDS)))
             draw = ImageDraw.Draw(img)

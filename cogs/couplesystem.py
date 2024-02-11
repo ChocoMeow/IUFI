@@ -89,12 +89,9 @@ class CoupleSystem(commands.Cog):
         """Create a valentine card for your loved ones"""
 
         valentine_card = iufi.ValentineCard(from_name, to_name, message)
-        image_bytes = await asyncio.to_thread(valentine_card.generate_image())
+        image_bytes = await asyncio.to_thread(valentine_card.generate_image)
         file = discord.File(fp=image_bytes, filename="valentine_card.png")
         await ctx.reply(file=file)
-
-
-
 
 async def setup(bot: commands.Bot) -> None:
     await bot.add_cog(CoupleSystem(bot))
