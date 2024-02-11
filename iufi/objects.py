@@ -545,7 +545,8 @@ class Question:
         return 100 - self.correct_rate
 
 
-VALENTINE_CARDS = ["card.png"]
+VALENTINE_CARDS = ["v1.png","v2.png","v3.png","v4.png"]
+FONT_PATH = os.path.join(func.ROOT_DIR, "valentine/scarlet/Scarlet.ttf.ttf")
 class ValentineCard:
     def __init__(self, from_name: str, to_name: str, message: str) -> None:
         self.from_name: str = from_name
@@ -555,35 +556,53 @@ class ValentineCard:
     async def generate_image(self) -> BytesIO:
         img = Image.open(os.path.join(func.ROOT_DIR, "valentine", random.choice(VALENTINE_CARDS)))
         draw = ImageDraw.Draw(img)
-        message_font = ImageFont.truetype("arial.ttf", self.get_message_font_size_based_on_length(self.message))
-        from_to_font = ImageFont.truetype("arial.ttf", self.get_from_to_font_size())
-        wrapped_message = textwrap.fill(self.message, width=40)
+        message_font = ImageFont.truetype(FONT_PATH, self.get_message_font_size_based_on_length(self.message))
+        from_to_font = ImageFont.truetype(FONT_PATH, self.get_from_to_font_size())
+        wrapped_message = textwrap.fill(self.message, width=self.get_message_width_based_on_length(self.message))
 
         # to
-        draw.text((94, 260), self.to_name, font=from_to_font, fill=(255, 255, 255))
+        draw.text((370,933), self.to_name, font=from_to_font, fill=(255, 255, 255))
         # from
-        draw.text((138, 313), self.from_name, font=from_to_font, fill=(255, 255, 255))
+        draw.text((523,1123), self.from_name, font=from_to_font, fill=(255, 255, 255))
 
         # desc
-        draw.text((36, 36),  wrapped_message, font=message_font, fill=(255, 255, 255))
+        draw.text((178,178),  wrapped_message, font=message_font, fill=(255, 255, 255))
 
         image_bytes = BytesIO()
         img.save(image_bytes, format='PNG')
 
         image_bytes.seek(0)
-
         return image_bytes
 
     def get_message_font_size_based_on_length(self, message: str) -> int:
         length = len(message)
         if length < 20:
-            return 50
+            return 150
         elif length < 40:
-            return 40
+            return 140
         elif length < 60:
-            return 30
+            return 130
+        elif length < 140:
+            return 120
+        elif length < 200:
+            return 100
         else:
+            return 60
+
+    def get_message_width_based_on_length(self, message: str) -> int:
+        length = len(message)
+        if length < 20:
+            return 15
+        elif length < 40:
             return 20
+        elif length < 60:
+            return 25
+        elif length < 140:
+            return 25
+        elif length < 200:
+            return 35
+        else:
+            return 50
 
     def get_from_to_font_size(self) -> int:
-        return 25
+        return 125
