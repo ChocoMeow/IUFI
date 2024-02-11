@@ -24,3 +24,6 @@ def get_main_currency_emoji() -> str:
 
 def get_main_currency_name() -> str:
     return "Choco" if is_valentines_day() else "Candies"
+
+def is_feb_14() -> bool:
+    return datetime.datetime.now().month == 2 and datetime.datetime.now().day == 14

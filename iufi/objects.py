@@ -1,10 +1,11 @@
 from __future__ import annotations
 
 import random, os, asyncio, Levenshtein
+import textwrap
 
 import functions as func
 
-from PIL import Image, ImageDraw, ImageSequence
+from PIL import Image, ImageDraw, ImageSequence, ImageFont
 from io import BytesIO
 from difflib import SequenceMatcher
 from typing import TYPE_CHECKING, Any
@@ -190,7 +191,7 @@ class CardObject:
         output.paste(image, (0, 0), mask)
 
         return output
-    
+
     def _load_image(self, path: str) -> None:
         """Load and process the image"""
         try:
@@ -228,7 +229,7 @@ class Card(CardObject):
         stars: int = None,
         tag: str = None,
         frame: str = None,
-    ):  
+    ):
         self.id: str = id
         self._tier: str = tier
         self._pool: CardPool = pool
@@ -240,7 +241,7 @@ class Card(CardObject):
 
         self._image: list[Image.Image] | Image.Image = None
         self._emoji: str = TIERS_BASE.get(self._tier)[0]
-    
+
     def _load_frame(self, image: Image.Image, frame: str = None) -> Image.Image:
         with Image.open(os.path.join(func.ROOT_DIR, "frames", f"{frame if frame else self._frame}.png")).convert("RGBA").resize((200, 355)) as img:
             image = self._round_corners(image)
@@ -281,14 +282,14 @@ class Card(CardObject):
                     image = self._load_frame(img.resize(size, Image.LANCZOS), frame)
                 else:
                     image = self._round_corners(img.resize(size, Image.LANCZOS))
-                    
+
                 image.save(image_bytes, format='PNG')
                 image_bytes.seek(0)
                 return image_bytes
-        
+
         except Exception as e:
             raise ImageLoadError(f"Unable to load the image. Reason: {e}")
-        
+
     def change_owner(self, owner_id: int | None = None) -> None:
         if self.owner_id != owner_id:
             self.owner_id = owner_id
@@ -306,14 +307,14 @@ class Card(CardObject):
     def change_tag(self, tag: str | None = None) -> None:
         if self.tag == tag:
             return
-        
+
         self.tag = tag
         asyncio.create_task(func.update_card(self.id, {"$set": {"tag": tag}}))
-    
+
     def change_frame(self, frame: str | None = None) -> None:
         if self._frame == frame:
             raise IUFIException("This frame is already assigned to this card.")
-        
+
         self._frame = frame.lower() if frame else None
 
         if self.image:
@@ -335,7 +336,7 @@ class Card(CardObject):
         image_bytes.seek(0)
 
         return image_bytes
-    
+
     @property
     def cost(self) -> int:
         price = TIERS_BASE.get(self._tier)[1]
@@ -343,7 +344,7 @@ class Card(CardObject):
             price *= 1 + ((self.stars - 5) * .25)
 
         return round(price)
-    
+
     @property
     def tier(self) -> tuple[str, str]:
         """Return a tuple (emoji, name)"""
@@ -352,7 +353,7 @@ class Card(CardObject):
     @property
     def frame(self) -> tuple[str, str]:
         return FRAMES_BASE.get(self._frame)[0], self._frame
-    
+
     @property
     def image(self) -> list[Image.Image] | Image.Image:
         """Return the image"""
@@ -367,11 +368,11 @@ class Card(CardObject):
     @property
     def format(self) -> str:
         return "gif" if self.is_gif else "png"
-    
+
     @property
     def display_id(self) -> str:
         return f"🆔 {self.id.zfill(5)}"
-    
+
     @property
     def display_stars(self) -> str:
         return ("⭐ " if self.stars < 5 else "🌟 ") + str(self.stars)
@@ -489,7 +490,7 @@ class Question:
 
         # Return the user ID and fastest_response_time of the first record
         return (sorted_records[0][0], sorted_records[0][1]["fastest_response_time"]) if sorted_records else None
-    
+
     def toDict(self) -> dict:
         if self.is_updated:
             self.is_updated = False
@@ -504,12 +505,12 @@ class Question:
             "records": self._records,
             "default_level": self._default_level
         }
-    
+
     @property
     def level(self) -> str:
         if self._default_level:
             return self._default_level
-        
+
         if self.correct_rate >= 85 or self._wrong == 0:
             return "easy"
         elif self.correct_rate >= 40:
@@ -523,22 +524,66 @@ class Question:
 
         if not self._average_time:
             return base_time
-        
+
         return round((self._average_time + base_time) / 2, 1)
 
     @property
     def total(self) -> int:
         return self._correct + self._wrong
-    
+
     @property
     def correct_rate(self) -> float:
         total = self.total
         if not total:
             return 0
         return round(self._correct / total, 2) * 100
-    
+
     @property
     def wrong_rate(self) -> float:
         if self._wrong == 0:
             return 0
         return 100 - self.correct_rate
+
+
+VALENTINE_CARDS = ["v1.png","v2.png","v3.png","v4.png"]
+FONT_PATH = os.path.join(func.ROOT_DIR, "valentine/scarlet/Scarlet.ttf.ttf")
+FONT_SIZES = [(20, 150, 15), (40, 140, 20), (60, 130, 25), (140, 120, 25), (200, 100, 35), (float('inf'), 60, 50)]
+FROM_TO_FONT_SIZE = 125
+
+class ValentineCard:
+    def __init__(self, from_name: str, to_name: str, message: str) -> None:
+        self.from_name: str = from_name
+        self.to_name: str = to_name
+        self.message: str = message
+
+    async def generate_image(self) -> BytesIO:
+        try:
+            img = Image.open(os.path.join(func.ROOT_DIR, "valentine", random.choice(VALENTINE_CARDS)))
+            draw = ImageDraw.Draw(img)
+            message_font = ImageFont.truetype(FONT_PATH, self.get_font_size_or_width(self.message, 'font_size'))
+            from_to_font = ImageFont.truetype(FONT_PATH, FROM_TO_FONT_SIZE)
+            wrapped_message = textwrap.fill(self.message, width=self.get_font_size_or_width(self.message, 'width'))
+
+            # to
+            draw.text((370,933), self.to_name, font=from_to_font, fill=(255, 255, 255))
+            # from
+            draw.text((523,1123), self.from_name, font=from_to_font, fill=(255, 255, 255))
+
+            # desc
+            draw.text((178,178),  wrapped_message, font=message_font, fill=(255, 255, 255))
+
+            image_bytes = BytesIO()
+            img.save(image_bytes, format='PNG')
+
+            image_bytes.seek(0)
+            return image_bytes
+        
+        except Exception as e:
+            print(f"Error generating image: {e}")
+            return None
+
+    def get_font_size_or_width(self, message: str, attribute: str) -> int:
+        length = len(message)
+        for max_length, font_size, width in FONT_SIZES:
+            if length < max_length:
+                return font_size if attribute == 'font_size' else width

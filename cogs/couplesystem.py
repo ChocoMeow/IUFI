@@ -3,6 +3,8 @@ import functions as func
 import time
 import random
 from discord.ext import commands
+
+import iufi
 from views import ProposeView
 
 class CoupleSystem(commands.Cog):
@@ -62,7 +64,8 @@ class CoupleSystem(commands.Cog):
         couple_data = await func.get_couple_data(user.get("couple_id"))
         quests = couple_data.get("quests", {})
         if not quests or couple_data.get("next_reset_at", 0) < time.time():
-            quests = random.sample(func.COUPLE_QUESTS, 3)
+            quests_count = 7 if iufi.is_feb_14() else 3
+            quests = random.sample(func.COUPLE_QUESTS, quests_count)
             quests = [[int(quests[0]), 0] for quests in quests]  # [[id, progress], [id, progress], [id, progress]]
             await func.update_couple(user.get("couple_id"),
                                      {"$set": {"quests": quests, "next_reset_at": time.time() + self.COOLDOWN}})
@@ -79,6 +82,18 @@ class CoupleSystem(commands.Cog):
         embed.description += "```"
         embed.set_footer(text="Completing each quest will reward you a ❤️ for couple leaderboard")
         await ctx.reply(embed=embed)
+
+    @commands.command(aliases=["vc"])
+    @commands.cooldown(1, 5, commands.BucketType.user)
+    async def valentinecard(self, ctx: commands.Context, from_name: str, to_name: str,* ,message: str):
+        """Create a valentine card for your loved ones"""
+
+        valentine_card = iufi.ValentineCard(from_name, to_name, message)
+        image_bytes = await valentine_card.generate_image()
+        file = discord.File(fp=image_bytes, filename="valentine_card.png")
+        await ctx.reply(file=file)
+
+
 
 
 async def setup(bot: commands.Bot) -> None:
