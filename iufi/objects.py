@@ -547,6 +547,9 @@ class Question:
 
 VALENTINE_CARDS = ["v1.png","v2.png","v3.png","v4.png"]
 FONT_PATH = os.path.join(func.ROOT_DIR, "valentine/scarlet/Scarlet.ttf.ttf")
+FONT_SIZES = [(20, 150, 15), (40, 140, 20), (60, 130, 25), (140, 120, 25), (200, 100, 35), (float('inf'), 60, 50)]
+FROM_TO_FONT_SIZE = 125
+
 class ValentineCard:
     def __init__(self, from_name: str, to_name: str, message: str) -> None:
         self.from_name: str = from_name
@@ -554,55 +557,33 @@ class ValentineCard:
         self.message: str = message
 
     async def generate_image(self) -> BytesIO:
-        img = Image.open(os.path.join(func.ROOT_DIR, "valentine", random.choice(VALENTINE_CARDS)))
-        draw = ImageDraw.Draw(img)
-        message_font = ImageFont.truetype(FONT_PATH, self.get_message_font_size_based_on_length(self.message))
-        from_to_font = ImageFont.truetype(FONT_PATH, self.get_from_to_font_size())
-        wrapped_message = textwrap.fill(self.message, width=self.get_message_width_based_on_length(self.message))
+        try:
+            img = Image.open(os.path.join(func.ROOT_DIR, "valentine", random.choice(VALENTINE_CARDS)))
+            draw = ImageDraw.Draw(img)
+            message_font = ImageFont.truetype(FONT_PATH, self.get_font_size_or_width(self.message, 'font_size'))
+            from_to_font = ImageFont.truetype(FONT_PATH, FROM_TO_FONT_SIZE)
+            wrapped_message = textwrap.fill(self.message, width=self.get_font_size_or_width(self.message, 'width'))
 
-        # to
-        draw.text((370,933), self.to_name, font=from_to_font, fill=(255, 255, 255))
-        # from
-        draw.text((523,1123), self.from_name, font=from_to_font, fill=(255, 255, 255))
+            # to
+            draw.text((370,933), self.to_name, font=from_to_font, fill=(255, 255, 255))
+            # from
+            draw.text((523,1123), self.from_name, font=from_to_font, fill=(255, 255, 255))
 
-        # desc
-        draw.text((178,178),  wrapped_message, font=message_font, fill=(255, 255, 255))
+            # desc
+            draw.text((178,178),  wrapped_message, font=message_font, fill=(255, 255, 255))
 
-        image_bytes = BytesIO()
-        img.save(image_bytes, format='PNG')
+            image_bytes = BytesIO()
+            img.save(image_bytes, format='PNG')
 
-        image_bytes.seek(0)
-        return image_bytes
+            image_bytes.seek(0)
+            return image_bytes
+        
+        except Exception as e:
+            print(f"Error generating image: {e}")
+            return None
 
-    def get_message_font_size_based_on_length(self, message: str) -> int:
+    def get_font_size_or_width(self, message: str, attribute: str) -> int:
         length = len(message)
-        if length < 20:
-            return 150
-        elif length < 40:
-            return 140
-        elif length < 60:
-            return 130
-        elif length < 140:
-            return 120
-        elif length < 200:
-            return 100
-        else:
-            return 60
-
-    def get_message_width_based_on_length(self, message: str) -> int:
-        length = len(message)
-        if length < 20:
-            return 15
-        elif length < 40:
-            return 20
-        elif length < 60:
-            return 25
-        elif length < 140:
-            return 25
-        elif length < 200:
-            return 35
-        else:
-            return 50
-
-    def get_from_to_font_size(self) -> int:
-        return 125
+        for max_length, font_size, width in FONT_SIZES:
+            if length < max_length:
+                return font_size if attribute == 'font_size' else width
