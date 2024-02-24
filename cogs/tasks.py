@@ -63,7 +63,7 @@ class Tasks(commands.Cog):
         # Syncing Question Data with Database
         for q in iufi.QuestionPool._questions:
             if q.is_updated:
-                await func.QUESTIONS_DB.update_one({"_id", q.id}, q.toDict())
+                await func.QUESTIONS_DB.update_one({"_id": q.id}, {"$set": q.toDict()})
         
         # Syncing Music Data with Database
         playlist = iufi.NodePool._questions
