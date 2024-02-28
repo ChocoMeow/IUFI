@@ -400,6 +400,10 @@ class Card(CardObject):
     def display_frame(self) -> str:
         return f"🖼️ {FRAMES_BASE.get(self._frame)[0] if self._frame else '- '}"
 
+    def can_apply_rarity_frame(self) -> bool:
+        if self._tier in ("common", "rare", "epic", "legendary") and not self._frame:
+            return True
+
     def __str__(self) -> str:
         return f"{self._emoji} {self.id.zfill(5)} " + (f"({self.tag})" if self.tag else "")
 
@@ -419,6 +423,9 @@ class TempCard(CardObject):
     @property
     def is_gif(self) -> bool:
         return isinstance(self.image, list)
+
+    def can_apply_rarity_frame(self) -> bool:
+        return False
 
 class Question:
     def __init__(
