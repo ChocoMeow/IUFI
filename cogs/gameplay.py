@@ -24,8 +24,13 @@ class Gameplay(commands.Cog):
     async def roll(self, ctx: commands.Context, *, tier: str = None):
         """Rolls a set of photocards for claiming."""
         user = await func.get_user(ctx.author.id)
-        actived_potions = {} if tier else func.get_potions(user.get("actived_potions", {}), iufi.POTIONS_BASE)
+        if not tier and (retry := user["cooldown"]["roll"]) > time.time():
+            return await ctx.reply(f"{ctx.author.mention} your next roll is <t:{round(retry)}:R>", delete_after=10)
 
+        if len(user["cards"]) >= func.MAX_CARDS:
+            return await ctx.reply(f"**{ctx.author.mention} your inventory is full.**", delete_after=5)
+        
+        actived_potions = {} if tier else func.get_potions(user.get("actived_potions", {}), iufi.POTIONS_BASE)
         query = {}
         if not tier:
             query["$set"] = {"cooldown.roll": time.time() + (func.COOLDOWN_BASE["roll"][1] * (1 - actived_potions.get("speed", 0)))}
@@ -40,16 +45,12 @@ class Gameplay(commands.Cog):
             
             query["$inc"] = {f"roll.{tier}": -1}
 
+        await func.update_user(ctx.author.id, query)
+        
         if user["exp"] == 0:
             view = discord.ui.View()
             view.add_item(discord.ui.Button(label='Beginner Guide', emoji='📗', url='https://docs.google.com/document/d/1VAD20wZQ56S_wDeMJlwIKn_jImIPuxh2lgy1fn17z0c/edit'))
             await ctx.reply(f"**Welcome to IUFI! Please have a look at the guide or use `qhelp` to begin.**", view=view)
-
-        if not tier and (retry := user["cooldown"]["roll"]) > time.time():
-            return await ctx.reply(f"{ctx.author.mention} your next roll is <t:{round(retry)}:R>", delete_after=10)
-
-        if len(user["cards"]) >= func.MAX_CARDS:
-            return await ctx.reply(f"**{ctx.author.mention} your inventory is full.**", delete_after=5)
 
         cards = iufi.CardPool.roll(included=[tier] if tier else None, luck_rates=None if tier else actived_potions.get("luck", None))
         image_bytes, image_format = await asyncio.to_thread(iufi.gen_cards_view, cards)
@@ -61,7 +62,6 @@ class Gameplay(commands.Cog):
             view=view
         )
         
-        await func.update_user(ctx.author.id, query)
         await view.timeout_count()
 
     @commands.command(aliases=["mg"])
