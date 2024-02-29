@@ -2,8 +2,7 @@ import random, time
 
 from .objects import Card, TempCard
 from io import BytesIO
-from PIL import Image, ImageDraw
-
+from PIL import Image
 
 def extend_lists(lists: list[list[Image.Image]]) -> list[list[Image.Image]]:
     # Find the length of the largest list
