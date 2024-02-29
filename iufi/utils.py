@@ -1,7 +1,5 @@
-import random, time, socket
+import random, time
 
-from timeit import default_timer as timer
-from itertools import zip_longest
 from .objects import Card, TempCard
 from io import BytesIO
 from PIL import Image

@@ -189,7 +189,7 @@ class CardObject:
     def __init__(self) -> None:
         self._image: list[Image.Image] | Image.Image = None
 
-    def _round_corners(self, image: Image.Image, radius: int = 10) -> Image.Image:
+    def _round_corners(self, image: Image.Image, radius: int = 16) -> Image.Image:
         """Creates a rounded corner image"""
         mask = Image.new('L', image.size, 0)
         draw = ImageDraw.Draw(mask)
@@ -258,14 +258,16 @@ class Card(CardObject):
         self._emoji: str = TIERS_BASE.get(self._tier)[0]
     
     def _load_frame(self, image: Image.Image, frame: str = None) -> Image.Image:
-        with Image.open(os.path.join(func.ROOT_DIR, "frames", f"{frame if frame else self._frame}.png")).convert("RGBA").resize((200, 355)) as img:
-            image = self._round_corners(image)
-            output = Image.new("RGBA", img.size)
-            output.paste(image, (6, 8))
-            output.paste(img, (0, 0), mask=img)
-
-            return output
-
+        try:
+            with Image.open(os.path.join(func.ROOT_DIR, "frames", f"{frame if frame else self._frame}.png")).convert("RGBA").resize((200, 355)) as img:
+                output = Image.new("RGBA", img.size)
+                output.paste(image, (0, 0))
+                output.paste(img, (0, 0), mask=img)
+                return self._round_corners(output)
+            
+        except FileNotFoundError:
+            return self._round_corners(image)
+        
     def _load_image(self) -> None:
         """Load and process the image"""
         try:
@@ -277,7 +279,7 @@ class Card(CardObject):
                 process_frame = self._load_frame if self._frame else self._round_corners
 
                 if img.format != "GIF":
-                    self._image = process_frame(img.resize(size, Image.LANCZOS))
+                    self._image = process_frame(img.resize(size, Image.LANCZOS)) if self._frame else self._load_frame(img.resize(size, Image.LANCZOS), frame=self._tier)
                 else:
                     self._image = [process_frame(frame.resize(size)).convert('RGB') for frame in ImageSequence.Iterator(img)]
 
