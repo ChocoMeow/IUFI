@@ -258,12 +258,16 @@ class Card(CardObject):
         self._emoji: str = TIERS_BASE.get(self._tier)[0]
     
     def _load_frame(self, image: Image.Image, frame: str = None) -> Image.Image:
-        with Image.open(os.path.join(func.ROOT_DIR, "frames", f"{frame if frame else self._frame}.png")).convert("RGBA").resize((200, 355)) as img:
-            output = Image.new("RGBA", img.size)
-            output.paste(image, (0, 0))
-            output.paste(img, (0, 0), mask=img)
-            return self._round_corners(output)
-
+        try:
+            with Image.open(os.path.join(func.ROOT_DIR, "frames", f"{frame if frame else self._frame}.png")).convert("RGBA").resize((200, 355)) as img:
+                output = Image.new("RGBA", img.size)
+                output.paste(image, (0, 0))
+                output.paste(img, (0, 0), mask=img)
+                return self._round_corners(output)
+            
+        except FileNotFoundError:
+            return self._round_corners(image)
+        
     def _load_image(self) -> None:
         """Load and process the image"""
         try:
