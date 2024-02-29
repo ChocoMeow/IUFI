@@ -1,7 +1,5 @@
-import random, time, socket
+import random, time
 
-from timeit import default_timer as timer
-from itertools import zip_longest
 from .objects import Card, TempCard
 from io import BytesIO
 from PIL import Image, ImageDraw
@@ -18,25 +16,11 @@ def extend_lists(lists: list[list[Image.Image]]) -> list[list[Image.Image]]:
 
     return lists
 
-def add_rounded_corners(image, corner_radius):
-    mask = Image.new('L', image.size, 0)
-    draw = ImageDraw.Draw(mask)
-    draw.rounded_rectangle([(0, 0), image.size], corner_radius, fill=255)
-    image.putalpha(mask)
-    return image
-
-def add_frame(image, frame_path):
-    frame = Image.open(frame_path)
-    frame = frame.resize(image.size)
-    image.paste(frame, (0, 0), frame)
-    return image
-
 def gen_cards_view(cards: list[Card | TempCard | None], cards_per_row: int = 3) -> tuple[BytesIO, str]:
     # Create a new image for output
     padding = 10
     card_width = 200
     card_height = 355
-    corner_radius = 20
     num_rows = (len(cards) + cards_per_row - 1) // cards_per_row  # calculate number of rows
 
     output_image = Image.new('RGBA', 
@@ -73,19 +57,12 @@ def gen_cards_view(cards: list[Card | TempCard | None], cards_per_row: int = 3) 
             if card:  # if card is not None
                 x = (card_width + padding) * (i % cards_per_row)
                 y = (card_height + padding) * (i // cards_per_row)
-                card_image = card.image
-                if card.can_apply_rarity_frame():
-                    card_image = add_rounded_corners(card.image, corner_radius)
-                    card_image = add_frame(card_image, get_frame_path(card.tier[1]))
+                output_image.paste(card.image, (x, y))
 
-                output_image.paste(card_image, (x, y), card_image)
         output_image.save(resized_image_bytes, format='PNG')
 
     resized_image_bytes.seek(0)
     return resized_image_bytes, "gif" if is_gif else "png"
-
-def get_frame_path(tier: str) -> str:
-    return f"Frames/RarityFrames/{tier}.png"
 
 class ExponentialBackoff:
     """
