@@ -18,6 +18,7 @@ if TYPE_CHECKING:
     from .pool import CardPool
 
 YOUTUBE_REGEX = re.compile(r'(https?://)?(www\.)?youtube\.(com|nl)/watch\?v=([-\w]+)')
+CARD_SIZE = (200, 355)
 
 TIERS_BASE: dict[str, tuple[str, int]] = {
     "common": ("🥬", 1),
@@ -211,13 +212,12 @@ class CardObject:
         """Load and process the image"""
         try:
             with Image.open(path) as img:
-                size = (200, 355)
                 process_frame = self._round_corners
 
                 if img.format == "GIF":
-                    self._image = [process_frame(frame.resize(size)) for frame in ImageSequence.Iterator(img)]
+                    self._image = [process_frame(frame.resize(CARD_SIZE)) for frame in ImageSequence.Iterator(img)]
                 else:
-                    self._image = process_frame(img.resize(size, Image.LANCZOS))
+                    self._image = process_frame(img.resize(CARD_SIZE, Image.LANCZOS))
 
         except Exception as e:
             raise ImageLoadError(f"Unable to load the image. Reason: {e}")
@@ -259,11 +259,15 @@ class Card(CardObject):
     
     def _load_frame(self, image: Image.Image, frame: str = None) -> Image.Image:
         try:
-            with Image.open(os.path.join(func.ROOT_DIR, "frames", f"{frame if frame else self._frame}.png")).convert("RGBA").resize((200, 355)) as img:
-                output = Image.new("RGBA", img.size)
-                output.paste(image, (0, 0))
-                output.paste(img, (0, 0), mask=img)
-                return self._round_corners(output)
+            with Image.open(os.path.join(func.ROOT_DIR, "frames", f"{frame if frame else self._frame}.png")).resize(CARD_SIZE) as img:
+                base_width, base_height = image.size
+                overlay_width, overlay_height = img.size
+                position = ((base_width - overlay_width) // 2, (base_height - overlay_height) // 2)
+                result = Image.new('RGBA', image.size)
+
+                result.paste(image, (0,0))
+                result.paste(img, position, img)
+                return self._round_corners(result)
             
         except FileNotFoundError:
             return self._round_corners(image)
@@ -273,15 +277,14 @@ class Card(CardObject):
         try:
             image_path = os.path.join(func.ROOT_DIR, "images", self._tier)
             image_file = f"{self.id}.gif" if self._tier == "celestial" else f"{self.id}.jpg"
-            size = (190, 338) if self._frame else (200, 355)
 
             with Image.open(os.path.join(image_path, image_file)) as img:
                 process_frame = self._load_frame if self._frame else self._round_corners
 
                 if img.format != "GIF":
-                    self._image = process_frame(img.resize(size, Image.LANCZOS)) if self._frame else self._load_frame(img.resize(size, Image.LANCZOS), frame=self._tier)
+                    self._image = process_frame(img.resize(CARD_SIZE, Image.LANCZOS)) if self._frame else self._load_frame(img.resize(CARD_SIZE, Image.LANCZOS), frame=self._tier)
                 else:
-                    self._image = [process_frame(frame.resize(size)).convert('RGB') for frame in ImageSequence.Iterator(img)]
+                    self._image = [process_frame(frame.resize(CARD_SIZE)).convert('RGB') for frame in ImageSequence.Iterator(img)]
 
         except Exception as e:
             raise ImageLoadError(f"Unable to load the image. Reason: {e}")
@@ -290,15 +293,13 @@ class Card(CardObject):
         try:
             image_path = os.path.join(func.ROOT_DIR, "images", self._tier)
             image_file = f"{self.id}.gif" if self._tier == "celestial" else f"{self.id}.jpg"
-            size = (190, 338) if frame else (200, 355)
 
             image_bytes = BytesIO()
-
             with Image.open(os.path.join(image_path, image_file)) as img:
                 if frame:
-                    image = self._load_frame(img.resize(size, Image.LANCZOS), frame)
+                    image = self._load_frame(img.resize(CARD_SIZE, Image.LANCZOS), frame)
                 else:
-                    image = self._round_corners(img.resize(size, Image.LANCZOS))
+                    image = self._round_corners(img.resize(CARD_SIZE, Image.LANCZOS))
                     
                 image.save(image_bytes, format='PNG')
                 image_bytes.seek(0)
