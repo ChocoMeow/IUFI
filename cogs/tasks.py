@@ -41,6 +41,7 @@ class Tasks(commands.Cog):
             for rank, data in iufi.RANK_BASE.items() if data["discord_role"]
         }
         for role in roles.values():
+            if not role: continue
             for member in role.members:
                 await member.remove_roles(role)
 
