@@ -270,7 +270,7 @@ class Card(CardObject):
                 
                 result = Image.new('RGBA', size)
                 
-                new_size_rate = size_rate - FRAME_SIZE_INCREMENT[0] if frame else FRAME_SIZE_INCREMENT[1]
+                new_size_rate = size_rate - (FRAME_SIZE_INCREMENT[0] if frame else FRAME_SIZE_INCREMENT[1])
                 img_size = (int(CARD_SIZE[0] * new_size_rate), int(CARD_SIZE[1] * new_size_rate))
                 image = self._round_corners(image.resize(img_size))
 
