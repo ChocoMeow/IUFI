@@ -112,7 +112,7 @@ class Card(commands.Cog):
         embed.description = f"```🆔 {card} \n🍬 + {card.cost}```"
         message: discord.Message = None
 
-        if card.tier[1] not in ["common", "rare"]:
+        if card.tier[1] not in ["common", "rare"] or card.tag:
             embed.title="✨ Confirm to convert?"
 
             view = ConfirmView(ctx.author)
