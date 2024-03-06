@@ -8,6 +8,8 @@ from io import BytesIO
 from difflib import SequenceMatcher
 from typing import (
     Optional,
+    Union,
+    List,
     TYPE_CHECKING,
     Any
 )
@@ -18,7 +20,9 @@ if TYPE_CHECKING:
     from .pool import CardPool
 
 YOUTUBE_REGEX = re.compile(r'(https?://)?(www\.)?youtube\.(com|nl)/watch\?v=([-\w]+)')
-CARD_SIZE = (200, 355)
+CARD_SIZE = (1080, 1920)
+SIZE_RATE = 0.2
+FRAME_SIZE_INCREMENT = (0.005, 0.003)
 
 TIERS_BASE: dict[str, tuple[str, int]] = {
     "common": ("🥬", 1),
@@ -208,16 +212,16 @@ class CardObject:
 
         return output
     
-    def _load_image(self, path: str) -> None:
+    def _load_image(self, path: str, *, size_rate: float = SIZE_RATE) -> Union[List[Image.Image], Image.Image]:
         """Load and process the image"""
         try:
             with Image.open(path) as img:
-                process_frame = self._round_corners
+                size = (int(CARD_SIZE[0] * size_rate), int(CARD_SIZE[1] * size_rate))
 
                 if img.format == "GIF":
-                    self._image = [process_frame(frame.resize(CARD_SIZE)) for frame in ImageSequence.Iterator(img)]
+                    return [self._round_corners(frame.resize(size)) for frame in ImageSequence.Iterator(img)]
                 else:
-                    self._image = process_frame(img.resize(CARD_SIZE, Image.LANCZOS))
+                    return self._round_corners(img.resize(CARD_SIZE, Image.LANCZOS))
 
         except Exception as e:
             raise ImageLoadError(f"Unable to load the image. Reason: {e}")
@@ -256,35 +260,40 @@ class Card(CardObject):
 
         self._image: list[Image.Image] | Image.Image = None
         self._emoji: str = TIERS_BASE.get(self._tier)[0]
-    
-    def _load_frame(self, image: Image.Image, frame: str = None) -> Image.Image:
-        try:
-            with Image.open(os.path.join(func.ROOT_DIR, "frames", f"{frame if frame else self._frame}.png")).resize(CARD_SIZE) as img:
-                base_width, base_height = image.size
-                overlay_width, overlay_height = img.size
-                position = ((base_width - overlay_width) // 2, (base_height - overlay_height) // 2)
-                result = Image.new('RGBA', image.size)
 
-                result.paste(image, (0,0))
-                result.paste(img, position, img)
-                return self._round_corners(result)
-            
+    def _load_frame(self, image: Image.Image, frame: str = None, *, size_rate: float = SIZE_RATE) -> Image.Image:
+        try:
+            frame = frame or self._frame
+            with Image.open(os.path.join(func.ROOT_DIR, "frames", f"{frame or self._tier}.png")) as frame_img:
+                size = (int(CARD_SIZE[0] * size_rate), int(CARD_SIZE[1] * size_rate))
+                frame_img = frame_img.resize(size)
+                
+                result = Image.new('RGBA', size)
+                
+                new_size_rate = size_rate - FRAME_SIZE_INCREMENT[0] if frame else FRAME_SIZE_INCREMENT[1]
+                img_size = (int(CARD_SIZE[0] * new_size_rate), int(CARD_SIZE[1] * new_size_rate))
+                image = self._round_corners(image.resize(img_size))
+
+                result.paste(image, ((size[0] - img_size[0]) // 2, (size[1] - img_size[1]) // 2))
+                result.paste(frame_img, (0, 0), frame_img)
+                return result
+                
         except FileNotFoundError:
             return self._round_corners(image)
-        
-    def _load_image(self) -> None:
+
+    def _load_image(self, *, size_rate: float = SIZE_RATE) -> Union[list[Image.Image], Image.Image]:
         """Load and process the image"""
         try:
             image_path = os.path.join(func.ROOT_DIR, "images", self._tier)
             image_file = f"{self.id}.gif" if self._tier == "celestial" else f"{self.id}.jpg"
 
             with Image.open(os.path.join(image_path, image_file)) as img:
-                process_frame = self._load_frame if self._frame else self._round_corners
+                size = (int(CARD_SIZE[0] * size_rate), int(CARD_SIZE[1] * size_rate))
 
                 if img.format != "GIF":
-                    self._image = process_frame(img.resize(CARD_SIZE, Image.LANCZOS)) if self._frame else self._load_frame(img.resize(CARD_SIZE, Image.LANCZOS), frame=self._tier)
+                    return self._load_frame(img.resize(size, Image.LANCZOS))
                 else:
-                    self._image = [process_frame(frame.resize(CARD_SIZE)).convert('RGB') for frame in ImageSequence.Iterator(img)]
+                    return [self._round_corners(frame.resize(size)).convert('RGB') for frame in ImageSequence.Iterator(img)]
 
         except Exception as e:
             raise ImageLoadError(f"Unable to load the image. Reason: {e}")
@@ -301,7 +310,7 @@ class Card(CardObject):
                 else:
                     image = self._round_corners(img.resize(CARD_SIZE, Image.LANCZOS))
                     
-                image.save(image_bytes, format='PNG')
+                image.save(image_bytes, format='WEBP')
                 image_bytes.seek(0)
                 return image_bytes
         
@@ -334,9 +343,7 @@ class Card(CardObject):
             raise IUFIException("This frame is already assigned to this card.")
         
         self._frame = frame.lower() if frame else None
-
-        if self.image:
-            self._load_image()
+        self._image = None
 
     def change_stars(self, stars: int) -> None:
         if self.stars != stars:
@@ -375,8 +382,8 @@ class Card(CardObject):
     @property
     def image(self) -> list[Image.Image] | Image.Image:
         """Return the image"""
-        if self._image is None:
-            self._load_image()
+        if not self._image:
+            self._image = self._load_image()
         return self._image
 
     @property
@@ -385,7 +392,7 @@ class Card(CardObject):
 
     @property
     def format(self) -> str:
-        return "gif" if self.is_gif else "png"
+        return "gif" if self.is_gif else "webp"
     
     @property
     def display_id(self) -> str:
@@ -415,8 +422,8 @@ class TempCard(CardObject):
     @property
     def image(self) -> list[Image.Image] | Image.Image:
         """Return the image"""
-        if self._image is None:
-            self._load_image(self._path)
+        if not self._image:
+            self._image = self._load_image(self._path)
         return self._image
 
     @property

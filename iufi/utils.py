@@ -1,6 +1,6 @@
 import random, time
 
-from .objects import Card, TempCard
+from .objects import SIZE_RATE, Card, TempCard
 from io import BytesIO
 from PIL import Image
 
@@ -18,14 +18,17 @@ def extend_lists(lists: list[list[Image.Image]]) -> list[list[Image.Image]]:
 def gen_cards_view(cards: list[Card | TempCard | None], cards_per_row: int = 3) -> tuple[BytesIO, str]:
     # Create a new image for output
     padding = 10
-    card_width = 200
-    card_height = 355
+    card = cards[0].image
+    card_width = card.width
+    card_height = card.height
     num_rows = (len(cards) + cards_per_row - 1) // cards_per_row  # calculate number of rows
 
-    output_image = Image.new('RGBA', 
-                             ((card_width * cards_per_row) + (padding * (cards_per_row - 1)), 
-                              (card_height * num_rows) + (padding * (num_rows - 1))), 
-                             (0, 0, 0, 0))
+    output_image = Image.new(
+        'RGBA', 
+        ((card_width * cards_per_row) + (padding * (cards_per_row - 1)), 
+        (card_height * num_rows) + (padding * (num_rows - 1))), 
+        (0, 0, 0, 0)
+    )
 
     resized_image_bytes = BytesIO()
 
@@ -58,10 +61,10 @@ def gen_cards_view(cards: list[Card | TempCard | None], cards_per_row: int = 3) 
                 y = (card_height + padding) * (i // cards_per_row)
                 output_image.paste(card.image, (x, y))
 
-        output_image.save(resized_image_bytes, format='PNG')
+        output_image.save(resized_image_bytes, format='WEBP')
 
     resized_image_bytes.seek(0)
-    return resized_image_bytes, "gif" if is_gif else "png"
+    return resized_image_bytes, "gif" if is_gif else "webp"
 
 class ExponentialBackoff:
     """
