@@ -264,7 +264,7 @@ class Card(CardObject):
     def _load_frame(self, image: Image.Image, frame: str = None, *, size_rate: float = SIZE_RATE) -> Image.Image:
         try:
             frame = frame or self._frame
-            with Image.open(os.path.join(func.ROOT_DIR, "frames", f"{frame or self._tier}.png")) as frame_img:
+            with Image.open(os.path.join(func.ROOT_DIR, "frames", f"{frame or self._tier}.webp")) as frame_img:
                 size = (int(CARD_SIZE[0] * size_rate), int(CARD_SIZE[1] * size_rate))
                 frame_img = frame_img.resize(size)
                 
@@ -285,7 +285,7 @@ class Card(CardObject):
         """Load and process the image"""
         try:
             image_path = os.path.join(func.ROOT_DIR, "images", self._tier)
-            image_file = f"{self.id}.gif" if self._tier == "celestial" else f"{self.id}.jpg"
+            image_file = f"{self.id}.gif" if self._tier == "celestial" else f"{self.id}.webp"
 
             with Image.open(os.path.join(image_path, image_file)) as img:
                 size = (int(CARD_SIZE[0] * size_rate), int(CARD_SIZE[1] * size_rate))
@@ -301,7 +301,7 @@ class Card(CardObject):
     def preview_frame(self, frame: str = None) -> BytesIO:
         try:
             image_path = os.path.join(func.ROOT_DIR, "images", self._tier)
-            image_file = f"{self.id}.gif" if self._tier == "celestial" else f"{self.id}.jpg"
+            image_file = f"{self.id}.gif" if self._tier == "celestial" else f"{self.id}.webp"
 
             image_bytes = BytesIO()
             with Image.open(os.path.join(image_path, image_file)) as img:
