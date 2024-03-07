@@ -219,9 +219,9 @@ class CardObject:
                 size = (int(CARD_SIZE[0] * size_rate), int(CARD_SIZE[1] * size_rate))
 
                 if img.format == "GIF":
-                    return [self._round_corners(frame.resize(size)) for frame in ImageSequence.Iterator(img)]
+                    return [self._round_corners(frame.resize(size, Image.LANCZOS)) for frame in ImageSequence.Iterator(img)]
                 else:
-                    return self._round_corners(img.resize(size))
+                    return self._round_corners(img.resize(size, Image.LANCZOS))
 
         except Exception as e:
             raise ImageLoadError(f"Unable to load the image. Reason: {e}")
@@ -266,13 +266,13 @@ class Card(CardObject):
             frame = frame or self._frame
             with Image.open(os.path.join(func.ROOT_DIR, "frames", f"{frame or self._tier}.webp")) as frame_img:
                 size = (int(CARD_SIZE[0] * size_rate), int(CARD_SIZE[1] * size_rate))
-                frame_img = frame_img.resize(size)
+                frame_img = frame_img.resize(size, Image.LANCZOS)
                 
                 result = Image.new('RGBA', size)
                 
                 new_size_rate = size_rate - (FRAME_SIZE_INCREMENT[0] if frame else FRAME_SIZE_INCREMENT[1])
                 img_size = (int(CARD_SIZE[0] * new_size_rate), int(CARD_SIZE[1] * new_size_rate))
-                image = self._round_corners(image.resize(img_size))
+                image = self._round_corners(image.resize(img_size, Image.LANCZOS))
 
                 result.paste(image, ((size[0] - img_size[0]) // 2, (size[1] - img_size[1]) // 2))
                 result.paste(frame_img, (0, 0), frame_img)
@@ -291,9 +291,9 @@ class Card(CardObject):
                 size = (int(CARD_SIZE[0] * size_rate), int(CARD_SIZE[1] * size_rate))
 
                 if img.format != "GIF":
-                    return self._load_frame(img.resize(size))
+                    return self._load_frame(img.resize(size, Image.LANCZOS))
                 else:
-                    return [self._round_corners(frame.resize(size)).convert('RGB') for frame in ImageSequence.Iterator(img)]
+                    return [self._round_corners(frame.resize(size, Image.LANCZOS)).convert('RGB') for frame in ImageSequence.Iterator(img)]
 
         except Exception as e:
             raise ImageLoadError(f"Unable to load the image. Reason: {e}")
@@ -306,9 +306,9 @@ class Card(CardObject):
             image_bytes = BytesIO()
             with Image.open(os.path.join(image_path, image_file)) as img:
                 if frame:
-                    image = self._load_frame(img.resize(CARD_SIZE), frame)
+                    image = self._load_frame(img.resize(CARD_SIZE, Image.LANCZOS), frame)
                 else:
-                    image = self._round_corners(img.resize(CARD_SIZE))
+                    image = self._round_corners(img.resize(CARD_SIZE, Image.LANCZOS))
                     
                 image.save(image_bytes, format='WEBP')
                 image_bytes.seek(0)
