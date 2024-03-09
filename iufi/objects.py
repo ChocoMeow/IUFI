@@ -194,8 +194,9 @@ class CardObject:
     def __init__(self) -> None:
         self._image: list[Image.Image] | Image.Image = None
 
-    def _round_corners(self, image: Image.Image, radius: int = 16) -> Image.Image:
+    def _round_corners(self, image: Image.Image, radius: int = 8) -> Image.Image:
         """Creates a rounded corner image"""
+        radius = min(image.size) * radius // 100
         mask = Image.new('L', image.size, 0)
         draw = ImageDraw.Draw(mask)
         draw.pieslice([(0, 0), (radius * 2, radius * 2)], 180, 270, fill=255)
@@ -216,13 +217,12 @@ class CardObject:
         """Load and process the image"""
         try:
             with Image.open(path) as img:
-                size = (int(CARD_SIZE[0] * size_rate), int(CARD_SIZE[1] * size_rate))
+                images = [self._round_corners(frame) for frame in ImageSequence.Iterator(img)]
+                if len(images) > 1:
+                    return images
 
-                if img.format == "GIF":
-                    return [self._round_corners(frame.resize(size, Image.LANCZOS)) for frame in ImageSequence.Iterator(img)]
-                else:
-                    return self._round_corners(img.resize(size, Image.LANCZOS))
-
+                return images[0]
+            
         except Exception as e:
             raise ImageLoadError(f"Unable to load the image. Reason: {e}")
 
@@ -264,47 +264,43 @@ class Card(CardObject):
     def _load_frame(self, image: Image.Image, frame: str = None, *, size_rate: float = SIZE_RATE) -> Image.Image:
         try:
             frame = frame or self._frame
+            new_size_rate = size_rate - (FRAME_SIZE_INCREMENT[0] if frame else FRAME_SIZE_INCREMENT[1])
+            img_size = (int(CARD_SIZE[0] * new_size_rate), int(CARD_SIZE[1] * new_size_rate))
+            
             with Image.open(os.path.join(func.ROOT_DIR, "frames", f"{frame or self._tier}.webp")) as frame_img:
                 size = (int(CARD_SIZE[0] * size_rate), int(CARD_SIZE[1] * size_rate))
                 frame_img = frame_img.resize(size, Image.LANCZOS)
                 
                 result = Image.new('RGBA', size)
-                
-                new_size_rate = size_rate - (FRAME_SIZE_INCREMENT[0] if frame else FRAME_SIZE_INCREMENT[1])
-                img_size = (int(CARD_SIZE[0] * new_size_rate), int(CARD_SIZE[1] * new_size_rate))
                 image = self._round_corners(image.resize(img_size, Image.LANCZOS))
-
                 result.paste(image, ((size[0] - img_size[0]) // 2, (size[1] - img_size[1]) // 2))
                 result.paste(frame_img, (0, 0), frame_img)
                 return result
                 
         except FileNotFoundError:
-            return self._round_corners(image)
+            return self._round_corners(image.resize(img_size, Image.LANCZOS))
 
     def _load_image(self, *, size_rate: float = SIZE_RATE) -> Union[list[Image.Image], Image.Image]:
         """Load and process the image"""
         try:
             image_path = os.path.join(func.ROOT_DIR, "images", self._tier)
-            image_file = f"{self.id}.gif" if self._tier == "celestial" else f"{self.id}.webp"
 
-            with Image.open(os.path.join(image_path, image_file)) as img:
-                size = (int(CARD_SIZE[0] * size_rate), int(CARD_SIZE[1] * size_rate))
-
-                if img.format != "GIF":
-                    return self._load_frame(img.resize(size, Image.LANCZOS))
-                else:
-                    return [self._round_corners(frame.resize(size, Image.LANCZOS)).convert('RGB') for frame in ImageSequence.Iterator(img)]
-
+            with Image.open(os.path.join(image_path, f"{self.id}.webp")) as img:
+                images = [self._load_frame(frame.convert('RGB'), size_rate=size_rate) for frame in ImageSequence.Iterator(img)]
+                if len(images) > 1:
+                    return images
+                
+                return images[0]
+                    
         except Exception as e:
             raise ImageLoadError(f"Unable to load the image. Reason: {e}")
 
     def preview_frame(self, frame: str = None) -> BytesIO:
         try:
             image_path = os.path.join(func.ROOT_DIR, "images", self._tier)
-            image_file = f"{self.id}.gif" if self._tier == "celestial" else f"{self.id}.webp"
 
             image_bytes = BytesIO()
-            with Image.open(os.path.join(image_path, image_file)) as img:
+            with Image.open(os.path.join(image_path, f"{self.id}.webp")) as img:
                 if frame:
                     image = self._load_frame(img.resize(CARD_SIZE, Image.LANCZOS), frame)
                 else:
