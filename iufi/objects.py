@@ -217,7 +217,8 @@ class CardObject:
         """Load and process the image"""
         try:
             with Image.open(path) as img:
-                images = [self._round_corners(frame) for frame in ImageSequence.Iterator(img)]
+                img_size = (int(CARD_SIZE[0] * size_rate), int(CARD_SIZE[1] * size_rate))
+                images = [self._round_corners(frame.resize(img_size)) for frame in ImageSequence.Iterator(img)]
                 if len(images) > 1:
                     return images
 
