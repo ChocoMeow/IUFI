@@ -55,9 +55,9 @@ class FrameView(discord.ui.View):
         embed = discord.Embed(title="🖼️  Frame Preview", color=discord.Color.random())
         embed.description = f"```🆔 {self.card.tier[0]} {self.card.id}\n🖼️ {self._selected_frame.title()}\n🍬 {self._price}```"
         bytes = await asyncio.to_thread(self.card.preview_frame, self._selected_frame)
-        embed.set_image(url="attachment://image.png")
+        embed.set_image(url="attachment://image.webp")
 
-        return embed, discord.File(bytes, filename="image.png")
+        return embed, discord.File(bytes, filename="image.webp")
     
     @discord.ui.button(label="Apply", style=discord.ButtonStyle.green, row=1)
     async def apply(self, interaction: discord.Interaction, button: discord.ui.Button):

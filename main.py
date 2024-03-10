@@ -75,6 +75,7 @@ class IUFI(commands.Bot):
         image_folder = os.path.join(func.ROOT_DIR, 'images')
 
         for category in os.listdir(image_folder):
+            if category.startswith("."): continue
             for image in os.listdir(os.path.join(image_folder, category)):
                 card_id = os.path.basename(image).split(".")[0]
                 card_data = all_card_data.get(card_id, {"_id": card_id})
