@@ -249,7 +249,8 @@ class Profile(commands.Cog):
             return await ctx.reply(f"**{ctx.author.mention} you have no photocards.**", delete_after=5)
 
         view = PhotoCardView(ctx.author, user['cards'])
-        view.message = await ctx.reply(embed=view.build_embed(), view=view)
+        embed, _ = await view.build_embed()
+        view.message = await ctx.reply(embed=embed, view=view)
 
     @commands.command(aliases=["in"])
     async def inventory(self, ctx: commands.Context):
