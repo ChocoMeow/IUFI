@@ -39,7 +39,7 @@ class Info(commands.Cog):
                 description += f"{LEADERBOARD_EMOJIS[index if index <= 2 else 3]} " + highlight_text(f"{func.truncate_string(member.display_name):<18} {level:>5} ⚔️", member == ctx.author)
         
         if rank > len(users):
-            description += ("┇\n" if rank > len(users) else "") + f"{LEADERBOARD_EMOJIS[3]} " + highlight_text(f"{func.truncate_string(ctx.author.display_name):<18} {user['exp']:>5} ⚔️")
+            description += ("┇\n" if rank > len(users) + 1 else "") + f"{LEADERBOARD_EMOJIS[3]} " + highlight_text(f"{func.truncate_string(ctx.author.display_name):<18} {user['exp']:>5} ⚔️")
 
         if not description:
             description = "The leaderboard is currently empty."
@@ -92,7 +92,7 @@ class Info(commands.Cog):
                 description += f"{LEADERBOARD_EMOJIS[index if index <= 2 else 3]} " + highlight_text(f"{func.truncate_string(member.display_name):<18} 🃏{game_state['matched']:<2} 🕒{func.convert_seconds(game_state['finished_time']):<10}", member == ctx.author)
         
         if user and rank > len(users):
-            description += ("┇\n" if rank > len(users) else "") + f"{LEADERBOARD_EMOJIS[3]} " + highlight_text(f"{func.truncate_string(ctx.author.display_name):<18} 🃏{user['matched']:<2} 🕒{func.convert_seconds(user['finished_time']):<10}")
+            description += ("┇\n" if rank > len(users) + 1 else "") + f"{LEADERBOARD_EMOJIS[3]} " + highlight_text(f"{func.truncate_string(ctx.author.display_name):<18} 🃏{user['matched']:<2} 🕒{func.convert_seconds(user['finished_time']):<10}")
 
         if not description:
             description = "The leaderboard is currently empty."
