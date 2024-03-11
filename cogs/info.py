@@ -125,7 +125,7 @@ class Info(commands.Cog):
             member = self.bot.get_user(top_user['_id'])
             if member:
                 _rank = iufi.QuestionPool.get_rank(game_state['points'])
-                description += f"<:{_rank[0]}:{_rank[1]}> `{func.truncate_string(member.display_name):<18} {game_state['points']:<6} 🔥`\n"
+                description += f"<:{_rank[0]}:{_rank[1]}> `{func.truncate_string(member.display_name):<18} {game_state['points']:>6} 🔥`\n"
         
         if not description:
             description = "The leaderboard is currently empty."
