@@ -36,10 +36,10 @@ class Info(commands.Cog):
             member = self.bot.get_user(top_user['_id'])
 
             if member:
-                description += f"{LEADERBOARD_EMOJIS[index if index <= 2 else 3]} " + highlight_text(f"{member.display_name:<15} {level:>5} ⚔️", member == ctx.author)
+                description += f"{LEADERBOARD_EMOJIS[index if index <= 2 else 3]} " + highlight_text(f"{func.truncate_string(member.display_name):<18} {level:>5} ⚔️", member == ctx.author)
         
         if rank > len(users):
-            description += ("┇\n" if rank > len(users) else "") + f"{LEADERBOARD_EMOJIS[3]} " + highlight_text(f"{member.display_name:<15} {user['exp']:>5} ⚔️")
+            description += ("┇\n" if rank > len(users) else "") + f"{LEADERBOARD_EMOJIS[3]} " + highlight_text(f"{func.truncate_string(ctx.author.display_name):<18} {user['exp']:>5} ⚔️")
 
         if not description:
             description = "The leaderboard is currently empty."
@@ -89,10 +89,10 @@ class Info(commands.Cog):
 
             member = self.bot.get_user(top_user['_id'])
             if member:
-                description += f"{LEADERBOARD_EMOJIS[index if index <= 2 else 3]} " + highlight_text(f"{member.display_name:<14} 🃏{game_state['matched']:<2} 🕒{func.convert_seconds(game_state['finished_time']):<10}", member == ctx.author)
+                description += f"{LEADERBOARD_EMOJIS[index if index <= 2 else 3]} " + highlight_text(f"{func.truncate_string(member.display_name):<18} 🃏{game_state['matched']:<2} 🕒{func.convert_seconds(game_state['finished_time']):<10}", member == ctx.author)
         
         if user and rank > len(users):
-            description += ("┇\n" if rank > len(users) else "") + f"{LEADERBOARD_EMOJIS[3]} " + highlight_text(f"{ctx.author.display_name:<14} 🃏{user['matched']:<2} 🕒{func.convert_seconds(user['finished_time']):<10}")
+            description += ("┇\n" if rank > len(users) else "") + f"{LEADERBOARD_EMOJIS[3]} " + highlight_text(f"{func.truncate_string(ctx.author.display_name):<18} 🃏{user['matched']:<2} 🕒{func.convert_seconds(user['finished_time']):<10}")
 
         if not description:
             description = "The leaderboard is currently empty."
@@ -125,7 +125,7 @@ class Info(commands.Cog):
             member = self.bot.get_user(top_user['_id'])
             if member:
                 _rank = iufi.QuestionPool.get_rank(game_state['points'])
-                description += f"<:{_rank[0]}:{_rank[1]}> `{member.display_name:<14} {game_state['points']:<6} 🔥`\n"
+                description += f"<:{_rank[0]}:{_rank[1]}> `{func.truncate_string(member.display_name):<18} {game_state['points']:<6} 🔥`\n"
         
         if not description:
             description = "The leaderboard is currently empty."
@@ -149,7 +149,7 @@ class Info(commands.Cog):
 
             member = self.bot.get_user(user_data['_id'])
             if member:
-                description += f"{LEADERBOARD_EMOJIS[index if index <= 2 else 3]} {member.display_name:<15} {user_data['game_state']['music_game']['points']:>4} 𝄞\n"
+                description += f"{LEADERBOARD_EMOJIS[index if index <= 2 else 3]} {func.truncate_string(member.display_name):<18} {user_data['game_state']['music_game']['points']:>6} 𝄞\n"
         
         if not description:
             description = "The leaderboard is currently empty."

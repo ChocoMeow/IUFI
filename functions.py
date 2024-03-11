@@ -171,6 +171,9 @@ def match_string(input_string: str, word_list: list[str]) -> str:
             return word
     return None
 
+def truncate_string(text: str, length: int = 18) -> str:
+    return text[:length - 3] + "..." if len(text) > length else text
+
 async def get_user(user_id: int, *, insert: bool = True) -> dict[str, Any]:
     user = USERS_BUFFER.get(user_id)
     if not user:
