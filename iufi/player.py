@@ -306,7 +306,7 @@ class Player(VoiceProtocol):
         track: Track = await self._node.pool.get_question()
         start_time = random.uniform(track.length * .2, track.length * .8)
 
-        await self.play(track, start=start_time, ignore_if_playing=True)
+        await self.play(track, start=int(start_time), ignore_if_playing=True)
         await self.invoke_controller()
 
         self.time_used = time.time()
