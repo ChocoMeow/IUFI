@@ -306,7 +306,7 @@ class Player(VoiceProtocol):
         track: Track = await self._node.pool.get_question()
         start_time = random.uniform(track.length * .2, track.length * .8)
 
-        await self.play(track, start=start_time, ignore_if_playing=True)
+        await self.play(track, start=int(start_time), ignore_if_playing=True)
         await self.invoke_controller()
 
         self.time_used = time.time()
@@ -337,14 +337,14 @@ class Player(VoiceProtocol):
         
         if not self.guesser:
             title = "What song do you think is on right now?"
-            description = "```📀 Song Title: ???\n✅ Correct: ??%\n⏱ Median: ??s\n🏅 Record: ??:??s (????)```"
+            description = "```📀 Song Title: ???\n✅ Correct: ??%\n⏱ Avg Time: ??s\n🏅 Record: ??:??s (????)```"
             thumbnail = "https://cdn.discordapp.com/attachments/1183364758175498250/1202590915093467208/74961f7708c7871fed5c7bee00e76418.png"
         
         else:
             member_id, best_time = current.best_record
             member_name = member.display_name if (member := self.guild.get_member(member_id)) else "???"
             title = f"{self.guesser.display_name}, You guessed it right!"
-            description = f"**To hear more: [Click Me]({current.uri})**\n```📀 Song Title: {current.title}\n\n✅ Correct: {current.correct_rate}%\n🕓 Avg Time: {current.average_time:.1f}s\n🏅 Record: {member_name}s ({func.convert_seconds(best_time)})```"
+            description = f"**To hear more: [Click Me]({current.uri})**\n```📀 Song Title: {current.title}\n\n✅ Correct: {current.correct_rate:.1f}%\n🕓 Avg Time: {current.average_time:.1f}s\n🏅 Record: {member_name}s ({func.convert_seconds(best_time)})```"
             thumbnail = current.thumbnail
 
         embed = Embed(title=title, description=description, color=Color.random())

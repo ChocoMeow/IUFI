@@ -7,6 +7,7 @@ from iufi import (
     gen_cards_view
 )
 
+from typing import Tuple
 from discord.ext import commands
 from . import ButtonOnCooldown
 from math import ceil
@@ -51,28 +52,38 @@ class PhotoCardView(discord.ui.View):
         self._dropdown_view: Dropdown = Dropdown(self.cards)
         self.add_item(self._dropdown_view)
 
+        self.toggle_cards_view: bool = False
         self.message: discord.Message = None
-        self.cooldown = commands.CooldownMapping.from_cooldown(1.0, 10.0, key)
+        self.cooldown = commands.CooldownMapping.from_cooldown(1.0, 8.0, key)
 
-    def build_embed(self) -> discord.Embed:
+    async def build_embed(self) -> Tuple[discord.Embed, discord.File]:
         offset = self.current_page * 8
-        cards = list(self.cards.keys())[(offset-8):offset]
-
+        card_ids, cards = list(self.cards.keys())[(offset-8):offset], []
+        
         desc = f"\n**📙 Collection size: `{len(self.cards)}/{func.MAX_CARDS}`**\n```"
         self._dropdown_view.options.clear()
 
-        for card_id in cards:
+        for card_id in card_ids:
             card = self.cards.get(card_id)
             if not card:
                 card = self.cards[card_id] = CardPool.get_card(card_id)
-
+            
+            if self.toggle_cards_view:
+                cards.append(card)
+            
             desc += f"{card.display_id} {card.display_tag} {card.display_frame} {card.display_stars} {card.tier[0]}\n" if card else f"🆔 {card_id.zfill(5)} {'-' * 20}"
             self._dropdown_view.options.append(discord.SelectOption(label=f"{card.id}", description=f"{card.display_tag}", emoji=card.tier[0]))
+            
         embed = discord.Embed(title=f"📖 {self.author.display_name}'s Photocards", description=desc + "```", color=discord.Color.random())
         embed.set_thumbnail(url=self.author.display_avatar.url)
         embed.set_footer(text="Pages: {}/{}".format(self.current_page, self.page))
 
-        return embed
+        if self.toggle_cards_view:
+            image_bytes, image_format = await asyncio.to_thread(gen_cards_view, cards, 4)
+            embed.set_image(url=f"attachment://image.{image_format}")
+            return embed, discord.File(image_bytes, filename=f"image.{image_format}")
+        
+        return embed, None
 
     async def on_timeout(self) -> None:
         for child in self.children:
@@ -86,61 +97,49 @@ class PhotoCardView(discord.ui.View):
             await interaction.response.send_message(f"You're on cooldown for {sec} second{'' if sec == 1 else 's'}!", ephemeral=True)
         
     async def interaction_check(self, interaction: discord.Interaction) -> bool:
+        if self.toggle_cards_view:
+            retry_after = self.cooldown.update_rate_limit(interaction)
+            if retry_after:
+                raise ButtonOnCooldown(retry_after)
+        
         return self.author == interaction.user
     
+    async def update_embed(self, interaction: discord.Interaction) -> None:
+        await interaction.response.defer()
+            
+        embed, file = await self.build_embed()
+        await self.message.edit(embed=embed, attachments=[file] if file else [], view=self)
+            
     @discord.ui.button(label='<<', style=discord.ButtonStyle.grey)
     async def fast_back_button(self, interaction: discord.Interaction, button: discord.ui.Button):
         if self.current_page != 1:
             self.current_page = 1
-            return await interaction.response.edit_message(embed=self.build_embed(), view=self)
-        return await interaction.response.defer()
+            await self.update_embed(interaction)
+        await interaction.response.defer()
     
     @discord.ui.button(label='Back', style=discord.ButtonStyle.blurple)
     async def back_button(self, interaction: discord.Interaction, button: discord.ui.Button):
         if self.current_page > 1:
             self.current_page -= 1
-            return await interaction.response.edit_message(embed=self.build_embed(), view=self)
-        return await interaction.response.defer()
+            await self.update_embed(interaction)
+        await interaction.response.defer()
     
     @discord.ui.button(label='Next', style=discord.ButtonStyle.blurple)
     async def next_button(self, interaction: discord.Interaction, button: discord.ui.Button):
         if self.current_page < self.page:
             self.current_page += 1
-            return await interaction.response.edit_message(embed=self.build_embed(), view=self)
+            await self.update_embed(interaction)
         await interaction.response.defer()
 
     @discord.ui.button(label='>>', style=discord.ButtonStyle.grey)
     async def fast_next_button(self, interaction: discord.Interaction, button: discord.ui.Button):
         if self.current_page != self.page:
             self.current_page = self.page
-            return await interaction.response.edit_message(embed=self.build_embed(), view=self)
+            await self.update_embed(interaction)
         await interaction.response.defer()
     
-    @discord.ui.button(emoji='📄', style=discord.ButtonStyle.green)
+    @discord.ui.button(emoji='👁️', style=discord.ButtonStyle.green)
     async def view_all(self, interaction: discord.Interaction, button: discord.ui.Button):
-        retry_after = self.cooldown.update_rate_limit(interaction)
-        if retry_after:
-            raise ButtonOnCooldown(retry_after)
-        
-        await interaction.response.defer()
-
-        offset = self.current_page * 8
-        card_ids = list(self.cards.keys())[(offset-8):offset]
-        cards: list[Card] = []
-
-        for card_id in card_ids:
-            card = self.cards.get(card_id)
-            if not card:
-                card = self.cards[card_id] = CardPool.get_card(card_id)
-            cards.append(card)
-
-        desc = "```"
-        for card in cards:
-            desc += f"{card.display_id} {card.display_tag} {card.display_frame} {card.display_stars} {card.tier[0]}\n"
-        desc += "```"
-
-        image_bytes, image_format = await asyncio.to_thread(gen_cards_view, cards, 4)
-
-        embed = discord.Embed(title=f"ℹ️ Card Info", description=desc, color=0x949fb8)
-        embed.set_image(url=f"attachment://image.{image_format}")
-        await interaction.followup.send(file=discord.File(image_bytes, filename=f"image.{image_format}"), embed=embed)
+        self.toggle_cards_view = not self.toggle_cards_view
+        button.style = discord.ButtonStyle.red if self.toggle_cards_view else discord.ButtonStyle.green
+        await self.update_embed(interaction)

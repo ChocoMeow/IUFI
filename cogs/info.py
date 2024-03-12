@@ -9,6 +9,11 @@ from views import (
 
 LEADERBOARD_EMOJIS: list[str] = ["🥇", "🥈", "🥉", "🏅"]
 
+def highlight_text(text: str, need: bool = True) -> str:
+    if not need:
+        return text + "\n"
+    return "[0;1;35m" + text + " [0m\n"
+
 class Info(commands.Cog):
     def __init__(self, bot: commands.Bot) -> None:
         self.bot = bot
@@ -20,22 +25,26 @@ class Info(commands.Cog):
         """Shows the IUFI leaderboard."""
         user = await func.get_user(ctx.author.id)
         users = await func.USERS_DB.find().sort("exp", -1).limit(10).to_list(10)
+        rank = await func.USERS_DB.count_documents({'exp': {'$gt': user.get('exp', 0)}}) + 1
 
         embed = discord.Embed(title="🏆   IUFI Leaderboard", color=discord.Color.random())
-        embed.description = f"**Your current position is `{await func.USERS_DB.count_documents({'exp': {'$gt': user.get('exp', 0)}}) + 1}`**\n"
+        embed.description = f"**Your current position is `{rank}`**\n"
 
         description = ""
-        for index, user in enumerate(users):
-            level, _ = func.calculate_level(user["exp"])
-            member = self.bot.get_user(user['_id'])
+        for index, top_user in enumerate(users):
+            level, _ = func.calculate_level(top_user["exp"])
+            member = self.bot.get_user(top_user['_id'])
 
             if member:
-                description += f"{LEADERBOARD_EMOJIS[index if index <= 2 else 3]} {member.display_name:<15} {level:>4} ⚔️\n"
+                description += f"{LEADERBOARD_EMOJIS[index if index <= 2 else 3]} " + highlight_text(f"{func.truncate_string(member.display_name):<18} {level:>5} ⚔️", member == ctx.author)
         
+        if rank > len(users):
+            description += ("┇\n" if rank > len(users) + 1 else "") + f"{LEADERBOARD_EMOJIS[3]} " + highlight_text(f"{func.truncate_string(ctx.author.display_name):<18} {user['exp']:>5} ⚔️")
+
         if not description:
             description = "The leaderboard is currently empty."
 
-        embed.description += f"```{description}```"
+        embed.description += f"```ansi\n{description}```"
         embed.set_thumbnail(url=icon.url if (icon := ctx.guild.icon) else None)
 
         await ctx.reply(embed=embed)
@@ -54,7 +63,7 @@ class Info(commands.Cog):
 
         user = await func.get_user(ctx.author.id)
         user = user.get("game_state", {}).get("match_game", {}).get(level, {})
-        better_states = await func.USERS_DB.count_documents({
+        rank = (await func.USERS_DB.count_documents({
             '$or': [
                 {f"game_state.match_game.{level}.matched": {'$gt': user['matched']}},
                 {'$and': [
@@ -67,25 +76,28 @@ class Info(commands.Cog):
                     {f"game_state.match_game.{level}.finished_time": {'$lt': user['finished_time']}}
                 ]}
             ]
-        }) if user else 0
+        }) if user else 0) + 1
         
         embed = discord.Embed(title=f"🏆   Level {level} Matching Game Leaderboard", color=discord.Color.random())
-        embed.description = (f"**Your current position is `{better_states + 1}`**" if user else "**You haven't play any match game!**") + "\n"
+        embed.description = (f"**Your current position is `{rank}`**" if user else "**You haven't play any match game!**") + "\n"
 
         description = ""
-        for index, user in enumerate(users):
-            game_state: dict[str, float | int] = user.get("game_state", {}).get("match_game", {}).get(level)
+        for index, top_user in enumerate(users):
+            game_state: dict[str, float | int] = top_user.get("game_state", {}).get("match_game", {}).get(level)
             if not game_state:
                 continue
 
-            member = self.bot.get_user(user['_id'])
+            member = self.bot.get_user(top_user['_id'])
             if member:
-                description += f"{LEADERBOARD_EMOJIS[index if index <= 2 else 3]} {member.display_name:<14} 🃏{game_state['matched']:<2} 🕒{func.convert_seconds(game_state['finished_time']):<10}\n"
+                description += f"{LEADERBOARD_EMOJIS[index if index <= 2 else 3]} " + highlight_text(f"{func.truncate_string(member.display_name):<18} 🃏{game_state['matched']:<2} 🕒{func.convert_seconds(game_state['finished_time']):<10}", member == ctx.author)
         
+        if user and rank > len(users):
+            description += ("┇\n" if rank > len(users) + 1 else "") + f"{LEADERBOARD_EMOJIS[3]} " + highlight_text(f"{func.truncate_string(ctx.author.display_name):<18} 🃏{user['matched']:<2} 🕒{func.convert_seconds(user['finished_time']):<10}")
+
         if not description:
             description = "The leaderboard is currently empty."
 
-        embed.description += f"```{description}```"
+        embed.description += f"```ansi\n{description}```"
         embed.set_thumbnail(url=icon.url if (icon := ctx.guild.icon) else None)
         await ctx.reply(embed=embed)
     
@@ -93,25 +105,32 @@ class Info(commands.Cog):
     async def quiz(self, ctx: commands.Context):
         """Shows the IUFI Quiz leaderboard."""
         start_time, end_time = func.get_month_unix_timestamps()
-        users = await func.USERS_DB.find({f"game_state.quiz_game.last_update": {"$gt":start_time, "$lte":end_time}}).sort(f"game_state.quiz_game.points", -1).limit(10).to_list(10)
+        user = await func.get_user(ctx.author.id)
+        user = user.get("game_state", {}).get("quiz_game", {})
+        users = await func.USERS_DB.find({f"game_state.quiz_game.last_update": {"$gt":start_time, "$lte":end_time}}).sort("game_state.quiz_game.points", -1).limit(10).to_list(10)
+        rank = await func.USERS_DB.count_documents({
+            "$and": [
+                {"game_state.quiz_game.last_update": {"$gt":start_time, "$lte":end_time}},
+                {"game_state.quiz_game.points": {'$gt': user.get("points", 0)}}
+            ]}) + 1
 
         embed = discord.Embed(title=f"🏆   Quiz Leaderboard", color=discord.Color.random())
 
         description = ""
-        for user in users:
-            game_state: dict[str, float | int] = user.get("game_state", {}).get("quiz_game")
+        for top_user in users:
+            game_state: dict[str, float | int] = top_user.get("game_state", {}).get("quiz_game")
             if not game_state:
                 continue
 
-            member = self.bot.get_user(user['_id'])
+            member = self.bot.get_user(top_user['_id'])
             if member:
-                rank = iufi.QuestionPool.get_rank(game_state['points'])
-                description += f"<:{rank[0]}:{rank[1]}> `{member.display_name:<14} {game_state['points']:<6} 🔥`\n"
+                _rank = iufi.QuestionPool.get_rank(game_state['points'])
+                description += f"<:{_rank[0]}:{_rank[1]}> `{func.truncate_string(member.display_name):<18} {game_state['points']:>6} 🔥`\n"
         
         if not description:
             description = "The leaderboard is currently empty."
 
-        embed.description = f"The next reset is <t:{int(end_time)}:R>\n{description}"
+        embed.description = f"**The next reset is <t:{int(end_time)}:R>**\n**" + (f"Your current position is `{rank}`" if user else "You haven't play any match game!") + f"**\n{description}"
         embed.set_thumbnail(url=icon.url if (icon := ctx.guild.icon) else None)
         await ctx.reply(embed=embed)
 
@@ -119,8 +138,12 @@ class Info(commands.Cog):
     async def music(self, ctx: commands.Context):
         """Shows the IUFI Music leaderboard."""
         users = await func.USERS_DB.find().sort("game_state.music_game.points", -1).limit(10).to_list(10)
-
+        user = await func.get_user(ctx.author.id)
+        user = user.get("game_state", {}).get("music_game", {})
+        rank = await func.USERS_DB.count_documents({'game_state.music_game': {'$gt': user.get('points', 0)}}) + 1
+        
         embed = discord.Embed(title="🏆   Music Leaderboard", color=discord.Color.random())
+        embed.description = (f"**Your current position is `{rank}`**" if user else "**You haven't play any match game!**") + "\n"
         
         description = ""
         for index, user_data in enumerate(users):
@@ -130,12 +153,15 @@ class Info(commands.Cog):
 
             member = self.bot.get_user(user_data['_id'])
             if member:
-                description += f"{LEADERBOARD_EMOJIS[index if index <= 2 else 3]} {member.display_name:<15} {user_data['game_state']['music_game']['points']:>4} 𝄞\n"
+                description += f"{LEADERBOARD_EMOJIS[index if index <= 2 else 3]} " + highlight_text(f"{func.truncate_string(member.display_name):<18} {user_data['game_state']['music_game']['points']:>6} 𝄞", member == ctx.author)
         
+        if user and rank > len(users):
+            description += ("┇\n" if rank > len(users) + 1 else "") + f"{LEADERBOARD_EMOJIS[3]} " + highlight_text(f"{func.truncate_string(ctx.author.display_name):<18} {user['points']:>6} 𝄞", member == ctx.author)
+
         if not description:
             description = "The leaderboard is currently empty."
 
-        embed.description = f"```{description}```"
+        embed.description += f"```ansi\n{description}```"
         embed.set_thumbnail(url=icon.url if (icon := ctx.guild.icon) else None)
 
         await ctx.reply(embed=embed)
