@@ -18,6 +18,7 @@ from typing import (
 )
 
 from dotenv import load_dotenv
+from enums import DailyQuestIds
 
 ROOT_DIR = os.path.dirname(os.path.abspath(__file__))
 
@@ -185,6 +186,24 @@ async def get_user(user_id: int, *, insert: bool = True) -> Dict[str, Any]:
 
         user = USERS_BUFFER[user_id] = user if user else copy.deepcopy(settings.USER_BASE) | {"_id": user_id}
     return user
+
+def update_quest_progress(user: Dict[str, Any], quest_ids: List[DailyQuestIds], progress: int = 1, *, query: Dict[str, Any]) -> Dict[str, Any]:
+    daily_quests = user.get("quests", copy.deepcopy(settings.USER_BASE["quests"]))["daily"]
+    quest_ids = quest_ids if isinstance(quest_ids, list) else [quest_ids]
+    now = time.time()
+
+    if daily_quests["next_update"] < now:
+        new_quests = random.sample(list(settings.DAILY_QUESTS.keys()), k=3)
+        query.setdefault("$set", {})[f"quests.daily.progresses"] = {str(quest): 0 for quest in new_quests}
+        query["$set"]["quests.daily.next_update"] = now + 86_400
+
+    for quest_id in quest_ids:
+        if str(quest_id) in daily_quests["progresses"]:
+            if daily_quests["progresses"][str(quest_id)] < settings.DAILY_QUESTS[quest_id]["amount"]:
+                query.setdefault("$inc", {})[f"quests.daily.progresses.{quest_id}"] = progress
+
+    print(query)
+    return query
 
 async def update_user(user_id: int, data: dict) -> None:
     user = await get_user(user_id)
