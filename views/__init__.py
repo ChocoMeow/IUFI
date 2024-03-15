@@ -5,7 +5,7 @@ class ButtonOnCooldown(commands.CommandError):
         self.retry_after = retry_after
         
 from .roll import RollView
-from .matchgame import MatchGame, GAME_SETTINGS
+from .matchgame import MatchGame
 from .quiz import QuizView, ResetAttemptView, QUIZ_SETTINGS
 from .frame import FrameView
 from .photocard import PhotoCardView

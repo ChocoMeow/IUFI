@@ -60,7 +60,7 @@ class PhotoCardView(discord.ui.View):
         offset = self.current_page * 8
         card_ids, cards = list(self.cards.keys())[(offset-8):offset], []
         
-        desc = f"\n**📙 Collection size: `{len(self.cards)}/{func.MAX_CARDS}`**\n```"
+        desc = f"\n**📙 Collection size: `{len(self.cards)}/{func.settings.MAX_CARDS}`**\n```"
         self._dropdown_view.options.clear()
 
         for card_id in card_ids:

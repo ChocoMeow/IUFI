@@ -1,10 +1,7 @@
 import discord, asyncio
 import functions as func
 
-from iufi import (
-    Card,
-    FRAMES_BASE
-)
+from iufi import Card
 
 class FrameDropDown(discord.ui.Select):
     def __init__(self):
@@ -17,7 +14,7 @@ class FrameDropDown(discord.ui.Select):
                     label=frame_name.title(),
                     description=f"🍬 {data[1]}"
                 )
-                for frame_name, data in FRAMES_BASE.items()
+                for frame_name, data in func.settings.FRAMES_BASE.items()
             ],
             placeholder="Select a frame to view...",
             min_values=1, max_values=1, row=0
@@ -25,7 +22,7 @@ class FrameDropDown(discord.ui.Select):
 
     async def callback(self, interaction: discord.Interaction) -> None:
         self.view._selected_frame = self.values[0].lower()
-        self.view._price = FRAMES_BASE.get(self.view._selected_frame)[1]
+        self.view._price = func.settings.FRAMES_BASE.get(self.view._selected_frame)[1]
         embed, file = await self.view.build()
         await interaction.response.edit_message(embed=embed, attachments=[file])
 

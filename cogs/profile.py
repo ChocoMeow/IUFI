@@ -4,18 +4,17 @@ import functions as func
 from discord.ext import commands
 from views import (
     CollectionView,
-    PhotoCardView,
-    GAME_SETTINGS
+    PhotoCardView
 )
 
 DAILY_ROWS: list[str] = ["🟥", "🟧", "🟨", "🟩", "🟦", "🟪"]
 WEEKLY_REWARDS: list[tuple[str, str, int]] = [
     ("🍬", "candies", 50),
-    (iufi.TIERS_BASE.get("rare")[0], "roll.rare", 1),
+    (func.settings.TIERS_BASE.get("rare")[0], "roll.rare", 1),
     ("🍬", "candies", 100),
-    (iufi.TIERS_BASE.get("epic")[0], "roll.epic", 1),
+    (func.settings.TIERS_BASE.get("epic")[0], "roll.epic", 1),
     ("🍬", "candies", 500),
-    (iufi.TIERS_BASE.get("legendary")[0], "roll.legendary", 1),
+    (func.settings.TIERS_BASE.get("legendary")[0], "roll.legendary", 1),
 ]
 
 class Profile(commands.Cog):
@@ -49,10 +48,10 @@ class Profile(commands.Cog):
 
         embed = discord.Embed(title=f"👤 {member.display_name}'s Profile", color=discord.Color.random())
         embed.description = f"```{bio}```" if bio else ""
-        embed.description += f"```📙 Photocards: {len(user.get('cards', []))}/{func.MAX_CARDS}\n⚔️ Level: {level} ({(exp/func.DEAFAULT_EXP)*100:.1f}%)```\u200b"
+        embed.description += f"```📙 Photocards: {len(user.get('cards', []))}/{func.settings.MAX_CARDS}\n⚔️ Level: {level} ({(exp/func.settings.DEAFAULT_EXP)*100:.1f}%)```\u200b"
 
         embed.add_field(name="Ranked Stats:", value=f"> <:{rank_name}:{rank_emoji}> {rank_name.title()} (`{quiz_stats['points']}`)\n> 🎯 K/DA: `{round(quiz_stats['correct'] / total_questions, 1) if total_questions else 0}` (C: `{quiz_stats['correct']}` | W: `{quiz_stats['wrong'] + quiz_stats['timeout']}`)\n> 🕒 Average Time: `{func.convert_seconds(quiz_stats['average_time'])}`", inline=True)
-        embed.add_field(name="Card Match Stats:", value="\n".join(f"> {DAILY_ROWS[int(level) - 4]} **Level {level}**: " + (f"🃏 `{stats.get('matched', 0)}` 🕒 `{func.convert_seconds(stats.get('finished_time'))}`" if (stats := card_match_stats.get(level)) else "Not attempt yet") for level in GAME_SETTINGS.keys()), inline=True)
+        embed.add_field(name="Card Match Stats:", value="\n".join(f"> {DAILY_ROWS[int(level) - 4]} **Level {level}**: " + (f"🃏 `{stats.get('matched', 0)}` 🕒 `{func.convert_seconds(stats.get('finished_time'))}`" if (stats := card_match_stats.get(level)) else "Not attempt yet") for level in func.settings.MATCH_GAME_SETTINGS.keys()), inline=True)
 
         card = iufi.CardPool.get_card(user["profile"]["main"])
         if card and card.owner_id == user["_id"]:
@@ -220,7 +219,7 @@ class Profile(commands.Cog):
         
         reward = {"candies": 5} if claimed % 5 else {WEEKLY_REWARDS[(claimed//5) - 1][1]: WEEKLY_REWARDS[(claimed//5) - 1][2]}
         await func.update_user(ctx.author.id, {
-            "$set": {"claimed": claimed, "cooldown.daily": time.time() + func.COOLDOWN_BASE["daily"][1]},
+            "$set": {"claimed": claimed, "cooldown.daily": time.time() + func.settings.COOLDOWN_BASE["daily"][1]},
             "$inc": reward
         })
 
@@ -260,8 +259,8 @@ class Profile(commands.Cog):
         embed.description = f"```{'🍬 Starcandies':<20} x{user['candies']}\n"
 
         for tier, count in user.get("roll").items():
-            if count > 0 and tier in iufi.TIERS_BASE.keys():
-                emoji, _ = iufi.TIERS_BASE.get(tier)
+            if count > 0 and tier in func.settings.TIERS_BASE.keys():
+                emoji, _ = func.settings.TIERS_BASE.get(tier)
                 embed.description += f"{emoji} {tier.title() + ' Rolls':<18} x{count}\n"
 
         embed.description += f"\n\n"

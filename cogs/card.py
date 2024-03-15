@@ -181,7 +181,7 @@ class Card(commands.Cog):
         """Converts photocards that fit the given mode."""
         user = await func.get_user(ctx.author.id)
         category_list = categorys.split(" ")
-        categories = [func.match_string(category.lower(), set(iufi.TIERS_BASE.keys()) | {"notag"}) for category in category_list]
+        categories = [func.match_string(category.lower(), set(func.settings.TIERS_BASE.keys()) | {"notag"}) for category in category_list]
         len_categories = len(category_list)
 
         if not user["cards"]:

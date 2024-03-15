@@ -14,7 +14,7 @@ class Listeners(commands.Cog):
 
     @commands.Cog.listener()
     async def on_member_ban(self, guild: discord.Guild, member: discord.Member) -> None:
-        if guild.id != func.MAIN_GUILD or member.bot:
+        if guild.id != func.settings.MAIN_GUILD or member.bot:
             return
         
         user = await func.get_user(member.id, insert=False)
@@ -37,11 +37,7 @@ class Listeners(commands.Cog):
         try:
             await self.iufi.create_node(
                 bot = self.bot,
-                # host = "172.18.0.1",
-                host = "127.0.0.1",
-                port = 2333,
-                password = "youshallnotpass",
-                identifier = "DEFAULT"
+                **func.settings.MUSIC_NODE
             )
             
         except Exception as e:
@@ -72,7 +68,7 @@ class Listeners(commands.Cog):
         joined_voice_channel: bool = (not before.channel and after.channel) or (before.channel != after.channel)
         player: iufi.Player | None = member.guild.voice_client
 
-        if joined_voice_channel and after.channel and after.channel.id == func.MUSIC_VOICE_CHANNEL:
+        if joined_voice_channel and after.channel and after.channel.id == func.settings.MUSIC_VOICE_CHANNEL:
             if not player:
                 check = after.channel.permissions_for(member.guild.get_member(self.bot.user.id))
                 if check.connect == False or check.speak == False:
@@ -83,7 +79,7 @@ class Listeners(commands.Cog):
             if not player.is_playing:
                 await player.do_next()
 
-        elif before.channel and before.channel.id == func.MUSIC_VOICE_CHANNEL:
+        elif before.channel and before.channel.id == func.settings.MUSIC_VOICE_CHANNEL:
             if not player:
                 return
             

@@ -5,7 +5,7 @@ import functions as func
 
 from discord.ext import commands
 from urllib.parse import quote
-from .objects import Playlist, Track, TRACK_BASE
+from .objects import Playlist, Track
 from .utils import ExponentialBackoff, NodeStats
 from collections import Counter
 
@@ -29,8 +29,7 @@ from random import (
 from .objects import (
     Card,
     Question,
-    QUIZ_LEVEL_BASE,
-    RANK_BASE
+    QUIZ_LEVEL_BASE
 )
 
 from .exceptions import IUFIException, DuplicatedCardError, DuplicatedTagError
@@ -167,7 +166,7 @@ class QuestionPool:
     
     @classmethod
     def get_rank(cls, points: int) -> tuple[str, int]:
-        sorted_ranks = sorted(RANK_BASE.items(), key=lambda item: item[1]["points"], reverse=True)
+        sorted_ranks = sorted(func.settings.RANK_BASE.items(), key=lambda item: item[1]["points"], reverse=True)
         for rank, details in sorted_ranks:
             if points >= details["points"]:
                 return (rank, details["emoji_id"])
@@ -175,7 +174,7 @@ class QuestionPool:
 
     @classmethod
     def get_question_distribution_by_rank(cls, rank: str) -> list[tuple[str, int]]:
-        rank_details = RANK_BASE.get(rank)
+        rank_details = func.settings.RANK_BASE.get(rank)
         if not rank_details:
             raise IUFIException(f"Rank '{rank}' not found!")
         

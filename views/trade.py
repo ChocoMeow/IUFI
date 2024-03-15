@@ -61,7 +61,7 @@ class TradeView(discord.ui.View):
         if user["candies"] < self.candies:
             return await interaction.response.send_message(f"You don't have enough candies! You only have `{user['candies']}` candies", ephemeral=True)
 
-        if len(user["cards"]) >= func.MAX_CARDS:
+        if len(user["cards"]) >= func.settings.MAX_CARDS:
             return await interaction.response.send_message(f"**Your inventory is full.**", ephemeral=True)
         
         await interaction.response.defer()

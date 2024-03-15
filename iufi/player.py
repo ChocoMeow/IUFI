@@ -108,7 +108,7 @@ class Player(VoiceProtocol):
         channel: Optional[VoiceChannel] = None, 
     ):
         self._bot: commands.Bot = client
-        self.text_channel: Optional[TextChannel] = self.bot.get_channel(func.MUSIC_TEXT_CHANNEL)
+        self.text_channel: Optional[TextChannel] = self.bot.get_channel(func.settings.MUSIC_TEXT_CHANNEL)
         self.channel: VoiceChannel = channel
         self.message: Optional[Message] = None
         self._guild = channel.guild if channel else None
