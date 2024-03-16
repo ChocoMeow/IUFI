@@ -53,23 +53,20 @@
         "ROLL": {
             "title": "Roll 10 times",
             "description": "Do 'qr' or any other rolls twenty times",
-            "emoji": "",
             "amount": 10,
-            "reward": "roll"
+            "rewards": [["🍬", "candies", 20]]
         },
         "PLAY_QUIZ_GAME": {
             "title": "Play quiz 5 times",
             "description": "Do 'qq' and answer the questions",
-            "emoji": "",
             "amount": 5,
-            "reward": "roll"
+            "rewards": [["🍬", "candies", 20]]
         },
         "PLAY_MATCH_GAME_LVL_1": {
             "title": "Play match game 5 times",
             "description": "Do 'qmg 1' and answer the questions",
-            "emoji": "",
             "amount": 5,
-            "reward": "roll"
+            "rewards": [["🍬", "candies", 20]]
         }
     },
     "TIERS_BASE": {

@@ -18,7 +18,6 @@ from typing import (
 )
 
 from dotenv import load_dotenv
-from enums import DailyQuestIds
 
 ROOT_DIR = os.path.dirname(os.path.abspath(__file__))
 
@@ -64,7 +63,7 @@ class Settings:
         self.MUSIC_NODE = settings.get("MUSIC_NODE")
         self.USER_BASE = settings.get("USER_BASE")
         self.COOLDOWN_BASE = settings.get("COOLDOWN_BASE")
-        self.DAILY_QUESTS = {DailyQuestIds[k]: v for k, v in settings.get("DAILY_QUESTS").items()}
+        self.DAILY_QUESTS = {k: v for k, v in settings.get("DAILY_QUESTS").items()}
         self.TIERS_BASE = settings.get("TIERS_BASE")
         self.FRAMES_BASE = settings.get("FRAMES_BASE")
         self.POTIONS_BASE = settings.get("POTIONS_BASE")
@@ -187,22 +186,24 @@ async def get_user(user_id: int, *, insert: bool = True) -> Dict[str, Any]:
         user = USERS_BUFFER[user_id] = user if user else copy.deepcopy(settings.USER_BASE) | {"_id": user_id}
     return user
 
-def update_quest_progress(user: Dict[str, Any], quest_ids: List[DailyQuestIds], progress: int = 1, *, query: Dict[str, Any]) -> Dict[str, Any]:
+def update_quest_progress(user: Dict[str, Any], quests: Union[str, List[str]], progress: int = 1, *, query: Dict[str, Any]) -> Dict[str, Any]:
+    quests = quests if isinstance(quests, list) else [quests]
     daily_quests = user.get("quests", copy.deepcopy(settings.USER_BASE["quests"]))["daily"]
-    quest_ids = quest_ids if isinstance(quest_ids, list) else [quest_ids]
-    now = time.time()
 
-    if daily_quests["next_update"] < now:
+    if daily_quests["next_update"] < (now := time.time()):
         new_quests = random.sample(list(settings.DAILY_QUESTS.keys()), k=3)
-        query.setdefault("$set", {})[f"quests.daily.progresses"] = {str(quest): 0 for quest in new_quests}
+        daily_quests["quests.daily.progresses"] = query.setdefault("$set", {})[f"quests.daily.progresses"] = {str(quest): 0 for quest in new_quests}
         query["$set"]["quests.daily.next_update"] = now + 86_400
 
-    for quest_id in quest_ids:
-        if str(quest_id) in daily_quests["progresses"]:
-            if daily_quests["progresses"][str(quest_id)] < settings.DAILY_QUESTS[quest_id]["amount"]:
-                query.setdefault("$inc", {})[f"quests.daily.progresses.{quest_id}"] = progress
+    for quest in quests:
+        if quest in daily_quests["progresses"]:
+            if daily_quests["progresses"][quest] < settings.DAILY_QUESTS[quest]["amount"]:
+                query.setdefault("$inc", {})[f"quests.daily.progresses.{quest}"] = progress
 
-    print(query)
+                if daily_quests["progresses"][quest] == settings.DAILY_QUESTS[quest]["amount"] - 1:
+                    reward = random.choice(settings.DAILY_QUESTS[quest]["rewards"])
+                    query["$inc"][reward[1]] = reward[2]
+
     return query
 
 async def update_user(user_id: int, data: dict) -> None:

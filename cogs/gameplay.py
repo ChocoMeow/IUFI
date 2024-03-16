@@ -44,7 +44,7 @@ class Gameplay(commands.Cog):
             
             query["$inc"] = {f"roll.{tier}": -1}
 
-        query = func.update_quest_progress(user, func.DailyQuestIds.ROLL, query=query)
+        query = func.update_quest_progress(user, "ROLL", query=query)
         await func.update_user(ctx.author.id, query)
         
         if user["exp"] == 0:
@@ -77,7 +77,7 @@ class Gameplay(commands.Cog):
         view = MatchGame(ctx.author, level)
         actived_potions = func.get_potions(user.get("actived_potions", {}), func.settings.POTIONS_BASE)
 
-        query = func.update_quest_progress(user, func.DailyQuestIds[f"PLAY_MATCH_GAME_LVL_{level}"], query={"$set": {"cooldown.match_game": time.time() + (view._data.get("cooldown", 0) * (1 - actived_potions.get("speed", 0)))}})
+        query = func.update_quest_progress(user, f"PLAY_MATCH_GAME_LVL_{level}", query={"$set": {"cooldown.match_game": time.time() + (view._data.get("cooldown", 0) * (1 - actived_potions.get("speed", 0)))}})
         await func.update_user(ctx.author.id, query)
         
         embed, file = await view.build()
@@ -111,7 +111,7 @@ class Gameplay(commands.Cog):
             return await ctx.send("There are no questions for you right now! Please try again later.")
 
         # Update the user's cooldown time
-        query = func.update_quest_progress(user, func.DailyQuestIds.PLAY_QUIZ_GAME, query={"$set": {"cooldown.quiz_game": time.time() + func.settings.COOLDOWN_BASE["roll"][1]}})
+        query = func.update_quest_progress(user, "PLAY_QUIZ_GAME", query={"$set": {"cooldown.quiz_game": time.time() + func.settings.COOLDOWN_BASE["roll"][1]}})
         await func.update_user(ctx.author.id, query)
 
         # Create the quiz view and send the initial message
