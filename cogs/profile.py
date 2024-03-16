@@ -17,6 +17,20 @@ WEEKLY_REWARDS: list[tuple[str, str, int]] = [
     (func.settings.TIERS_BASE.get("legendary")[0], "roll.legendary", 1),
 ]
 
+def generate_progress_bar(total, progress_percentage, filled='⣿', in_progress='⣦', empty='⣀'):
+    progress = int(total * progress_percentage / 100)
+    filled_length = progress
+    in_progress_length = 1 if progress_percentage - filled_length > 0 else 0
+    empty_length = total - filled_length - in_progress_length
+
+    # ANSI escape code for magenta color
+    start_color = f"[0;1;{'32' if total == progress else '35'}m"
+    end_color = "[0m"
+
+    progress_bar = start_color + filled * filled_length + in_progress * in_progress_length + end_color + empty * empty_length
+
+    return progress_bar
+
 class Profile(commands.Cog):
     def __init__(self, bot: commands.Bot) -> None:
         self.bot = bot
@@ -272,6 +286,31 @@ class Profile(commands.Cog):
         ) if sum(potions_data.values()) else "Potion not found!")
 
         embed.description += f"🍶 Potions:\n{potions}```"
+        embed.set_thumbnail(url=ctx.author.display_avatar.url)
+        await ctx.reply(embed=embed)
+
+    @commands.command(aliases=["dq"])
+    async def dailyquests(self, ctx: commands.Context):
+        """Shows the daily quests"""
+        user = await func.get_user(ctx.author.id)
+        quests = user.get("quests").get("daily")
+        if not quests:
+            return
+        
+        reset_time = round(quests.get("next_update", 0))
+        embed = discord.Embed(title="Daily Quests", description=f"Resets at <t:{reset_time}:t> (<t:{reset_time}:R>)", color=discord.Color.random())
+
+        for quest_name, progress in quests.get("progresses", {}).items():
+            quest = func.settings.DAILY_QUESTS.get(quest_name)
+            if quest:
+                progress_percentage = (progress / quest['amount']) * 100
+                progress_bar = generate_progress_bar(15, progress_percentage)
+                embed.add_field(
+                    name=f"{'✅' if progress >= quest['amount'] else '❌'} {quest['title']}",
+                    value=f"```ansi\n➢ Reward: " + " | ".join(f"{r[0]} {r[2]}" for r in quest["rewards"]) + f"\n➢ {progress_bar} {int(progress_percentage)}% ({progress}/{quest['amount']})```",
+                    inline=False
+                )
+
         embed.set_thumbnail(url=ctx.author.display_avatar.url)
         await ctx.reply(embed=embed)
 
