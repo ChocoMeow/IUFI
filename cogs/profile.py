@@ -1,10 +1,14 @@
-import discord, iufi, time, asyncio
+import discord, iufi, time, asyncio, copy, random
 import functions as func
 
 from discord.ext import commands
 from views import (
     CollectionView,
     PhotoCardView
+)
+from typing import (
+    Dict,
+    Any
 )
 
 DAILY_ROWS: list[str] = ["🟥", "🟧", "🟨", "🟩", "🟦", "🟪"]
@@ -289,27 +293,41 @@ class Profile(commands.Cog):
         embed.set_thumbnail(url=ctx.author.display_avatar.url)
         await ctx.reply(embed=embed)
 
-    @commands.command(aliases=["dq"])
-    async def dailyquests(self, ctx: commands.Context):
+    @commands.command(aliases=["qu"])
+    async def quests(self, ctx: commands.Context):
         """Shows the daily quests"""
         user = await func.get_user(ctx.author.id)
-        quests = user.get("quests").get("daily")
-        if not quests:
-            return
-        
-        reset_time = round(quests.get("next_update", 0))
-        embed = discord.Embed(title="Daily Quests", description=f"Resets at <t:{reset_time}:t> (<t:{reset_time}:R>)", color=discord.Color.random())
 
-        for quest_name, progress in quests.get("progresses", {}).items():
-            quest = func.settings.DAILY_QUESTS.get(quest_name)
-            if quest:
-                progress_percentage = (progress / quest['amount']) * 100
-                progress_bar = generate_progress_bar(15, progress_percentage)
-                embed.add_field(
-                    name=f"{'✅' if progress >= quest['amount'] else '❌'} {quest['title']}",
-                    value=f"```ansi\n➢ Reward: " + " | ".join(f"{r[0]} {r[2]}" for r in quest["rewards"]) + f"\n➢ {progress_bar} {int(progress_percentage)}% ({progress}/{quest['amount']})```",
-                    inline=False
-                )
+        embed = discord.Embed(color=discord.Color.random())
+        
+        for quest_type in func.settings.USER_BASE["quests"].keys():    
+            user_quest: Dict[str, Any] = user.copy().get("quests", {}).get(quest_type, copy.deepcopy(func.settings.USER_BASE["quests"][quest_type]))
+
+            QUESTS_BASE: Dict[str, Any] = getattr(func.settings, f"{quest_type.upper()}_QUESTS", None)
+            if not QUESTS_BASE:
+                continue
+            
+            if user_quest["next_update"] < (now := time.time()):
+                query = {}
+
+                settings = func.QUESTS_SETTINGS.get(quest_type, {})
+                new_quests = random.sample(list(QUESTS_BASE.keys()), k=settings.get("items", 0))
+                user_quest["progresses"] = query.setdefault("$set", {})[f"quests.{quest_type}.progresses"] = {str(quest): 0 for quest in new_quests}
+                query["$set"][f"quests.{quest_type}.next_update"] = now + settings.get("update_time", 0)
+
+                await func.update_user(ctx.author.id, query)
+
+            reset_time = round(user_quest.get("next_update", 0))
+            details = ""
+            for quest_name, progress in user_quest.get("progresses", {}).items():
+                quest = QUESTS_BASE.get(quest_name)
+                if quest:
+                    progress_percentage = (progress / quest['amount']) * 100
+                    progress_bar = generate_progress_bar(15, progress_percentage)
+                    details += f"{'✅' if progress >= quest['amount'] else '❌'} {quest['title']}\n"
+                    details += f"```ansi\n➢ Reward: " + " | ".join(f"{r[0]} {f'{r[2][0]} ~ {r[2][1]}' if isinstance(r[2], list) else r[2]}" for r in quest["rewards"]) + f"\n➢ {progress_bar} {int(progress_percentage)}% ({progress}/{quest['amount']})```\n"
+            
+            embed.add_field(name=f"{quest_type.title()} Quests", value=f"Resets at <t:{reset_time}:t> (<t:{reset_time}:R>)\n\n{details}", inline=False)
 
         embed.set_thumbnail(url=ctx.author.display_avatar.url)
         await ctx.reply(embed=embed)
