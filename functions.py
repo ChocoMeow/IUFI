@@ -43,6 +43,7 @@ class Settings:
         self.USER_BASE: Dict[str, Any] = {}
         self.COOLDOWN_BASE: Dict[str, tuple[str, int]] = {}
         self.DAILY_QUESTS: Dict[str, Union[str, int]] = {}
+        self.WEEKLY_QUESTS: Dict[str, Union[str, int]] = {}
         self.TIERS_BASE: Dict[str, List[str, int]] = {}
         self.FRAMES_BASE: Dict[str, List[str, str]] = {}
         self.POTIONS_BASE: Dict[str, Union[str, Dict[str, float]]] = {}
@@ -64,6 +65,7 @@ class Settings:
         self.USER_BASE = settings.get("USER_BASE")
         self.COOLDOWN_BASE = settings.get("COOLDOWN_BASE")
         self.DAILY_QUESTS = {k: v for k, v in settings.get("DAILY_QUESTS").items()}
+        self.WEEKLY_QUESTS = {k: v for k, v in settings.get("WEEKLY_QUESTS").items()}
         self.TIERS_BASE = settings.get("TIERS_BASE")
         self.FRAMES_BASE = settings.get("FRAMES_BASE")
         self.POTIONS_BASE = settings.get("POTIONS_BASE")
@@ -82,6 +84,17 @@ QUESTIONS_DB: AsyncIOMotorCollection = None
 MUSIC_DB: AsyncIOMotorCollection = None
 
 USERS_BUFFER: Dict[int, Dict[str, Any]] = {}
+
+QUESTS_SETTINGS: Dict[str, Dict[str, int]] = {
+    "daily": {
+        "update_time": 86_400,
+        "items": 3
+    },
+    "weekly": {
+        "update_time": 86_400 * 7,
+        "items": 2
+    }
+}
 
 def open_json(path: str) -> dict:
     try:
@@ -186,23 +199,42 @@ async def get_user(user_id: int, *, insert: bool = True) -> Dict[str, Any]:
         user = USERS_BUFFER[user_id] = user if user else copy.deepcopy(settings.USER_BASE) | {"_id": user_id}
     return user
 
-def update_quest_progress(user: Dict[str, Any], quests: Union[str, List[str]], progress: int = 1, *, query: Dict[str, Any]) -> Dict[str, Any]:
-    quests = quests if isinstance(quests, list) else [quests]
-    daily_quests = user.get("quests", copy.deepcopy(settings.USER_BASE["quests"]))["daily"]
+def update_quest_progress(user: Dict[str, Any], completed_quests: Union[str, List[str]], progress: int = 1, *, query: Dict[str, Any] = None) -> Dict[str, Any]:
+    global settings
 
-    if daily_quests["next_update"] < (now := time.time()):
-        new_quests = random.sample(list(settings.DAILY_QUESTS.keys()), k=3)
-        daily_quests["quests.daily.progresses"] = query.setdefault("$set", {})[f"quests.daily.progresses"] = {str(quest): 0 for quest in new_quests}
-        query["$set"]["quests.daily.next_update"] = now + 86_400
+    completed_quests = completed_quests if isinstance(completed_quests, list) else [completed_quests]
+    if not query:
+        query: Dict[str, Any] = {}
 
-    for quest in quests:
-        if quest in daily_quests["progresses"]:
-            if daily_quests["progresses"][quest] < settings.DAILY_QUESTS[quest]["amount"]:
-                query.setdefault("$inc", {})[f"quests.daily.progresses.{quest}"] = progress
+    for quest_type in settings.USER_BASE["quests"].keys():
+        user_quest = user.copy().get("quests", {}).get(quest_type, copy.deepcopy(settings.USER_BASE["quests"][quest_type]))
 
-                if daily_quests["progresses"][quest] == settings.DAILY_QUESTS[quest]["amount"] - 1:
-                    reward = random.choice(settings.DAILY_QUESTS[quest]["rewards"])
-                    query["$inc"][reward[1]] = reward[2]
+        QUESTS_BASE: Dict[str, Any] = getattr(settings, f"{quest_type.upper()}_QUESTS", None)
+        if not QUESTS_BASE:
+            continue
+        
+        #  Check if the quests need to be updated
+        if (quest_updated := user_quest["next_update"] < (now := time.time())):
+            settings = QUESTS_SETTINGS.get(quest_type, {})
+            new_quests = random.sample(list(QUESTS_BASE.keys()), k=settings.get("items", 0))
+            user_quest["progresses"] = query.setdefault("$set", {})[f"quests.{quest_type}.progresses"] = {str(quest): 0 for quest in new_quests}
+            query["$set"][f"quests.{quest_type}.next_update"] = now + settings.get("update_time", 0)
+
+        # Update the progress for each quest
+        for quest_name in completed_quests:
+            if quest_name in user_quest["progresses"]:
+                if user_quest["progresses"][quest_name] < QUESTS_BASE[quest_name]["amount"]:
+
+                    # If the quests were just updated, set the progress to the specified 
+                    if quest_updated:
+                        query["$set"][f"quests.{quest_type}.progresses"][quest_name] = progress
+                    else:
+                        query.setdefault("$inc", {})[f"quests.{quest_type}.progresses.{quest_name}"] = progress
+
+                    # If the quest is now complete, select a reward at random
+                    if (user_quest["progresses"][quest_name] + progress) >= QUESTS_BASE[quest_name]["amount"]:
+                        reward = random.choice(QUESTS_BASE[quest_name]["rewards"])
+                        query.setdefault("$inc", {})[reward[1]] = random.randint(reward[2][0], reward[2][1]) if isinstance(reward[2], list) else reward[2]
 
     return query
 

@@ -39,6 +39,10 @@
             "daily": {
                 "progresses": {},
                 "next_update": 0
+            },
+            "weekly": {
+                "progresses": {},
+                "next_update": 0
             }
         }
     },
@@ -52,21 +56,125 @@
     "DAILY_QUESTS": {
         "ROLL": {
             "title": "Roll 10 times",
-            "description": "Do 'qr' or any other rolls twenty times",
             "amount": 10,
-            "rewards": [["🍬", "candies", 20]]
+            "rewards": [["🍬", "candies", [10, 20]]]
         },
         "PLAY_QUIZ_GAME": {
             "title": "Play quiz 5 times",
-            "description": "Do 'qq' and answer the questions",
             "amount": 5,
-            "rewards": [["🍬", "candies", 20]]
+            "rewards": [["🍬", "candies", [10, 20]]]
         },
         "PLAY_MATCH_GAME_LVL_1": {
-            "title": "Play match game 5 times",
-            "description": "Do 'qmg 1' and answer the questions",
+            "title": "Play level 1 match game 5 times",
             "amount": 5,
-            "rewards": [["🍬", "candies", 20]]
+            "rewards": [["🍬", "candies", [10, 20]]]
+        },
+        "PLAY_MATCH_GAME_LVL_2": {
+            "title": "Play level 2 match game 5 times",
+            "amount": 5,
+            "rewards": [["🍬", "candies", [15, 25]]]
+        },
+        "PLAY_MATCH_GAME_LVL_3": {
+            "title": "Play level 2 match game 5 times",
+            "amount": 5,
+            "rewards": [["🍬", "candies", [20, 30]]]
+        },
+        "FRAME_CONFIG": {
+            "title": "Add frame to 1 card",
+            "amount": 1,
+            "rewards": [["🍬", "candies", [10, 25]]]
+        },
+        "UPGRADE_CARD": {
+            "title": "UpgradeUpgrade any 1 card",
+            "amount": 1,
+            "rewards": [["🍬", "candies", [10, 25]]]
+        },
+        "USE_ANY_POTION": {
+            "title": "Use any potion 1 times",
+            "amount": 1,
+            "rewards": [["🍬", "candies", [10, 20]]]
+        },
+        "COLLECT_ANY_CARD": {
+            "title": "Collect 10 cards of any type",
+            "amount": 10,
+            "rewards": [["🍬", "candies", [5, 10]]]
+        },
+        "COLLECT_COMMON_CARD": {
+            "title": "Collect 10 common cards",
+            "amount": 10,
+            "rewards": [["🍬", "candies", [10, 20]]]
+        },
+        "COLLECT_RARE_CARD": {
+            "title": "Collect 3 rare cards",
+            "amount": 3,
+            "rewards": [["🍬", "candies", [10, 20]]]
+        },
+        "COLLECT_EPIC_CARD": {
+            "title": "Collect 1 epic cards",
+            "amount": 1,
+            "rewards": [["🍬", "candies", [20, 30]]]
+        }
+    },
+    "WEEKLY_QUESTS": {
+        "ROLL": {
+            "title": "Roll 100 times",
+            "amount": 100,
+            "rewards": [["🍬", "candies", [70, 140]]]
+        },
+        "PLAY_QUIZ_GAME": {
+            "title": "Play quiz 50 times",
+            "amount": 50,
+            "rewards": [["🍬", "candies", [100, 200]]]
+        },
+        "PLAY_MATCH_GAME_LVL_1": {
+            "title": "Play level 1 match game 50 times",
+            "amount": 50,
+            "rewards": [["🍬", "candies", [100, 200]]]
+        },
+        "PLAY_MATCH_GAME_LVL_2": {
+            "title": "Play level 2 match game 50 times",
+            "amount": 50,
+            "rewards": [["🍬", "candies", [150, 250]]]
+        },
+        "PLAY_MATCH_GAME_LVL_3": {
+            "title": "Play level 2 match game 50 times",
+            "amount": 50,
+            "rewards": [["🍬", "candies", [200, 300]]]
+        },
+        "FRAME_CONFIG": {
+            "title": "Add frame to 10 card",
+            "amount": 10,
+            "rewards": [["🍬", "candies", [100, 250]]]
+        },
+        "UPGRADE_CARD": {
+            "title": "UpgradeUpgrade any 10 card",
+            "amount": 10,
+            "rewards": [["🍬", "candies", [100, 250]]]
+        },
+        "USE_ANY_POTION": {
+            "title": "Use any potion 10 times",
+            "amount": 10,
+            "rewards": [["🍬", "candies", [100, 200]]]
+        },
+        "COLLECT_ANY_CARD": {
+            "title": "Collect 200 cards of any type",
+            "amount": 200,
+            "rewards": [["💎", "roll.epic", 1]]
+        },
+        "COLLECT_COMMON_CARD": {
+            "title": "Collect 100 common cards",
+            "amount": 100,
+            "rewards": [["🍬", "candies", [100, 200]]]
+        },
+        "COLLECT_RARE_CARD": {
+            "title": "Collect 30 rare cards",
+            "amount": 30,
+            "rewards": [["🍬", "candies", [100, 200]]]
+        },
+        "COLLECT_EPIC_CARD": {
+            "title": "Collect 10 epic cards",
+            "amount": 10,
+            "rewards": [["🍬", "candies", [200, 300]]]
         }
     },
     "TIERS_BASE": {
