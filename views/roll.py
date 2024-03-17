@@ -41,11 +41,12 @@ class RollButton(discord.ui.Button):
         
         await interaction.response.defer()
         actived_potions = func.get_potions(user.get("actived_potions", {}), func.settings.POTIONS_BASE)
-        await func.update_user(interaction.user.id, {
+        query = func.update_quest_progress(user, ["COLLECT_ANY_CARD", f"COLLECT_{self.card._tier.upper()}_CARD"], query={
             "$push": {"cards": self.card.id},
             "$set": {"cooldown.claim": time.time() + (func.settings.COOLDOWN_BASE["claim"][1] * (1 - actived_potions.get("speed", 0)))},
             "$inc": {"exp": 10}
         })
+        await func.update_user(interaction.user.id, query)
         await func.update_card(self.card.id, {"$set": {"owner_id": interaction.user.id}})
 
         await self.view.message.edit(view=self.view)

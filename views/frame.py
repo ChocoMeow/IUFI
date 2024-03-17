@@ -70,7 +70,8 @@ class FrameView(discord.ui.View):
         except Exception as e:
             return await interaction.response.send_message(e, ephemeral=True)
         
-        await func.update_user(self.author.id, {"$inc": {"candies": -self._price}})
+        query = func.update_quest_progress(user, "FRAME_CONFIG", query={"$inc": {"candies": -self._price}})
+        await func.update_user(self.author.id, query)
         await func.update_card(self.card.id, {"$set": {"frame": self._selected_frame}})
         await self.response.edit(view=None)
 
