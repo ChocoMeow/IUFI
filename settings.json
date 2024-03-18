@@ -75,7 +75,7 @@
             "rewards": [["🍬", "candies", [15, 25]]]
         },
         "PLAY_MATCH_GAME_LVL_3": {
-            "title": "Play level 2 match game 5 times",
+            "title": "Play level 3 match game 5 times",
             "amount": 5,
             "rewards": [["🍬", "candies", [20, 30]]]
         },
@@ -85,12 +85,12 @@
             "rewards": [["🍬", "candies", [10, 25]]]
         },
         "UPGRADE_CARD": {
-            "title": "UpgradeUpgrade any 1 card",
+            "title": "Upgrade any cards",
             "amount": 1,
             "rewards": [["🍬", "candies", [10, 25]]]
         },
         "USE_ANY_POTION": {
-            "title": "Use any potion 1 times",
+            "title": "Use any potion 1 time",
             "amount": 1,
             "rewards": [["🍬", "candies", [10, 20]]]
         },
