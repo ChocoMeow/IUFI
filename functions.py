@@ -215,10 +215,10 @@ def update_quest_progress(user: Dict[str, Any], completed_quests: Union[str, Lis
         
         #  Check if the quests need to be updated
         if (quest_updated := user_quest["next_update"] < (now := time.time())):
-            settings = QUESTS_SETTINGS.get(quest_type, {})
-            new_quests = random.sample(list(QUESTS_BASE.keys()), k=settings.get("items", 0))
+            _settings = QUESTS_SETTINGS.get(quest_type, {})
+            new_quests = random.sample(list(QUESTS_BASE.keys()), k=_settings.get("items", 0))
             user_quest["progresses"] = query.setdefault("$set", {})[f"quests.{quest_type}.progresses"] = {str(quest): 0 for quest in new_quests}
-            query["$set"][f"quests.{quest_type}.next_update"] = now + settings.get("update_time", 0)
+            query["$set"][f"quests.{quest_type}.next_update"] = now + _settings.get("update_time", 0)
 
         # Update the progress for each quest
         for quest_name in completed_quests:
