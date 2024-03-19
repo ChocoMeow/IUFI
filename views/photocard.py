@@ -75,14 +75,15 @@ class PhotoCardView(discord.ui.View):
             self._dropdown_view.options.append(discord.SelectOption(label=f"{card.id}", description=f"{card.display_tag}", emoji=card.tier[0]))
             
         embed = discord.Embed(title=f"📖 {self.author.display_name}'s Photocards", description=desc + "```", color=discord.Color.random())
-        embed.set_thumbnail(url=self.author.display_avatar.url)
         embed.set_footer(text="Pages: {}/{}".format(self.current_page, self.page))
 
         if self.toggle_cards_view:
             image_bytes, image_format = await asyncio.to_thread(gen_cards_view, cards, 4)
             embed.set_image(url=f"attachment://image.{image_format}")
             return embed, discord.File(image_bytes, filename=f"image.{image_format}")
-        
+        else:
+            embed.set_thumbnail(url=self.author.display_avatar.url)
+            
         return embed, None
 
     async def on_timeout(self) -> None:
