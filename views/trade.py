@@ -68,7 +68,7 @@ class TradeView(discord.ui.View):
         self.card.change_owner(buyer.id)
 
         # Seller
-        _seller = func.get_user(self.seller.id)
+        _seller = await func.get_user(self.seller.id)
         seller_query = func.update_quest_progress(_seller, "TRADE_ANY_CARD", query={"$pull": {"cards": self.card.id}, "$inc": {"candies": self.candies}})
         await func.update_user(self.seller.id, seller_query)
         
