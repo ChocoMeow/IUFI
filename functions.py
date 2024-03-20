@@ -234,7 +234,11 @@ def update_quest_progress(user: Dict[str, Any], completed_quests: Union[str, Lis
                     # If the quest is now complete, select a reward at random
                     if (user_quest["progresses"][quest_name] + progress) >= QUESTS_BASE[quest_name]["amount"]:
                         reward = random.choice(QUESTS_BASE[quest_name]["rewards"])
-                        query.setdefault("$inc", {})[reward[1]] = random.randint(reward[2][0], reward[2][1]) if isinstance(reward[2], list) else reward[2]
+                        query.setdefault("$inc", {}).setdefault(reward[1], 0)
+                        query["$inc"].setdefault("exp", 0)
+
+                        query["$inc"][reward[1]] += random.randint(reward[2][0], reward[2][1]) if isinstance(reward[2], list) else reward[2]
+                        query["$inc"]["exp"] += 10
 
     return query
 

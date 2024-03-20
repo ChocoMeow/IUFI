@@ -60,9 +60,10 @@ class Dropdown(discord.ui.Select):
                     if user["candies"] < price:
                         return await interaction.followup.send(f"You don't have enough candies! You only have `{user['candies']}` candies", ephemeral=True)
                     
-                    await func.update_user(interaction.user.id, {
-                        "$inc": {"candies": -price, item[1]: modal.quantity},
+                    query = func.update_quest_progress(user, "BUY_ITEM", progress=modal.quantity, query={
+                        "$inc": {"candies": -price, item[1]: modal.quantity}
                     })
+                    await func.update_user(interaction.user.id, query)
 
                     embed = discord.Embed(title="🛒 Shop Purchase", color=discord.Color.random())
                     embed.description = f"```{item[0]} + {modal.quantity}\n🍬 - {price}```"

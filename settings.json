@@ -95,7 +95,7 @@
             "rewards": [["🍬", "candies", [10, 20]]]
         },
         "COLLECT_ANY_CARD": {
-            "title": "Collect 10 cards of any type",
+            "title": "Collect 10 cards of any tier",
             "amount": 10,
             "rewards": [["🍬", "candies", [5, 10]]]
         },
@@ -113,6 +113,21 @@
             "title": "Collect 1 epic cards",
             "amount": 1,
             "rewards": [["🍬", "candies", [20, 30]]]
+        },
+        "CONVERT_ANY_CARD": {
+            "title": "Convert 10 cards of any tier",
+            "amount": 10,
+            "rewards": [["🍬", "candies", [5, 10]]]
+        },
+        "TRADE_ANY_CARD": {
+            "title": "Trade 10 cards of any tier",
+            "amount": 10,
+            "rewards": [["🍬", "candies", [5, 10]]]
+        },
+        "BUY_ITEM": {
+            "title": "Buy 5 items from the shop",
+            "amount": 5,
+            "rewards": [["🍬", "candies", [5, 10]]]
         }
     },
     "WEEKLY_QUESTS": {
@@ -147,7 +162,7 @@
             "rewards": [["🍬", "candies", [100, 250]]]
         },
         "UPGRADE_CARD": {
-            "title": "UpgradeUpgrade any 10 card",
+            "title": "Upgrade any 10 card",
             "amount": 10,
             "rewards": [["🍬", "candies", [100, 250]]]
         },
@@ -157,7 +172,7 @@
             "rewards": [["🍬", "candies", [100, 200]]]
         },
         "COLLECT_ANY_CARD": {
-            "title": "Collect 200 cards of any type",
+            "title": "Collect 200 cards of any tier",
             "amount": 200,
             "rewards": [["💎", "roll.epic", 1]]
         },
@@ -174,6 +189,21 @@
         "COLLECT_EPIC_CARD": {
             "title": "Collect 10 epic cards",
             "amount": 10,
+            "rewards": [["🍬", "candies", [200, 300]]]
+        },
+        "CONVERT_ANY_CARD": {
+            "title": "Convert 100 cards of any tier",
+            "amount": 100,
+            "rewards": [["🍬", "candies", [50, 100]]]
+        },
+        "TRADE_ANY_CARD": {
+            "title": "Trade 30 cards of any tier",
+            "amount": 30,
+            "rewards": [["🍬", "candies", [100, 150]]]
+        },
+        "BUY_ITEM": {
+            "title": "Buy 20 items from the shop",
+            "amount": 20,
             "rewards": [["🍬", "candies", [200, 300]]]
         }
     },

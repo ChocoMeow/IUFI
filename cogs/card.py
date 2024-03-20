@@ -87,10 +87,12 @@ class Card(commands.Cog):
                 iufi.CardPool.add_available_card(card)
                 converted_cards.append(card)
         
-        await func.update_user(ctx.author.id, {
+        user = await func.get_user(ctx.author.id)
+        query = func.update_quest_progress(user, "CONVERT_ANY_CARD", progress=len(converted_cards), query={
             "$pull": {"cards": {"$in": (card_ids := [card.id for card in converted_cards])}},
             "$inc": {"candies": candies}
         })
+        await func.update_user(ctx.author.id, query)
         await func.update_card(card_ids, {"$set": {"owner_id": None, "tag": None, "frame": None}})
 
         embed = discord.Embed(title="✨ Convert", color=discord.Color.random())
@@ -125,10 +127,11 @@ class Card(commands.Cog):
         if card.owner_id != ctx.author.id:
             return await ctx.reply(content="Your cards cannot be converted because there has been a change in your inventory.")
         
-        await func.update_user(ctx.author.id, {
+        query = func.update_quest_progress(user, "CONVERT_ANY_CARD", query={
             "$pull": {"cards": card.id},
             "$inc": {"candies": card.cost}
         })
+        await func.update_user(ctx.author.id, query)
         await func.update_card(card.id, {"$set": {"owner_id": None, "tag": None, "frame": None}})
         iufi.CardPool.add_available_card(card)
         
@@ -167,10 +170,11 @@ class Card(commands.Cog):
             for card in converted_cards:
                 iufi.CardPool.add_available_card(card)
 
-            await func.update_user(ctx.author.id, {
+            query = func.update_quest_progress(user, "CONVERT_ANY_CARD", progress=len(converted_cards), query={
                 "$pull": {"cards": {"$in": card_ids}},
                 "$inc": {"candies": candies}
             })
+            await func.update_user(ctx.author.id, query)
             await func.update_card(card_ids, {"$set": {"owner_id": None, "tag": None, "frame": None}})
 
             embed.title = "✨ Converted"
@@ -218,10 +222,11 @@ class Card(commands.Cog):
             for card in converted_cards:
                 iufi.CardPool.add_available_card(card)
 
-            await func.update_user(ctx.author.id, {
+            query = func.update_quest_progress(user, "CONVERT_ANY_CARD", progress=len(converted_cards), query={
                 "$pull": {"cards": {"$in": card_ids}},
                 "$inc": {"candies": candies}
             })
+            await func.update_user(ctx.author.id, query)
             await func.update_card(card_ids, {"$set": {"owner_id": None, "tag": None, "frame": None}})
 
             embed.title = "✨ Converted"
