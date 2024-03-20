@@ -1,7 +1,7 @@
 import discord, time, asyncio
 import functions as func
 
-from iufi import CardPool, Card, POTIONS_BASE
+from iufi import CardPool, Card
 
 class RollButton(discord.ui.Button):
     def __init__(self, card: Card, **kwargs):
@@ -26,7 +26,7 @@ class RollButton(discord.ui.Button):
         if (retry := user["cooldown"]["claim"]) > time.time() and self.view.author != interaction.user:
             return await interaction.response.send_message(f"{interaction.user.mention} your next claim is <t:{round(retry)}:R>", ephemeral=True)
         
-        if len(user["cards"]) >= func.MAX_CARDS:
+        if len(user["cards"]) >= func.settings.MAX_CARDS:
             return await interaction.response.send_message(f"**{interaction.user.mention} your inventory is full.**", ephemeral=True)
         
         self.view.claimed_users.add(interaction.user)
@@ -40,12 +40,13 @@ class RollButton(discord.ui.Button):
         CardPool.remove_available_card(self.card)
         
         await interaction.response.defer()
-        actived_potions = func.get_potions(user.get("actived_potions", {}), POTIONS_BASE)
-        await func.update_user(interaction.user.id, {
+        actived_potions = func.get_potions(user.get("actived_potions", {}), func.settings.POTIONS_BASE)
+        query = func.update_quest_progress(user, ["COLLECT_ANY_CARD", f"COLLECT_{self.card._tier.upper()}_CARD"], query={
             "$push": {"cards": self.card.id},
-            "$set": {"cooldown.claim": time.time() + (func.COOLDOWN_BASE["claim"][1] * (1 - actived_potions.get("speed", 0)))},
+            "$set": {"cooldown.claim": time.time() + (func.settings.COOLDOWN_BASE["claim"][1] * (1 - actived_potions.get("speed", 0)))},
             "$inc": {"exp": 10}
         })
+        await func.update_user(interaction.user.id, query)
         await func.update_card(self.card.id, {"$set": {"owner_id": interaction.user.id}})
 
         await self.view.message.edit(view=self.view)

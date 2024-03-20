@@ -6,10 +6,7 @@ from random import choice
 from iufi import (
     Question,
     QuestionPool as QP,
-    TIERS_BASE,
-    POTIONS_BASE,
-    QUIZ_LEVEL_BASE,
-    RANK_BASE
+    QUIZ_LEVEL_BASE
 )
 
 from typing import Any
@@ -214,12 +211,12 @@ class QuizView(discord.ui.View):
         if new_record:
             rank: tuple[str, int] = QP.get_rank(state["points"])
             highest_rank: tuple[str, int] = QP.get_rank(old_highest_points)
-            rank_list = list(RANK_BASE.keys())
+            rank_list = list(func.settings.RANK_BASE.keys())
 
             if rank[0] in rank_list[rank_list.index(highest_rank[0]) + 1:]:
                 embed.description += f"\n<:{rank[0]}:{rank[1]}> **{rank[0].title()} Promotion Rewards**```"
-                for index, reward in RANK_BASE[rank[0]]["rewards"].items():
-                    if isinstance(reward, list):
+                for index, reward in func.settings.RANK_BASE[rank[0]]["rewards"].items():
+                    if isinstance(reward[0], list):
                         reward = choice(reward)
                     
                     reward_name, amount = reward
@@ -234,7 +231,7 @@ class QuizView(discord.ui.View):
                         embed.description += f"{'🍬 Candies':<18} x{amount}\n"
                     
                     elif reward_name[0] == "roll":
-                        roll_data = TIERS_BASE.get(reward_name[1])
+                        roll_data = func.settings.TIERS_BASE.get(reward_name[1])
                         embed.description += f"{roll_data[0]} {reward_name[1].title() + ' Roll':<16} x{amount}\n"
 
                     elif reward_name[0] == "exp":
@@ -242,7 +239,7 @@ class QuizView(discord.ui.View):
 
                     else:
                         reward_name = reward_name[1].split("_")
-                        potion_data = POTIONS_BASE.get(reward_name[0])
+                        potion_data = func.settings.POTIONS_BASE.get(reward_name[0])
                         embed.description += f"{potion_data.get('emoji') + ' ' + reward_name[0].title() + ' ' + reward_name[1].upper() + ' Potion':<18} x{amount}\n"
 
                 embed.description += "```"

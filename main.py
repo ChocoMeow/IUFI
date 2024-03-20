@@ -5,9 +5,6 @@ from random import randint
 from discord.ext import commands
 from motor.motor_asyncio import AsyncIOMotorClient
 
-ALLOWED_CATEGORY_IDS = [987352501172989993, 1144810748158165043]
-IGONE_CHANNEL_IDS = [1004494130874953769, 987354694236131418]
-
 class IUFI(commands.Bot):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -19,7 +16,7 @@ class IUFI(commands.Bot):
         if message.author.bot or not message.guild:
             return False
 
-        if message.channel.id == func.MUSIC_TEXT_CHANNEL:
+        if message.channel.id == func.settings.MUSIC_TEXT_CHANNEL:
             player: iufi.Player = message.guild.voice_client
             if player:
                 await player.check_answer(message)
@@ -37,10 +34,10 @@ class IUFI(commands.Bot):
             for emoji in emojis:
                 await message.add_reaction(emoji)
 
-        if message.channel.category_id not in ALLOWED_CATEGORY_IDS:
+        if message.channel.category_id not in func.settings.ALLOWED_CATEGORY_IDS:
             return False
         
-        if message.channel.id in IGONE_CHANNEL_IDS:
+        if message.channel.id in func.settings.IGONE_CHANNEL_IDS:
             return False
         
         elif message.channel.id == 987354574304190476:
@@ -91,7 +88,7 @@ class IUFI(commands.Bot):
                 for category in os.listdir(image_folder):
                     if new_image.startswith(category):
                         card_id = available_ids.pop(0)
-                        os.rename(os.path.join(func.ROOT_DIR, "newImages", new_image), os.path.join(image_folder, category, f"{card_id}.{'gif' if category == 'celestial' else 'jpg'}"))
+                        os.rename(os.path.join(func.ROOT_DIR, "newImages", new_image), os.path.join(image_folder, category, f"{card_id}.webp"))
                         await func.update_card(card_id, {"$set": {"stars": (stars := randint(1, 5))}}, insert=True)
                         self.iufi.add_card(_id=card_id, tier=category, stars=stars)
 
@@ -142,6 +139,7 @@ class IUFI(commands.Bot):
         except:
             pass
 
+func.settings.load()
 intents = discord.Intents.default()
 intents.members = True
 intents.message_content = True
@@ -154,6 +152,6 @@ bot = IUFI(
     case_insensitive=True,
     intents=intents
 )
-    
+  
 if __name__ == "__main__":
     bot.run(token=func.tokens.token)

@@ -1,0 +1,407 @@
+{
+    "MAX_CARDS": 100,
+    "DEAFAULT_EXP": 100,
+    "MAIN_GUILD": 781828787352240129,
+    "MUSIC_TEXT_CHANNEL": 1216685839585771560,
+    "MUSIC_VOICE_CHANNEL": 1216674440486588457,
+    "ALLOWED_CATEGORY_IDS": [987352501172989993, 1144810748158165043],
+    "IGONE_CHANNEL_IDS": [1004494130874953769, 987354694236131418],
+    "GAME_CHANNEL_IDS": [1155772660979093555, 1155772719909044224, 1155772738858913792, 1155772756730859580],
+    "MUSIC_NODE": {
+        "host": "127.0.0.1",
+        "port": 2333,
+        "password": "youshallnotpass",
+        "identifier": "DEFAULT"
+    },
+    "USER_BASE": {
+        "candies": 0,
+        "exp": 0,
+        "claimed": 0,
+        "cards": [],
+        "collections": {},
+        "potions": {},
+        "actived_potions": {},
+        "roll": {
+            "rare": 0,
+            "epic": 0,
+            "legendary": 0
+        },
+        "cooldown": {
+            "roll": 0,
+            "claim": 0,
+            "daily": 0
+        },
+        "profile": {
+            "bio": "",
+            "main": ""
+        },
+        "quests": {
+            "daily": {
+                "progresses": {},
+                "next_update": 0
+            },
+            "weekly": {
+                "progresses": {},
+                "next_update": 0
+            }
+        }
+    },
+    "COOLDOWN_BASE": {
+        "roll": ["🎲", 600],
+        "claim": ["🎮", 180],
+        "daily": ["📅", 82800],
+        "match_game": ["🃏", 0],
+        "quiz_game": ["💯", 600]
+    },
+    "DAILY_QUESTS": {
+        "ROLL": {
+            "title": "Roll 10 times",
+            "amount": 10,
+            "rewards": [["🍬", "candies", [10, 20]]]
+        },
+        "PLAY_QUIZ_GAME": {
+            "title": "Play quiz 5 times",
+            "amount": 5,
+            "rewards": [["🍬", "candies", [10, 20]]]
+        },
+        "PLAY_MATCH_GAME_LVL_1": {
+            "title": "Play level 1 match game 5 times",
+            "amount": 5,
+            "rewards": [["🍬", "candies", [10, 20]]]
+        },
+        "PLAY_MATCH_GAME_LVL_2": {
+            "title": "Play level 2 match game 5 times",
+            "amount": 5,
+            "rewards": [["🍬", "candies", [15, 25]]]
+        },
+        "PLAY_MATCH_GAME_LVL_3": {
+            "title": "Play level 3 match game 5 times",
+            "amount": 5,
+            "rewards": [["🍬", "candies", [20, 30]]]
+        },
+        "FRAME_CONFIG": {
+            "title": "Add frame to 1 card",
+            "amount": 1,
+            "rewards": [["🍬", "candies", [10, 25]]]
+        },
+        "UPGRADE_CARD": {
+            "title": "Upgrade any cards",
+            "amount": 1,
+            "rewards": [["🍬", "candies", [10, 25]]]
+        },
+        "USE_ANY_POTION": {
+            "title": "Use any potion 1 time",
+            "amount": 1,
+            "rewards": [["🍬", "candies", [10, 20]]]
+        },
+        "COLLECT_ANY_CARD": {
+            "title": "Collect 10 cards of any tier",
+            "amount": 10,
+            "rewards": [["🍬", "candies", [5, 10]]]
+        },
+        "COLLECT_COMMON_CARD": {
+            "title": "Collect 10 common cards",
+            "amount": 10,
+            "rewards": [["🍬", "candies", [10, 20]]]
+        },
+        "COLLECT_RARE_CARD": {
+            "title": "Collect 3 rare cards",
+            "amount": 3,
+            "rewards": [["🍬", "candies", [10, 20]]]
+        },
+        "COLLECT_EPIC_CARD": {
+            "title": "Collect 1 epic cards",
+            "amount": 1,
+            "rewards": [["🍬", "candies", [20, 30]]]
+        },
+        "CONVERT_ANY_CARD": {
+            "title": "Convert 10 cards of any tier",
+            "amount": 10,
+            "rewards": [["🍬", "candies", [5, 10]]]
+        },
+        "TRADE_ANY_CARD": {
+            "title": "Trade 10 cards of any tier",
+            "amount": 10,
+            "rewards": [["🍬", "candies", [5, 10]]]
+        },
+        "BUY_ITEM": {
+            "title": "Buy 5 items from the shop",
+            "amount": 5,
+            "rewards": [["🍬", "candies", [5, 10]]]
+        }
+    },
+    "WEEKLY_QUESTS": {
+        "ROLL": {
+            "title": "Roll 100 times",
+            "amount": 100,
+            "rewards": [["🍬", "candies", [70, 140]]]
+        },
+        "PLAY_QUIZ_GAME": {
+            "title": "Play quiz 50 times",
+            "amount": 50,
+            "rewards": [["🍬", "candies", [100, 200]]]
+        },
+        "PLAY_MATCH_GAME_LVL_1": {
+            "title": "Play level 1 match game 50 times",
+            "amount": 50,
+            "rewards": [["🍬", "candies", [100, 200]]]
+        },
+        "PLAY_MATCH_GAME_LVL_2": {
+            "title": "Play level 2 match game 50 times",
+            "amount": 50,
+            "rewards": [["🍬", "candies", [150, 250]]]
+        },
+        "PLAY_MATCH_GAME_LVL_3": {
+            "title": "Play level 2 match game 50 times",
+            "amount": 50,
+            "rewards": [["🍬", "candies", [200, 300]]]
+        },
+        "FRAME_CONFIG": {
+            "title": "Add frame to 10 card",
+            "amount": 10,
+            "rewards": [["🍬", "candies", [100, 250]]]
+        },
+        "UPGRADE_CARD": {
+            "title": "Upgrade any 10 card",
+            "amount": 10,
+            "rewards": [["🍬", "candies", [100, 250]]]
+        },
+        "USE_ANY_POTION": {
+            "title": "Use any potion 10 times",
+            "amount": 10,
+            "rewards": [["🍬", "candies", [100, 200]]]
+        },
+        "COLLECT_ANY_CARD": {
+            "title": "Collect 200 cards of any tier",
+            "amount": 200,
+            "rewards": [["💎", "roll.epic", 1]]
+        },
+        "COLLECT_COMMON_CARD": {
+            "title": "Collect 100 common cards",
+            "amount": 100,
+            "rewards": [["🍬", "candies", [100, 200]]]
+        },
+        "COLLECT_RARE_CARD": {
+            "title": "Collect 30 rare cards",
+            "amount": 30,
+            "rewards": [["🍬", "candies", [100, 200]]]
+        },
+        "COLLECT_EPIC_CARD": {
+            "title": "Collect 10 epic cards",
+            "amount": 10,
+            "rewards": [["🍬", "candies", [200, 300]]]
+        },
+        "CONVERT_ANY_CARD": {
+            "title": "Convert 100 cards of any tier",
+            "amount": 100,
+            "rewards": [["🍬", "candies", [50, 100]]]
+        },
+        "TRADE_ANY_CARD": {
+            "title": "Trade 30 cards of any tier",
+            "amount": 30,
+            "rewards": [["🍬", "candies", [100, 150]]]
+        },
+        "BUY_ITEM": {
+            "title": "Buy 20 items from the shop",
+            "amount": 20,
+            "rewards": [["🍬", "candies", [200, 300]]]
+        }
+    },
+    "TIERS_BASE": {
+        "common": ["🥬", 1],
+        "rare": ["🌸", 10],
+        "epic": ["💎", 40],
+        "legendary": ["👑", 100],
+        "mystic": ["🦄", 250],
+        "celestial": ["💫", 400]
+    },
+    "FRAMES_BASE": {
+        "hearts": ["💕", 20],
+        "celebrity": ["🌟", 20],
+        "uaena": ["💌", 40],
+        "dandelions": ["🌷", 40],
+        "shine": ["✨", 60],
+        "lovepoem": ["💠", 60],
+        "cheer": ["🎤", 60],
+        "smoon": ["🍓", 60],
+        "signed": ["✍️", 60],
+        "lilac": ["💐", 60],
+        "palette": ["🎨", 60],
+        "starfish": ["🍥", 60],
+        "cactus": ["🌵", 60],
+        "snow": ["❄️", 60],
+        "candy": ["🍬", 60],
+        "chocolate": ["🍫", 60],
+        "kiss": ["💋", 60],
+        "bear": ["🧸", 60],
+        "heart": ["💗", 60]
+    },
+    "POTIONS_BASE": {
+        "speed": {
+            "emoji": "⚡",
+            "expiration": 1800,
+            "levels": {
+                "i": 0.3,
+                "ii": 0.5,
+                "iii": 0.7
+            }
+        },
+        "luck": {
+            "emoji": "🍀",
+            "expiration": 900,
+            "levels": {
+                "i": 3,
+                "ii": 4,
+                "iii": 6
+            }
+        }
+    },
+    "RANK_BASE": {
+        "milk": {
+            "emoji_id": "1173065442009555096",
+            "points": 0,
+            "discord_role": null,
+            "questions": [["easy", 5]],
+            "rewards": {}
+        },
+        "bronze": {
+            "emoji_id": "1173063915098345472",
+            "points": 10,
+            "discord_role": null,
+            "questions": [["easy", 4], ["medium", 1]],
+            "rewards": {
+                "1": ["exp", 50],
+                "2": ["candies", 50],
+                "3": [["potions.speed_ii", 1], ["potions.luck_ii", 1]]
+            }
+        },
+        "silver": {
+            "emoji_id": "1173063924116095087",
+            "points": 25,
+            "discord_role": null,
+            "questions": [["easy", 3], ["medium", 2]],
+            "rewards": {
+                "1": ["exp", 70],
+                "2": ["candies", 80],
+                "3": ["roll.epic", 1],
+                "4": [["potions.speed_iii", 1], ["potions.luck_iii", 1]]
+            }
+        },
+        "gold": {
+            "emoji_id": "1173063917614927975",
+            "points": 60,
+            "discord_role": null,
+            "questions": [["easy", 2], ["medium", 3]],
+            "rewards": {
+                "1": ["exp", 90],
+                "2": ["candies", 80],
+                "3": ["roll.epic", 1],
+                "4": [["potions.speed_iii", 1], ["potions.luck_iii", 1]]
+            }
+        },
+        "platinum": {
+            "emoji_id": "1173063922564218961",
+            "points": 100,
+            "discord_role": null,
+            "questions": [["easy", 1], ["medium", 4]],
+            "rewards": {
+                "1": ["exp", 110],
+                "2": ["candies", 100],
+                "3": ["roll.epic", 1],
+                "4": [["potions.speed_iii", 1], ["potions.luck_iii", 1]]
+            }
+        },
+        "diamond": {
+            "emoji_id": "1173064418075099167",
+            "points": 200,
+            "discord_role": null,
+            "questions": [["medium", 5]],
+            "rewards": {
+                "1": ["exp", 130],
+                "2": ["candies", 150],
+                "3": ["roll.epic", 2],
+                "4": [["potions.speed_iii", 1], ["potions.luck_iii", 1]]
+            }
+        },
+        "master": {
+            "emoji_id": "1173063919846293535",
+            "points": 350,
+            "discord_role": 1201455425820827708,
+            "questions": [["medium", 3], ["hard", 2]],
+            "rewards": {
+                "1": ["exp", 150],
+                "2": ["candies", 200],
+                "3": ["roll.epic", 1],
+                "4": ["roll.legendary", 1],
+                "5": [["potions.speed_iii", 1], ["potions.luck_iii", 1]]
+            }
+        },
+        "challenger": {
+            "emoji_id": "1173064415453663242",
+            "points": 500,
+            "discord_role": 1201455425820827708,
+            "questions": [["medium", 2], ["hard", 3]],
+            "rewards": {
+                "1": ["exp", 200],
+                "2": ["candies", 400],
+                "3": ["roll.epic", 1],
+                "4": ["roll.legendary", 1],
+                "5": [["potions.speed_iii", 1], ["potions.luck_iii", 1]]
+            }
+        }
+    },
+    "TRACK_BASE": {
+        "correct": 0,
+        "wrong": 0,
+        "average_time": 0,
+        "likes": 0,
+        "best_record": {
+            "member": null,
+            "time": null
+        }
+    },
+    "MATCH_GAME_SETTINGS": {
+        "1": {
+            "cooldown": 3600,
+            "timeout": 120,
+            "cards": 3,
+            "elem_per_row": 3,
+            "max_clicks": 8,
+            "rewards": {
+                "1": ["exp", 10],
+                "2": ["candies", 5],
+                "3": [["potions.speed_i", 1], ["potions.luck_i", 1]]
+            }
+        },
+        "2": {
+            "cooldown": 5400,
+            "timeout": 240,
+            "cards": 6,
+            "elem_per_row": 4,
+            "max_clicks": 16,
+            "rewards": {
+                "1": ["exp", 15],
+                "2": ["candies",  5],
+                "4": ["candies",  10],
+                "5": [["potions.speed_ii", 1], ["potions.luck_ii", 1]],
+                "6": ["candies",  15]
+            }
+        },
+        "3": {
+            "cooldown": 7200,
+            "timeout": 480,
+            "cards": 10,
+            "elem_per_row": 5,
+            "max_clicks": 26,
+            "rewards": {
+                "1": ["exp", 20],
+                "2": ["candies",  10],
+                "4": ["candies",  15],
+                "6": [["potions.speed_ii", 1], ["potions.luck_ii", 1]],
+                "8": ["candies",  20],
+                "9": [["potions.speed_iii", 1], ["potions.luck_iii", 1]],
+                "10": ["candies",  100]
+            }
+        }
+    }
+}

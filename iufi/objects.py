@@ -10,8 +10,7 @@ from typing import (
     Optional,
     Union,
     List,
-    TYPE_CHECKING,
-    Any
+    TYPE_CHECKING
 )
 
 from .exceptions import ImageLoadError, IUFIException
@@ -24,168 +23,10 @@ CARD_SIZE = (1080, 1920)
 SIZE_RATE = 0.2
 FRAME_SIZE_INCREMENT = (0.005, 0.003)
 
-TIERS_BASE: dict[str, tuple[str, int]] = {
-    "common": ("🥬", 1),
-    "rare": ("🌸", 10),
-    "epic": ("💎", 40),
-    "legendary": ("👑", 100),
-    "mystic": ("🦄", 250),
-    "celestial": ("💫", 400)
-}
-
-FRAMES_BASE: dict[str, tuple[str, str]] = {
-    "hearts": ("💕", 20),
-    "celebrity": ("🌟", 20),
-    "uaena": ("💌", 40),
-    "dandelions": ("🌷", 40),
-    "shine": ("✨", 60),
-    "lovepoem": ("💠", 60),
-    "cheer": ("🎤", 60),
-    "smoon": ("🍓", 60),
-    "signed": ("✍️", 60),
-    "lilac": ("💐", 60),
-    "palette": ("🎨", 60),
-    "starfish": ("🍥", 60),
-    "cactus": ("🌵", 60),
-    "snow": ("❄️", 60),
-    "candy": ("🍬", 60),
-    "chocolate": ("🍫", 60),
-    "kiss": ("💋", 60),
-    "bear": ("🧸", 60),
-    "heart": ("💗", 60),
-}
-
-POTIONS_BASE: dict[str, str | dict[str, float]] = {
-    "speed": {
-        "emoji": "⚡",
-        "expiration": 1800,
-        "levels": {
-            "i": .3,
-            "ii": .5,
-            "iii": .7
-        }
-    },
-    "luck": {
-        "emoji": "🍀",
-        "expiration": 900,
-        "levels": {
-            "i": 3,
-            "ii": 4,
-            "iii": 6
-        }
-    }
-}
-
 QUIZ_LEVEL_BASE: dict[str, tuple[int, tuple[int, int, hex]]] = {
     "easy": (10, (1, 1, 0x7CD74B)),
     "medium": (20, (3, 2, 0xF9E853)),
     "hard": (30, (5, 3, 0xD75C4B))
-}
-
-RANK_BASE: dict[str, dict[str, Any]] = {
-    "milk": {
-        "emoji_id": "1173065442009555096",
-        "points": 0,
-        "discord_role": None,
-        "questions": [('easy', 5)],
-        "rewards": {}
-    },
-    "bronze": {
-        "emoji_id": "1173063915098345472",
-        "points": 10,
-        "discord_role": None,
-        "questions": [('easy', 4), ('medium', 1)],
-        "rewards": {
-            1: ("exp", 50),
-            2: ("candies", 50),
-            3: [("potions.speed_ii", 1), ("potions.luck_ii", 1)],
-        }
-    },
-    "silver": {
-        "emoji_id": "1173063924116095087",
-        "points": 25,
-        "discord_role": None,
-        "questions": [('easy', 3), ('medium', 2)],
-        "rewards": {
-            1: ("exp", 70),
-            2: ("candies", 80),
-            3: ("roll.epic", 1),
-            4: [("potions.speed_iii", 1), ("potions.luck_iii", 1)],
-        }
-    },
-    "gold": {
-        "emoji_id": "1173063917614927975",
-        "points": 60,
-        "discord_role": None,
-        "questions": [('easy', 2), ('medium', 3)],
-        "rewards": {
-            1: ("exp", 90),
-            2: ("candies", 80),
-            3: ("roll.epic", 1),
-            4: [("potions.speed_iii", 1), ("potions.luck_iii", 1)],
-        }
-    },
-    "platinum": {
-        "emoji_id": "1173063922564218961",
-        "points": 100,
-        "discord_role": None,
-        "questions": [('easy', 1), ('medium', 4)],
-        "rewards": {
-            1: ("exp", 110),
-            2: ("candies", 100),
-            3: ("roll.epic", 1),
-            4: [("potions.speed_iii", 1), ("potions.luck_iii", 1)],
-        }
-    },
-    "diamond": {
-        "emoji_id": "1173064418075099167",
-        "points": 200,
-        "discord_role": None,
-        "questions": [('medium', 5)],
-        "rewards": {
-            1: ("exp", 130),
-            2: ("candies", 150),
-            3: ("roll.epic", 2),
-            4: [("potions.speed_iii", 1), ("potions.luck_iii", 1)],
-        }
-    },
-    "master": {
-        "emoji_id": "1173063919846293535",
-        "points": 350,
-        "discord_role": 1201455425820827708,
-        "questions": [('medium', 3), ('hard', 2)],
-        "rewards": {
-            1: ("exp", 150),
-            2: ("candies", 200),
-            3: ("roll.epic", 1),
-            4: ("roll.legendary", 1),
-            5: [("potions.speed_iii", 1), ("potions.luck_iii", 1)],
-        },
-    },
-    "challenger": {
-        "emoji_id": "1173064415453663242",
-        "points": 500,
-        "discord_role": 1201455425820827708,
-        "questions": [('medium', 2), ('hard', 3)],
-        "rewards": {
-            1: ("exp", 200),
-            2: ("candies", 400),
-            3: ("roll.epic", 1),
-            4: ("roll.legendary", 1),
-            5: [("potions.speed_iii", 1), ("potions.luck_iii", 1)],
-        }
-    }
-}
-
-TRACK_BASE: dict[str, Any] = {
-    "correct": 0,
-    "wrong": 0,
-    "average_time": 0,
-    "likes": 0,
-    "best_record": {
-        "member": None,
-        "time": None
-    }
 }
 
 class CardObject:
@@ -260,7 +101,7 @@ class Card(CardObject):
         self._frame: str = frame
 
         self._image: list[Image.Image] | Image.Image = None
-        self._emoji: str = TIERS_BASE.get(self._tier)[0]
+        self._emoji: str = func.settings.TIERS_BASE.get(self._tier)[0]
 
     def _load_frame(self, image: Image.Image, frame: str = None, *, size_rate: float = SIZE_RATE) -> Image.Image:
         try:
@@ -361,7 +202,7 @@ class Card(CardObject):
     
     @property
     def cost(self) -> int:
-        price = TIERS_BASE.get(self._tier)[1]
+        price = func.settings.TIERS_BASE.get(self._tier)[1]
         if self.stars > 5:
             price *= 1 + ((self.stars - 5) * .25)
 
@@ -374,7 +215,7 @@ class Card(CardObject):
 
     @property
     def frame(self) -> tuple[str, str]:
-        return FRAMES_BASE.get(self._frame)[0], self._frame
+        return func.settings.FRAMES_BASE.get(self._frame)[0], self._frame
     
     @property
     def image(self) -> list[Image.Image] | Image.Image:
@@ -405,7 +246,7 @@ class Card(CardObject):
 
     @property
     def display_frame(self) -> str:
-        return f"🖼️ {FRAMES_BASE.get(self._frame)[0] if self._frame else '- '}"
+        return f"🖼️ {func.settings.FRAMES_BASE.get(self._frame)[0] if self._frame else '- '}"
 
     def __str__(self) -> str:
         return f"{self._emoji} {self.id.zfill(5)} " + (f"({self.tag})" if self.tag else "")
