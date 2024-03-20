@@ -1,10 +1,12 @@
 import discord
 import functions as func
 
+from iufi import TIERS_BASE
+
 SHOP_BASE: list[tuple[str, str, int]] = [
-    (func.settings.TIERS_BASE.get("rare")[0], "roll.rare", 30),
-    (func.settings.TIERS_BASE.get("epic")[0], "roll.epic", 100),
-    (func.settings.TIERS_BASE.get("legendary")[0], "roll.legendary", 250)
+    (TIERS_BASE.get("rare")[0], "roll.rare", 30),
+    (TIERS_BASE.get("epic")[0], "roll.epic", 100),
+    (TIERS_BASE.get("legendary")[0], "roll.legendary", 250)
 ]
 
 class QuantityModal(discord.ui.Modal):
@@ -60,10 +62,9 @@ class Dropdown(discord.ui.Select):
                     if user["candies"] < price:
                         return await interaction.followup.send(f"You don't have enough candies! You only have `{user['candies']}` candies", ephemeral=True)
                     
-                    query = func.update_quest_progress(user, "BUY_ITEM", progress=modal.quantity, query={
-                        "$inc": {"candies": -price, item[1]: modal.quantity}
+                    await func.update_user(interaction.user.id, {
+                        "$inc": {"candies": -price, item[1]: modal.quantity},
                     })
-                    await func.update_user(interaction.user.id, query)
 
                     embed = discord.Embed(title="🛒 Shop Purchase", color=discord.Color.random())
                     embed.description = f"```{item[0]} + {modal.quantity}\n🍬 - {price}```"

@@ -7,6 +7,7 @@ class Tasks(commands.Cog):
     def __init__(self, bot: commands.Bot):
         self.bot = bot
         self.invisible = False
+        self.game_channel_ids: list[int] = [1155772660979093555, 1155772719909044224, 1155772738858913792, 1155772756730859580]
 
         self.cache_clear.start()
         self.reminder.start()
@@ -31,13 +32,13 @@ class Tasks(commands.Cog):
         if end_time - time.time() > 3_600:
             return
         
-        guild: discord.Guild = self.bot.get_guild(func.settings.MAIN_GUILD)
+        guild: discord.Guild = self.bot.get_guild(func.MAIN_GUILD)
         if not guild:
             return
         
         roles: dict[str, discord.Role] = {
             rank: guild.get_role(data["discord_role"])
-            for rank, data in func.settings.RANK_BASE.items() if data["discord_role"]
+            for rank, data in iufi.RANK_BASE.items() if data["discord_role"]
         }
         for role in roles.values():
             if not role: continue
@@ -85,7 +86,7 @@ class Tasks(commands.Cog):
                 {"reminder": True},
                 {"$or": [
                     {f"cooldown.{name}": time_range}
-                    for name in func.settings.COOLDOWN_BASE.keys() if name != "claim"
+                    for name in func.COOLDOWN_BASE.keys() if name != "claim"
             ]}
         ]}
 
@@ -96,9 +97,9 @@ class Tasks(commands.Cog):
                 continue
 
             cd: dict[str, float] = doc["cooldown"]
-            for name, (emoji, _) in func.settings.COOLDOWN_BASE.items():
+            for name, (emoji, _) in func.COOLDOWN_BASE.items():
                 if name != "claim":
-                    await self.check_and_schedule(user, current_time, cd.get(name, 0), f"{emoji} Your {name.split('_')[0]} is ready! Join <#{random.choice(func.settings.GAME_CHANNEL_IDS)}> and roll now.")        
+                    await self.check_and_schedule(user, current_time, cd.get(name, 0), f"{emoji} Your {name.split('_')[0]} is ready! Join <#{random.choice(self.game_channel_ids)}> and roll now.")        
 
 async def setup(bot: commands.Bot):
     await bot.add_cog(Tasks(bot))

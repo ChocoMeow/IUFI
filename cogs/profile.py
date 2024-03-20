@@ -1,39 +1,22 @@
-import discord, iufi, time, asyncio, copy, random
+import discord, iufi, time, asyncio
 import functions as func
 
 from discord.ext import commands
 from views import (
     CollectionView,
-    PhotoCardView
-)
-from typing import (
-    Dict,
-    Any
+    PhotoCardView,
+    GAME_SETTINGS
 )
 
 DAILY_ROWS: list[str] = ["🟥", "🟧", "🟨", "🟩", "🟦", "🟪"]
 WEEKLY_REWARDS: list[tuple[str, str, int]] = [
     ("🍬", "candies", 50),
-    (func.settings.TIERS_BASE.get("rare")[0], "roll.rare", 1),
+    (iufi.TIERS_BASE.get("rare")[0], "roll.rare", 1),
     ("🍬", "candies", 100),
-    (func.settings.TIERS_BASE.get("epic")[0], "roll.epic", 1),
+    (iufi.TIERS_BASE.get("epic")[0], "roll.epic", 1),
     ("🍬", "candies", 500),
-    (func.settings.TIERS_BASE.get("legendary")[0], "roll.legendary", 1),
+    (iufi.TIERS_BASE.get("legendary")[0], "roll.legendary", 1),
 ]
-
-def generate_progress_bar(total, progress_percentage, filled='⣿', in_progress='⣦', empty='⣀'):
-    progress = int(total * progress_percentage / 100)
-    filled_length = progress
-    in_progress_length = 1 if progress_percentage - filled_length > 0 else 0
-    empty_length = total - filled_length - in_progress_length
-
-    # ANSI escape code for magenta color
-    start_color = f"[0;1;{'32' if total == progress else '35'}m"
-    end_color = "[0m"
-
-    progress_bar = start_color + filled * filled_length + in_progress * in_progress_length + end_color + empty * empty_length
-
-    return progress_bar
 
 class Profile(commands.Cog):
     def __init__(self, bot: commands.Bot) -> None:
@@ -66,10 +49,10 @@ class Profile(commands.Cog):
 
         embed = discord.Embed(title=f"👤 {member.display_name}'s Profile", color=discord.Color.random())
         embed.description = f"```{bio}```" if bio else ""
-        embed.description += f"```📙 Photocards: {len(user.get('cards', []))}/{func.settings.MAX_CARDS}\n⚔️ Level: {level} ({(exp/func.settings.DEAFAULT_EXP)*100:.1f}%)```\u200b"
+        embed.description += f"```📙 Photocards: {len(user.get('cards', []))}/{func.MAX_CARDS}\n⚔️ Level: {level} ({(exp/func.DEAFAULT_EXP)*100:.1f}%)```\u200b"
 
         embed.add_field(name="Ranked Stats:", value=f"> <:{rank_name}:{rank_emoji}> {rank_name.title()} (`{quiz_stats['points']}`)\n> 🎯 K/DA: `{round(quiz_stats['correct'] / total_questions, 1) if total_questions else 0}` (C: `{quiz_stats['correct']}` | W: `{quiz_stats['wrong'] + quiz_stats['timeout']}`)\n> 🕒 Average Time: `{func.convert_seconds(quiz_stats['average_time'])}`", inline=True)
-        embed.add_field(name="Card Match Stats:", value="\n".join(f"> {DAILY_ROWS[int(level) - 4]} **Level {level}**: " + (f"🃏 `{stats.get('matched', 0)}` 🕒 `{func.convert_seconds(stats.get('finished_time'))}`" if (stats := card_match_stats.get(level)) else "Not attempt yet") for level in func.settings.MATCH_GAME_SETTINGS.keys()), inline=True)
+        embed.add_field(name="Card Match Stats:", value="\n".join(f"> {DAILY_ROWS[int(level) - 4]} **Level {level}**: " + (f"🃏 `{stats.get('matched', 0)}` 🕒 `{func.convert_seconds(stats.get('finished_time'))}`" if (stats := card_match_stats.get(level)) else "Not attempt yet") for level in GAME_SETTINGS.keys()), inline=True)
 
         card = iufi.CardPool.get_card(user["profile"]["main"])
         if card and card.owner_id == user["_id"]:
@@ -237,7 +220,7 @@ class Profile(commands.Cog):
         
         reward = {"candies": 5} if claimed % 5 else {WEEKLY_REWARDS[(claimed//5) - 1][1]: WEEKLY_REWARDS[(claimed//5) - 1][2]}
         await func.update_user(ctx.author.id, {
-            "$set": {"claimed": claimed, "cooldown.daily": time.time() + func.settings.COOLDOWN_BASE["daily"][1]},
+            "$set": {"claimed": claimed, "cooldown.daily": time.time() + func.COOLDOWN_BASE["daily"][1]},
             "$inc": reward
         })
 
@@ -277,8 +260,8 @@ class Profile(commands.Cog):
         embed.description = f"```{'🍬 Starcandies':<20} x{user['candies']}\n"
 
         for tier, count in user.get("roll").items():
-            if count > 0 and tier in func.settings.TIERS_BASE.keys():
-                emoji, _ = func.settings.TIERS_BASE.get(tier)
+            if count > 0 and tier in iufi.TIERS_BASE.keys():
+                emoji, _ = iufi.TIERS_BASE.get(tier)
                 embed.description += f"{emoji} {tier.title() + ' Rolls':<18} x{count}\n"
 
         embed.description += f"\n\n"
@@ -290,45 +273,6 @@ class Profile(commands.Cog):
         ) if sum(potions_data.values()) else "Potion not found!")
 
         embed.description += f"🍶 Potions:\n{potions}```"
-        embed.set_thumbnail(url=ctx.author.display_avatar.url)
-        await ctx.reply(embed=embed)
-
-    @commands.command(aliases=["qu"])
-    async def quests(self, ctx: commands.Context):
-        """Shows the daily quests"""
-        user = await func.get_user(ctx.author.id)
-
-        embed = discord.Embed(color=discord.Color.random())
-        
-        for quest_type in func.settings.USER_BASE["quests"].keys():    
-            user_quest: Dict[str, Any] = user.copy().get("quests", {}).get(quest_type, copy.deepcopy(func.settings.USER_BASE["quests"][quest_type]))
-
-            QUESTS_BASE: Dict[str, Any] = getattr(func.settings, f"{quest_type.upper()}_QUESTS", None)
-            if not QUESTS_BASE:
-                continue
-            
-            if user_quest["next_update"] < (now := time.time()):
-                query = {}
-
-                settings = func.QUESTS_SETTINGS.get(quest_type, {})
-                new_quests = random.sample(list(QUESTS_BASE.keys()), k=settings.get("items", 0))
-                user_quest["progresses"] = query.setdefault("$set", {})[f"quests.{quest_type}.progresses"] = {str(quest): 0 for quest in new_quests}
-                query["$set"][f"quests.{quest_type}.next_update"] = now + settings.get("update_time", 0)
-
-                await func.update_user(ctx.author.id, query)
-
-            reset_time = round(user_quest.get("next_update", 0))
-            details = ""
-            for quest_name, progress in user_quest.get("progresses", {}).items():
-                quest = QUESTS_BASE.get(quest_name)
-                if quest:
-                    progress_percentage = (progress / quest['amount']) * 100
-                    progress_bar = generate_progress_bar(15, progress_percentage)
-                    details += f"{'✅' if progress >= quest['amount'] else '❌'} {quest['title']}\n"
-                    details += f"```ansi\n➢ Reward: " + " | ".join(f"{r[0]} {f'{r[2][0]} ~ {r[2][1]}' if isinstance(r[2], list) else r[2]}" for r in quest["rewards"]) + f"\n➢ {progress_bar} {int(progress_percentage)}% ({progress}/{quest['amount']})```\n"
-            
-            embed.add_field(name=f"{quest_type.title()} Quests", value=f"Resets at <t:{reset_time}:t> (<t:{reset_time}:R>)\n\n{details}", inline=False)
-
         embed.set_thumbnail(url=ctx.author.display_avatar.url)
         await ctx.reply(embed=embed)
 

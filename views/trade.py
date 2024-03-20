@@ -57,24 +57,17 @@ class TradeView(discord.ui.View):
             self.stop()
             return await interaction.response.send_message(f"This card is ineligible for trading because its owner has already converted it!", ephemeral=True)
         
-        _buyer = await func.get_user(buyer.id)
-        if _buyer["candies"] < self.candies:
-            return await interaction.response.send_message(f"You don't have enough candies! You only have `{_buyer['candies']}` candies", ephemeral=True)
+        user = await func.get_user(buyer.id)
+        if user["candies"] < self.candies:
+            return await interaction.response.send_message(f"You don't have enough candies! You only have `{user['candies']}` candies", ephemeral=True)
 
-        if len(_buyer["cards"]) >= func.settings.MAX_CARDS:
+        if len(user["cards"]) >= func.MAX_CARDS:
             return await interaction.response.send_message(f"**Your inventory is full.**", ephemeral=True)
         
         await interaction.response.defer()
         self.card.change_owner(buyer.id)
-
-        # Seller
-        _seller = func.get_user(self.seller.id)
-        seller_query = func.update_quest_progress(_seller, "TRADE_ANY_CARD", query={"$pull": {"cards": self.card.id}, "$inc": {"candies": self.candies}})
-        await func.update_user(self.seller.id, seller_query)
-        
-        # Buyer
-        buyer_query = func.update_quest_progress(_buyer, "TRADE_ANY_CARD", query={"$push": {"cards": self.card.id}, "$inc": {"candies": -self.candies}})
-        await func.update_user(buyer.id, buyer_query)
+        await func.update_user(self.seller.id, {"$pull": {"cards": self.card.id}, "$inc": {"candies": self.candies}})
+        await func.update_user(buyer.id, {"$push": {"cards": self.card.id}, "$inc": {"candies": -self.candies}})
         await func.update_card(self.card.id, {"$set": {"owner_id": buyer.id}})
 
         embed = discord.Embed(title="✅ Traded", color=discord.Color.random())

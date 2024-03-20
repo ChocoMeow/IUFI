@@ -5,12 +5,58 @@ from iufi import (
     Card,
     TempCard,
     CardPool,
-    gen_cards_view
+    gen_cards_view,
+    POTIONS_BASE
 )
 
 from random import shuffle, choice
 from typing import Any
 from collections import Counter
+
+GAME_SETTINGS: dict[str, dict[str, Any]] = {
+    "1": {
+        "cooldown": 3_600,
+        "timeout": 120,
+        "cards": 3,
+        "elem_per_row": 3,
+        "max_clicks": 8,
+        "rewards": {
+            1: ("exp", 10),
+            2: ("candies",  5),
+            3: [("potions.speed_i", 1), ("potions.luck_i", 1)]
+        },
+    },
+    "2": {
+        "cooldown": 5_400,
+        "timeout": 240,
+        "cards": 6,
+        "elem_per_row": 4,
+        "max_clicks": 16,
+        "rewards": {
+            1: ("exp", 15),
+            2: ("candies",  5),
+            4: ("candies",  10),
+            5: [("potions.speed_ii", 1), ("potions.luck_ii", 1)],
+            6: ("candies",  15),
+        },
+    },
+    "3": {
+        "cooldown": 7_200,
+        "timeout": 480,
+        "cards": 10,
+        "elem_per_row": 5,
+        "max_clicks": 26,
+        "rewards": {
+            1: ("exp", 20),
+            2: ("candies",  10),
+            4: ("candies",  15),
+            6: [("potions.speed_ii", 1), ("potions.luck_ii", 1)],
+            8: ("candies",  20),
+            9: [("potions.speed_iii", 1), ("potions.luck_iii", 1)],
+            10: ("candies",  100)
+        },
+    }
+}
 
 class GuessButton(discord.ui.Button):
     def __init__(self, card: Card, *args, **kwargs) -> None:
@@ -85,7 +131,7 @@ class MatchGame(discord.ui.View):
 
         self.author: discord.Member = author
         self._level: str = level
-        self._data: dict[str, Any] = func.settings.MATCH_GAME_SETTINGS.get(level)
+        self._data: dict[str, Any] = GAME_SETTINGS.get(level)
         self._cards: int = self._data.get("cards")
         self._max_click: int = self._data.get("max_clicks")
         self._start_time: float = time.time()
@@ -138,10 +184,10 @@ class MatchGame(discord.ui.View):
         
         rewards = f"{'Pairs':>9}{'Rewards':>9}\n"
         for matched, reward in self._data.get("rewards").items():
-            if isinstance(reward[0], list):
+            if isinstance(reward, list):
                 reward = choice(reward)
             
-            if is_matched := (int(matched) <= matched_raw):
+            if is_matched := (matched <= matched_raw):
                 if reward[0] not in final_rewards:
                     final_rewards[reward[0]] = 0
                 final_rewards[reward[0]] += reward[1]
@@ -158,7 +204,7 @@ class MatchGame(discord.ui.View):
 
             else:
                 reward_name = reward_name[1].split("_")
-                potion_data = func.settings.POTIONS_BASE.get(reward_name[0])
+                potion_data = POTIONS_BASE.get(reward_name[0])
                 rewards += f"    {potion_data.get('emoji') + ' ' + reward_name[0].title() + ' ' + reward_name[1].upper() + ' Potion':<18} x{amount}\n"
             
         embed.description = f"```{'🕔 Time Used:':<15} {func.convert_seconds(self.used_time)}\n{'🃏 Matched:':<15} {matched_raw}```\n```{rewards}```"

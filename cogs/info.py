@@ -2,7 +2,10 @@ import discord, iufi
 import functions as func
 
 from discord.ext import commands
-from views import HelpView
+from views import (
+    HelpView, 
+    GAME_SETTINGS
+)
 
 LEADERBOARD_EMOJIS: list[str] = ["🥇", "🥈", "🥉", "🏅"]
 
@@ -36,7 +39,7 @@ class Info(commands.Cog):
                 description += f"{LEADERBOARD_EMOJIS[index if index <= 2 else 3]} " + highlight_text(f"{func.truncate_string(member.display_name):<18} {level:>5} ⚔️", member == ctx.author)
         
         if rank > len(users):
-            description += ("┇\n" if rank > len(users) + 1 else "") + f"{LEADERBOARD_EMOJIS[3]} " + highlight_text(f"{func.truncate_string(ctx.author.display_name):<18} {func.calculate_level(user['exp']):>5} ⚔️")
+            description += ("┇\n" if rank > len(users) + 1 else "") + f"{LEADERBOARD_EMOJIS[3]} " + highlight_text(f"{func.truncate_string(ctx.author.display_name):<18} {user['exp']:>5} ⚔️")
 
         if not description:
             description = "The leaderboard is currently empty."
@@ -49,7 +52,7 @@ class Info(commands.Cog):
     @leaderboard.command(aliases=["mg"])
     async def matchgame(self, ctx: commands.Context, level: str = "1"):
         """Shows the IUFI Matching Game leaderboard."""
-        if level not in (levels := func.settings.MATCH_GAME_SETTINGS.keys()):
+        if level not in (levels := GAME_SETTINGS.keys()):
             return await ctx.reply(f"Invalid level selection! Please select a valid level: `{', '.join(levels)}`")
         
         users = await func.USERS_DB.find().sort([

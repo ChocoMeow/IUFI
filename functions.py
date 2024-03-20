@@ -1,4 +1,4 @@
-import os, time, copy, json, random
+import os, time, copy, json
 
 from motor.motor_asyncio import (
     AsyncIOMotorClient,
@@ -10,14 +10,8 @@ from datetime import (
     timedelta
 )
 
-from typing import (
-    List,
-    Dict,
-    Any,
-    Union
-)
-
 from dotenv import load_dotenv
+from typing import Any
 
 ROOT_DIR = os.path.dirname(os.path.abspath(__file__))
 
@@ -29,52 +23,7 @@ class TOKEN:
         self.mongodb_url = os.getenv("MONGODB_URL")
         self.mongodb_name = os.getenv("MONGODB_NAME")
 
-class Settings:
-    def __init__(self):
-        self.MAX_CARDS: int = 0
-        self.DEAFAULT_EXP: int = 0
-        self.MAIN_GUILD: int = 0
-        self.MUSIC_TEXT_CHANNEL: int = 0
-        self.MUSIC_VOICE_CHANNEL: int = 0
-        self.ALLOWED_CATEGORY_IDS: List[int] = []
-        self.IGONE_CHANNEL_IDS: List[int] = []
-        self.GAME_CHANNEL_IDS: List[int] = []
-        self.MUSIC_NODE: Dict[str, Union[str, int]] = {}
-        self.USER_BASE: Dict[str, Any] = {}
-        self.COOLDOWN_BASE: Dict[str, tuple[str, int]] = {}
-        self.DAILY_QUESTS: Dict[str, Union[str, int]] = {}
-        self.WEEKLY_QUESTS: Dict[str, Union[str, int]] = {}
-        self.TIERS_BASE: Dict[str, List[str, int]] = {}
-        self.FRAMES_BASE: Dict[str, List[str, str]] = {}
-        self.POTIONS_BASE: Dict[str, Union[str, Dict[str, float]]] = {}
-        self.RANK_BASE: Dict[Dict, Dict[str, Any]] = {}
-        self.TRACK_BASE: Dict[str, Any] = {}
-        self.MATCH_GAME_SETTINGS: Dict[str, Dict[str, Any]] = {}
-
-    def load(self):
-        settings = open_json("settings.json")
-        self.MAX_CARDS = settings.get("MAX_CARDS")
-        self.DEAFAULT_EXP = settings.get("DEAFAULT_EXP")
-        self.MAIN_GUILD = settings.get("MAIN_GUILD")
-        self.MUSIC_TEXT_CHANNEL = settings.get("MUSIC_TEXT_CHANNEL")
-        self.MUSIC_VOICE_CHANNEL = settings.get("MUSIC_VOICE_CHANNEL")
-        self.ALLOWED_CATEGORY_IDS = settings.get("ALLOWED_CATEGORY_IDS")
-        self.IGONE_CHANNEL_IDS = settings.get("IGONE_CHANNEL_IDS")
-        self.GAME_CHANNEL_IDS = settings.get("GAME_CHANNEL_IDS")
-        self.MUSIC_NODE = settings.get("MUSIC_NODE")
-        self.USER_BASE = settings.get("USER_BASE")
-        self.COOLDOWN_BASE = settings.get("COOLDOWN_BASE")
-        self.DAILY_QUESTS = {k: v for k, v in settings.get("DAILY_QUESTS").items()}
-        self.WEEKLY_QUESTS = {k: v for k, v in settings.get("WEEKLY_QUESTS").items()}
-        self.TIERS_BASE = settings.get("TIERS_BASE")
-        self.FRAMES_BASE = settings.get("FRAMES_BASE")
-        self.POTIONS_BASE = settings.get("POTIONS_BASE")
-        self.RANK_BASE = settings.get("RANK_BASE")
-        self.TRACK_BASE = settings.get("TRACK_BASE")
-        self.MATCH_GAME_SETTINGS = settings.get("MATCH_GAME_SETTINGS")
-
 tokens: TOKEN = TOKEN()
-settings: Settings = Settings()
 
 # DB Var
 MONGO_DB: AsyncIOMotorClient = None
@@ -83,17 +32,43 @@ CARDS_DB: AsyncIOMotorCollection = None
 QUESTIONS_DB: AsyncIOMotorCollection = None
 MUSIC_DB: AsyncIOMotorCollection = None
 
-USERS_BUFFER: Dict[int, Dict[str, Any]] = {}
+USERS_BUFFER: dict[int, dict[str, Any]] = {}
+MAX_CARDS: int = 100
+DEAFAULT_EXP: int = 100
+MAIN_GUILD: int = 781828787352240129
+MUSIC_TEXT_CHANNEL: int = 1143735704778711120
+MUSIC_VOICE_CHANNEL: int = 781828787352240133
 
-QUESTS_SETTINGS: Dict[str, Dict[str, int]] = {
-    "daily": {
-        "update_time": 86_400,
-        "items": 3
+USER_BASE: dict[str, Any] = {
+    "candies": 0,
+    "exp": 0,
+    "claimed": 0,
+    "cards": [],
+    "collections": {},
+    "potions": {},
+    "actived_potions": {},
+    "roll": {
+        "rare": 0,
+        "epic": 0,
+        "legendary": 0
     },
-    "weekly": {
-        "update_time": 86_400 * 7,
-        "items": 2
+    "cooldown": {
+        "roll": 0,
+        "claim": 0,
+        "daily": 0
+    },
+    "profile": {
+        "bio": "",
+        "main": ""
     }
+}
+
+COOLDOWN_BASE: dict[str, tuple[str, int]] = {
+    "roll": ("🎲", 600),
+    "claim": ("🎮", 180),
+    "daily": ("📅", 82800),
+    "match_game": ("🃏", 0),
+    "quiz_game": ("💯", 600)
 }
 
 def open_json(path: str) -> dict:
@@ -102,6 +77,16 @@ def open_json(path: str) -> dict:
             return json.load(json_file)
     except:
         return {}
+    
+def update_json(path: str, new_data: dict) -> None:
+    data = open_json(path)
+    if not data:
+        return
+    
+    data.update(new_data)
+
+    with open(os.path.join(ROOT_DIR, path), "w") as json_file:
+        json.dump(data, json_file, indent=4)
 
 def cal_retry_time(end_time: float, default: str = None) -> str | None:
     if end_time <= (current_time := time.time()):
@@ -117,8 +102,8 @@ def cal_retry_time(end_time: float, default: str = None) -> str | None:
 def calculate_level(exp: int) -> tuple[int, int]:
     level = 0
 
-    while exp >= settings.DEAFAULT_EXP:
-        exp -= settings.DEAFAULT_EXP
+    while exp >= DEAFAULT_EXP:
+        exp -= DEAFAULT_EXP
         level += 1
 
     return level, exp
@@ -131,8 +116,8 @@ def convert_seconds(seconds: float) -> str:
     else:
         return f"{seconds:.1f}s"
 
-def get_potions(potions: Dict[str, float], base: Dict[str, str | Dict[str, float]], details: bool = False) -> Dict[str, float]:
-    result: Dict[str, float] = {}
+def get_potions(potions: dict[str, float], base: dict[str, str | dict[str, float]], details: bool = False) -> dict[str, float]:
+    result: dict[str, float] = {}
     for potion, expiration in potions.items():
         if expiration <= time.time():
             continue
@@ -180,7 +165,7 @@ def get_month_unix_timestamps() -> tuple[float, float]:
 
     return time.mktime(start_of_this_month.timetuple()), time.mktime(start_of_next_month.timetuple())
 
-def match_string(input_string: str, word_list: List[str]) -> str:
+def match_string(input_string: str, word_list: list[str]) -> str:
     for word in word_list:
         if word.startswith(input_string):
             return word
@@ -189,58 +174,15 @@ def match_string(input_string: str, word_list: List[str]) -> str:
 def truncate_string(text: str, length: int = 18) -> str:
     return text[:length - 3] + "..." if len(text) > length else text
 
-async def get_user(user_id: int, *, insert: bool = True) -> Dict[str, Any]:
+async def get_user(user_id: int, *, insert: bool = True) -> dict[str, Any]:
     user = USERS_BUFFER.get(user_id)
     if not user:
         user = await USERS_DB.find_one({"_id": user_id})
         if not user and insert:
-            await USERS_DB.insert_one({"_id": user_id, **settings.USER_BASE})
+            await USERS_DB.insert_one({"_id": user_id, **USER_BASE})
 
-        user = USERS_BUFFER[user_id] = user if user else copy.deepcopy(settings.USER_BASE) | {"_id": user_id}
+        user = USERS_BUFFER[user_id] = user if user else copy.deepcopy(USER_BASE) | {"_id": user_id}
     return user
-
-def update_quest_progress(user: Dict[str, Any], completed_quests: Union[str, List[str]], progress: int = 1, *, query: Dict[str, Any] = None) -> Dict[str, Any]:
-    global settings
-
-    completed_quests = completed_quests if isinstance(completed_quests, list) else [completed_quests]
-    if not query:
-        query: Dict[str, Any] = {}
-
-    for quest_type in settings.USER_BASE["quests"].keys():
-        user_quest = user.copy().get("quests", {}).get(quest_type, copy.deepcopy(settings.USER_BASE["quests"][quest_type]))
-
-        QUESTS_BASE: Dict[str, Any] = getattr(settings, f"{quest_type.upper()}_QUESTS", None)
-        if not QUESTS_BASE:
-            continue
-        
-        #  Check if the quests need to be updated
-        if (quest_updated := user_quest["next_update"] < (now := time.time())):
-            _settings = QUESTS_SETTINGS.get(quest_type, {})
-            new_quests = random.sample(list(QUESTS_BASE.keys()), k=_settings.get("items", 0))
-            user_quest["progresses"] = query.setdefault("$set", {})[f"quests.{quest_type}.progresses"] = {str(quest): 0 for quest in new_quests}
-            query["$set"][f"quests.{quest_type}.next_update"] = now + _settings.get("update_time", 0)
-
-        # Update the progress for each quest
-        for quest_name in completed_quests:
-            if quest_name in user_quest["progresses"]:
-                if user_quest["progresses"][quest_name] < QUESTS_BASE[quest_name]["amount"]:
-
-                    # If the quests were just updated, set the progress to the specified 
-                    if quest_updated:
-                        query["$set"][f"quests.{quest_type}.progresses"][quest_name] = progress
-                    else:
-                        query.setdefault("$inc", {})[f"quests.{quest_type}.progresses.{quest_name}"] = progress
-
-                    # If the quest is now complete, select a reward at random
-                    if (user_quest["progresses"][quest_name] + progress) >= QUESTS_BASE[quest_name]["amount"]:
-                        reward = random.choice(QUESTS_BASE[quest_name]["rewards"])
-                        query.setdefault("$inc", {}).setdefault(reward[1], 0)
-                        query["$inc"].setdefault("exp", 0)
-
-                        query["$inc"][reward[1]] += random.randint(reward[2][0], reward[2][1]) if isinstance(reward[2], list) else reward[2]
-                        query["$inc"]["exp"] += 10
-
-    return query
 
 async def update_user(user_id: int, data: dict) -> None:
     user = await get_user(user_id)
@@ -277,7 +219,7 @@ async def update_user(user_id: int, data: dict) -> None:
 
     await USERS_DB.update_one({"_id": user_id}, data)
 
-async def update_card(card_id: List[str] | str, data: dict, insert: bool = False) -> None:
+async def update_card(card_id: list[str] | str, data: dict, insert: bool = False) -> None:
     if insert:
         await CARDS_DB.insert_one({"_id": card_id})
 
