@@ -128,7 +128,7 @@ class Card(CardObject):
             image_path = os.path.join(func.ROOT_DIR, "images", self._tier)
 
             with Image.open(os.path.join(image_path, f"{self.id}.webp")) as img:
-                images = [self._load_frame(frame.convert('RGB'), size_rate=size_rate) for frame in ImageSequence.Iterator(img)]
+                images = [self._load_frame(frame.convert('RGBA'), size_rate=size_rate) for frame in ImageSequence.Iterator(img)]
                 if len(images) > 1:
                     return images
                 
