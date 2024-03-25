@@ -299,6 +299,9 @@ class Profile(commands.Cog):
         user = await func.get_user(ctx.author.id)
 
         embed = discord.Embed(color=discord.Color.random())
+        query = func.update_quest_progress(user, "", progress=0, query={})
+        if query:
+            await func.update_user(ctx.author.id, query)
         
         for quest_type in func.settings.USER_BASE["quests"].keys():    
             user_quest: Dict[str, Any] = user.copy().get("quests", {}).get(quest_type, copy.deepcopy(func.settings.USER_BASE["quests"][quest_type]))
@@ -306,16 +309,6 @@ class Profile(commands.Cog):
             QUESTS_BASE: Dict[str, Any] = getattr(func.settings, f"{quest_type.upper()}_QUESTS", None)
             if not QUESTS_BASE:
                 continue
-            
-            if user_quest["next_update"] < (now := time.time()):
-                query = {}
-
-                settings = func.QUESTS_SETTINGS.get(quest_type, {})
-                new_quests = random.sample(list(QUESTS_BASE.keys()), k=settings.get("items", 0))
-                user_quest["progresses"] = query.setdefault("$set", {})[f"quests.{quest_type}.progresses"] = {str(quest): 0 for quest in new_quests}
-                query["$set"][f"quests.{quest_type}.next_update"] = now + settings.get("update_time", 0)
-
-                await func.update_user(ctx.author.id, query)
 
             reset_time = round(user_quest.get("next_update", 0))
             details = ""

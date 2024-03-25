@@ -224,7 +224,8 @@ def update_quest_progress(user: Dict[str, Any], completed_quests: Union[str, Lis
         for quest_name in completed_quests:
             if quest_name in user_quest["progresses"]:
                 if user_quest["progresses"][quest_name] < QUESTS_BASE[quest_name]["amount"]:
-
+                    progress = QUESTS_BASE[quest_name]["amount"] if user_quest["progresses"][quest_name] + progress >= QUESTS_BASE[quest_name]["amount"] else progress
+                    
                     # If the quests were just updated, set the progress to the specified 
                     if quest_updated:
                         query["$set"][f"quests.{quest_type}.progresses"][quest_name] = progress
