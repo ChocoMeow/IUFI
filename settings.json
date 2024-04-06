@@ -152,7 +152,7 @@
             "rewards": [["🍬", "candies", [150, 250]]]
         },
         "PLAY_MATCH_GAME_LVL_3": {
-            "title": "Play level 2 match game 20 times",
+            "title": "Play level 3 match game 20 times",
             "amount": 20,
             "rewards": [["🍬", "candies", [200, 300]]]
         },
