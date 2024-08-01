@@ -37,7 +37,7 @@ class IUFI(commands.Bot):
         if message.channel.category_id not in func.settings.ALLOWED_CATEGORY_IDS:
             return False
         
-        if message.channel.id in func.settings.IGONE_CHANNEL_IDS:
+        if message.channel.id in func.settings.IGNORE_CHANNEL_IDS:
             return False
         
         elif message.channel.id == 987354574304190476:

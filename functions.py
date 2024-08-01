@@ -32,12 +32,12 @@ class TOKEN:
 class Settings:
     def __init__(self):
         self.MAX_CARDS: int = 0
-        self.DEAFAULT_EXP: int = 0
+        self.DEFAULT_EXP: int = 0
         self.MAIN_GUILD: int = 0
         self.MUSIC_TEXT_CHANNEL: int = 0
         self.MUSIC_VOICE_CHANNEL: int = 0
         self.ALLOWED_CATEGORY_IDS: List[int] = []
-        self.IGONE_CHANNEL_IDS: List[int] = []
+        self.IGNORE_CHANNEL_IDS: List[int] = []
         self.GAME_CHANNEL_IDS: List[int] = []
         self.MUSIC_NODE: Dict[str, Union[str, int]] = {}
         self.USER_BASE: Dict[str, Any] = {}
@@ -54,12 +54,12 @@ class Settings:
     def load(self):
         settings = open_json("settings.json")
         self.MAX_CARDS = settings.get("MAX_CARDS")
-        self.DEAFAULT_EXP = settings.get("DEAFAULT_EXP")
+        self.DEFAULT_EXP = settings.get("DEFAULT_EXP")
         self.MAIN_GUILD = settings.get("MAIN_GUILD")
         self.MUSIC_TEXT_CHANNEL = settings.get("MUSIC_TEXT_CHANNEL")
         self.MUSIC_VOICE_CHANNEL = settings.get("MUSIC_VOICE_CHANNEL")
         self.ALLOWED_CATEGORY_IDS = settings.get("ALLOWED_CATEGORY_IDS")
-        self.IGONE_CHANNEL_IDS = settings.get("IGONE_CHANNEL_IDS")
+        self.IGNORE_CHANNEL_IDS = settings.get("IGNORE_CHANNEL_IDS")
         self.GAME_CHANNEL_IDS = settings.get("GAME_CHANNEL_IDS")
         self.MUSIC_NODE = settings.get("MUSIC_NODE")
         self.USER_BASE = settings.get("USER_BASE")
@@ -117,8 +117,8 @@ def cal_retry_time(end_time: float, default: str = None) -> str | None:
 def calculate_level(exp: int) -> tuple[int, int]:
     level = 0
 
-    while exp >= settings.DEAFAULT_EXP:
-        exp -= settings.DEAFAULT_EXP
+    while exp >= settings.DEFAULT_EXP:
+        exp -= settings.DEFAULT_EXP
         level += 1
 
     return level, exp
