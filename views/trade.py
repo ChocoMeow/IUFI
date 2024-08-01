@@ -20,6 +20,7 @@ class TradeView(discord.ui.View):
         self.card: Card = card
         self.candies: int = candies
 
+        self.is_loading: bool = False
         self.message: discord.Message = None
 
     async def on_timeout(self) -> None:
@@ -57,15 +58,21 @@ class TradeView(discord.ui.View):
             self.stop()
             return await interaction.response.send_message(f"This card is ineligible for trading because its owner has already converted it!", ephemeral=True)
         
+        if self.is_loading:
+            return await interaction.response.send_message("This trade is currently being processed for another user. Please try again later!", ephemeral=True)
+        self.is_loading = True
+
         _buyer = await func.get_user(buyer.id)
         if _buyer["candies"] < self.candies:
+            self.is_loading = False
             return await interaction.response.send_message(f"You don't have enough candies! You only have `{_buyer['candies']}` candies", ephemeral=True)
 
         if len(_buyer["cards"]) >= func.settings.MAX_CARDS:
+            self.is_loading = False
             return await interaction.response.send_message(f"**Your inventory is full.**", ephemeral=True)
         
-        await interaction.response.defer()
         self.card.change_owner(buyer.id)
+        await interaction.response.defer()
 
         # Seller
         _seller = await func.get_user(self.seller.id)
@@ -80,6 +87,7 @@ class TradeView(discord.ui.View):
         embed = discord.Embed(title="✅ Traded", color=discord.Color.random())
         embed.description = f"```{self.card.display_id}\n🍬 - {self.candies}```"
 
+        self.is_loading = False
         await self.on_timeout()
         await interaction.followup.send(content=f"{self.seller.mention}, {buyer.mention} has made a trade with you for the card!", embed=embed)
 
