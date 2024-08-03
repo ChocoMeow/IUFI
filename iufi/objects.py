@@ -35,7 +35,8 @@ class CardObject:
     def __init__(self) -> None:
         self._image: list[Image.Image] | Image.Image = None
 
-    def _round_corners(self, image: Image.Image, radius: int = 8) -> Image.Image:
+    @classmethod
+    def _round_corners(cls, image: Image.Image, radius: int = 8) -> Image.Image:
         """Creates a rounded corner image"""
         radius = min(image.size) * radius // 100
         mask = Image.new('L', image.size, 0)
@@ -54,127 +55,115 @@ class CardObject:
 
         return output
     
-    def _load_image(self, path: str, *, size_rate: float = SIZE_RATE) -> Union[List[Image.Image], Image.Image]:
-        """Load and process the image"""
+    @classmethod
+    def _load_frame(cls, image: Image.Image, frame: str, *, size_rate: float = SIZE_RATE) -> Image.Image:
         try:
-            with Image.open(path) as img:
-                img_size = (int(CARD_SIZE[0] * size_rate), int(CARD_SIZE[1] * size_rate))
-                images = [self._round_corners(frame.resize(img_size)) for frame in ImageSequence.Iterator(img)]
-                if len(images) > 1:
-                    return images
-
-                return images[0]
-            
-        except Exception as e:
-            raise ImageLoadError(f"Unable to load the image. Reason: {e}")
-
-class Card(CardObject):
-    __slots__ = (
-        "id",
-        "_tier",
-        "_pool",
-        "owner_id",
-        "stars",
-        "tag",
-        "_frame",
-        "_image",
-        "_emoji"
-    )
-
-    def __init__(
-        self,
-        pool: CardPool,
-        id: str,
-        tier: str,
-        owner_id: int = None,
-        stars: int = None,
-        tag: str = None,
-        frame: str = None,
-    ):  
-        self.id: str = id
-        self._tier: str = tier
-        self._pool: CardPool = pool
-
-        self.owner_id: int = owner_id
-        self.stars: int = stars if stars else 0
-        self.tag: str = tag
-        self._frame: str = frame
-
-        self._image: list[Image.Image] | Image.Image = None
-        self._emoji: str = func.settings.TIERS_BASE.get(self._tier)[0]
-
-    def _load_frame(self, image: Image.Image, frame: str = None, *, size_rate: float = SIZE_RATE) -> Image.Image:
-        try:
-            frame = frame or self._frame
             new_size_rate = size_rate - (FRAME_SIZE_INCREMENT[0] if frame else FRAME_SIZE_INCREMENT[1])
             img_size = (int(CARD_SIZE[0] * new_size_rate), int(CARD_SIZE[1] * new_size_rate))
             
-            with Image.open(os.path.join(func.ROOT_DIR, "frames", f"{frame or self._tier}.webp")) as frame_img:
+            with Image.open(os.path.join(func.ROOT_DIR, "frames", f"{frame}.webp")) as frame_img:
                 size = (int(CARD_SIZE[0] * size_rate), int(CARD_SIZE[1] * size_rate))
                 frame_img = frame_img.resize(size, Image.LANCZOS)
                 
                 result = Image.new('RGBA', size)
-                image = self._round_corners(image.resize(img_size, Image.LANCZOS))
+                image = cls._round_corners(image.resize(img_size, Image.LANCZOS))
                 result.paste(image, ((size[0] - img_size[0]) // 2, (size[1] - img_size[1]) // 2))
                 result.paste(frame_img, (0, 0), frame_img)
                 return result
                 
         except FileNotFoundError:
-            return self._round_corners(image.resize(img_size, Image.LANCZOS))
-
-    def _load_image(self, *, size_rate: float = SIZE_RATE) -> Union[list[Image.Image], Image.Image]:
+            return cls._round_corners(image.resize(img_size, Image.LANCZOS))
+        
+    @classmethod
+    def _load_image(cls, image_path: str, *, card_frame: str = None, size_rate: float = SIZE_RATE) -> Union[list[Image.Image], Image.Image]:
         """Load and process the image"""
         try:
-            image_path = os.path.join(func.ROOT_DIR, "images", self._tier)
+            with Image.open(image_path) as img:
+                if card_frame:
+                    images = [cls._load_frame(frame.convert('RGBA'), card_frame, size_rate=size_rate) for frame in ImageSequence.Iterator(img)]
+                
+                else:
+                    img_size = (int(CARD_SIZE[0] * size_rate), int(CARD_SIZE[1] * size_rate))
+                    images = [cls._round_corners(frame.resize(img_size)) for frame in ImageSequence.Iterator(img)]
 
-            with Image.open(os.path.join(image_path, f"{self.id}.webp")) as img:
-                images = [self._load_frame(frame.convert('RGBA'), size_rate=size_rate) for frame in ImageSequence.Iterator(img)]
                 if len(images) > 1:
                     return images
-                
                 return images[0]
                     
         except Exception as e:
             raise ImageLoadError(f"Unable to load the image. Reason: {e}")
+        
+class Card(CardObject):
+    __slots__ = (
+        "id",
+        "tier",
+        "category"
+    )
+
+    def __init__(
+        self,
+        id: str,
+        tier: str,
+        category: str,
+    ):  
+        self.id: str = id
+        self._tier: str = tier
+        self._category: str = category
+
+        self._image: list[Image.Image] | Image.Image = None
+        self._emoji: str = func.settings.TIERS_BASE.get(self._tier)[0]
+
+    @property
+    def image_path(self) -> str:
+        return os.path.join(func.ROOT_DIR, "images", self._tier, self.id)
+    
+    @property
+    def tier(self) -> Optional[tuple[str, str]]:
+        """Return a tuple (emoji, name)"""
+        return self._emoji, self._tier
+    
+    @property
+    def category(self) -> str:
+        return self._category
+    
+class DuplicateCard(CardObject):
+    __slots__ = (
+        "id",
+        "_origin"
+    )
+
+    def __init__(
+        self,
+        id: str,
+        origin_card_id: str,
+        owner_id: int,
+        stars: int,
+        tag: int,
+        frame: str
+    ):  
+        self.id: str = id
+        self._origin_card: Card = None
+        self.owner_id: int = owner_id
+        self.stars: int = stars
+        self.tag: str = tag
+        self._frame: str = frame
 
     def preview_frame(self, frame: str = None) -> BytesIO:
         try:
-            image_path = os.path.join(func.ROOT_DIR, "images", self._tier)
-
             image_bytes = BytesIO()
-            with Image.open(os.path.join(image_path, f"{self.id}.webp")) as img:
-                if frame:
-                    image = self._load_frame(img.resize(CARD_SIZE, Image.LANCZOS), frame)
-                else:
-                    image = self._round_corners(img.resize(CARD_SIZE, Image.LANCZOS))
-                    
-                image.save(image_bytes, format='WEBP')
-                image_bytes.seek(0)
-                return image_bytes
+            image = CardObject._load_image(self._origin_card.image_path, card_frame=frame)
+            image.save(image_bytes, format='WEBP')
+            image_bytes.seek(0)
+            return image_bytes
         
         except Exception as e:
             raise ImageLoadError(f"Unable to load the image. Reason: {e}")
         
     def change_owner(self, owner_id: int | None = None) -> None:
-        if self.owner_id != owner_id:
-            self.owner_id = owner_id
-
-            if owner_id is None:
-                if self.stars > 5:
-                    self.change_stars(random.randint(1, 5))
-
-                if self.tag and self.tag.lower() in self._pool._tag_cards:
-                    self._pool._tag_cards.pop(self.tag.lower())
-                self.tag = None
-
-                self._frame, self._image = None, None
+        ...
 
     def change_tag(self, tag: str | None = None) -> None:
-        if self.tag == tag:
-            return
-        
-        self.tag = tag
-        asyncio.create_task(func.update_card(self.id, {"$set": {"tag": tag}}))
+        ...
     
     def change_frame(self, frame: str | None = None) -> None:
         if self._frame == frame:
@@ -199,7 +188,7 @@ class Card(CardObject):
         image_bytes.seek(0)
 
         return image_bytes
-    
+
     @property
     def cost(self) -> int:
         price = func.settings.TIERS_BASE.get(self._tier)[1]
@@ -207,11 +196,6 @@ class Card(CardObject):
             price *= 1 + ((self.stars - 5) * .25)
 
         return round(price)
-    
-    @property
-    def tier(self) -> tuple[str, str]:
-        """Return a tuple (emoji, name)"""
-        return self._emoji, self._tier
 
     @property
     def frame(self) -> tuple[str, str]:
