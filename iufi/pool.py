@@ -28,15 +28,12 @@ from random import (
 
 from .objects import (
     Card,
+    DuplicateCard,
     Question,
     QUIZ_LEVEL_BASE
 )
 
 from .exceptions import IUFIException, DuplicatedCardError, DuplicatedTagError
-# from .deepsearch import (
-#     Load_Data,
-#     Search_Setup
-# )
 
 DROP_RATES = {
     'common': .93,
@@ -57,78 +54,50 @@ CALL_METHOD = ["PATCH", "DELETE"]
 
 class CardPool:
     _cards: dict[str, Card] = {}
-    _tag_cards: dict[str, Card] = {}
-    _available_cards: dict[str, list[Card]] = {
-        category: [] for category in DROP_RATES
-    }
+    _tiered_cards: dict[str, list[Card]] = {tier: [] for tier in func.settings.TIERS_BASE.keys()}
+    _cards_by_categories: dict[str, list[Card]] = {}
 
-    #DeepSearch
-    # search_image: Search_Setup | None = None
+    _duplicated_cards: dict[str, DuplicateCard] = {}
+    _tagged_duplicated_cards: dict[str, DuplicateCard] = {}
 
-    # @classmethod
-    # def load_search_metadata(cls) -> None:
-    #     image_list = Load_Data().from_folder(["/metadata-files"])
-    #     cls.search_image = Search_Setup(image_list=image_list)
-    #     cls.search_image.run_index()
-
-    @classmethod
-    def add_available_card(cls, card: Card) -> None:
-        card.change_owner()
-        cls._available_cards[card.tier[1]].append(card)
-
-    @classmethod
-    def remove_available_card(cls, card: Card) -> None:
-        cls._available_cards[card.tier[1]].remove(card)
-
-    @classmethod
-    def add_tag(cls, card: Card, tag: str) -> None:
-        if tag.lower() in cls._tag_cards:
-            raise DuplicatedTagError(f"Tag {tag} already added into the pool.")
-        
-        card.change_tag(tag)
-        cls._tag_cards[tag.lower()] = card
-    
-    @classmethod
-    def change_tag(cls, card: Card, tag: str) -> None:
-        if tag.lower() in cls._tag_cards:
-            raise DuplicatedTagError(f"Tag {tag} already added into the pool.")
-        
-        if card.tag and card.tag.lower() in cls._tag_cards:
-            card = cls._tag_cards.pop(card.tag.lower())
-            card.change_tag(tag)
-            cls._tag_cards[tag.lower()] = card
-
-    @classmethod
-    def remove_tag(cls, card: Card) -> None:
-        try:
-            card = cls._tag_cards.pop(card.tag.lower())
-            card.change_tag(None)
-        except KeyError as _:
-            return
-        
     @classmethod
     def add_card(cls, _id: str, tier: str, **kwargs) -> Card:
-        card = Card(cls, _id, tier, **kwargs)
-        if card.id in cls._cards:
-            raise DuplicatedCardError(f"Card {card.id} in {tier} already added into the pool.")
-        
-        cls._cards[card.id] = card
-        if not card.owner_id:
-            cls.add_available_card(card)
-        
-        if card.tag:
-            cls.add_tag(card, card.tag)
+        # Create a new card instance
+        card = Card(_id, tier, **kwargs)
 
+        # Check for duplicate card
+        if card.id in cls._cards:
+            raise DuplicatedCardError(f"Card {card.id} in tier {tier} already exists in the pool.")
+        
+        # Validate the tier and Add card to the appropriate tier
+        if card.tier[1] not in cls._tiered_cards:
+            raise IUFIException(f"Card {card.id} has an unsupported tier [{card.tier[1]}].")
+        cls._tiered_cards[card.tier[1]].append(card)
+
+        # Organize cards by category
+        if card.category:
+            cls._cards_by_categories.setdefault(card.category, []).append(card)
+
+        # Store the card in the main dictionary
+        cls._cards[card.id] = card
         return card
     
     @classmethod
-    def get_card(cls, card_id: str) -> Card | None:
+    def get_card(cls, card_id: str) -> Optional[Card]:
+        # Return None if card_id is empty or None
         if not card_id:
-            return
+            return None
+        
+        card = cls._cards.get(card_id.lstrip("0"))
+        return card
+    
+    @classmethod
+    def get_duplicate_card(cls, card_id: str) -> Optional[DuplicateCard]:
+        if not card_id:
+            return None
+        
         card_id = card_id.lstrip("0")
-        card = cls._cards.get(card_id)
-        if not card:
-            card = cls._tag_cards.get(card_id.lower())
+        card = cls._duplicated_cards.get(card_id) or cls._tagged_duplicated_cards.get(card_id.lower())
         return card
     
     @classmethod
@@ -148,11 +117,15 @@ class CardPool:
         cards = [
             card
             for cat, amt in Counter(results).items()
-            for card in sample(cls._available_cards[cat], k=amt)
+            for card in sample(cls._cards[cat], k=amt)
         ]
         shuffle(cards)
         return cards
 
+    @classmethod
+    def get_categorys(cls) -> dict[str, list[Card]]:
+        return cls._cards_by_categories
+        
 class QuestionPool:
     _questions: list[Question] = []
 
