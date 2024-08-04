@@ -113,9 +113,30 @@ class Card(CardObject):
         self._image: list[Image.Image] | Image.Image = None
         self._emoji: str = func.settings.TIERS_BASE.get(self._tier)[0]
 
+    def image_bytes(self) -> BytesIO:
+        image_bytes = BytesIO()
+
+        if self.is_gif:
+            self.image[0].save(image_bytes, format="GIF", save_all=True, append_images=self.image[1:], loop=0)
+        else:
+            self.image.save(image_bytes, format='WEBP')
+        image_bytes.seek(0)
+
+        return image_bytes
+    
+    @property
+    def is_gif(self) -> bool:
+        return isinstance(self.image, list)
+    
     @property
     def image_path(self) -> str:
         return os.path.join(func.ROOT_DIR, "images", self._tier, self.id)
+    
+    @property
+    def image(self) -> list[Image.Image] | Image.Image:
+        if not self._image:
+            self._image = self._load_image(self.image_path, card_frame=self._tier)
+        return self._image
     
     @property
     def tier(self) -> Optional[tuple[str, str]]:
@@ -126,14 +147,22 @@ class Card(CardObject):
     def category(self) -> str:
         return self._category
     
+    @property
+    def format(self) -> str:
+        return "gif" if self.is_gif else "webp"
+    
 class DuplicateCard(CardObject):
     __slots__ = (
         "id",
-        "_origin"
+        "_origin",
+        "owner_id",
+        "stars",
+        "tag"
     )
 
     def __init__(
         self,
+        pool: CardPool,
         id: str,
         origin_card_id: str,
         owner_id: int,
@@ -142,6 +171,7 @@ class DuplicateCard(CardObject):
         frame: str
     ):  
         self.id: str = id
+        self._pool: CardPool = pool
         self._origin_card: Card = None
         self.owner_id: int = owner_id
         self.stars: int = stars
@@ -160,11 +190,22 @@ class DuplicateCard(CardObject):
             raise ImageLoadError(f"Unable to load the image. Reason: {e}")
         
     def change_owner(self, owner_id: int | None = None) -> None:
-        ...
+        if owner_id is None:
+            self._pool._duplicated_cards.pop(self.id, None)
+            return
+
+        if self.owner_id != owner_id:
+            self.owner_id = owner_id
 
     def change_tag(self, tag: str | None = None) -> None:
-        ...
-    
+        if self.tag in self._pool._tagged_duplicated_cards:
+            self._pool._tagged_duplicated_cards.pop(self.tag, None)
+
+        if tag is None:
+            return
+
+        self._pool._tagged_duplicated_cards[tag.lower()] = self
+        
     def change_frame(self, frame: str | None = None) -> None:
         if self._frame == frame:
             raise IUFIException("This frame is already assigned to this card.")
@@ -175,19 +216,6 @@ class DuplicateCard(CardObject):
     def change_stars(self, stars: int) -> None:
         if self.stars != stars:
             self.stars = stars
-
-            asyncio.create_task(func.update_card(self.id, {"$set": {"stars": stars}}))
-
-    def image_bytes(self) -> BytesIO:
-        image_bytes = BytesIO()
-
-        if self.is_gif:
-            self.image[0].save(image_bytes, format="GIF", save_all=True, append_images=self.image[1:], loop=0)
-        else:
-            self.image.save(image_bytes, format='PNG')
-        image_bytes.seek(0)
-
-        return image_bytes
 
     @property
     def cost(self) -> int:
@@ -200,21 +228,6 @@ class DuplicateCard(CardObject):
     @property
     def frame(self) -> tuple[str, str]:
         return func.settings.FRAMES_BASE.get(self._frame)[0], self._frame
-    
-    @property
-    def image(self) -> list[Image.Image] | Image.Image:
-        """Return the image"""
-        if not self._image:
-            self._image = self._load_image()
-        return self._image
-
-    @property
-    def is_gif(self) -> bool:
-        return isinstance(self.image, list)
-
-    @property
-    def format(self) -> str:
-        return "gif" if self.is_gif else "webp"
     
     @property
     def display_id(self) -> str:
@@ -233,24 +246,7 @@ class DuplicateCard(CardObject):
         return f"🖼️ {func.settings.FRAMES_BASE.get(self._frame)[0] if self._frame else '- '}"
 
     def __str__(self) -> str:
-        return f"{self._emoji} {self.id.zfill(5)} " + (f"({self.tag})" if self.tag else "")
-
-class TempCard(CardObject):
-    def __init__(self, path: str) -> None:
-        super().__init__()
-
-        self._path = path
-
-    @property
-    def image(self) -> list[Image.Image] | Image.Image:
-        """Return the image"""
-        if not self._image:
-            self._image = self._load_image(self._path)
-        return self._image
-
-    @property
-    def is_gif(self) -> bool:
-        return isinstance(self.image, list)
+        return f"{self._origin_card._emoji} {self.id.zfill(5)} " + (f"({self.tag})" if self.tag else "")
 
 class Question:
     def __init__(
