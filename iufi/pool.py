@@ -51,7 +51,6 @@ URL_REGEX = re.compile(
 NODE_VERSION = "v4"
 CALL_METHOD = ["PATCH", "DELETE"]
 
-
 class CardPool:
     _cards: dict[str, Card] = {}
     _tiered_cards: dict[str, list[Card]] = {tier: [] for tier in func.settings.TIERS_BASE.keys()}
@@ -81,6 +80,23 @@ class CardPool:
         # Store the card in the main dictionary
         cls._cards[card.id] = card
         return card
+
+    @classmethod
+    def add_duplicate_card(cls, _id: str, **kwargs) -> Card:
+        # Create a new card instance
+        card = DuplicateCard(cls, _id, **kwargs)
+        
+        # Check for duplicate card
+        if card.id in cls._duplicated_cards:
+            raise DuplicatedCardError(f"Card {card.id} already exists in the duplicate card pool.")
+
+        # Organize cards by tag
+        if card.tag:
+            cls._tagged_duplicated_cards[card.tag] = card
+
+        # Store the card in the main duplicated dictionary
+        cls._duplicated_cards[card.id] = card
+        return card
     
     @classmethod
     def get_card(cls, card_id: str) -> Optional[Card]:
@@ -98,6 +114,15 @@ class CardPool:
         
         card_id = card_id.lstrip("0")
         card = cls._duplicated_cards.get(card_id) or cls._tagged_duplicated_cards.get(card_id.lower())
+        return card
+    
+    @classmethod
+    def create_duplicate_card(cls, card_id: str, **kwargs) -> DuplicateCard:
+        card = DuplicateCard(cls, card_id, **kwargs)
+        if card.id in cls._duplicated_cards:
+            raise DuplicatedCardError(f"Card {card.id} already exists in the duplicate card pool.")
+        
+        cls._duplicated_cards[card_id] = card
         return card
     
     @classmethod
