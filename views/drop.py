@@ -35,11 +35,10 @@ class DropView(discord.ui.View):
         for child in self.children:
             child.disabled = True
         
-        await self.message.edit(view=self)
+        await self.message.edit(content="This drop has expired", view=self)
 
     def build_embed(self) -> discord.Embed:
         embed = discord.Embed(title="🎁 Random Card Drop", color=discord.Color.random())
-        
         embed.set_image(url=f"attachment://image.{self.card.format}")
         return embed
 

@@ -65,6 +65,7 @@ class Tasks(commands.Cog):
             image_bytes, image_format = await asyncio.to_thread(covered_card.image_bytes), covered_card.format
             view.message = await channel.send(
                 content=f"**Hurry up! This claim ends in: <t:{round(time.time()) + 70}:R>**",
+                embed=view.build_embed(),
                 file=discord.File(image_bytes, filename=f'image.{image_format}'),
                 view=view
             )
