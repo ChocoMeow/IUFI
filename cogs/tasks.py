@@ -2,16 +2,19 @@ import discord, asyncio, iufi, time, random
 import functions as func
 
 from discord.ext import commands, tasks
+from views import DropView
 
 class Tasks(commands.Cog):
     def __init__(self, bot: commands.Bot):
         self.bot = bot
         self.invisible = False
 
+        self.drop_card.start()
         self.cache_clear.start()
         self.reminder.start()
 
     def cog_unload(self):
+        self.drop_card.cancel()
         self.cache_clear.cancel()
         self.reminder.cancel()
     
@@ -51,6 +54,20 @@ class Tasks(commands.Cog):
                 rank = iufi.QuestionPool.get_rank(user_data["game_state"]["quiz_game"]["points"])[0]
                 if rank in roles.keys() and roles[rank] is not None:
                     await user.add_roles(roles[rank])
+
+    @tasks.loop(minutes=30)
+    async def drop_card(self) -> None:
+        cards = iufi.CardPool.roll(amount=1)
+        channel = self.bot.get_channel(random.choice(func.settings.GAME_CHANNEL_IDS))
+        if channel:
+            view = DropView(cards)
+            covered_card: iufi.TempCard = iufi.TempCard(f"cover/level{random.randint(1, 3)}.webp")
+            image_bytes, image_format = await asyncio.to_thread(covered_card.image_bytes), covered_card.format
+            view.message = await channel.send(
+                content=f"**Hurry up! This claim ends in: <t:{round(time.time()) + 70}:R>**",
+                file=discord.File(image_bytes, filename=f'image.{image_format}'),
+                view=view
+            )
 
     @tasks.loop(hours=1.0)
     async def cache_clear(self):

@@ -257,6 +257,17 @@ class TempCard(CardObject):
 
         self._path = path
 
+    def image_bytes(self) -> BytesIO:
+        image_bytes = BytesIO()
+
+        if self.is_gif:
+            self.image[0].save(image_bytes, format="GIF", save_all=True, append_images=self.image[1:], loop=0)
+        else:
+            self.image.save(image_bytes, format='PNG')
+        image_bytes.seek(0)
+
+        return image_bytes
+    
     @property
     def image(self) -> list[Image.Image] | Image.Image:
         """Return the image"""
@@ -268,6 +279,10 @@ class TempCard(CardObject):
     def is_gif(self) -> bool:
         return isinstance(self.image, list)
 
+    @property
+    def format(self) -> str:
+        return "gif" if self.is_gif else "webp"
+        
 class Question:
     def __init__(
         self,
