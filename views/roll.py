@@ -18,9 +18,9 @@ class RollButton(discord.ui.Button):
         
         if (owner_id := self.card.owner_id):
             if owner_id != interaction.user.id:
-                return await interaction.response.send_message(f"This card has been claimed by <@{owner_id}>")
+                return await interaction.response.send_message(f"{interaction.user.mention} This card has been claimed by <@{owner_id}>")
             else:
-                return await interaction.response.send_message("This card has claimed by you already!")
+                return await interaction.response.send_message(f"{interaction.user.mention} This card has claimed by you already!")
         
         user = await func.get_user(interaction.user.id)
         if (retry := user["cooldown"]["claim"]) > time.time() and self.view.author != interaction.user:

@@ -15,3 +15,4 @@ from .confirm import ConfirmView
 from .collection import CollectionView
 from .help import HelpView
 from .debugs import DebugView
+from .drop import DropView
