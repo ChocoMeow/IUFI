@@ -7,7 +7,7 @@ from iufi import (
     gen_cards_view
 )
 
-from typing import Tuple
+from typing import Tuple, List
 from discord.ext import commands
 from . import ButtonOnCooldown
 from math import ceil
@@ -15,29 +15,31 @@ from math import ceil
 def key(interaction: discord.Interaction):
     return interaction.user
 
-class Dropdown(discord.ui.Select):
-    def __init__(self, cards: dict[str, Card]):
+#Sorter
+class SorterInterface:
+    def __init__(self, name: str, description: str, emoji: str) -> None:
+        self.name: str = name
+        self.description: str = description
+        self.emoji: str = emoji
+
+    def sort(self, cards: dict[str, Card]) -> None:
+        pass
+
+class SortDropdown(discord.ui.Select):
+    def __init__(self):
+        self.view: PhotoCardView
+        self._sorters: List[SorterInterface] = []
+        
         super().__init__(
-            placeholder="Select a card to view...",
+            placeholder="Select a sorter for clearer photocards...",
             min_values=1, max_values=1
         )
-        self.options = []
-        self._cards = cards
+        self.options = [discord.SelectOption(label=sorter.name, value=index, description=sorter.description, emoji=sorter.emoji) for index, sorter in enumerate(self._sorters)]
 
     async def callback(self, interaction: discord.Interaction) -> None:
-        card_id = int(self.values[0])
-        card = self._cards.get(str(card_id))
-
-        embed = discord.Embed(title=f"ℹ️ Card Info", color=0x949fb8)
-        embed.description = f"```{card.display_id}\n" \
-                            f"{card.display_tag}\n" \
-                            f"{card.display_frame}\n" \
-                            f"{card.tier[0]} {card.tier[1].capitalize()}\n" \
-                            f"{card.display_stars}```\n" \
-                            "Owned by: " + (f"<@{card.owner_id}>" if card.owner_id else "None")
-        
-        embed.set_image(url=f"attachment://image.{card.format}")
-        await interaction.response.send_message(file=discord.File(await asyncio.to_thread(card.image_bytes), filename=f"image.{card.format}"), embed=embed)
+        sel_sorter: SorterInterface = self._sorters[self.values[0]]
+        self.view.cards = sel_sorter.sort(self.view.cards.copy())
+        await self.view.update_embed(interaction)
 
 class PhotoCardView(discord.ui.View):
     def __init__(self, author: discord.Member, cards: list[int], *, timeout: float | None = 100):
@@ -49,7 +51,7 @@ class PhotoCardView(discord.ui.View):
         self.page: int = ceil(len(self.cards) / 8)
         self.current_page: int = 1
 
-        self._dropdown_view: Dropdown = Dropdown(self.cards)
+        self._dropdown_view: SortDropdown = SortDropdown()
         self.add_item(self._dropdown_view)
 
         self.toggle_cards_view: bool = False
