@@ -18,7 +18,18 @@ class HDBtn(discord.ui.Button):
     async def callback(self, interaction: discord.Interaction) -> None:
         await interaction.response.defer()
         await self.view.send_msg(1)
-        
+
+class GalleryBtn(discord.ui.Button):
+    def __init__(self) -> None:
+        super().__init__(emoji="", label="Send To Gallery")
+
+    async def callback(self, interaction: discord.Interaction) -> None:
+        if self.view.file and (gallery_channel := interaction.guild.get_channel(func.settings.GALLERY_CHANNEL_ID)):
+            await gallery_channel.send(
+                content=f"Check out the collection {self.view.sel_collection.title()} curated by {interaction.user.mention}!",
+                file=self.view.file
+            )
+
 class EditModal(discord.ui.Modal):
     def __init__(self, view: discord.ui.View) -> None:
         super().__init__(title="Edit Collection")
@@ -97,9 +108,11 @@ class CollectionView(discord.ui.View):
         self.is_author: bool = ctx.author == member
         self.collections: dict[str, list[str | None]] = collections
         self.sel_collection: str = list(self.collections.keys())[0]
+        self.file: discord.File = None
 
         if self.is_author:
             self.add_item(EditBtn())
+            self.add_item(GalleryBtn())
         self.add_item(HDBtn())
         if len(self.collections) > 1:
             self.add_item(CollectionDropdown(list(self.collections.keys())))
@@ -134,8 +147,8 @@ class CollectionView(discord.ui.View):
         embed.description += "```"
         image_bytes, image_format = await asyncio.to_thread(iufi.gen_cards_view, cards, size_rate=size_rate)
         embed.set_image(url=f"attachment://image.{image_format}")
-        file=discord.File(image_bytes, filename=f'image.{image_format}')
+        self.file = discord.File(image_bytes, filename=f'image.{image_format}')
 
         if self.message:
-            return await self.message.edit(attachments=[file], embed=embed, view=self)
-        self.message = await self.ctx.reply(file=file, embed=embed, view=self)
+            return await self.message.edit(attachments=[self.file], embed=embed, view=self)
+        self.message = await self.ctx.reply(file=self.file, embed=embed, view=self)
