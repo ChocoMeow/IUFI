@@ -1,7 +1,7 @@
 import discord, asyncio
 import functions as func
 
-from iufi import Card
+from iufi import Card, CardPool
 from random import choice
 
 REPLY_MESSAGES = [
@@ -59,6 +59,7 @@ class DropView(discord.ui.View):
             return await interaction.response.send_message(f"**Your inventory is full.**", ephemeral=True)
         
         self.card.change_owner(interaction.user.id)
+        CardPool.remove_available_card(self.card)
         await interaction.response.defer()
 
         await func.update_user(interaction.user.id, {"$push": {"cards": self.card.id}})
