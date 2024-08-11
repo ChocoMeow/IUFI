@@ -25,10 +25,29 @@ class SorterInterface:
     def sort(self, cards: dict[str, Card]) -> None:
         pass
 
+class TierSorter(SorterInterface):
+    def __init__(self) -> None:
+        super().__init__(
+            name="Tier Sorter [Ascending]",
+            description="Sort your photocards from lowest to highest tier with ease.",
+            emoji="😌"
+        )
+    
+    def sort(self, cards: dict[str, Card]) -> dict[str, Card]:
+        sorted_dict = {}
+        
+        for tier in func.settings.TIERS_BASE:
+            sorted_dict.update({
+                card_id: card 
+                for card_id, card in cards.items() if card and card._tier == tier
+            })
+        
+        return sorted_dict
+    
 class SortDropdown(discord.ui.Select):
     def __init__(self):
         self.view: PhotoCardView
-        self._sorters: List[SorterInterface] = []
+        self._sorters: List[SorterInterface] = [TierSorter()]
         
         super().__init__(
             placeholder="Select a sorter for clearer photocards...",
@@ -37,7 +56,7 @@ class SortDropdown(discord.ui.Select):
         self.options = [discord.SelectOption(label=sorter.name, value=index, description=sorter.description, emoji=sorter.emoji) for index, sorter in enumerate(self._sorters)]
 
     async def callback(self, interaction: discord.Interaction) -> None:
-        sel_sorter: SorterInterface = self._sorters[self.values[0]]
+        sel_sorter: SorterInterface = self._sorters[int(self.values[0])]
         self.view.cards = sel_sorter.sort(self.view.cards.copy())
         await self.view.update_embed(interaction)
 
@@ -61,20 +80,20 @@ class PhotoCardView(discord.ui.View):
     async def build_embed(self) -> Tuple[discord.Embed, discord.File]:
         offset = self.current_page * 8
         card_ids, cards = list(self.cards.keys())[(offset-8):offset], []
-        
         desc = f"\n**📙 Collection size: `{len(self.cards)}/{func.settings.MAX_CARDS}`**\n```"
-        self._dropdown_view.options.clear()
 
         for card_id in card_ids:
             card = self.cards.get(card_id)
             if not card:
                 card = self.cards[card_id] = CardPool.get_card(card_id)
             
+            if not card:
+                continue
+            
             if self.toggle_cards_view:
                 cards.append(card)
             
             desc += f"{card.display_id} {card.display_tag} {card.display_frame} {card.display_stars} {card.tier[0]}\n" if card else f"🆔 {card_id.zfill(5)} {'-' * 20}"
-            self._dropdown_view.options.append(discord.SelectOption(label=f"{card.id}", description=f"{card.display_tag}", emoji=card.tier[0]))
             
         embed = discord.Embed(title=f"📖 {self.author.display_name}'s Photocards", description=desc + "```", color=discord.Color.random())
         embed.set_footer(text="Pages: {}/{}".format(self.current_page, self.page))
