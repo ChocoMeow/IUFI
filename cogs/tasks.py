@@ -57,6 +57,7 @@ class Tasks(commands.Cog):
 
     @tasks.loop(minutes=5.0)
     async def drop_card(self) -> None:
+        await self.bot.wait_until_ready()
         if random.randint(1, 6) == 1:
             cards = iufi.CardPool.roll(amount=1)
             channel = self.bot.get_channel(random.choice(func.settings.GAME_CHANNEL_IDS))

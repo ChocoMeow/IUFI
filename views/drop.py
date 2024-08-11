@@ -19,14 +19,14 @@ REPLY_MESSAGES = [
 
 class DropView(discord.ui.View):
     def __init__(
-            self,
-            card: Card,
-            timeout: float | None = 70,
-        ) -> None:
+        self,
+        card: Card,
+        timeout: float | None = 70,
+    ) -> None:
         
         super().__init__(timeout=timeout)
 
-        self.card: Card = card
+        self.card: Card = card[0]
 
         self.is_loading: bool = False
         self.message: discord.Message = None
