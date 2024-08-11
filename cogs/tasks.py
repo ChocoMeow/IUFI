@@ -62,7 +62,7 @@ class Tasks(commands.Cog):
             cards = iufi.CardPool.roll(amount=1)
             channel = self.bot.get_channel(random.choice(func.settings.GAME_CHANNEL_IDS))
             if channel:
-                view = DropView(cards)
+                view = DropView(cards[0])
                 covered_card: iufi.TempCard = iufi.TempCard(f"cover/level{random.randint(1, 3)}.webp")
                 image_bytes, image_format = await asyncio.to_thread(covered_card.image_bytes), covered_card.format
                 view.message = await channel.send(

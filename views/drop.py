@@ -26,7 +26,7 @@ class DropView(discord.ui.View):
         
         super().__init__(timeout=timeout)
 
-        self.card: Card = card[0]
+        self.card: Card = card
 
         self.is_loading: bool = False
         self.message: discord.Message = None
