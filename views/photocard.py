@@ -26,28 +26,77 @@ class SorterInterface:
         pass
 
 class TierSorter(SorterInterface):
-    def __init__(self) -> None:
+    def __init__(self, reverse: bool = False) -> None:
+        direction = "Descending" if reverse else "Ascending"
+        description = "Sort your photocards from highest to lowest tier with ease." if reverse else "Sort your photocards from lowest to highest tier with ease."
         super().__init__(
-            name="Tier Sorter [Ascending]",
-            description="Sort your photocards from lowest to highest tier with ease.",
-            emoji="😌"
+            name=f"Tier Sorter [{direction}]",
+            description=description,
+            emoji="👑"
         )
+        self.reverse = reverse
+
+    def sort(self, cards: dict[str, Card]) -> dict[str, Card]:
+        sorted_dict = {}
+        tiers = reversed(func.settings.TIERS_BASE.keys()) if self.reverse else func.settings.TIERS_BASE.keys()
+        
+        for tier in tiers:
+            sorted_dict.update({
+                card_id: card 
+                for card_id, card in cards.items() if card._tier == tier
+            })
+        
+        return sorted_dict
+
+class IDSorter(SorterInterface):
+    def __init__(self, reverse: bool = False) -> None:
+        direction = "Descending" if reverse else "Ascending"
+        description = "Sort your photocards by ID from largest to smallest with ease." if reverse else "Sort your photocards by ID from smallest to largest with ease."
+        super().__init__(
+            name=f"ID Sorter [{direction}]",
+            description=description,
+            emoji="🆔"
+        )
+        self.reverse = reverse
     
     def sort(self, cards: dict[str, Card]) -> dict[str, Card]:
         sorted_dict = {}
-        
-        for tier in func.settings.TIERS_BASE:
-            sorted_dict.update({
-                card_id: card 
-                for card_id, card in cards.items() if card and card._tier == tier
-            })
-        
+
+        sorted_keys = sorted(cards.keys(), key=int, reverse=self.reverse)
+        for card_id in sorted_keys:
+            sorted_dict[card_id] = cards[card_id]
+
+        return sorted_dict
+    
+class TagSorter(SorterInterface):
+    def __init__(self, reverse: bool = False) -> None:
+        direction = "Descending" if reverse else "Ascending"
+        description = "Sort your photocards in alphabetical order with ease." if reverse else "Sort your photocards in reverse alphabetical order with ease."
+        super().__init__(
+            name=f"Tag Sorter [{direction}]",
+            description=description,
+            emoji="🏷️"
+        )
+        self.reverse = reverse
+    
+    def sort(self, cards: dict[str, Card]) -> dict[str, Card]:
+        sorted_dict = {}
+
+        sorted_cards = sorted(
+            cards.items(),
+            key=lambda item: (item[1].tag is None, item[1].tag),  # Handle None tags
+            reverse=self.reverse
+        )
+
+        for card_id, card in sorted_cards:
+            sorted_dict[card_id] = card
+
         return sorted_dict
     
 class SortDropdown(discord.ui.Select):
     def __init__(self):
         self.view: PhotoCardView
-        self._sorters: List[SorterInterface] = [TierSorter()]
+        self._sorters: List[SorterInterface] = [TierSorter(), TierSorter(reverse=True), IDSorter(), IDSorter(reverse=True), TagSorter(), TagSorter(reverse=True)]
         
         super().__init__(
             placeholder="Select a sorter for clearer photocards...",
@@ -65,7 +114,10 @@ class PhotoCardView(discord.ui.View):
         super().__init__(timeout=timeout)
 
         self.author: discord.Member = author
-        self.cards: dict[str, Card | None] = {card: None for card in cards}
+        self.cards: dict[str, Card | None] = {}
+        for card_id in cards:
+            if card := CardPool.get_card(card_id):
+                self.cards[card_id] = card
 
         self.page: int = ceil(len(self.cards) / 8)
         self.current_page: int = 1
@@ -84,12 +136,7 @@ class PhotoCardView(discord.ui.View):
 
         for card_id in card_ids:
             card = self.cards.get(card_id)
-            if not card:
-                card = self.cards[card_id] = CardPool.get_card(card_id)
-            
-            if not card:
-                continue
-            
+
             if self.toggle_cards_view:
                 cards.append(card)
             
@@ -136,28 +183,28 @@ class PhotoCardView(discord.ui.View):
     async def fast_back_button(self, interaction: discord.Interaction, button: discord.ui.Button):
         if self.current_page != 1:
             self.current_page = 1
-            await self.update_embed(interaction)
+            return await self.update_embed(interaction)
         await interaction.response.defer()
     
     @discord.ui.button(label='Back', style=discord.ButtonStyle.blurple)
     async def back_button(self, interaction: discord.Interaction, button: discord.ui.Button):
         if self.current_page > 1:
             self.current_page -= 1
-            await self.update_embed(interaction)
+            return await self.update_embed(interaction)
         await interaction.response.defer()
     
     @discord.ui.button(label='Next', style=discord.ButtonStyle.blurple)
     async def next_button(self, interaction: discord.Interaction, button: discord.ui.Button):
         if self.current_page < self.page:
             self.current_page += 1
-            await self.update_embed(interaction)
+            return await self.update_embed(interaction)
         await interaction.response.defer()
 
     @discord.ui.button(label='>>', style=discord.ButtonStyle.grey)
     async def fast_next_button(self, interaction: discord.Interaction, button: discord.ui.Button):
         if self.current_page != self.page:
             self.current_page = self.page
-            await self.update_embed(interaction)
+            return await self.update_embed(interaction)
         await interaction.response.defer()
     
     @discord.ui.button(emoji='👁️', style=discord.ButtonStyle.green)
