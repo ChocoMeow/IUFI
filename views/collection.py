@@ -1,5 +1,5 @@
 
-import discord, iufi, asyncio
+import discord, iufi, asyncio, time
 import functions as func
 
 from discord.ext import commands
@@ -21,13 +21,24 @@ class HDBtn(discord.ui.Button):
 
 class GalleryBtn(discord.ui.Button):
     def __init__(self) -> None:
-        super().__init__(emoji="", label="Send To Gallery")
+        self.view: CollectionView
+        super().__init__(emoji="🎨", label="Send To Gallery")
+        self.last_send_time: float = 0
 
     async def callback(self, interaction: discord.Interaction) -> None:
-        if self.view.file and (gallery_channel := interaction.guild.get_channel(func.settings.GALLERY_CHANNEL_ID)):
+        await interaction.response.defer()
+        if all(item is None for item in self.view.cards):
+            return await interaction.followup.send("You can't send this collection without any cards in it.", ephemeral=True)
+        
+        if time.time() < (self.last_send_time + 30):
+            return await interaction.followup.send("Whoa, that was too fast! Could you please try again later?", ephemeral=True)
+        self.last_send_time = time.time()
+
+        image_bytes, image_format = await asyncio.to_thread(iufi.gen_cards_view, self.view.cards, size_rate=1)
+        if self.view.cards and (gallery_channel := interaction.guild.get_channel(func.settings.GALLERY_CHANNEL_ID)):
             await gallery_channel.send(
-                content=f"Check out the collection {self.view.sel_collection.title()} curated by {interaction.user.mention}!",
-                file=self.view.file
+                content=f"Check out the collection `{self.view.sel_collection.title()}` curated by {interaction.user.mention}!",
+                file=discord.File(image_bytes, filename=f'image.{image_format}')
             )
 
 class EditModal(discord.ui.Modal):
@@ -108,7 +119,7 @@ class CollectionView(discord.ui.View):
         self.is_author: bool = ctx.author == member
         self.collections: dict[str, list[str | None]] = collections
         self.sel_collection: str = list(self.collections.keys())[0]
-        self.file: discord.File = None
+        self.cards: list[iufi.Card | None] = []
 
         if self.is_author:
             self.add_item(EditBtn())
@@ -129,7 +140,7 @@ class CollectionView(discord.ui.View):
         return self.ctx.author == interaction.user
     
     async def send_msg(self, size_rate: float = iufi.objects.SIZE_RATE) -> None:
-        cards: list[iufi.Card | None] = []
+        self.cards.clear()
 
         embed = discord.Embed(title=f"❤️  {self.member.display_name}'s {self.sel_collection.title()} Collection", color=discord.Color.random())
         embed.description = "```"
@@ -138,17 +149,17 @@ class CollectionView(discord.ui.View):
             card = iufi.CardPool.get_card(card_id)
             if card and card.owner_id == self.member.id:
                 embed.description += f"{card.display_id} {card.display_tag} {card.display_frame} {card.display_stars} {card.tier[0]}\n"
-                cards.append(card)
+                self.cards.append(card)
                 continue
 
             embed.description += "\u200b\n"
-            cards.append(None)
+            self.cards.append(None)
             
         embed.description += "```"
-        image_bytes, image_format = await asyncio.to_thread(iufi.gen_cards_view, cards, size_rate=size_rate)
+        image_bytes, image_format = await asyncio.to_thread(iufi.gen_cards_view, self.cards, size_rate=size_rate)
         embed.set_image(url=f"attachment://image.{image_format}")
-        self.file = discord.File(image_bytes, filename=f'image.{image_format}')
+        image_file = discord.File(image_bytes, filename=f'image.{image_format}')
 
         if self.message:
-            return await self.message.edit(attachments=[self.file], embed=embed, view=self)
-        self.message = await self.ctx.reply(file=self.file, embed=embed, view=self)
+            return await self.message.edit(attachments=[image_file], embed=embed, view=self)
+        self.message = await self.ctx.reply(file=image_file, embed=embed, view=self)
