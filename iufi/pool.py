@@ -110,7 +110,8 @@ class CardPool:
     def add_card(cls, _id: str, tier: str, **kwargs) -> Card:
         card = Card(cls, _id, tier, **kwargs)
         if card.id in cls._cards:
-            raise DuplicatedCardError(f"Card {card.id} in {tier} already added into the pool.")
+            return
+            # raise DuplicatedCardError(f"Card {card.id} in {tier} already added into the pool.")
         
         cls._cards[card.id] = card
         if not card.owner_id:
