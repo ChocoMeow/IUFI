@@ -4,6 +4,20 @@ import functions as func
 
 from discord.ext import commands
 
+class CaptionModal(discord.ui.Modal, title="Add Caption"):
+    def __init__(self, cards: list[iufi.Card]) -> None:
+        self.cards = cards
+        caption = discord.ui.TextInput(label='Caption')
+
+    async def on_submit(self, interaction: discord.Interaction):
+        await interaction.response.defer()
+        image_bytes, image_format = await asyncio.to_thread(iufi.gen_cards_view, self.cards, size_rate=1)
+        if self.cards and (gallery_channel := interaction.guild.get_channel(func.settings.GALLERY_CHANNEL_ID)):
+            await gallery_channel.send(
+                content=f"Sent by {interaction.user.mention}! {self.caption}",
+                file=discord.File(image_bytes, filename=f'image.{image_format}')
+            )
+
 class EditBtn(discord.ui.Button):
     def __init__(self) -> None:
         super().__init__(emoji="✏️", label="Edit")
@@ -26,20 +40,13 @@ class GalleryBtn(discord.ui.Button):
         self.last_send_time: float = 0
 
     async def callback(self, interaction: discord.Interaction) -> None:
-        await interaction.response.defer()
         if all(item is None for item in self.view.cards):
-            return await interaction.followup.send("You can't send this collection without any cards in it.", ephemeral=True)
+            return await interaction.response.send_message("You can't send this collection without any cards in it.", ephemeral=True)
         
         if time.time() < (self.last_send_time + 30):
-            return await interaction.followup.send("Whoa, that was too fast! Could you please try again later?", ephemeral=True)
+            return await interaction.response.send_message("Whoa, that was too fast! Could you please try again later?", ephemeral=True)
         self.last_send_time = time.time()
-
-        image_bytes, image_format = await asyncio.to_thread(iufi.gen_cards_view, self.view.cards, size_rate=1)
-        if self.view.cards and (gallery_channel := interaction.guild.get_channel(func.settings.GALLERY_CHANNEL_ID)):
-            await gallery_channel.send(
-                content=f"Check out the collection `{self.view.sel_collection.title()}` curated by {interaction.user.mention}!",
-                file=discord.File(image_bytes, filename=f'image.{image_format}')
-            )
+        await interaction.response.send_modal(CaptionModal(self.view.cards))
 
 class EditModal(discord.ui.Modal):
     def __init__(self, view: discord.ui.View) -> None:
