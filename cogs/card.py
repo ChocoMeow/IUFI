@@ -411,7 +411,7 @@ class Card(commands.Cog):
         converted_cards: list[iufi.Card] = []
         for card_id in card_ids.split(" "):
             card = iufi.CardPool.get_card(card_id)
-            if card and upgrade_card != card.id and card.owner_id == ctx.author.id and card.tier[1] == upgrade_card.tier[1]:
+            if card and upgrade_card.id != card.id and card.owner_id == ctx.author.id and card.tier[1] == upgrade_card.tier[1]:
                 converted_cards.append(card)
 
         converted_cards = converted_cards[:(10 - upgrade_card.stars)]
