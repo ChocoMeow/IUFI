@@ -133,7 +133,7 @@ class CardPool:
         return card
     
     @classmethod
-    def roll(cls, amount: int = 3, *, included: list[str] = None, avoid: list[str] = None, luck_rates: float = None) -> list[Card]:
+    def roll(cls, amount: int = 3, *, included: list[str] = None, avoid: list[str] = None, luck_rates: float = None, birthday: bool = False) -> list[Card]:
         results = included if included else []
 
         drop_rates = DROP_RATES.copy()
@@ -151,6 +151,10 @@ class CardPool:
             for cat, amt in Counter(results).items()
             for card in sample(cls._available_cards[cat], k=amt)
         ]
+        #if birhtday and 04550 is availablle without owner, replace the first card with card with id 04550
+        if birthday and (card := cls.get_card("04550")) and not card.owner_id:
+            cards[0] = card
+
         shuffle(cards)
         return cards
 
