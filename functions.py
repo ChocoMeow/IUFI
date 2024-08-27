@@ -50,6 +50,7 @@ class Settings:
         self.RANK_BASE: Dict[Dict, Dict[str, Any]] = {}
         self.TRACK_BASE: Dict[str, Any] = {}
         self.MATCH_GAME_SETTINGS: Dict[str, Dict[str, Any]] = {}
+        self.ADMIN_IDS: List[int] = []
 
     def load(self):
         settings = open_json("settings.json")
@@ -72,6 +73,7 @@ class Settings:
         self.RANK_BASE = settings.get("RANK_BASE")
         self.TRACK_BASE = settings.get("TRACK_BASE")
         self.MATCH_GAME_SETTINGS = settings.get("MATCH_GAME_SETTINGS")
+        self.ADMIN_IDS = settings.get("ADMIN_IDS")
 
 tokens: TOKEN = TOKEN()
 settings: Settings = Settings()
@@ -216,7 +218,20 @@ def update_quest_progress(user: Dict[str, Any], completed_quests: Union[str, Lis
         #  Check if the quests need to be updated
         if (quest_updated := user_quest["next_update"] < (now := time.time())):
             _settings = QUESTS_SETTINGS.get(quest_type, {})
-            new_quests = random.sample(list(QUESTS_BASE.keys()), k=_settings.get("items", 0))
+            quests_by_type = {}
+
+            # Group quests by their type
+            for quest_name, quest_details in QUESTS_BASE.items():
+                quest_type = quest_details['type']
+                if quest_type not in quests_by_type:
+                    quests_by_type[quest_type] = []
+                quests_by_type[quest_type].append(quest_name)
+
+            # Now pick one quest from each type
+            new_quests = [random.choice(quests) for quests in quests_by_type.values()]
+
+            new_quests = random.sample(new_quests, k=_settings.get("items", len(new_quests)))
+
             user_quest["progresses"] = query.setdefault("$set", {})[f"quests.{quest_type}.progresses"] = {str(quest): 0 for quest in new_quests}
             query["$set"][f"quests.{quest_type}.next_update"] = now + _settings.get("update_time", 0)
 
