@@ -222,10 +222,10 @@ def update_quest_progress(user: Dict[str, Any], completed_quests: Union[str, Lis
 
             # Group quests by their type
             for quest_name, quest_details in QUESTS_BASE.items():
-                quest_type = quest_details['type']
-                if quest_type not in quests_by_type:
-                    quests_by_type[quest_type] = []
-                quests_by_type[quest_type].append(quest_name)
+                type = quest_details['type']
+                if type not in quests_by_type:
+                    quests_by_type[type] = []
+                quests_by_type[type].append(quest_name)
 
             # Now pick one quest from each type
             new_quests = [random.choice(quests) for quests in quests_by_type.values()]
