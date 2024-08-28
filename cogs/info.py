@@ -47,6 +47,39 @@ class Info(commands.Cog):
 
         await ctx.reply(embed=embed)
 
+    @leaderboard.command(aliases=["l"],hidden=True)
+    async def level(self, ctx: commands.Context, limit: str = "10"):
+        """Shows the IUFI level leaderboard with a limit. Only for admins."""
+        if ctx.author.id not in func.settings.ADMIN_IDS:
+            return
+
+        users = await func.USERS_DB.find().sort("exp", -1).limit(int(limit)).to_list(int(limit))
+        user = await func.get_user(ctx.author.id)
+        rank = await func.USERS_DB.count_documents({'exp': {'$gt': user.get('exp', 0)}}) + 1
+
+        embed = discord.Embed(title="🏆   Level Leaderboard", color=discord.Color.random())
+        embed.description = f"**Your current position is `{rank}`**\n"
+
+        description = ""
+        for index, top_user in enumerate(users):
+            level, _ = func.calculate_level(top_user["exp"])
+            member = self.bot.get_user(top_user['_id'])
+            if member:
+                description += f"{LEADERBOARD_EMOJIS[index if index <= 2 else 3]} " + highlight_text(f"{func.truncate_string(member.display_name):<18} {level:>5} ⚔️", member == ctx.author)
+
+        if rank > int(limit):
+            level, _ = func.calculate_level(user['exp'])
+            description += ("┇\n" if rank > int(limit) + 1 else "") + f"{LEADERBOARD_EMOJIS[3]} " + highlight_text(f"{func.truncate_string(ctx.author.display_name):<18} {level:>5} ⚔️", member == ctx.author)
+
+        if not description:
+            description = "The leaderboard is currently empty."
+
+        embed.description += f"```ansi\n{description}```"
+        embed.set_thumbnail(url=icon.url if (icon := ctx.guild.icon) else None)
+
+        await ctx.reply(embed=embed)
+
+
     @leaderboard.command(aliases=["mg"])
     async def matchgame(self, ctx: commands.Context, level: str = "1"):
         """Shows the IUFI Matching Game leaderboard."""
@@ -123,12 +156,16 @@ class Info(commands.Cog):
             member = self.bot.get_user(top_user['_id'])
             if member:
                 _rank = iufi.QuestionPool.get_rank(game_state['points'])
-                description += f"<:{_rank[0]}:{_rank[1]}> `{func.truncate_string(member.display_name):<18} {game_state['points']:>6} 🔥`\n"
-        
+                description += f"<:{_rank[0]}:{_rank[1]}> "+highlight_text(f"`{func.truncate_string(member.display_name):<18} {game_state['points']:>6} 🔥`\n", member == ctx.author)
+
+        if rank > len(users):
+            _rank = iufi.QuestionPool.get_rank(user.get("points", 0))
+            description += ("┇\n" if rank > len(users) + 1 else "") + f"<:{_rank[0]}:{_rank[1]}> "+highlight_text(f"`{func.truncate_string(ctx.author.display_name):<18} {user.get('points', 0):>6} 🔥`", member == ctx.author)
+
         if not description:
             description = "The leaderboard is currently empty."
 
-        embed.description = f"**The next reset is <t:{int(end_time)}:R>**\n**" + (f"Your current position is `{rank}`" if user else "You haven't play any match game!") + f"**\n{description}"
+        embed.description = f"**The next reset is <t:{int(end_time)}:R>**\n**" + (f"Your current position is `{rank}`" if user else "You haven't play any quiz game!") + f"**\n{description}"
         embed.set_thumbnail(url=icon.url if (icon := ctx.guild.icon) else None)
         await ctx.reply(embed=embed)
 
