@@ -7,6 +7,7 @@
     "ALLOWED_CATEGORY_IDS": [987352501172989993, 1144810748158165043],
     "IGNORE_CHANNEL_IDS": [1004494130874953769, 987354694236131418],
     "GAME_CHANNEL_IDS": [1155772660979093555, 1155772719909044224, 1155772738858913792, 1155772756730859580],
+    "ADMIN_IDS": [605776164744724512, 705783356767338648],
     "MUSIC_NODE": {
         "host": "127.0.0.1",
         "port": 2333,
@@ -57,154 +58,184 @@
         "ROLL": {
             "title": "Roll 10 times",
             "amount": 10,
-            "rewards": [["🍬", "candies", [10, 20]]]
+            "rewards": [["🍬", "candies", [10, 20]]],
+            "type": "ROLL"
         },
         "PLAY_QUIZ_GAME": {
             "title": "Play quiz 5 times",
             "amount": 5,
-            "rewards": [["🍬", "candies", [10, 20]]]
+            "rewards": [["🍬", "candies", [10, 20]]],
+            "type": "QUIZ"
         },
         "PLAY_MATCH_GAME_LVL_1": {
             "title": "Play level 1 match game 5 times",
             "amount": 5,
-            "rewards": [["🍬", "candies", [10, 20]]]
+            "rewards": [["🍬", "candies", [10, 20]]],
+            "type": "MATCH_GAME"
         },
         "PLAY_MATCH_GAME_LVL_2": {
             "title": "Play level 2 match game 4 times",
             "amount": 4,
-            "rewards": [["🍬", "candies", [15, 25]]]
+            "rewards": [["🍬", "candies", [15, 25]]],
+            "type": "MATCH_GAME"
         },
         "PLAY_MATCH_GAME_LVL_3": {
             "title": "Play level 3 match game 2 times",
             "amount": 2,
-            "rewards": [["🍬", "candies", [20, 30]]]
+            "rewards": [["🍬", "candies", [20, 30]]],
+            "type": "MATCH_GAME"
         },
         "FRAME_CONFIG": {
             "title": "Add frame to 1 card",
             "amount": 1,
-            "rewards": [["🍬", "candies", [20, 30]]]
+            "rewards": [["🍬", "candies", [20, 30]]],
+            "type": "FRAME"
         },
         "UPGRADE_CARD": {
             "title": "Upgrade any cards",
             "amount": 1,
-            "rewards": [["🍬", "candies", [10, 25]]]
+            "rewards": [["🍬", "candies", [10, 25]]],
+            "type": "UPGRADE"
         },
         "USE_ANY_POTION": {
             "title": "Use any potion 1 time",
             "amount": 1,
-            "rewards": [["🍬", "candies", [10, 20]]]
+            "rewards": [["🍬", "candies", [10, 20]]],
+            "type": "POTION"
         },
         "COLLECT_ANY_CARD": {
             "title": "Collect 10 cards of any tier",
             "amount": 10,
-            "rewards": [["🍬", "candies", [10, 20]]]
+            "rewards": [["🍬", "candies", [10, 20]]],
+            "type": "COLLECT"
         },
         "COLLECT_COMMON_CARD": {
             "title": "Collect 10 common cards",
             "amount": 10,
-            "rewards": [["🍬", "candies", [10, 20]]]
+            "rewards": [["🍬", "candies", [10, 20]]],
+            "type": "COLLECT"
         },
         "COLLECT_RARE_CARD": {
             "title": "Collect 3 rare cards",
             "amount": 3,
-            "rewards": [["🍬", "candies", [10, 20]]]
+            "rewards": [["🍬", "candies", [10, 20]]],
+            "type": "COLLECT"
         },
         "COLLECT_EPIC_CARD": {
             "title": "Collect 1 epic cards",
             "amount": 1,
-            "rewards": [["🍬", "candies", [20, 30]]]
+            "rewards": [["🍬", "candies", [20, 30]]],
+            "type": "COLLECT"
         },
         "CONVERT_ANY_CARD": {
             "title": "Convert 10 cards of any tier",
             "amount": 10,
-            "rewards": [["🍬", "candies", [5, 10]]]
+            "rewards": [["🍬", "candies", [5, 10]]],
+            "type": "CONVERT"
         },
         "TRADE_ANY_CARD": {
             "title": "Trade 10 cards of any tier",
             "amount": 10,
-            "rewards": [["🍬", "candies", [5, 10]]]
+            "rewards": [["🍬", "candies", [5, 10]]],
+            "type": "TRADE"
         },
         "BUY_ITEM": {
             "title": "Buy 3 items from the shop",
             "amount": 3,
-            "rewards": [["🍬", "candies", [80, 100]]]
+            "rewards": [["🍬", "candies", [80, 100]]],
+            "type": "SHOP"
         }
     },
     "WEEKLY_QUESTS": {
         "ROLL": {
             "title": "Roll 100 times",
             "amount": 100,
-            "rewards": [["🍬", "candies", [100, 120]]]
+            "rewards": [["🍬", "candies", [100, 120]]],
+            "type": "ROLL"
         },
         "PLAY_QUIZ_GAME": {
             "title": "Play quiz 50 times",
             "amount": 50,
-            "rewards": [["🍬", "candies", [100, 200]]]
+            "rewards": [["🍬", "candies", [100, 200]]],
+            "type": "QUIZ"
         },
         "PLAY_MATCH_GAME_LVL_1": {
             "title": "Play level 1 match game 50 times",
             "amount": 50,
-            "rewards": [["🍬", "candies", [100, 200]]]
+            "rewards": [["🍬", "candies", [100, 200]]],
+            "type": "MATCH_GAME"
         },
         "PLAY_MATCH_GAME_LVL_2": {
             "title": "Play level 2 match game 40 times",
             "amount": 40,
-            "rewards": [["🍬", "candies", [150, 250]]]
+            "rewards": [["🍬", "candies", [150, 250]]],
+            "type": "MATCH_GAME"
         },
         "PLAY_MATCH_GAME_LVL_3": {
             "title": "Play level 3 match game 20 times",
             "amount": 20,
-            "rewards": [["🍬", "candies", [200, 300]]]
+            "rewards": [["🍬", "candies", [200, 300]]],
+            "type": "MATCH_GAME"
         },
         "FRAME_CONFIG": {
             "title": "Add frame to 10 card",
             "amount": 10,
-            "rewards": [["🍬", "candies", [190, 210]]]
+            "rewards": [["🍬", "candies", [190, 210]]],
+            "type": "FRAME"
         },
         "UPGRADE_CARD": {
             "title": "Upgrade any 10 card",
             "amount": 10,
-            "rewards": [["🍬", "candies", [70, 120]]]
+            "rewards": [["🍬", "candies", [70, 120]]],
+            "type": "UPGRADE"
         },
         "USE_ANY_POTION": {
             "title": "Use any potion 10 times",
             "amount": 10,
-            "rewards": [["🍬", "candies", [100, 200]]]
+            "rewards": [["🍬", "candies", [100, 200]]],
+            "type": "POTION"
         },
         "COLLECT_ANY_CARD": {
             "title": "Collect 200 cards of any tier",
             "amount": 200,
-            "rewards": [["💎", "roll.epic", 1]]
+            "rewards": [["💎", "roll.epic", 1]],
+            "type": "COLLECT"
         },
         "COLLECT_COMMON_CARD": {
             "title": "Collect 100 common cards",
             "amount": 100,
-            "rewards": [["🍬", "candies", [100, 200]]]
+            "rewards": [["🍬", "candies", [100, 200]]],
+            "type": "COLLECT"
         },
         "COLLECT_RARE_CARD": {
             "title": "Collect 30 rare cards",
             "amount": 30,
-            "rewards": [["🍬", "candies", [100, 200]]]
+            "rewards": [["🍬", "candies", [100, 200]]],
+            "type": "COLLECT"
         },
         "COLLECT_EPIC_CARD": {
             "title": "Collect 10 epic cards",
             "amount": 10,
-            "rewards": [["🍬", "candies", [200, 300]]]
+            "rewards": [["🍬", "candies", [200, 300]]],
+            "type": "COLLECT"
         },
         "CONVERT_ANY_CARD": {
             "title": "Convert 100 cards of any tier",
             "amount": 100,
-            "rewards": [["🍬", "candies", [50, 100]]]
+            "rewards": [["🍬", "candies", [50, 100]]],
+            "type": "CONVERT"
         },
         "TRADE_ANY_CARD": {
             "title": "Trade 50 cards of any tier",
             "amount": 50,
-            "rewards": [["🍬", "candies", [150, 180]]]
+            "rewards": [["🍬", "candies", [150, 180]]],
+            "type": "TRADE"
         },
         "BUY_ITEM": {
             "title": "Buy 10 items from the shop",
             "amount": 10,
-            "rewards": [["🍬", "candies", [280, 320]]]
+            "rewards": [["🍬", "candies", [280, 320]]],
+            "type": "SHOP"
         }
     },
     "TIERS_BASE": {
