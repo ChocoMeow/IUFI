@@ -154,13 +154,15 @@ class Info(commands.Cog):
                 continue
 
             member = self.bot.get_user(top_user['_id'])
+            if not member:
+                member = self.bot.get_user(236400388847173632)
             if member:
                 _rank = iufi.QuestionPool.get_rank(game_state['points'])
-                description += f"<:{_rank[0]}:{_rank[1]}> "+highlight_text(f"`{func.truncate_string(member.display_name):<18} {game_state['points']:>6} 🔥`\n", member == ctx.author)
+                description += f"<:{_rank[0]}:{_rank[1]}> `{func.truncate_string(member.display_name):<18} {game_state['points']:>6} 🔥`\n"
 
         if description and rank > len(users):
             _rank = iufi.QuestionPool.get_rank(user.get("points", 0))
-            description += ("┇\n" if rank > len(users) + 1 else "") + f"<:{_rank[0]}:{_rank[1]}> "+highlight_text(f"`{func.truncate_string(ctx.author.display_name):<18} {user.get('points', 0):>6} 🔥`", member == ctx.author)
+            description += ("┇\n" if rank > len(users) + 1 else "") + f"<:{_rank[0]}:{_rank[1]}> `{func.truncate_string(ctx.author.display_name):<18} {user.get('points', 0):>6} 🔥`"
 
         if not description:
             description = "The leaderboard is currently empty."

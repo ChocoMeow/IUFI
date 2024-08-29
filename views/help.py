@@ -32,7 +32,7 @@ class HelpView(discord.ui.View):
             if cog.invisible:
                 continue
             
-            commands = [command for command in cog.walk_commands()]
+            commands = [command for command in cog.walk_commands() if not command.hidden]
             if not commands:
                 continue
             

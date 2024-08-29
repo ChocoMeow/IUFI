@@ -22,7 +22,7 @@ class Settings(commands.Cog):
         embed.description = f"Reminders have been turned {toggle_text}"
         await ctx.reply(embed=embed)
 
-    @commands.command(Hidden=True)
+    @commands.command(hidden=True)
     async def reset(self, ctx: commands.Context) -> None:
         """Reset jk"""
         if ctx.author.id in func.settings.ADMIN_IDS:
