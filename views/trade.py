@@ -33,7 +33,7 @@ class TradeView(discord.ui.View):
         embed = discord.Embed(title="⤵️ Trade", color=discord.Color.random())
         embed.description = f"```Seller: {self.seller.display_name}\n" \
                             f"Buyer: {self.buyer.display_name if self.buyer else 'Anyone'}\n" \
-                            f"Candies: 🍬 {self.candies}\n\n" \
+                            f"Mics: 🎤 {self.candies}\n\n" \
                             f"{self.card.display_id}\n" \
                             f"{self.card.display_tag}\n" \
                             f"{self.card.display_frame}\n" \
@@ -65,7 +65,7 @@ class TradeView(discord.ui.View):
         _buyer = await func.get_user(buyer.id)
         if _buyer["candies"] < self.candies:
             self.is_loading = False
-            return await interaction.response.send_message(f"You don't have enough candies! You only have `{_buyer['candies']}` candies", ephemeral=True)
+            return await interaction.response.send_message(f"You don't have enough mics! You only have `{_buyer['candies']}` mics", ephemeral=True)
 
         if len(_buyer["cards"]) >= func.settings.MAX_CARDS:
             self.is_loading = False
@@ -85,7 +85,7 @@ class TradeView(discord.ui.View):
         await func.update_card(self.card.id, {"$set": {"owner_id": buyer.id}})
 
         embed = discord.Embed(title="✅ Traded", color=discord.Color.random())
-        embed.description = f"```{self.card.display_id}\n🍬 - {self.candies}```"
+        embed.description = f"```{self.card.display_id}\n🎤 - {self.candies}```"
 
         self.is_loading = False
         await self.on_timeout()
