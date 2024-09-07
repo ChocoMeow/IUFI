@@ -252,7 +252,7 @@ class Profile(commands.Cog):
         embed = discord.Embed(title="📅   Daily Reward", color=discord.Color.random())
         embed.description = f"Daily reward claimed! + {'🎤 5' if claimed % 5 else f'{WEEKLY_REWARDS[(claimed//5) - 1][0]} {WEEKLY_REWARDS[(claimed//5) - 1][2]}'}"
         if debut_anniversary_daily_reward:
-            embed.description += f" \nExtra Debut Anniversary Reward: {debut_anniversary_daily_reward[0]} {debut_anniversary_daily_reward[2]}"
+            embed.description += f" \nExtra Debut Anniversary Reward: + {debut_anniversary_daily_reward[0]} {debut_anniversary_daily_reward[2]}"
         embed.set_thumbnail(url=ctx.author.display_avatar.url)
 
         value = "```"

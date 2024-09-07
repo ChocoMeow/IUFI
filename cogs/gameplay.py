@@ -46,6 +46,8 @@ class Gameplay(commands.Cog):
 
         query = func.update_quest_progress(user, "ROLL", query=query)
         await func.update_user(ctx.author.id, query)
+
+        await func.add_anniversary_quest_progress(1, ctx.author.id)
         
         if user["exp"] == 0:
             view = discord.ui.View()

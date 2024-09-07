@@ -19,7 +19,10 @@ from typing import (
 
 from dotenv import load_dotenv
 
+import iufi
+
 ROOT_DIR = os.path.dirname(os.path.abspath(__file__))
+
 
 class TOKEN:
     def __init__(self) -> None:
@@ -28,6 +31,7 @@ class TOKEN:
         self.token = os.getenv("TOKEN")
         self.mongodb_url = os.getenv("MONGODB_URL")
         self.mongodb_name = os.getenv("MONGODB_NAME")
+
 
 class Settings:
     def __init__(self):
@@ -75,6 +79,7 @@ class Settings:
         self.MATCH_GAME_SETTINGS = settings.get("MATCH_GAME_SETTINGS")
         self.ADMIN_IDS = settings.get("ADMIN_IDS")
 
+
 tokens: TOKEN = TOKEN()
 settings: Settings = Settings()
 
@@ -84,6 +89,7 @@ USERS_DB: AsyncIOMotorCollection = None
 CARDS_DB: AsyncIOMotorCollection = None
 QUESTIONS_DB: AsyncIOMotorCollection = None
 MUSIC_DB: AsyncIOMotorCollection = None
+ANNIVERSARY_DB: AsyncIOMotorCollection = None
 
 USERS_BUFFER: Dict[int, Dict[str, Any]] = {}
 
@@ -98,12 +104,14 @@ QUESTS_SETTINGS: Dict[str, Dict[str, int]] = {
     }
 }
 
+
 def open_json(path: str) -> dict:
     try:
         with open(os.path.join(ROOT_DIR, path), encoding="utf8") as json_file:
             return json.load(json_file)
     except:
         return {}
+
 
 def cal_retry_time(end_time: float, default: str = None) -> str | None:
     if end_time <= (current_time := time.time()):
@@ -116,6 +124,7 @@ def cal_retry_time(end_time: float, default: str = None) -> str | None:
 
     return (f"{hours}h " if hours > 0 else "") + f"{minutes}m {seconds}s"
 
+
 def calculate_level(exp: int) -> tuple[int, int]:
     level = 0
 
@@ -125,6 +134,7 @@ def calculate_level(exp: int) -> tuple[int, int]:
 
     return level, exp
 
+
 def convert_seconds(seconds: float) -> str:
     if seconds >= 60:
         minutes = int(seconds // 60)
@@ -133,29 +143,36 @@ def convert_seconds(seconds: float) -> str:
     else:
         return f"{seconds:.1f}s"
 
-def get_potions(potions: Dict[str, float], base: Dict[str, str | Dict[str, float]], details: bool = False) -> Dict[str, float]:
+
+def get_potions(potions: Dict[str, float], base: Dict[str, str | Dict[str, float]], details: bool = False) -> Dict[
+    str, float]:
     result: Dict[str, float] = {}
     for potion, expiration in potions.items():
         if expiration <= time.time():
             continue
         potion = potion.split("_")
         potion_data = base.get(potion[0], {})
-        result[potion[0]] = potion_data.copy() | {"level": potion[1], "expiration": expiration} if details else potion_data.get("levels", {}).get(potion[1], 0)
+        result[potion[0]] = potion_data.copy() | {"level": potion[1],
+                                                  "expiration": expiration} if details else potion_data.get("levels",
+                                                                                                            {}).get(
+            potion[1], 0)
     return result
+
 
 def clean_text(input_text: str, allow_spaces: bool = True, convert_to_lower: bool = False) -> str:
     if not input_text:
         return ""
-    
+
     cleaned_text = "".join(char for char in input_text if char.isalnum() or char.isspace())
-    
+
     if not allow_spaces:
         cleaned_text = "".join(char for char in cleaned_text if char != " ")
-    
+
     if convert_to_lower:
         cleaned_text = cleaned_text.lower()
-    
+
     return cleaned_text
+
 
 def get_week_unix_timestamps() -> tuple[float, float]:
     today = date.today()
@@ -168,12 +185,13 @@ def get_week_unix_timestamps() -> tuple[float, float]:
 
     return time.mktime(start_of_this_week.timetuple()), time.mktime(start_of_next_week.timetuple())
 
+
 def get_month_unix_timestamps() -> tuple[float, float]:
     today = date.today()
 
     # Get the first day of this month
     start_of_this_month = date(today.year, today.month, 1)
-    
+
     # Get the first day of next month
     if today.month == 12:
         start_of_next_month = date(today.year + 1, 1, 1)
@@ -182,14 +200,17 @@ def get_month_unix_timestamps() -> tuple[float, float]:
 
     return time.mktime(start_of_this_month.timetuple()), time.mktime(start_of_next_month.timetuple())
 
+
 def match_string(input_string: str, word_list: List[str]) -> str:
     for word in word_list:
         if word.startswith(input_string):
             return word
     return None
 
+
 def truncate_string(text: str, length: int = 18) -> str:
     return text[:length - 3] + "..." if len(text) > length else text
+
 
 async def get_user(user_id: int, *, insert: bool = True) -> Dict[str, Any]:
     user = USERS_BUFFER.get(user_id)
@@ -201,7 +222,9 @@ async def get_user(user_id: int, *, insert: bool = True) -> Dict[str, Any]:
         user = USERS_BUFFER[user_id] = user if user else copy.deepcopy(settings.USER_BASE) | {"_id": user_id}
     return user
 
-def update_quest_progress(user: Dict[str, Any], completed_quests: Union[str, List[str]], progress: int = 1, *, query: Dict[str, Any] = None) -> Dict[str, Any]:
+
+def update_quest_progress(user: Dict[str, Any], completed_quests: Union[str, List[str]], progress: int = 1, *,
+                          query: Dict[str, Any] = None) -> Dict[str, Any]:
     global settings
 
     completed_quests = completed_quests if isinstance(completed_quests, list) else [completed_quests]
@@ -209,12 +232,13 @@ def update_quest_progress(user: Dict[str, Any], completed_quests: Union[str, Lis
         query: Dict[str, Any] = {}
 
     for quest_type in settings.USER_BASE["quests"].keys():
-        user_quest = user.copy().get("quests", {}).get(quest_type, copy.deepcopy(settings.USER_BASE["quests"][quest_type]))
+        user_quest = user.copy().get("quests", {}).get(quest_type,
+                                                       copy.deepcopy(settings.USER_BASE["quests"][quest_type]))
 
         QUESTS_BASE: Dict[str, Any] = getattr(settings, f"{quest_type.upper()}_QUESTS", None)
         if not QUESTS_BASE:
             continue
-        
+
         #  Check if the quests need to be updated
         if (quest_updated := user_quest["next_update"] < (now := time.time())):
             _settings = QUESTS_SETTINGS.get(quest_type, {})
@@ -232,7 +256,9 @@ def update_quest_progress(user: Dict[str, Any], completed_quests: Union[str, Lis
 
             new_quests = random.sample(new_quests, k=_settings.get("items", len(new_quests)))
 
-            user_quest["progresses"] = query.setdefault("$set", {})[f"quests.{quest_type}.progresses"] = {str(quest): 0 for quest in new_quests}
+            user_quest["progresses"] = query.setdefault("$set", {})[f"quests.{quest_type}.progresses"] = {str(quest): 0
+                                                                                                          for quest in
+                                                                                                          new_quests}
             query["$set"][f"quests.{quest_type}.next_update"] = now + _settings.get("update_time", 0)
 
         # Update the progress for each quest
@@ -244,7 +270,7 @@ def update_quest_progress(user: Dict[str, Any], completed_quests: Union[str, Lis
 
                     if quest_progress + progress > quest_amount:
                         progress = min(progress, quest_amount - quest_progress)
-    
+
                     # If the quests were just updated, set the progress to the specified 
                     if quest_updated:
                         query["$set"][f"quests.{quest_type}.progresses"][quest_name] = progress
@@ -257,10 +283,13 @@ def update_quest_progress(user: Dict[str, Any], completed_quests: Union[str, Lis
                         query.setdefault("$inc", {}).setdefault(reward[1], 0)
                         query["$inc"].setdefault("exp", 0)
 
-                        query["$inc"][reward[1]] += random.randint(reward[2][0], reward[2][1]) if isinstance(reward[2], list) else reward[2]
+                        query["$inc"][reward[1]] += random.randint(reward[2][0], reward[2][1]) if isinstance(reward[2],
+                                                                                                             list) else \
+                        reward[2]
                         query["$inc"]["exp"] += 10
 
     return query
+
 
 async def update_user(user_id: int, data: dict) -> None:
     user = await get_user(user_id)
@@ -285,7 +314,8 @@ async def update_user(user_id: int, data: dict) -> None:
                 nested_user[cursors[-1]] = nested_user.get(cursors[-1], 0) + value
 
             elif mode == "$push":
-                nested_user.setdefault(cursors[-1], []).extend(value.get("$in", []) if isinstance(value, dict) else [value])
+                nested_user.setdefault(cursors[-1], []).extend(
+                    value.get("$in", []) if isinstance(value, dict) else [value])
 
             elif mode == "$pull":
                 if cursors[-1] in nested_user:
@@ -297,6 +327,7 @@ async def update_user(user_id: int, data: dict) -> None:
 
     await USERS_DB.update_one({"_id": user_id}, data)
 
+
 async def update_card(card_id: List[str] | str, data: dict, insert: bool = False) -> None:
     if insert:
         await CARDS_DB.insert_one({"_id": card_id})
@@ -305,3 +336,57 @@ async def update_card(card_id: List[str] | str, data: dict, insert: bool = False
         return await CARDS_DB.update_many({"_id": {"$in": card_id}}, data)
 
     await CARDS_DB.update_one({"_id": card_id}, data)
+
+
+# anniversary_data = {
+#     "quest_progress": 0,
+#     "required_progress": 5844,
+#     "users": [
+#         {"_id": 0, "progress": 0}
+#     ]
+# }
+
+async def add_anniversary_quest_progress(progress: int, user_id: int) -> None:
+    anniversary_data = await get_anniversary()
+
+    if anniversary_data["quest_progress"] >= anniversary_data["required_progress"]:
+        return
+
+    anniversary_data["quest_progress"] += progress
+    user = next((u for u in anniversary_data["users"] if u["_id"] == user_id), None)
+    if user:
+        user["progress"] += progress
+    else:
+        anniversary_data["users"].append({"_id": user_id, "progress": progress})
+
+    if anniversary_data["quest_progress"] >= anniversary_data["required_progress"]:
+        anniversary_data["quest_progress"] = anniversary_data["required_progress"]
+        await give_anniversary_rewards(anniversary_data["users"])
+
+    await update_anniversary(anniversary_data)
+
+
+async def give_anniversary_rewards(users: List[Dict[str, Any]]) -> None:
+    reward = random.choice(iufi.ANNIVERSARY_QUEST_REWARDS)
+
+    for user_data in users:
+        await update_user(user_data["_id"], {"$inc": {reward[1]: random.randint(reward[2][0], reward[2][1])}})
+
+    print(f"Rewarded {len(users)} users with {reward[1]}")
+
+
+async def update_anniversary(data: Dict[str, Any]) -> None:
+    await ANNIVERSARY_DB.replace_one({"_id": 0}, data, upsert=True)
+
+
+async def get_anniversary() -> Dict[str, Any]:
+    anniversary_data = await ANNIVERSARY_DB.find_one({"_id": 0})
+    if not anniversary_data:
+        anniversary_data = {
+            "_id": 0,
+            "quest_progress": 0,
+            "required_progress": 5844,
+            "users": []
+        }
+
+    return anniversary_data

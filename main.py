@@ -64,6 +64,7 @@ class IUFI(commands.Bot):
         func.USERS_DB = func.MONGO_DB[db_name]["users"]
         func.QUESTIONS_DB = func.MONGO_DB[db_name]["questions"]
         func.MUSIC_DB = func.MONGO_DB[db_name]["musics"]
+        func.ANNIVERSARY_DB = func.MONGO_DB[db_name]["anniversary"]
 
     async def setup_hook(self) -> None:
         await self.connect_db()
@@ -112,6 +113,7 @@ class IUFI(commands.Bot):
         print(f"Loaded {len(self.questions._questions)} questions")
 
     async def on_command_error(self, ctx: commands.Context, exception, /) -> None:
+        print(exception)
         error = getattr(exception, 'original', exception)
         if ctx.interaction:
             error = getattr(error, 'original', error)

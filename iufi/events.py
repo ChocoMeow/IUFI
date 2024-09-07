@@ -5,8 +5,8 @@ EVENT_CONFIG: dict[str, dict[str, str | datetime.datetime]] = {
     "debut_anniversary": {
         "name": "Debut Anniversary",
         "description": "Celebrate IU's debut anniversary with IUFI!",
-        "start_date": datetime.datetime(datetime.datetime.now().year, 9, 3),
-        "end_date": datetime.datetime(datetime.datetime.now().year, 9, 22),
+        "start_date": datetime.datetime(datetime.datetime.now().year, 9, 6),
+        "end_date": datetime.datetime(datetime.datetime.now().year, 9, 26),
         "folder": "debut"
     }
 }
@@ -18,6 +18,9 @@ def is_debut_anniversary_day() -> bool:
     return debut_anniversary_day["start_date"] <= datetime.datetime.now() <= debut_anniversary_day["end_date"]
 
 
+def get_end_time() -> datetime.datetime:
+    return debut_anniversary_day["end_date"]
+
 def get_match_game_cover(level: str) -> str:
     return "cover/" + (
         f"{debut_anniversary_day['folder']}/level{level}.png" if is_debut_anniversary_day() else f"level{level}.jpg")
@@ -25,8 +28,8 @@ def get_match_game_cover(level: str) -> str:
 
 DAILY_REWARDS: dict[int, tuple[str, str, int]] = {
     1: ("🎤", "candies", 10),
-    2: ("🎤", "candies", 20),
-    3: ("🎤", "candies", 30),
+    2: ("💎", "roll.epic", 1),
+    3: ("🌸", "roll.rare", 1),
     4: ("🎤", "candies", 40),
     5: ("🎤", "candies", 50),
     6: ("🎤", "candies", 60),
@@ -45,7 +48,7 @@ DAILY_REWARDS: dict[int, tuple[str, str, int]] = {
 
 CARDS_TO_SELL: dict[int, [tuple[str, int]]] = {
     1: (("1", 10), ("2", 20)),
-    2: (("3", 30), ("4", 40)),
+    2: (("194", 3), ("327", 999)),
     3: (("5", 50), ("6", 60)),
     4: (("7", 70), ("8", 80)),
     5: (("9", 90), ("10", 100)),
@@ -63,8 +66,10 @@ CARDS_TO_SELL: dict[int, [tuple[str, int]]] = {
     17: (("33", 330), ("34", 340)),
 }
 
-MARKET_ID = 1143358510697021532
+ANNIVERSARY_QUEST_REWARDS = [["🎤", "candies", [500, 600]]]
 
+MARKET_ID = 1159846609924927558 # dev server
+#MARKET_ID = 1143358510697021532 #my server
 
 def GetTodayReward() -> tuple[str, str, int]:
     # current day - event start day
