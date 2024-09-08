@@ -340,16 +340,16 @@ async def update_card(card_id: List[str] | str, data: dict, insert: bool = False
 
 # anniversary_data = {
 #     "quest_progress": 0,
-#     "required_progress": 5844,
 #     "users": [
 #         {"_id": 0, "progress": 0}
-#     ]
+#     ],
+#     "current_milestone": 0
 # }
 
 async def add_anniversary_quest_progress(progress: int, user_id: int) -> None:
     anniversary_data = await get_anniversary()
 
-    if anniversary_data["quest_progress"] >= anniversary_data["required_progress"]:
+    if anniversary_data["quest_progress"] >= iufi.MILESTONES[-1] or anniversary_data["current_milestone"] >= len(iufi.MILESTONES):
         return
 
     anniversary_data["quest_progress"] += progress
@@ -359,20 +359,21 @@ async def add_anniversary_quest_progress(progress: int, user_id: int) -> None:
     else:
         anniversary_data["users"].append({"_id": user_id, "progress": progress})
 
-    if anniversary_data["quest_progress"] >= anniversary_data["required_progress"]:
-        anniversary_data["quest_progress"] = anniversary_data["required_progress"]
-        await give_anniversary_rewards(anniversary_data["users"])
+    if anniversary_data["quest_progress"] >= iufi.MILESTONES[anniversary_data["current_milestone"]]:
+        await give_anniversary_rewards(anniversary_data["users"],anniversary_data["current_milestone"])
+        anniversary_data["current_milestone"] += 1
 
     await update_anniversary(anniversary_data)
 
 
-async def give_anniversary_rewards(users: List[Dict[str, Any]]) -> None:
-    reward = random.choice(iufi.ANNIVERSARY_QUEST_REWARDS)
+async def give_anniversary_rewards(users: List[Dict[str, Any]], current_milestone: int) -> None:
+    rewards = iufi.ANNIVERSARY_QUEST_REWARDS[current_milestone]
 
     for user_data in users:
-        await update_user(user_data["_id"], {"$inc": {reward[1]: random.randint(reward[2][0], reward[2][1])}})
+        query = { "$inc": {reward_name: amount} for reward_emoji, reward_name, amount in rewards }
+        await update_user(user_data["_id"], query)
 
-    print(f"Rewarded {len(users)} users with {reward[1]}")
+    print("Rewards given to users")
 
 
 async def update_anniversary(data: Dict[str, Any]) -> None:
@@ -385,7 +386,7 @@ async def get_anniversary() -> Dict[str, Any]:
         anniversary_data = {
             "_id": 0,
             "quest_progress": 0,
-            "required_progress": 5844,
+            "current_milestone": 0,
             "users": []
         }
 

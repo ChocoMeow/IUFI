@@ -55,12 +55,15 @@ class DebutAnniversary(commands.Cog):
                         view=view
                     )
 
-    @commands.command(aliases=["al"])
-    async def anniversaryleaderboard(self, ctx: commands.Context) -> None:
+    @commands.command(aliases=["aq"])
+    async def anniversaryquest(self, ctx: commands.Context) -> None:
         """Displays the leaderboard for the Debut Anniversary event"""
         anniversary_data = await func.get_anniversary()
         users = anniversary_data["users"]
-        required_progress = anniversary_data["required_progress"]
+        current_milestone = anniversary_data["current_milestone"]
+        if current_milestone >= len(iufi.MILESTONES):
+            current_milestone = len(iufi.MILESTONES) - 1
+        required_progress = iufi.MILESTONES[current_milestone]
         quest_progress = anniversary_data["quest_progress"]
         percentage = quest_progress / required_progress * 100
         progress_bar = generate_progress_bar(20, percentage)
@@ -68,11 +71,13 @@ class DebutAnniversary(commands.Cog):
         if time.time() > endtime:
             await ctx.reply("The Debut Anniversary event has ended.")
             return
+        milestone_name = "QUEST MILESTONE " + str(current_milestone + 1)
         details = f"Quest ends <t:{endtime}:R>\n\n"
-        details += f"{'✅' if quest_progress >= required_progress else '❌'} ROLL 5844 TIMES\n"
+        details += f"**   {milestone_name}**\n\n"
+        details += f"{'✅' if quest_progress >= required_progress else '❌'} ROLL {required_progress} TIMES\n"
         details += f"```ansi\n➢ Reward: " + " | ".join(
             f"{r[0]} {f'{r[2][0]} ~ {r[2][1]}' if isinstance(r[2], list) else r[2]}" for r in
-            iufi.ANNIVERSARY_QUEST_REWARDS) + f"\n➢ {progress_bar} {int(percentage)}% ({quest_progress}/{required_progress})```\n"
+            iufi.ANNIVERSARY_QUEST_REWARDS[current_milestone]) + f"\n➢ {progress_bar} {int(percentage)}% ({quest_progress}/{required_progress})```\n"
 
         rank = users.index(ctx.author.id) + 1 if ctx.author.id in users else None
         embed = discord.Embed(title="❤️   Debut Anniversary Global Quest", color=discord.Color.purple())

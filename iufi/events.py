@@ -66,7 +66,12 @@ CARDS_TO_SELL: dict[int, [tuple[str, int]]] = {
     17: (("33", 330), ("34", 340)),
 }
 
-ANNIVERSARY_QUEST_REWARDS = [["🎤", "candies", [500, 600]]]
+MILESTONES = [5, 10, 15, 20]
+MILESTONE_ONE_REWARD = [["🎤", "candies", 100]]
+MILESTONE_TWO_REWARD = [["💎", "roll.epic", 1]]
+MILESTONE_THREE_REWARD = [["🌸", "roll.rare", 1]]
+MILESTONE_FOUR_REWARD = [["👑", "roll.legendary", 1]]
+ANNIVERSARY_QUEST_REWARDS = [MILESTONE_ONE_REWARD, MILESTONE_TWO_REWARD, MILESTONE_THREE_REWARD, MILESTONE_FOUR_REWARD]
 
 MARKET_ID = 1159846609924927558 # dev server
 #MARKET_ID = 1143358510697021532 #my server
