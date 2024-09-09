@@ -27,23 +27,23 @@ def get_match_game_cover(level: str) -> str:
 
 
 DAILY_REWARDS: dict[int, tuple[str, str, int]] = {
-    1: ("🎤", "candies", 10),
-    2: ("💎", "roll.epic", 1),
-    3: ("🌸", "roll.rare", 1),
-    4: ("🎤", "candies", 40),
-    5: ("🎤", "candies", 50),
-    6: ("🎤", "candies", 60),
-    7: ("🎤", "candies", 70),
-    8: ("🎤", "candies", 80),
-    9: ("🎤", "candies", 90),
-    10: ("🎤", "candies", 100),
-    11: ("🎤", "candies", 110),
-    12: ("🎤", "candies", 120),
-    13: ("🎤", "candies", 130),
-    14: ("🎤", "candies", 140),
-    15: ("🎤", "candies", 150),
-    16: ("🎤", "candies", 160),
-    17: ("🎤", "candies", 170),
+    1: ("🎤", "candies", 5),
+    2: ("🎤", "candies", 5),
+    3: ("🎤", "candies", 5),
+    4: ("🎤", "candies", 10),
+    5: ("🌸", "roll.rare", 1),
+    6: ("🎤", "candies", 10),
+    7: ("🎤", "candies", 15),
+    8: ("🎤", "candies", 25),
+    9: ("💎", "roll.epic", 1),
+    10: ("🎤", "candies", 25),
+    11: ("🎤", "candies", 15),
+    12: ("🎤", "candies", 10),
+    13: ("🌸", "roll.rare", 1),
+    14: ("🎤", "candies", 10),
+    15: ("🎤", "candies", 5),
+    16: ("🎤", "candies", 5),
+    17: ("🎤", "candies", 5)
 }
 
 CARDS_TO_SELL: dict[int, [tuple[str, int]]] = {
@@ -67,10 +67,10 @@ CARDS_TO_SELL: dict[int, [tuple[str, int]]] = {
 }
 
 MILESTONES = [5, 10, 15, 20]
-MILESTONE_ONE_REWARD = [["🎤", "candies", 100]]
-MILESTONE_TWO_REWARD = [["💎", "roll.epic", 1]]
-MILESTONE_THREE_REWARD = [["🌸", "roll.rare", 1]]
-MILESTONE_FOUR_REWARD = [["👑", "roll.legendary", 1]]
+MILESTONE_ONE_REWARD = [["🎤", "candies", 50]]
+MILESTONE_TWO_REWARD = [["🌸", "roll.rare", 2]]
+MILESTONE_THREE_REWARD = [["🌸", "roll.rare", 1],["💎", "roll.epic", 1]]
+MILESTONE_FOUR_REWARD = [["🎤", "candies", 50],["💎", "roll.epic", 2],["👑", "roll.legendary", 1]]
 ANNIVERSARY_QUEST_REWARDS = [MILESTONE_ONE_REWARD, MILESTONE_TWO_REWARD, MILESTONE_THREE_REWARD, MILESTONE_FOUR_REWARD]
 
 MARKET_ID = 1159846609924927558 # dev server
@@ -88,3 +88,7 @@ def GetTodayCardSell() -> list[tuple[str, int]]:
     current_day = (datetime.datetime.now() - debut_anniversary_day["start_date"]).days + 1
     print("current_day: ", current_day)
     return CARDS_TO_SELL.get(current_day, None)
+
+
+def GetAllCards() -> list[tuple[str, int]]:
+    return [card for cards in CARDS_TO_SELL.values() for card in cards]

@@ -19,22 +19,24 @@ class DebutAnniversary(commands.Cog):
         self.invisible = True
         self.emoji = "🎤"
 
-
-    @commands.command(hidden=True)
-    async def debut(self, ctx: commands.Context) -> None:  # delete
-        user = await func.get_user(ctx.author.id)
-        if user["debut_anniversary"]:
-            await ctx.send("You have already claimed your debut anniversary reward!")
-            return
-
-        await ctx.send("Happy Debut Anniversary! 🎉" + "\n" + "You have received 1000🎤 Mics!")
-        await func.update_user(ctx.author.id, {"candies": user["candies"] + 1000, "debut_anniversary": True})
-
     @commands.command(hidden=True)
     async def sendMessage(self, ctx: commands.Context, channel: discord.TextChannel, *, message: str) -> None:
         """Sends admin message to channel specified"""
         if ctx.author.id in func.settings.ADMIN_IDS:
             await channel.send(message)
+
+    @commands.command(hidden=True, aliases=["aac"])
+    async def assignAllCardsToBot(self, ctx: commands.Context) -> None:
+        """Assigns all cards to the bot"""
+        if ctx.author.id in func.settings.ADMIN_IDS:
+            #get all anniversary sale cards and give it to the bot
+            all_cards = iufi.GetAllCards()
+            for card_id, card_price in all_cards:
+                card = iufi.CardPool.get_card(card_id)
+                if card.owner_id:
+                    continue
+                await func.update_card(card_id, {"$set": {"owner_id": self.bot.user.id}})
+            await ctx.reply("All cards have been assigned to the bot.")
 
     @tasks.loop(hours=24)
     async def debut_anniversary(self) -> None:
@@ -49,7 +51,7 @@ class DebutAnniversary(commands.Cog):
                 if card.owner_id == self.bot.user.id:
                     view = AnniversarySellView(self.bot, None, card, card_price)
                     view.message = await channel.send(
-                        content=f"Special Debut Anniversary Sale",
+                        content=f"**Special Debut Anniversary Sale**",
                         file=discord.File(await asyncio.to_thread(card.image_bytes), filename=f"image.{card.format}"),
                         embed=view.build_embed(),
                         view=view
@@ -79,20 +81,36 @@ class DebutAnniversary(commands.Cog):
             f"{r[0]} {f'{r[2][0]} ~ {r[2][1]}' if isinstance(r[2], list) else r[2]}" for r in
             iufi.ANNIVERSARY_QUEST_REWARDS[current_milestone]) + f"\n➢ {progress_bar} {int(percentage)}% ({quest_progress}/{required_progress})```\n"
 
-        rank = users.index(ctx.author.id) + 1 if ctx.author.id in users else None
         embed = discord.Embed(title="❤️   Debut Anniversary Global Quest", color=discord.Color.purple())
         embed.description = details
-        embed.description += f"\n🏆   Debut Anniversary Leaderboard\n"
+        embed.set_thumbnail(url=icon.url if (icon := ctx.guild.icon) else None)
+        await ctx.reply(embed=embed)
+
+    @commands.command(aliases=["al"])
+    async def anniversaryleaderboard(self, ctx: commands.Context) -> None:
+        """Displays the leaderboard for the Debut Anniversary event"""
+        anniversary_data = await func.get_anniversary()
+        users = anniversary_data["users"]
+        if time.time() > int(iufi.get_end_time().timestamp()):
+            await ctx.reply("The Debut Anniversary event has ended.")
+            return
+        embed = discord.Embed(title="🏆   Debut Anniversary Leaderboard", color=discord.Color.purple())
+        embed.description = ""
+        rank = users.index(ctx.author.id) + 1 if ctx.author.id in users else None
         if rank:
             embed.description += f"**Your current position is `{rank}`**\n"
 
         description = ""
         top_users = users[:10]
+        rank_1_user = None
+
         for index, top_user in enumerate(top_users):
             user_progress = top_user["progress"]
             member = self.bot.get_user(top_user['_id'])
 
             if member:
+                if index == 0:
+                    rank_1_user = member
                 description += f"{LEADERBOARD_EMOJIS[index if index <= 2 else 3]} " + highlight_text(
                     f"{func.truncate_string(member.display_name):<18} {user_progress:>5} ⚔️", member == ctx.author)
 
@@ -106,7 +124,8 @@ class DebutAnniversary(commands.Cog):
             description = "The leaderboard is currently empty."
 
         embed.description += f"```ansi\n{description}```"
-        embed.set_thumbnail(url=icon.url if (icon := ctx.guild.icon) else None)
+        icon = rank_1_user.display_avatar if rank_1_user else ctx.guild.icon
+        embed.set_thumbnail(url=icon.url if (icon := icon) else None)
 
         await ctx.reply(embed=embed)
 
