@@ -5,7 +5,7 @@ EVENT_CONFIG: dict[str, dict[str, str | datetime.datetime]] = {
     "debut_anniversary": {
         "name": "Debut Anniversary",
         "description": "Celebrate IU's debut anniversary with IUFI!",
-        "start_date": datetime.datetime(datetime.datetime.now().year, 9, 6),
+        "start_date": datetime.datetime(datetime.datetime.now().year, 9, 9),
         "end_date": datetime.datetime(datetime.datetime.now().year, 9, 26),
         "folder": "debut"
     }
@@ -22,28 +22,27 @@ def get_end_time() -> datetime.datetime:
     return debut_anniversary_day["end_date"]
 
 def get_match_game_cover(level: str) -> str:
-    return "cover/" + (
-        f"{debut_anniversary_day['folder']}/level{level}.png" if is_debut_anniversary_day() else f"level{level}.jpg")
+    return "cover/" + f"level{level}.jpg"
 
 
 DAILY_REWARDS: dict[int, tuple[str, str, int]] = {
-    1: ("🎤", "candies", 5),
-    2: ("🎤", "candies", 5),
-    3: ("🎤", "candies", 5),
-    4: ("🎤", "candies", 10),
+    1: ("🎵", "candies", 5),
+    2: ("🎵", "candies", 5),
+    3: ("🎵", "candies", 5),
+    4: ("🎵", "candies", 10),
     5: ("🌸", "roll.rare", 1),
-    6: ("🎤", "candies", 10),
-    7: ("🎤", "candies", 15),
-    8: ("🎤", "candies", 25),
+    6: ("🎵", "candies", 10),
+    7: ("🎵", "candies", 15),
+    8: ("🎵", "candies", 25),
     9: ("💎", "roll.epic", 1),
-    10: ("🎤", "candies", 25),
-    11: ("🎤", "candies", 15),
-    12: ("🎤", "candies", 10),
+    10: ("🎵", "candies", 25),
+    11: ("🎵", "candies", 15),
+    12: ("🎵", "candies", 10),
     13: ("🌸", "roll.rare", 1),
-    14: ("🎤", "candies", 10),
-    15: ("🎤", "candies", 5),
-    16: ("🎤", "candies", 5),
-    17: ("🎤", "candies", 5)
+    14: ("🎵", "candies", 10),
+    15: ("🎵", "candies", 5),
+    16: ("🎵", "candies", 5),
+    17: ("🎵", "candies", 5)
 }
 
 CARDS_TO_SELL: dict[int, [tuple[str, int]]] = {
@@ -66,15 +65,17 @@ CARDS_TO_SELL: dict[int, [tuple[str, int]]] = {
     17: (("33", 330), ("34", 340)),
 }
 
-MILESTONES = [5, 10, 15, 20]
-MILESTONE_ONE_REWARD = [["🎤", "candies", 50]]
+MILESTONES = [5, 10, 13, 14]
+MILESTONE_ONE_REWARD = [["🎵", "candies", 50]]
 MILESTONE_TWO_REWARD = [["🌸", "roll.rare", 2]]
 MILESTONE_THREE_REWARD = [["🌸", "roll.rare", 1],["💎", "roll.epic", 1]]
-MILESTONE_FOUR_REWARD = [["🎤", "candies", 50],["💎", "roll.epic", 2],["👑", "roll.legendary", 1]]
+MILESTONE_FOUR_REWARD = [["🎵", "candies", 50],["💎", "roll.epic", 2],["👑", "roll.legendary", 1]]
 ANNIVERSARY_QUEST_REWARDS = [MILESTONE_ONE_REWARD, MILESTONE_TWO_REWARD, MILESTONE_THREE_REWARD, MILESTONE_FOUR_REWARD]
 
-MARKET_ID = 1159846609924927558 # dev server
-#MARKET_ID = 1143358510697021532 #my server
+#MARKET_ID = 1159846609924927558 # dev server
+#ANNOUNCEMENT_ID = 1159846609924927558 # dev server
+MARKET_ID = 1143358510697021532 #my server
+ANNOUNCEMENT_ID = 1143358510697021532 #my server
 
 def GetTodayReward() -> tuple[str, str, int]:
     # current day - event start day

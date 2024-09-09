@@ -33,10 +33,7 @@ class AnniversarySellView(discord.ui.View):
 
     def build_embed(self) -> discord.Embed:
         embed = discord.Embed(title="⤵️ SALE", color=discord.Color.random())
-        embed.description = f"```Mics: 🎤 {self.candies}\n\n" \
-                            f"{self.card.display_id}\n" \
-                            f"{self.card.display_tag}\n" \
-                            f"{self.card.display_frame}\n" \
+        embed.description = f"```Musical Notes: 🎵 {self.candies}\n\n" \
                             f"{self.card.tier[0]} {self.card.tier[1].capitalize()}\n" \
                             f"{self.card.display_stars}```\n"
 
@@ -63,7 +60,7 @@ class AnniversarySellView(discord.ui.View):
         if _buyer["candies"] < self.candies:
             self.is_loading = False
             return await interaction.response.send_message(
-                f"You don't have enough mics! You only have `{_buyer['candies']}` mics", ephemeral=True)
+                f"You don't have enough Musical Notes! You only have `{_buyer['candies']}` Musical Notes", ephemeral=True)
 
         if len(_buyer["cards"]) >= func.settings.MAX_CARDS:
             self.is_loading = False
@@ -79,7 +76,7 @@ class AnniversarySellView(discord.ui.View):
         await func.update_card(self.card.id, {"$set": {"owner_id": buyer.id}})
 
         embed = discord.Embed(title="✅ SOLD", color=discord.Color.random())
-        embed.description = f"```{self.card.display_id}\n🎤 - {self.candies}```"
+        embed.description = f"```{self.card.display_id}\n🎵 - {self.candies}```"
 
         self.is_loading = False
         await self.on_timeout()

@@ -47,7 +47,7 @@ class Gameplay(commands.Cog):
         query = func.update_quest_progress(user, "ROLL", query=query)
         await func.update_user(ctx.author.id, query)
 
-        await func.add_anniversary_quest_progress(1, ctx.author.id)
+        await func.add_anniversary_quest_progress(1, ctx.author.id,self.bot)
         
         if user["exp"] == 0:
             view = discord.ui.View()
@@ -101,7 +101,7 @@ class Gameplay(commands.Cog):
         if (retry := user.get("cooldown", {}).setdefault("quiz_game", 0)) > time.time():
             price = max(5, int(QUIZ_SETTINGS['reset_price'] * ((retry - time.time()) / func.settings.COOLDOWN_BASE["quiz_game"][1])))
             view = ResetAttemptView(ctx, user, price)
-            view.response = await ctx.reply(f"{ctx.author.mention} your quiz is <t:{round(retry)}:R>. If you’d like to bypass this cooldown, you can do so by paying `🎤 {price}` mics.", delete_after=20, view=view)
+            view.response = await ctx.reply(f"{ctx.author.mention} your quiz is <t:{round(retry)}:R>. If you’d like to bypass this cooldown, you can do so by paying `🎵 {price}` Musical Notes.", delete_after=20, view=view)
             return 
         
         # Get the rank and questions for the user

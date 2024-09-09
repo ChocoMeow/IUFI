@@ -75,7 +75,7 @@ class Card(commands.Cog):
 
     @commands.command(aliases=["c"])
     async def convert(self, ctx: commands.Context, *, card_ids: str):
-        """Converts the photocards into mics. Card can be identified by its ID or given tag. The amount of mics received is dependent on the card's rarity."""
+        """Converts the photocards into Musical Notes. Card can be identified by its ID or given tag. The amount of Musical Notes received is dependent on the card's rarity."""
         converted_cards: list[iufi.Card] = []
 
         card_ids = card_ids.split(" ")
@@ -96,7 +96,7 @@ class Card(commands.Cog):
         await func.update_card(card_ids, {"$set": {"owner_id": None, "tag": None, "frame": None}})
 
         embed = discord.Embed(title="✨ Convert", color=discord.Color.random())
-        embed.description = f"```🆔 {', '.join([f'{card}' for card in converted_cards])} \n🎤 + {candies}```"
+        embed.description = f"```🆔 {', '.join([f'{card}' for card in converted_cards])} \n🎵 + {candies}```"
         await ctx.reply(embed=embed)
 
     @commands.command(aliases=["cl"])
@@ -111,7 +111,7 @@ class Card(commands.Cog):
             return
         
         embed = discord.Embed(color=discord.Color.random())
-        embed.description = f"```🆔 {card} \n🎤 + {card.cost}```"
+        embed.description = f"```🆔 {card} \n🎵 + {card.cost}```"
         message: discord.Message = None
 
         if card.tier[1] not in ["common", "rare"] or card.tag:
@@ -157,7 +157,7 @@ class Card(commands.Cog):
         candies = sum([card.cost for card in converted_cards])
                        
         embed = discord.Embed(title="✨ Confirm to convert?", color=discord.Color.random())
-        embed.description = f"```🆔 {', '.join([f'{card}' for card in converted_cards])} \n🎤 + {candies}```"
+        embed.description = f"```🆔 {', '.join([f'{card}' for card in converted_cards])} \n🎵 + {candies}```"
 
         view = ConfirmView(ctx.author)
         view.message = await ctx.reply(embed=embed, view=view)
@@ -209,7 +209,7 @@ class Card(commands.Cog):
         candies = sum([card.cost for card in converted_cards])
                        
         embed = discord.Embed(title="✨ Confirm to convert?", color=discord.Color.random())
-        embed.description = f"```🆔 {', '.join([f'{card}' for card in converted_cards])} \n🎤 + {candies}```"
+        embed.description = f"```🆔 {', '.join([f'{card}' for card in converted_cards])} \n🎵 + {candies}```"
 
         view = ConfirmView(ctx.author)
         view.message = await ctx.reply(embed=embed, view=view)

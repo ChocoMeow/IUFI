@@ -12,12 +12,12 @@ from views import AnniversarySellView
 
 LEADERBOARD_EMOJIS: list[str] = ["🥇", "🥈", "🥉", "🏅"]
 
-class DebutAnniversary(commands.Cog):
+class Anniversary(commands.Cog):
     def __init__(self, bot: commands.Bot) -> None:
         self.bot = bot
         self.debut_anniversary.start()
-        self.invisible = True
-        self.emoji = "🎤"
+        self.invisible = False
+        self.emoji = "🎵"
 
     @commands.command(hidden=True)
     async def sendMessage(self, ctx: commands.Context, channel: discord.TextChannel, *, message: str) -> None:
@@ -25,7 +25,7 @@ class DebutAnniversary(commands.Cog):
         if ctx.author.id in func.settings.ADMIN_IDS:
             await channel.send(message)
 
-    @commands.command(hidden=True, aliases=["aac"])
+    @commands.command(hidden=True)
     async def assignAllCardsToBot(self, ctx: commands.Context) -> None:
         """Assigns all cards to the bot"""
         if ctx.author.id in func.settings.ADMIN_IDS:
@@ -37,6 +37,18 @@ class DebutAnniversary(commands.Cog):
                     continue
                 await func.update_card(card_id, {"$set": {"owner_id": self.bot.user.id}})
             await ctx.reply("All cards have been assigned to the bot.")
+
+    @commands.command(hidden=True)
+    async def removeAssignedCards(self, ctx: commands.Context) -> None:
+        """Removes all assigned cards from the bot"""
+        if ctx.author.id in func.settings.ADMIN_IDS:
+            all_cards = iufi.GetAllCards()
+            for card_id, card_price in all_cards:
+                card = iufi.CardPool.get_card(card_id)
+                if card.owner_id != self.bot.user.id:
+                    continue
+                await func.update_card(card_id, {"$set": {"owner_id": None}})
+            await ctx.reply("All assigned cards have been removed.")
 
     @tasks.loop(hours=24)
     async def debut_anniversary(self) -> None:
@@ -50,9 +62,11 @@ class DebutAnniversary(commands.Cog):
                 card = iufi.CardPool.get_card(card_id)
                 if card.owner_id == self.bot.user.id:
                     view = AnniversarySellView(self.bot, None, card, card_price)
+                    covered_card: iufi.TempCard = iufi.TempCard(f"cover/level{random.randint(1, 3)}.webp")
+                    image_bytes, image_format = await asyncio.to_thread(covered_card.image_bytes), covered_card.format
                     view.message = await channel.send(
-                        content=f"**Special Debut Anniversary Sale**",
-                        file=discord.File(await asyncio.to_thread(card.image_bytes), filename=f"image.{card.format}"),
+                        content=f"**Today's Card Sale!**",
+                        file=discord.File(image_bytes, filename=f'image.{image_format}'),
                         embed=view.build_embed(),
                         view=view
                     )
@@ -150,4 +164,4 @@ def highlight_text(text: str, need: bool = True) -> str:
     return "[0;1;35m" + text + " [0m\n"
 
 async def setup(bot: commands.Bot) -> None:
-    await bot.add_cog(DebutAnniversary(bot))
+    await bot.add_cog(Anniversary(bot))

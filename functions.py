@@ -1,5 +1,7 @@
 import os, time, copy, json, random
 
+import discord
+from discord.ext import commands
 from motor.motor_asyncio import (
     AsyncIOMotorClient,
     AsyncIOMotorCollection,
@@ -346,7 +348,7 @@ async def update_card(card_id: List[str] | str, data: dict, insert: bool = False
 #     "current_milestone": 0
 # }
 
-async def add_anniversary_quest_progress(progress: int, user_id: int) -> None:
+async def add_anniversary_quest_progress(progress: int, user_id: int, bot: commands.Bot) -> None:
     anniversary_data = await get_anniversary()
 
     if anniversary_data["quest_progress"] >= iufi.MILESTONES[-1] or anniversary_data["current_milestone"] >= len(iufi.MILESTONES):
@@ -361,10 +363,49 @@ async def add_anniversary_quest_progress(progress: int, user_id: int) -> None:
 
     if anniversary_data["quest_progress"] >= iufi.MILESTONES[anniversary_data["current_milestone"]]:
         await give_anniversary_rewards(anniversary_data["users"],anniversary_data["current_milestone"])
+        await SendRewarrdMessage(bot, anniversary_data)
         anniversary_data["current_milestone"] += 1
 
     await update_anniversary(anniversary_data)
 
+async def getPostfix(number: int) -> str:
+    if number == 1:
+        return "st"
+    elif number == 2:
+        return "nd"
+    elif number == 3:
+        return "rd"
+    else:
+        return "th"
+
+async def SendRewarrdMessage(bot: commands.Bot, anniversary_data: Dict[str, Any]) -> None:
+    channel = bot.get_channel(iufi.ANNOUNCEMENT_ID)
+    milestone_number = anniversary_data['current_milestone'] + 1
+    embed = discord.Embed(title=f"{milestone_number}{await getPostfix(milestone_number)} Milestone has been reached!", color=discord.Color.random())
+    details = ""
+    details += f"All users who participated in the quest have received the following rewards:\n"
+    rewards = iufi.ANNIVERSARY_QUEST_REWARDS[anniversary_data['current_milestone']]
+    details += "```ansi\n"
+    for reward_emoji, reward_name, amount in rewards:
+        reward_name = reward_name.split(".")
+        if reward_name[0] == "candies":
+            details += f"{'🎵 Musical Notes':<18} x{amount}\n"
+
+        elif reward_name[0] == "roll":
+            roll_data = settings.TIERS_BASE.get(reward_name[1])
+            details += f"{roll_data[0]} {reward_name[1].title() + ' Roll':<16} x{amount}\n"
+
+        elif reward_name[0] == "exp":
+            details += f"{'⚔️ Exp':<19} x{amount}\n"
+
+        else:
+            reward_name = reward_name[1].split("_")
+            potion_data = settings.POTIONS_BASE.get(reward_name[0])
+            details += f"{potion_data.get('emoji') + ' ' + reward_name[0].title() + ' ' + reward_name[1].upper() + ' Potion':<18} x{amount}\n"
+
+    details += "```"
+    embed.description = details
+    await channel.send(embed=embed)
 
 async def give_anniversary_rewards(users: List[Dict[str, Any]], current_milestone: int) -> None:
     rewards = iufi.ANNIVERSARY_QUEST_REWARDS[current_milestone]
@@ -372,8 +413,6 @@ async def give_anniversary_rewards(users: List[Dict[str, Any]], current_mileston
     for user_data in users:
         query = { "$inc": {reward_name: amount} for reward_emoji, reward_name, amount in rewards }
         await update_user(user_data["_id"], query)
-
-    print("Rewards given to users")
 
 
 async def update_anniversary(data: Dict[str, Any]) -> None:
