@@ -245,7 +245,7 @@ class Profile(commands.Cog):
             final_rewards[debut_anniversary_daily_reward[1]] = debut_anniversary_daily_reward[2]
 
         await func.update_user(ctx.author.id, {
-            #"$set": {"claimed": claimed, "cooldown.daily": time.time() + func.settings.COOLDOWN_BASE["daily"][1]},
+            "$set": {"claimed": claimed, "cooldown.daily": time.time() + func.settings.COOLDOWN_BASE["daily"][1]},
             "$inc": final_rewards
         })
 
