@@ -1,9 +1,11 @@
 import asyncio
+import random
 
 import discord
 import functions as func
 from discord.ext import commands
 
+import iufi
 from iufi import Card
 
 
@@ -77,7 +79,17 @@ class AnniversarySellView(discord.ui.View):
         await func.update_user(buyer.id, buyer_query)
         await func.update_card(self.card.id, {"$set": {"owner_id": buyer.id}})
 
+        embed = discord.Embed(title="🎊 Mystery Card", color=discord.Color.random())
+        embed.description = f"```{self.card.display_id}\n" \
+                            f"{self.card.display_tag}\n" \
+                            f"{self.card.display_frame}\n" \
+                            f"{self.card.tier[0]} {self.card.tier[1].capitalize()}\n" \
+                            f"{self.card.display_stars}```\n"
+
+        image_bytes, image_format = await asyncio.to_thread(self.card.image_bytes), self.card.format
+        embed.set_image(url=f"attachment://image.{self.card.format}")
+
         self.is_loading = False
         await self.on_timeout()
-        await interaction.followup.send(
-            content=f"{buyer.mention} has bought the card! (id : {self.card.id})",file=discord.File(await asyncio.to_thread(self.card.image_bytes), filename=f"image.{self.card.format}"))
+        await interaction.followup.send(content=random.choice(iufi.BUY_MESSAGE).format(interaction.user.mention), embed=embed,
+                                        file=discord.File(image_bytes, filename=f'image.{image_format}'))

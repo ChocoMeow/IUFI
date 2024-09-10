@@ -50,6 +50,13 @@ class Anniversary(commands.Cog):
                 await func.update_card(card_id, {"$set": {"owner_id": None}})
             await ctx.reply("All assigned cards have been removed.")
 
+    @commands.command(hidden=True)
+    async def startSale(self, ctx: commands.Context) -> None:
+        """Starts the sale of cards"""
+        if ctx.author.id in func.settings.ADMIN_IDS:
+            await self.debut_anniversary()
+            await ctx.reply("Sale has started.")
+
     @tasks.loop(hours=24)
     async def debut_anniversary(self) -> None:
         await self.bot.wait_until_ready()

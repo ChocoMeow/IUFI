@@ -5,7 +5,7 @@ EVENT_CONFIG: dict[str, dict[str, str | datetime.datetime]] = {
     "debut_anniversary": {
         "name": "Debut Anniversary",
         "description": "Celebrate IU's debut anniversary with IUFI!",
-        "start_date": datetime.datetime(datetime.datetime.now().year, 9, 5),
+        "start_date": datetime.datetime(datetime.datetime.now().year, 9, 11),
         "end_date": datetime.datetime(datetime.datetime.now().year, 9, 26),
         "folder": "debut"
     }
@@ -20,10 +20,6 @@ def is_debut_anniversary_day() -> bool:
 
 def get_end_time() -> datetime.datetime:
     return debut_anniversary_day["end_date"]
-
-
-def get_match_game_cover(level: str) -> str:
-    return "cover/" + f"level{level}.jpg"
 
 
 DAILY_REWARDS: dict[int, tuple[str, str, int]] = {
@@ -45,25 +41,23 @@ DAILY_REWARDS: dict[int, tuple[str, str, int]] = {
     16: ("🎵", "candies", 5),
     17: ("🎵", "candies", 5)
 }
-
 CARDS_TO_SELL: dict[int, [tuple[str, int]]] = {
-    1: (("1", 10), ("2", 20)),
-    2: (("194", 3), ("327", 999)),
-    3: (("5", 50), ("6", 60)),
-    4: (("7", 70), ("8", 80)),
-    5: (("9", 90), ("10", 100)),
-    6: (("11", 110), ("12", 120)),
-    7: (("13", 130), ("14", 140)),
-    8: (("15", 150), ("16", 160)),
-    9: (("17", 170), ("18", 180)),
-    10: (("19", 190), ("20", 200)),
-    11: (("21", 210), ("22", 220)),
-    12: (("23", 230), ("24", 240)),
-    13: (("25", 250), ("26", 260)),
-    14: (("27", 270), ("28", 280)),
-    15: (("29", 290), ("30", 300)),
-    16: (("31", 310), ("32", 320)),
-    17: (("33", 330), ("34", 340)),
+    1: (('10243', 9), ('06507', 31), ('07294', 40), ('08971', 66), ('00916', 414)),
+    2: (('01944', 25), ('4895', 19), ('00788', 98), ('02518', 86)),
+    3: (('07073', 18), ('03056', 38), ('00558', 80), ('10365', 396)),
+    4: (('01128', 11), ('05393', 23), ('02916', 84), ('05992', 72), ('02463', 307)),
+    5: (('02722', 29), ('09024', 23), ('07748', 119), ('08243', 87), ('00270', 394)),
+    6: (('04341', 7), ('02169', 35), ('09925', 77), ('01184', 73)),
+    7: (('06356', 17), ('8075', 24), ('03130', 75), ('00876', 80), ('07206', 408)),
+    8: (('05259', 23), ('5778', 39), ('06567', 75), ('07302', 2000), ('03689', 90), ('02839', 87), ('05558', 319)),
+    9: (('02246', 25), ('3056', 27), ('02944', 87), ('04554', 110), ('03700', 429)),
+    10: (('03112', 17), ('5126', 20), ('08573', 72), ('00543', 99)),
+    11: (('04250', 11), ('00113', 20), ('01473', 94), ('09451', 100), ('02223', 411)),
+    12: (('03577', 23), ('03146', 28), ('08359', 72), ('03658', 445)),
+    13: (('02055', 27), ('9285', 36), ('08764', 97), ('00093', 102)),
+    14: (('03211', 25), ('198', 40), ('08572', 120), ('02669', 115)),
+    15: (('02250', 18), ('8506', 23), ('03055', 84), ('10233', 82)),
+    16: (('05059', 38), ('04538', 23), ('00702', 68), ('07230', 118), ('06352', 250))
 }
 
 SALE_MESSAGE: list[str] = [
@@ -132,6 +126,36 @@ SALE_MESSAGE: list[str] = [
     "🎉 Let’s go haul, till the shop is empty! More is more, go and make it your own"
 ]
 
+BUY_MESSAGE: list[str] = [
+    "🎉 {0} just bought the secret prize! Time to see what’s inside!",
+    "🚀 Blast off! {0} grabbed the hidden gem. What’s the big reveal!",
+    "🎁 Surprise alert! {0} just unlocked the exclusive card. What’s the scoop!",
+    "🎲 {0} rolled the dice and bought the surprise card! Get ready for the reveal!",
+    "🌟 {0} just made the ultimate find! What’s their new treasure?",
+    "💥 {0} hit the jackpot! Their new card is about to make some waves!",
+    "🎊 Boom! {0} just got their hands on the surprise card. What’s in store!",
+    "🧩 Puzzle solved! {0} just acquired the special card. What’s the secret?",
+    "🔮 Crystal ball says {0} just grabbed the exclusive item! Time to unveil!",
+    "🎈 Confetti time! {0} picked up the surprise card. What’s the excitement?",
+    "🕵️‍♂️ Detective {0} cracked the code and found the hidden treasure! What’s the prize?",
+    "🧙‍♂️ Magic unlocked! {0} just snagged the enchanted card. Let’s see the wonder!",
+    "🚨 Heads up! {0} went for the special card. Get ready for a fantastic reveal!",
+    "🕶️ Cool move, {0}! You just grabbed the limited edition card. Time for the reveal!",
+    "🌈 Rainbow alert! {0} just landed the surprise card. What’s the colorful prize?",
+    "🎁 {0} went all-in! The mystery card is now theirs—what's inside?",
+    "🕵️‍♂️ Aha! {0} found the secret stash! What’s the mystery card going to be?",
+    "🌟 Boom! {0} pulled the trigger on the mystery card! Get ready for the surprise!",
+    "🎊 Congrats, {0}! The mystery card is now yours—unbox the excitement!",
+    "💥 Surprise alert! {0} just snagged the mystery card. What will they uncover?",
+    "🧩 Puzzle complete! {0} just bought the mystery card. What’s their lucky find?",
+    "🔮 Mystery unlocked! {0} claimed the card. The big reveal is just moments away!",
+    "🎉 Hold up! {0} went for the mystery card! What’s the big surprise?",
+    "🧙‍♂️ Wizard-level move, {0}! You’ve got the mystery card—prepare for magic!",
+    "🎈 Confetti time! {0} just picked the mystery card. What’s the treasure inside?",
+    "🕶️ Cool move, {0}! You’ve got the mystery card. Get ready for the epic reveal!",
+    "🚨 Alert! {0} bought the mystery card! Time to unveil the surprise!"
+]
+
 MILESTONES = [2, 3, 4, 5]
 MILESTONE_ONE_REWARD = [["🎵", "candies", 50]]
 MILESTONE_TWO_REWARD = [["🌸", "roll.rare", 2]]
@@ -139,10 +163,8 @@ MILESTONE_THREE_REWARD = [["🌸", "roll.rare", 1], ["💎", "roll.epic", 1]]
 MILESTONE_FOUR_REWARD = [["🎵", "candies", 50], ["💎", "roll.epic", 2], ["👑", "roll.legendary", 1]]
 ANNIVERSARY_QUEST_REWARDS = [MILESTONE_ONE_REWARD, MILESTONE_TWO_REWARD, MILESTONE_THREE_REWARD, MILESTONE_FOUR_REWARD]
 
-MARKET_ID = 1159846609924927558 # dev server
-ANNOUNCEMENT_ID = 1159846609924927558 # dev server
-#MARKET_ID = 1143358510697021532  # my server
-#ANNOUNCEMENT_ID = 1143358510697021532  # my server
+MARKET_ID = 987354574304190476  # iufi server
+ANNOUNCEMENT_ID = 987353737548935198  # iufi server
 
 
 def GetTodayReward() -> tuple[str, str, int]:
