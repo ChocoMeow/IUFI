@@ -55,6 +55,8 @@ class Anniversary(commands.Cog):
         await self.bot.wait_until_ready()
         if iufi.is_debut_anniversary_day():
             cards_to_sell = iufi.GetTodayCardSell()
+            if not cards_to_sell:
+                return
             channel = self.bot.get_channel(iufi.MARKET_ID)
             for card_details in cards_to_sell:
                 card_id = card_details[0]
@@ -64,8 +66,9 @@ class Anniversary(commands.Cog):
                     view = AnniversarySellView(self.bot, None, card, card_price)
                     covered_card: iufi.TempCard = iufi.TempCard(f"cover/level{random.randint(1, 3)}.webp")
                     image_bytes, image_format = await asyncio.to_thread(covered_card.image_bytes), covered_card.format
+                    sale_message = random.choice(iufi.SALE_MESSAGE)
                     view.message = await channel.send(
-                        content=f"**Today's Card Sale!**",
+                        content=f"**{sale_message}!**",
                         file=discord.File(image_bytes, filename=f'image.{image_format}'),
                         embed=view.build_embed(),
                         view=view
@@ -84,11 +87,12 @@ class Anniversary(commands.Cog):
         percentage = quest_progress / required_progress * 100
         progress_bar = generate_progress_bar(20, percentage)
         endtime = int(iufi.get_end_time().timestamp())
-        if time.time() > endtime:
-            await ctx.reply("The Debut Anniversary event has ended.")
-            return
         milestone_name = "QUEST MILESTONE " + str(current_milestone + 1)
-        details = f"Quest ends <t:{endtime}:R>\n\n"
+        details = ""
+        if time.time() > endtime:
+            details = "Quest has ended\n\n"
+        else:
+            details = f"Quest ends <t:{endtime}:R>\n\n"
         details += f"**   {milestone_name}**\n\n"
         details += f"{'✅' if quest_progress >= required_progress else '❌'} ROLL {required_progress} TIMES\n"
         details += f"```ansi\n➢ Reward: " + " | ".join(
@@ -105,9 +109,6 @@ class Anniversary(commands.Cog):
         """Displays the leaderboard for the Debut Anniversary event"""
         anniversary_data = await func.get_anniversary()
         users = anniversary_data["users"]
-        if time.time() > int(iufi.get_end_time().timestamp()):
-            await ctx.reply("The Debut Anniversary event has ended.")
-            return
         embed = discord.Embed(title="🏆   Debut Anniversary Leaderboard", color=discord.Color.purple())
         embed.description = ""
         rank = users.index(ctx.author.id) + 1 if ctx.author.id in users else None

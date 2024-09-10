@@ -349,6 +349,8 @@ async def update_card(card_id: List[str] | str, data: dict, insert: bool = False
 # }
 
 async def add_anniversary_quest_progress(progress: int, user_id: int, bot: commands.Bot) -> None:
+    if not iufi.is_debut_anniversary_day():
+        return
     anniversary_data = await get_anniversary()
 
     if anniversary_data["quest_progress"] >= iufi.MILESTONES[-1] or anniversary_data["current_milestone"] >= len(iufi.MILESTONES):

@@ -1,3 +1,5 @@
+import asyncio
+
 import discord
 import functions as func
 from discord.ext import commands
@@ -75,10 +77,7 @@ class AnniversarySellView(discord.ui.View):
         await func.update_user(buyer.id, buyer_query)
         await func.update_card(self.card.id, {"$set": {"owner_id": buyer.id}})
 
-        embed = discord.Embed(title="✅ SOLD", color=discord.Color.random())
-        embed.description = f"```{self.card.display_id}\n🎵 - {self.candies}```"
-
         self.is_loading = False
         await self.on_timeout()
         await interaction.followup.send(
-            content=f"{buyer.mention} has bought the card!", embed=embed)
+            content=f"{buyer.mention} has bought the card! (id : {self.card.id})",file=discord.File(await asyncio.to_thread(self.card.image_bytes), filename=f"image.{self.card.format}"))
