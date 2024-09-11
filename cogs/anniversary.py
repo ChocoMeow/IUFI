@@ -8,6 +8,7 @@ from discord.ext import commands
 import iufi
 from discord.ext import commands, tasks
 
+from iufi import CardPool
 from views import AnniversarySellView
 
 LEADERBOARD_EMOJIS: list[str] = ["🥇", "🥈", "🥉", "🏅"]
@@ -31,11 +32,15 @@ class Anniversary(commands.Cog):
         if ctx.author.id in func.settings.ADMIN_IDS:
             #get all anniversary sale cards and give it to the bot
             all_cards = iufi.GetAllCards()
+            card_ids = []
             for card_id, card_price in all_cards:
-                card = iufi.CardPool.get_card(card_id)
+                card = CardPool.get_card(card_id)
                 if card.owner_id:
                     continue
-                await func.update_card(card_id, {"$set": {"owner_id": self.bot.user.id}})
+                card_ids.append(card_id)
+                card.change_owner(self.bot.user.id)
+                CardPool.remove_available_card(card)
+            await func.update_card(card_ids, {"$set": {"owner_id": self.bot.user.id}})
             await ctx.reply("All cards have been assigned to the bot.")
 
     @commands.command(hidden=True)
@@ -43,11 +48,14 @@ class Anniversary(commands.Cog):
         """Removes all assigned cards from the bot"""
         if ctx.author.id in func.settings.ADMIN_IDS:
             all_cards = iufi.GetAllCards()
+            card_ids = []
             for card_id, card_price in all_cards:
-                card = iufi.CardPool.get_card(card_id)
+                card = CardPool.get_card(card_id)
                 if card.owner_id != self.bot.user.id:
                     continue
-                await func.update_card(card_id, {"$set": {"owner_id": None}})
+                card_ids.append(card_id)
+                CardPool.add_available_card(card)
+            await func.update_card(card_ids, {"$set": {"owner_id": None}})
             await ctx.reply("All assigned cards have been removed.")
 
     @commands.command(hidden=True)
@@ -69,6 +77,8 @@ class Anniversary(commands.Cog):
                 card_id = card_details[0]
                 card_price = card_details[1]
                 card = iufi.CardPool.get_card(card_id)
+                if not card:
+                    continue
                 if card.owner_id == self.bot.user.id:
                     view = AnniversarySellView(self.bot, None, card, card_price)
                     covered_card: iufi.TempCard = iufi.TempCard(f"cover/level{random.randint(1, 3)}.webp")
