@@ -6,7 +6,7 @@ EVENT_CONFIG: dict[str, dict[str, str | datetime.datetime]] = {
         "name": "Debut Anniversary",
         "description": "Celebrate IU's debut anniversary with IUFI!",
         "start_date": datetime.datetime(datetime.datetime.now().year, 9, 11),
-        "end_date": datetime.datetime(datetime.datetime.now().year, 9, 26),
+        "end_date": datetime.datetime(datetime.datetime.now().year, 9, 27),
         "folder": "debut"
     }
 }
