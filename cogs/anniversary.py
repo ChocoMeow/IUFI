@@ -126,6 +126,7 @@ class Anniversary(commands.Cog):
         """Displays the leaderboard for the Debut Anniversary event"""
         anniversary_data = await func.get_anniversary()
         users = anniversary_data["users"]
+        users.sort(key=lambda x: x["progress"], reverse=True)
         embed = discord.Embed(title="🏆   Debut Anniversary Leaderboard", color=discord.Color.purple())
         embed.description = ""
         rank = users.index(ctx.author.id) + 1 if ctx.author.id in users else None

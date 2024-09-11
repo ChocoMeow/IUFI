@@ -168,16 +168,12 @@ ANNOUNCEMENT_ID = 987353737548935198  # iufi server
 
 
 def GetTodayReward() -> tuple[str, str, int]:
-    # current day - event start day
     current_day = (datetime.datetime.now() - debut_anniversary_day["start_date"]).days + 1
-    print("current_day: ", current_day)
     return DAILY_REWARDS.get(current_day, None)
 
 
 def GetTodayCardSell() -> list[tuple[str, int]]:
-    # current day - event start day
     current_day = (datetime.datetime.now() - debut_anniversary_day["start_date"]).days + 1
-    print("current_day: ", current_day)
     return CARDS_TO_SELL.get(current_day, None)
 
 
