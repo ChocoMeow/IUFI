@@ -113,7 +113,6 @@ class IUFI(commands.Bot):
         print(f"Loaded {len(self.questions._questions)} questions")
 
     async def on_command_error(self, ctx: commands.Context, exception, /) -> None:
-        print(exception)
         error = getattr(exception, 'original', exception)
         if ctx.interaction:
             error = getattr(error, 'original', error)
