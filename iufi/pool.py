@@ -61,6 +61,7 @@ class CardPool:
     _available_cards: dict[str, list[Card]] = {
         category: [] for category in DROP_RATES
     }
+    _match_game_cards: list[Card] = []
 
     #DeepSearch
     # search_image: Search_Setup | None = None
@@ -120,6 +121,9 @@ class CardPool:
         if card.tag:
             cls.add_tag(card, card.tag)
 
+        if card.tier[1] != "celestial":
+            cls._match_game_cards.append(card)
+
         return card
     
     @classmethod
@@ -152,6 +156,11 @@ class CardPool:
             for card in sample(cls._available_cards[cat], k=amt)
         ]
         shuffle(cards)
+        return cards
+
+    @classmethod
+    def get_random_cards_for_match_game(cls, amount: int = 3) -> list[Card]:
+        cards = sample(cls._match_game_cards,amount)
         return cards
 
 class QuestionPool:
