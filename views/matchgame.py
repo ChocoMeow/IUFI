@@ -97,7 +97,7 @@ class MatchGame(discord.ui.View):
         self._last_clicked: discord.ui.Button = None
         self.covered_card: TempCard = TempCard(f"cover/level{self._level}.webp")
 
-        cards: list[Card] = CardPool.roll(self._cards, avoid=["celestial"])
+        cards: list[Card] = CardPool.get_random_cards_for_match_game(self._cards)
         cards.extend(cards)
         self.cards: list[Card] = cards
         shuffle(self.cards)
