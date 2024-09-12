@@ -65,13 +65,22 @@ class Anniversary(commands.Cog):
             await self.debut_anniversary()
             await ctx.reply("Sale has started.")
 
-    @tasks.loop(hours=24)
+    @tasks.loop(hours=12)
     async def debut_anniversary(self) -> None:
         await self.bot.wait_until_ready()
         if iufi.is_debut_anniversary_day():
             cards_to_sell = iufi.GetTodayCardSell()
             if not cards_to_sell:
                 return
+
+            if time.localtime().tm_hour < 12:
+                cards_to_sell = cards_to_sell[::2]
+            else:
+                cards_to_sell = cards_to_sell[1::2]
+
+            if not cards_to_sell:
+                return
+
             channel = self.bot.get_channel(iufi.MARKET_ID)
             for card_details in cards_to_sell:
                 card_id = card_details[0]
