@@ -42,6 +42,7 @@ class Settings:
         self.MAIN_GUILD: int = 0
         self.MUSIC_TEXT_CHANNEL: int = 0
         self.MUSIC_VOICE_CHANNEL: int = 0
+        self.GALLERY_CHANNEL_ID: int = 0
         self.ALLOWED_CATEGORY_IDS: List[int] = []
         self.IGNORE_CHANNEL_IDS: List[int] = []
         self.GAME_CHANNEL_IDS: List[int] = []
@@ -65,6 +66,7 @@ class Settings:
         self.MAIN_GUILD = settings.get("MAIN_GUILD")
         self.MUSIC_TEXT_CHANNEL = settings.get("MUSIC_TEXT_CHANNEL")
         self.MUSIC_VOICE_CHANNEL = settings.get("MUSIC_VOICE_CHANNEL")
+        self.GALLERY_CHANNEL_ID = settings.get("GALLERY_CHANNEL_ID")
         self.ALLOWED_CATEGORY_IDS = settings.get("ALLOWED_CATEGORY_IDS")
         self.IGNORE_CHANNEL_IDS = settings.get("IGNORE_CHANNEL_IDS")
         self.GAME_CHANNEL_IDS = settings.get("GAME_CHANNEL_IDS")
