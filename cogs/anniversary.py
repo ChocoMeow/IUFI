@@ -138,7 +138,11 @@ class Anniversary(commands.Cog):
         users.sort(key=lambda x: x["progress"], reverse=True)
         embed = discord.Embed(title="🏆   Debut Anniversary Leaderboard", color=discord.Color.purple())
         embed.description = ""
-        rank = users.index(ctx.author.id) + 1 if ctx.author.id in users else None
+        rank = None
+        for index, user in enumerate(users):
+            if user["_id"] == ctx.author.id:
+                rank = index + 1
+                break
         if rank:
             embed.description += f"**Your current position is `{rank}`**\n"
 
