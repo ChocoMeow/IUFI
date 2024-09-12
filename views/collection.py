@@ -1,8 +1,22 @@
 
-import discord, iufi, asyncio
+import discord, iufi, asyncio, time
 import functions as func
 
 from discord.ext import commands
+
+class CaptionModal(discord.ui.Modal, title="Add Caption"):
+    def __init__(self, cards: list[iufi.Card]) -> None:
+        self.cards = cards
+        caption = discord.ui.TextInput(label='Caption')
+
+    async def on_submit(self, interaction: discord.Interaction):
+        await interaction.response.defer()
+        image_bytes, image_format = await asyncio.to_thread(iufi.gen_cards_view, self.cards, size_rate=1)
+        if self.cards and (gallery_channel := interaction.guild.get_channel(func.settings.GALLERY_CHANNEL_ID)):
+            await gallery_channel.send(
+                content=f"Sent by {interaction.user.mention}! {self.caption}",
+                file=discord.File(image_bytes, filename=f'image.{image_format}')
+            )
 
 class EditBtn(discord.ui.Button):
     def __init__(self) -> None:
@@ -18,7 +32,22 @@ class HDBtn(discord.ui.Button):
     async def callback(self, interaction: discord.Interaction) -> None:
         await interaction.response.defer()
         await self.view.send_msg(1)
+
+class GalleryBtn(discord.ui.Button):
+    def __init__(self) -> None:
+        self.view: CollectionView
+        super().__init__(emoji="🎨", label="Send To Gallery")
+        self.last_send_time: float = 0
+
+    async def callback(self, interaction: discord.Interaction) -> None:
+        if all(item is None for item in self.view.cards):
+            return await interaction.response.send_message("You can't send this collection without any cards in it.", ephemeral=True)
         
+        if time.time() < (self.last_send_time + 30):
+            return await interaction.response.send_message("Whoa, that was too fast! Could you please try again later?", ephemeral=True)
+        self.last_send_time = time.time()
+        await interaction.response.send_modal(CaptionModal(self.view.cards))
+
 class EditModal(discord.ui.Modal):
     def __init__(self, view: discord.ui.View) -> None:
         super().__init__(title="Edit Collection")
@@ -97,9 +126,11 @@ class CollectionView(discord.ui.View):
         self.is_author: bool = ctx.author == member
         self.collections: dict[str, list[str | None]] = collections
         self.sel_collection: str = list(self.collections.keys())[0]
+        self.cards: list[iufi.Card | None] = []
 
         if self.is_author:
             self.add_item(EditBtn())
+            self.add_item(GalleryBtn())
         self.add_item(HDBtn())
         if len(self.collections) > 1:
             self.add_item(CollectionDropdown(list(self.collections.keys())))
@@ -116,7 +147,7 @@ class CollectionView(discord.ui.View):
         return self.ctx.author == interaction.user
     
     async def send_msg(self, size_rate: float = iufi.objects.SIZE_RATE) -> None:
-        cards: list[iufi.Card | None] = []
+        self.cards.clear()
 
         embed = discord.Embed(title=f"❤️  {self.member.display_name}'s {self.sel_collection.title()} Collection", color=discord.Color.random())
         embed.description = "```"
@@ -125,17 +156,17 @@ class CollectionView(discord.ui.View):
             card = iufi.CardPool.get_card(card_id)
             if card and card.owner_id == self.member.id:
                 embed.description += f"{card.display_id} {card.display_tag} {card.display_frame} {card.display_stars} {card.tier[0]}\n"
-                cards.append(card)
+                self.cards.append(card)
                 continue
 
             embed.description += "\u200b\n"
-            cards.append(None)
+            self.cards.append(None)
             
         embed.description += "```"
-        image_bytes, image_format = await asyncio.to_thread(iufi.gen_cards_view, cards, size_rate=size_rate)
+        image_bytes, image_format = await asyncio.to_thread(iufi.gen_cards_view, self.cards, size_rate=size_rate)
         embed.set_image(url=f"attachment://image.{image_format}")
-        file=discord.File(image_bytes, filename=f'image.{image_format}')
+        image_file = discord.File(image_bytes, filename=f'image.{image_format}')
 
         if self.message:
-            return await self.message.edit(attachments=[file], embed=embed, view=self)
-        self.message = await self.ctx.reply(file=file, embed=embed, view=self)
+            return await self.message.edit(attachments=[image_file], embed=embed, view=self)
+        self.message = await self.ctx.reply(file=image_file, embed=embed, view=self)
