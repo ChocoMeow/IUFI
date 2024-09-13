@@ -94,7 +94,12 @@ class Card(commands.Cog):
         })
         await func.update_user(ctx.author.id, query)
         await func.update_card(card_ids, {"$set": {"owner_id": None, "tag": None, "frame": None}})
-
+        
+        func.logger.info(
+            f"User {ctx.author.name}({ctx.author.id}) converted {len(converted_cards)} card(s): ["
+            f"{', '.join([str(card) for card in converted_cards])}]. Gained {candies} candies."
+        )
+        
         embed = discord.Embed(title="✨ Convert", color=discord.Color.random())
         embed.description = f"```🆔 {', '.join([f'{card}' for card in converted_cards])} \n🍬 + {candies}```"
         await ctx.reply(embed=embed)
@@ -127,13 +132,16 @@ class Card(commands.Cog):
         if card.owner_id != ctx.author.id:
             return await ctx.reply(content="Your cards cannot be converted because there has been a change in your inventory.")
         
+        iufi.CardPool.add_available_card(card)
+
         query = func.update_quest_progress(user, "CONVERT_ANY_CARD", query={
             "$pull": {"cards": card.id},
             "$inc": {"candies": card.cost}
         })
         await func.update_user(ctx.author.id, query)
         await func.update_card(card.id, {"$set": {"owner_id": None, "tag": None, "frame": None}})
-        iufi.CardPool.add_available_card(card)
+        
+        func.logger.info(f"User {ctx.author.name}({ctx.author.id}) converted 1 card(s): [{card.id}]. Gained {card.cost} candies.")
         
         embed.title="✨ Converted"
         await message.edit(embed=embed, view=None) if message else await ctx.reply(embed=embed)
@@ -176,6 +184,11 @@ class Card(commands.Cog):
             })
             await func.update_user(ctx.author.id, query)
             await func.update_card(card_ids, {"$set": {"owner_id": None, "tag": None, "frame": None}})
+
+            func.logger.info(
+                f"User {ctx.author.name}({ctx.author.id}) converted {len(converted_cards)} card(s): ["
+                f"{', '.join([str(card) for card in converted_cards])}]. Gained {candies} candies."
+            )
 
             embed.title = "✨ Converted"
             await view.message.edit(embed=embed, view=None)
@@ -229,6 +242,11 @@ class Card(commands.Cog):
             await func.update_user(ctx.author.id, query)
             await func.update_card(card_ids, {"$set": {"owner_id": None, "tag": None, "frame": None}})
 
+            func.logger.info(
+                f"User {ctx.author.name}({ctx.author.id}) converted {len(converted_cards)} card(s): ["
+                f"{', '.join([str(card) for card in converted_cards])}]. Gained {candies} candies."
+            )
+
             embed.title = "✨ Converted"
             await view.message.edit(embed=embed, view=None)
 
@@ -246,11 +264,13 @@ class Card(commands.Cog):
         if card.owner_id != ctx.author.id:
             return await ctx.reply("You are not the owner of this card.")
         
+        func.logger.info(f"User {ctx.author.name}({ctx.author.id}) tagged card [{card.id}] from {card.tag} to {tag}")
+
         if card.tag:
             iufi.CardPool.change_tag(card, tag)
         else:
             iufi.CardPool.add_tag(card, tag)
-        
+
         embed = discord.Embed(title="🏷️ Set Tag", color=discord.Color.random())
         embed.description = f"```🆔 {card}\n{card.display_tag}```"
         await ctx.reply(embed=embed)
@@ -269,6 +289,11 @@ class Card(commands.Cog):
         card_id = user["cards"][-1]
         card = iufi.CardPool.get_card(card_id)
         if card:
+            if card.owner_id != ctx.author.id:
+                return await ctx.reply("You are not the owner of this card.")
+            
+            func.logger.info(f"User {ctx.author.name}({ctx.author.id}) tagged card [{card.id}] from {card.tag} to {tag}")
+            
             if card.tag:
                 iufi.CardPool.change_tag(card, tag)
             else:
@@ -289,6 +314,11 @@ class Card(commands.Cog):
             return await ctx.reply("You are not the owner of this card.")
         
         iufi.CardPool.remove_tag(card)
+
+        func.logger.info(
+            f"User {ctx.author.name}({ctx.author.id}) removed the tag from card [{card.id}]. "
+            f"Original tag: {card.tag}."
+        )
 
         embed = discord.Embed(title="🏷️ Set Tag", color=discord.Color.random())
         embed.description = f"```🆔 {card}\n{card.display_tag}```"
@@ -311,6 +341,11 @@ class Card(commands.Cog):
         if card.owner_id != ctx.author.id:
             return await ctx.reply("You are not the owner of this card.")
         
+        func.logger.info(
+            f"User {ctx.author.name} ({ctx.author.id}) initiated a trade with {member.name}({member.id}). "
+            f"Trading card [{card.id}] and offering {candies} candies."
+        )
+
         view = TradeView(ctx.author, member, card, candies)
         view.message = await ctx.reply(
             content=f"{member.mention}, {ctx.author.mention} want to trade with you.",
@@ -330,6 +365,11 @@ class Card(commands.Cog):
 
         if card.owner_id != ctx.author.id:
             return await ctx.reply("You are not the owner of this card.")
+
+        func.logger.info(
+            f"User {ctx.author.name} ({ctx.author.id}) initiated a trade with everyone. "
+            f"Trading card [{card.id}] and offering {candies} candies."
+        )
 
         view = TradeView(ctx.author, None, card, candies)
         view.message = await ctx.reply(
@@ -361,6 +401,11 @@ class Card(commands.Cog):
         if card.owner_id != ctx.author.id:
             return await ctx.reply("You are not the owner of this card.")
         
+        func.logger.info(
+            f"User {ctx.author.name} ({ctx.author.id}) initiated a trade with {member.name}({member.id}). "
+            f"Trading card [{card.id}] and offering {candies} candies."
+        )
+
         view = TradeView(ctx.author, member, card, candies)
         view.message = await ctx.reply(
             content=f"{member.mention}, {ctx.author.mention} want to trade with you.",
@@ -387,6 +432,11 @@ class Card(commands.Cog):
         if card.owner_id != ctx.author.id:
             return await ctx.reply("You are not the owner of this card.")
         
+        func.logger.info(
+            f"User {ctx.author.name} ({ctx.author.id}) initiated a trade with everyone. "
+            f"Trading card [{card.id}] and offering {candies} candies."
+        )
+
         view = TradeView(ctx.author, None, card, candies)
         view.message = await ctx.reply(
             content=f"{ctx.author.mention} wants to trade",
@@ -427,6 +477,11 @@ class Card(commands.Cog):
         await func.update_user(ctx.author.id, query)
         await func.update_card(card_ids, {"$set": {"owner_id": None, "tag": None, "frame": None}})
         upgraded_stars = upgrade_card.stars + len(converted_cards)
+
+        func.logger.info(
+            f"User {ctx.author.name} ({ctx.author.id}) upgraded a card [{card.id}] from {upgrade_card.stars} to {upgraded_stars}). "
+            f"With cards: [{", ".join([card.id for card in converted_cards])}]"
+        )
 
         embed = discord.Embed(title="🆙 Upgraded", color=discord.Color.random())
         embed.description = f"```🆔 {upgrade_card} <- {', '.join([f'{card}' for card in converted_cards])}\n⭐ {upgraded_stars} <- {upgrade_card.stars}```"
