@@ -1,4 +1,4 @@
-import os, time, copy, json, random
+import os, time, copy, json, random, logging
 
 from motor.motor_asyncio import (
     AsyncIOMotorClient,
@@ -52,6 +52,7 @@ class Settings:
         self.TRACK_BASE: Dict[str, Any] = {}
         self.MATCH_GAME_SETTINGS: Dict[str, Dict[str, Any]] = {}
         self.ADMIN_IDS: List[int] = []
+        self.LOGGING: Dict[Union[str, Dict[str, Union[str, bool]]]] = {}
 
     def load(self):
         settings = open_json("settings.json")
@@ -76,9 +77,11 @@ class Settings:
         self.TRACK_BASE = settings.get("TRACK_BASE")
         self.MATCH_GAME_SETTINGS = settings.get("MATCH_GAME_SETTINGS")
         self.ADMIN_IDS = settings.get("ADMIN_IDS")
+        self.LOGGING = settings.get("LOGGING", {})
 
 tokens: TOKEN = TOKEN()
 settings: Settings = Settings()
+logger: logging.Logger = logging.getLogger("iufi")
 
 # DB Var
 MONGO_DB: AsyncIOMotorClient = None
