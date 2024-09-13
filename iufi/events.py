@@ -156,12 +156,13 @@ BUY_MESSAGE: list[str] = [
     "🚨 Alert! {0} bought the mystery card! Time to unveil the surprise!"
 ]
 
-MILESTONES = [500, 2000, 5844, 10000]
+MILESTONES = [500, 2000, 5844, 10000, 20000] #will decide the milestone 5 progress number when people almost reach milestone 4
 MILESTONE_ONE_REWARD = [["🎵", "candies", 50]]
 MILESTONE_TWO_REWARD = [["🌸", "roll.rare", 2]]
 MILESTONE_THREE_REWARD = [["🌸", "roll.rare", 1], ["💎", "roll.epic", 1]]
 MILESTONE_FOUR_REWARD = [["🎵", "candies", 50], ["💎", "roll.epic", 2], ["👑", "roll.legendary", 1]]
-ANNIVERSARY_QUEST_REWARDS = [MILESTONE_ONE_REWARD, MILESTONE_TWO_REWARD, MILESTONE_THREE_REWARD, MILESTONE_FOUR_REWARD]
+MILESTONE_FIVE_REWARD = [["🎵", "candies", 100],["🌸", "roll.rare", 3], ["💎", "roll.epic", 2], ["👑", "roll.legendary", 1]]
+ANNIVERSARY_QUEST_REWARDS = [MILESTONE_ONE_REWARD, MILESTONE_TWO_REWARD, MILESTONE_THREE_REWARD, MILESTONE_FOUR_REWARD, MILESTONE_FIVE_REWARD]
 
 MARKET_ID = 987354574304190476  # iufi server
 ANNOUNCEMENT_ID = 987353737548935198  # iufi server
