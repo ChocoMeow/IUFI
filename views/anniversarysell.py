@@ -9,6 +9,20 @@ import iufi
 from iufi import Card
 
 
+# Initialize the queue for processing trades
+trade_queue = asyncio.Queue()
+
+
+# Task processor to handle the queue
+async def task_processor():
+    while True:
+        task = await trade_queue.get()
+        try:
+            await task()  # Execute the task
+        finally:
+            trade_queue.task_done()
+
+
 class AnniversarySellView(discord.ui.View):
     def __init__(
             self,
@@ -18,16 +32,17 @@ class AnniversarySellView(discord.ui.View):
             candies: int,
             timeout: float | None = 43_200,
     ) -> None:
-
         super().__init__(timeout=timeout)
 
         self.seller: commands.Bot = seller
         self.buyer: discord.Member | None = buyer
         self.card: Card = card
         self.candies: int = candies
+        self.bot: commands.Bot = seller
 
         self.is_loading: bool = False
         self.message: discord.Message = None
+        self.bot.loop.create_task(task_processor())  # Start the processor
 
     async def on_timeout(self) -> None:
         for child in self.children:
@@ -49,7 +64,7 @@ class AnniversarySellView(discord.ui.View):
         buyer = self.buyer or interaction.user
 
         if interaction.user != buyer:
-            return await interaction.response.send_message(f"This card is being traded to {buyer.mention}",
+            return await interaction.response.send_message(f"This card is being bought by {buyer.mention}",
                                                            ephemeral=True)
 
         if interaction.user == self.seller:
@@ -58,13 +73,19 @@ class AnniversarySellView(discord.ui.View):
         if self.is_loading:
             return await interaction.response.send_message(
                 "This sale is currently being processed for another user. Please try again later!", ephemeral=True)
-        self.is_loading = True
 
+        # Add trade to the queue to be processed
+        await trade_queue.put(lambda: self.process_trade(interaction, buyer))
+
+    async def process_trade(self, interaction, buyer):
+        self.is_loading = True
         _buyer = await func.get_user(buyer.id)
+
         if _buyer["candies"] < self.candies:
             self.is_loading = False
             return await interaction.response.send_message(
-                f"You don't have enough Musical Notes! You only have `{_buyer['candies']}` Musical Notes", ephemeral=True)
+                f"You don't have enough Musical Notes! You only have `{_buyer['candies']}` Musical Notes",
+                ephemeral=True)
 
         if len(_buyer["cards"]) >= func.settings.MAX_CARDS:
             self.is_loading = False
@@ -91,5 +112,6 @@ class AnniversarySellView(discord.ui.View):
 
         self.is_loading = False
         await self.on_timeout()
-        await interaction.followup.send(content=random.choice(iufi.BUY_MESSAGE).format(interaction.user.mention), embed=embed,
+        await interaction.followup.send(content=random.choice(iufi.BUY_MESSAGE).format(interaction.user.mention),
+                                        embed=embed,
                                         file=discord.File(image_bytes, filename=f'image.{image_format}'))
