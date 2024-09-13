@@ -4,17 +4,25 @@ import functions as func
 
 from discord.ext import commands
 
-class CaptionModal(discord.ui.Modal, title="Add Caption"):
+class CaptionModal(discord.ui.Modal):
     def __init__(self, cards: list[iufi.Card]) -> None:
+        super().__init__(title="Add Caption")
         self.cards = cards
-        caption = discord.ui.TextInput(label='Caption')
+        
+        self.add_item(discord.ui.TextInput(
+            label='Caption', 
+            placeholder="You can leave it as is if you prefer not to add any options.",
+            required=False
+        ))
 
     async def on_submit(self, interaction: discord.Interaction):
         await interaction.response.defer()
+
+        caption = self.children[0].value or ""
         image_bytes, image_format = await asyncio.to_thread(iufi.gen_cards_view, self.cards, size_rate=1)
         if self.cards and (gallery_channel := interaction.guild.get_channel(func.settings.GALLERY_CHANNEL_ID)):
             await gallery_channel.send(
-                content=f"Sent by {interaction.user.mention}! {self.caption}",
+                content=f"{caption}\nSent by {interaction.user.mention}",
                 file=discord.File(image_bytes, filename=f'image.{image_format}')
             )
 
