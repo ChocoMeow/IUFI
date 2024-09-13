@@ -9,19 +9,6 @@ import iufi
 from iufi import Card
 
 
-# Initialize the queue for processing trades
-trade_queue = asyncio.Queue()
-
-
-# Task processor to handle the queue
-async def task_processor():
-    while True:
-        task = await trade_queue.get()
-        try:
-            await task()  # Execute the task
-        finally:
-            trade_queue.task_done()
-
 
 class AnniversarySellView(discord.ui.View):
     def __init__(
@@ -38,11 +25,9 @@ class AnniversarySellView(discord.ui.View):
         self.buyer: discord.Member | None = buyer
         self.card: Card = card
         self.candies: int = candies
-        self.bot: commands.Bot = seller
 
         self.is_loading: bool = False
         self.message: discord.Message = None
-        self.bot.loop.create_task(task_processor())  # Start the processor
 
     async def on_timeout(self) -> None:
         for child in self.children:
@@ -64,7 +49,7 @@ class AnniversarySellView(discord.ui.View):
 
 
         # Add trade to the queue to be processed
-        await trade_queue.put(lambda: self.process_trade(interaction))
+        await iufi.trade_queue.put(lambda: self.process_trade(interaction))
 
     async def process_trade(self, interaction):
         buyer = self.buyer or interaction.user

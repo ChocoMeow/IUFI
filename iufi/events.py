@@ -1,3 +1,4 @@
+import asyncio
 import datetime
 
 # Debut Anniversary
@@ -13,6 +14,8 @@ EVENT_CONFIG: dict[str, dict[str, str | datetime.datetime]] = {
 
 debut_anniversary_day = EVENT_CONFIG["debut_anniversary"]
 
+# Initialize the queue for processing trades
+trade_queue = asyncio.Queue()
 
 def is_debut_anniversary_day() -> bool:
     return debut_anniversary_day["start_date"] <= datetime.datetime.now() <= debut_anniversary_day["end_date"]
