@@ -61,6 +61,12 @@ class AnniversarySellView(discord.ui.View):
 
     @discord.ui.button(label='Buy', style=discord.ButtonStyle.green)
     async def trade(self, interaction: discord.Interaction, button: discord.ui.Button):
+
+
+        # Add trade to the queue to be processed
+        await trade_queue.put(lambda: self.process_trade(interaction))
+
+    async def process_trade(self, interaction):
         buyer = self.buyer or interaction.user
 
         if interaction.user != buyer:
@@ -73,11 +79,6 @@ class AnniversarySellView(discord.ui.View):
         if self.is_loading:
             return await interaction.response.send_message(
                 "This sale is currently being processed for another user. Please try again later!", ephemeral=True)
-
-        # Add trade to the queue to be processed
-        await trade_queue.put(lambda: self.process_trade(interaction, buyer))
-
-    async def process_trade(self, interaction, buyer):
         self.is_loading = True
         _buyer = await func.get_user(buyer.id)
 
