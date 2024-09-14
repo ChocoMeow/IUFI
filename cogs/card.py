@@ -1,4 +1,4 @@
-import discord, iufi, asyncio
+import discord, iufi, asyncio, time
 import functions as func
 
 from discord.ext import commands
@@ -93,7 +93,7 @@ class Card(commands.Cog):
             "$inc": {"candies": candies}
         })
         await func.update_user(ctx.author.id, query)
-        await func.update_card(card_ids, {"$set": {"owner_id": None, "tag": None, "frame": None}})
+        await func.update_card(card_ids, {"$set": {"owner_id": None, "tag": None, "frame": None, "last_trade_time": 0}})
 
         embed = discord.Embed(title="✨ Convert", color=discord.Color.random())
         embed.description = f"```🆔 {', '.join([f'{card}' for card in converted_cards])} \n🍬 + {candies}```"
@@ -132,7 +132,7 @@ class Card(commands.Cog):
             "$inc": {"candies": card.cost}
         })
         await func.update_user(ctx.author.id, query)
-        await func.update_card(card.id, {"$set": {"owner_id": None, "tag": None, "frame": None}})
+        await func.update_card(card.id, {"$set": {"owner_id": None, "tag": None, "frame": None, "last_trade_time": 0}})
         iufi.CardPool.add_available_card(card)
         
         embed.title="✨ Converted"
@@ -175,7 +175,7 @@ class Card(commands.Cog):
                 "$inc": {"candies": candies}
             })
             await func.update_user(ctx.author.id, query)
-            await func.update_card(card_ids, {"$set": {"owner_id": None, "tag": None, "frame": None}})
+            await func.update_card(card_ids, {"$set": {"owner_id": None, "tag": None, "frame": None, "last_trade_time": 0}})
 
             embed.title = "✨ Converted"
             await view.message.edit(embed=embed, view=None)
@@ -227,7 +227,7 @@ class Card(commands.Cog):
                 "$inc": {"candies": candies}
             })
             await func.update_user(ctx.author.id, query)
-            await func.update_card(card_ids, {"$set": {"owner_id": None, "tag": None, "frame": None}})
+            await func.update_card(card_ids, {"$set": {"owner_id": None, "tag": None, "frame": None, "last_trade_time": 0}})
 
             embed.title = "✨ Converted"
             await view.message.edit(embed=embed, view=None)
@@ -311,6 +311,9 @@ class Card(commands.Cog):
         if card.owner_id != ctx.author.id:
             return await ctx.reply("You are not the owner of this card.")
         
+        if time.time() - card.last_trade_time < 86400:
+            return await ctx.reply("Oopsie! You need to wait a little longer~ You can trade this card again after 24 hours have passed.")
+        
         view = TradeView(ctx.author, member, card, candies)
         view.message = await ctx.reply(
             content=f"{member.mention}, {ctx.author.mention} want to trade with you.",
@@ -330,7 +333,10 @@ class Card(commands.Cog):
 
         if card.owner_id != ctx.author.id:
             return await ctx.reply("You are not the owner of this card.")
-
+        
+        if time.time() - card.last_trade_time < 86400:
+            return await ctx.reply("Oopsie! You need to wait a little longer~ You can trade this card again after 24 hours have passed.")
+        
         view = TradeView(ctx.author, None, card, candies)
         view.message = await ctx.reply(
             content=f"{ctx.author.mention} wants to trade",
@@ -361,6 +367,9 @@ class Card(commands.Cog):
         if card.owner_id != ctx.author.id:
             return await ctx.reply("You are not the owner of this card.")
         
+        if time.time() - card.last_trade_time < 86400:
+            return await ctx.reply("Oopsie! You need to wait a little longer~ You can trade this card again after 24 hours have passed.")
+        
         view = TradeView(ctx.author, member, card, candies)
         view.message = await ctx.reply(
             content=f"{member.mention}, {ctx.author.mention} want to trade with you.",
@@ -386,6 +395,9 @@ class Card(commands.Cog):
 
         if card.owner_id != ctx.author.id:
             return await ctx.reply("You are not the owner of this card.")
+        
+        if time.time() - card.last_trade_time < 86400:
+            return await ctx.reply("Oopsie! You need to wait a little longer~ You can trade this card again after 24 hours have passed.")
         
         view = TradeView(ctx.author, None, card, candies)
         view.message = await ctx.reply(
