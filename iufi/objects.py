@@ -32,9 +32,6 @@ QUIZ_LEVEL_BASE: dict[str, tuple[int, tuple[int, int, hex]]] = {
 class CardObject:
     __slots__ = ("_image")
 
-    def __init__(self) -> None:
-        self._image: list[Image.Image] | Image.Image = None
-
     def _round_corners(self, image: Image.Image, radius: int = 8) -> Image.Image:
         """Creates a rounded corner image"""
         radius = min(image.size) * radius // 100
@@ -100,7 +97,6 @@ class Card(CardObject):
         self.tag: str = tag
         self._frame: str = frame
 
-        self._image: list[Image.Image] | Image.Image = None
         self._emoji: str = func.settings.TIERS_BASE.get(self._tier)[0]
 
     def _load_frame(self, image: Image.Image, frame: str = None, *, size_rate: float = SIZE_RATE) -> Image.Image:
@@ -122,8 +118,11 @@ class Card(CardObject):
         except FileNotFoundError:
             return self._round_corners(image.resize(img_size, Image.LANCZOS))
 
-    def _load_image(self, *, size_rate: float = SIZE_RATE) -> Union[list[Image.Image], Image.Image]:
+    def _load_image(self, *, size_rate: float = SIZE_RATE, hide_image_if_no_owner: bool = False) -> Union[list[Image.Image], Image.Image]:
         """Load and process the image"""
+        if hide_image_if_no_owner and not self.owner_id:
+            return TempCard(f"cover/level{random.randint(1, 3)}.webp").image
+        
         try:
             image_path = os.path.join(func.ROOT_DIR, "images", self._tier)
 
@@ -167,7 +166,7 @@ class Card(CardObject):
                     self._pool._tag_cards.pop(self.tag.lower())
                 self.tag = None
 
-                self._frame, self._image = None, None
+                self._frame = None
 
     def change_tag(self, tag: str | None = None) -> None:
         if self.tag == tag:
@@ -181,7 +180,6 @@ class Card(CardObject):
             raise IUFIException("This frame is already assigned to this card.")
         
         self._frame = frame.lower() if frame else None
-        self._image = None
 
     def change_stars(self, stars: int) -> None:
         if self.stars != stars:
@@ -189,13 +187,15 @@ class Card(CardObject):
 
             asyncio.create_task(func.update_card(self.id, {"$set": {"stars": stars}}))
 
-    def image_bytes(self) -> BytesIO:
+    def image_bytes(self, hide_image_if_no_owner: bool = False) -> BytesIO:
         image_bytes = BytesIO()
 
+        image = TempCard(f"cover/level{random.randint(1, 3)}.webp").image if hide_image_if_no_owner and not self.owner_id else self.image
+
         if self.is_gif:
-            self.image[0].save(image_bytes, format="GIF", save_all=True, append_images=self.image[1:], loop=0)
+            image[0].save(image_bytes, format="GIF", save_all=True, append_images=image[1:], loop=0)
         else:
-            self.image.save(image_bytes, format='PNG')
+            image.save(image_bytes, format='PNG')
         image_bytes.seek(0)
 
         return image_bytes
@@ -220,9 +220,7 @@ class Card(CardObject):
     @property
     def image(self) -> list[Image.Image] | Image.Image:
         """Return the image"""
-        if not self._image:
-            self._image = self._load_image()
-        return self._image
+        return self._load_image()
 
     @property
     def is_gif(self) -> bool:
@@ -271,9 +269,7 @@ class TempCard(CardObject):
     @property
     def image(self) -> list[Image.Image] | Image.Image:
         """Return the image"""
-        if not self._image:
-            self._image = self._load_image(self._path)
-        return self._image
+        return self._load_image(self._path)
 
     @property
     def is_gif(self) -> bool:

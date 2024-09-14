@@ -17,7 +17,7 @@ def extend_lists(lists: list[list[Image.Image]]) -> list[list[Image.Image]]:
 
     return lists
 
-def gen_cards_view(cards: list[Card | TempCard | None], cards_per_row: int = 3, *, size_rate: float = SIZE_RATE) -> tuple[BytesIO, str]:
+def gen_cards_view(cards: list[Card | TempCard | None], cards_per_row: int = 3, *, size_rate: float = SIZE_RATE, hide_image_if_no_owner: bool = False) -> tuple[BytesIO, str]:
     # Create a new image for output
     card_width, card_height = int(CARD_SIZE[0] * size_rate), int(CARD_SIZE[1] * size_rate)
     num_rows = (len(cards) + cards_per_row - 1) // cards_per_row  # calculate number of rows
