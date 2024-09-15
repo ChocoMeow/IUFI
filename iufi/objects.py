@@ -87,6 +87,7 @@ class Card(CardObject):
         stars: int = None,
         tag: str = None,
         frame: str = None,
+        last_trade_time: float = None
     ):  
         self.id: str = id
         self._tier: str = tier
@@ -96,6 +97,7 @@ class Card(CardObject):
         self.stars: int = stars if stars else 0
         self.tag: str = tag
         self._frame: str = frame
+        self.last_trade_time = last_trade_time or 0
 
         self._emoji: str = func.settings.TIERS_BASE.get(self._tier)[0]
 
@@ -167,6 +169,7 @@ class Card(CardObject):
                 self.tag = None
 
                 self._frame = None
+                self.last_trade_time = 0
 
     def change_tag(self, tag: str | None = None) -> None:
         if self.tag == tag:

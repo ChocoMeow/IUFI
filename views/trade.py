@@ -1,4 +1,4 @@
-import discord, asyncio
+import discord, time, asyncio
 import functions as func
 
 from iufi import Card
@@ -68,6 +68,7 @@ class TradeView(discord.ui.View):
                 return await interaction.followup.send(f"**Your inventory is full.**", ephemeral=True)
             
             self.card.change_owner(buyer.id)
+            self.card.last_trade_time = time.time()
 
             # Seller
             _seller = await func.get_user(self.seller.id)
@@ -77,7 +78,7 @@ class TradeView(discord.ui.View):
             # Buyer
             buyer_query = func.update_quest_progress(_buyer, "TRADE_ANY_CARD", query={"$push": {"cards": self.card.id}, "$inc": {"candies": -self.candies}})
             await func.update_user(buyer.id, buyer_query)
-            await func.update_card(self.card.id, {"$set": {"owner_id": buyer.id}})
+            await func.update_card(self.card.id, {"$set": {"owner_id": buyer.id, "last_trade_time": self.card.last_trade_time}})
 
             embed = discord.Embed(title="✅ Traded", color=discord.Color.random())
             embed.description = f"```{self.card.display_id}\n🍬 - {self.candies}```"
