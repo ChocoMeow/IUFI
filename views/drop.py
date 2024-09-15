@@ -28,7 +28,7 @@ class DropView(discord.ui.View):
 
         self.card: Card = card
 
-        self.is_loading: bool = False
+        self._lock: asyncio.Lock = asyncio.Lock()
         self.message: discord.Message = None
 
     async def on_timeout(self) -> None:
@@ -44,37 +44,32 @@ class DropView(discord.ui.View):
 
     @discord.ui.button(label='Claim Now', style=discord.ButtonStyle.green)
     async def claim(self, interaction: discord.Interaction, button: discord.ui.Button):
-        if self.is_loading:
-            return await interaction.response.send_message("<:IUpray:294109405497131009> Oops! This claim is currently having a party with another user. Please try again later!", ephemeral=True)
-        self.is_loading = True
-
-        if self.card.owner_id != None:
-            await self.on_timeout()
-            self.stop()
-            return await interaction.response.send_message("<:IUsad3:1071179718969266318> Oops! This card has already been claimed by someone else!", ephemeral=True)
-        
-        user_data = await func.get_user(interaction.user.id)
-        if len(user_data["cards"]) >= func.settings.MAX_CARDS:
-            self.is_loading = False
-            return await interaction.response.send_message(f"**Your inventory is full.**", ephemeral=True)
-        
-        self.card.change_owner(interaction.user.id)
-        CardPool.remove_available_card(self.card)
         await interaction.response.defer()
+        async with self._lock:
+            if self.card.owner_id != None:
+                await self.on_timeout()
+                self.stop()
+                return await interaction.followup.send("<:IUsad3:1071179718969266318> Oops! This card has already been claimed by someone else!", ephemeral=True)
+            
+            user_data = await func.get_user(interaction.user.id)
+            if len(user_data["cards"]) >= func.settings.MAX_CARDS:
+                return await interaction.followup.send(f"**Your inventory is full.**", ephemeral=True)
+            
+            self.card.change_owner(interaction.user.id)
+            CardPool.remove_available_card(self.card)
 
-        await func.update_user(interaction.user.id, {"$push": {"cards": self.card.id}})
-        await func.update_card(self.card.id, {"$set": {"owner_id": interaction.user.id}})
+            await func.update_user(interaction.user.id, {"$push": {"cards": self.card.id}})
+            await func.update_card(self.card.id, {"$set": {"owner_id": interaction.user.id}})
 
-        embed = discord.Embed(title="🎊 Random Drop", color=discord.Color.random())
-        embed.description = f"```{self.card.display_id}\n" \
-                            f"{self.card.display_tag}\n" \
-                            f"{self.card.display_frame}\n" \
-                            f"{self.card.tier[0]} {self.card.tier[1].capitalize()}\n" \
-                            f"{self.card.display_stars}```\n"
-        
-        image_bytes, image_format = await asyncio.to_thread(self.card.image_bytes), self.card.format
-        embed.set_image(url=f"attachment://image.{self.card.format}")
+            embed = discord.Embed(title="🎊 Random Drop", color=discord.Color.random())
+            embed.description = f"```{self.card.display_id}\n" \
+                                f"{self.card.display_tag}\n" \
+                                f"{self.card.display_frame}\n" \
+                                f"{self.card.tier[0]} {self.card.tier[1].capitalize()}\n" \
+                                f"{self.card.display_stars}```\n"
+            
+            image_bytes, image_format = await asyncio.to_thread(self.card.image_bytes), self.card.format
+            embed.set_image(url=f"attachment://image.{self.card.format}")
 
-        self.is_loading = False
-        await self.on_timeout()
-        await interaction.followup.send(content=choice(REPLY_MESSAGES).format(interaction.user.mention), embed=embed, file=discord.File(image_bytes, filename=f'image.{image_format}'))
+            await self.on_timeout()
+            await interaction.followup.send(content=choice(REPLY_MESSAGES).format(interaction.user.mention), embed=embed, file=discord.File(image_bytes, filename=f'image.{image_format}'))
