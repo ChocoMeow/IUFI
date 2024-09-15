@@ -30,8 +30,6 @@ QUIZ_LEVEL_BASE: dict[str, tuple[int, tuple[int, int, hex]]] = {
 }
 
 class CardObject:
-    __slots__ = ("_image")
-
     def _round_corners(self, image: Image.Image, radius: int = 8) -> Image.Image:
         """Creates a rounded corner image"""
         radius = min(image.size) * radius // 100
@@ -74,7 +72,6 @@ class Card(CardObject):
         "stars",
         "tag",
         "_frame",
-        "_image",
         "_emoji"
     )
 
