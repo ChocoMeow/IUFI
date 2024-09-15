@@ -33,8 +33,8 @@ def gen_cards_view(cards: list[Card | TempCard | None], cards_per_row: int = 3, 
     # Paste images into the output image with 10 pixels padding
     if is_gif := any([card.is_gif for card in cards if card]):
         gif_lists = [
-            (card._load_image(size_rate=size_rate) if size_rate != SIZE_RATE else card.image) if card and card.is_gif else
-            [card._load_image(size_rate=size_rate) if size_rate != SIZE_RATE else card.image] if card else [None]
+            (card._load_image(size_rate=size_rate, hide_image_if_no_owner=hide_image_if_no_owner) if size_rate != SIZE_RATE else card.image) if card and card.is_gif else
+            [card._load_image(size_rate=size_rate, hide_image_if_no_owner=hide_image_if_no_owner) if size_rate != SIZE_RATE else card.image] if card else [None]
             for card in cards
         ]                    
         extended_gifs = extend_lists(gif_lists)
@@ -58,7 +58,7 @@ def gen_cards_view(cards: list[Card | TempCard | None], cards_per_row: int = 3, 
             if card:  # if card is not None
                 x = (card_width + PADDING) * (i % cards_per_row)
                 y = (card_height + PADDING) * (i // cards_per_row)
-                output_image.paste(card._load_image(size_rate=size_rate) if size_rate != SIZE_RATE else card.image, (x, y))
+                output_image.paste(card._load_image(size_rate=size_rate, hide_image_if_no_owner=hide_image_if_no_owner) if size_rate != SIZE_RATE else card._load_image(hide_image_if_no_owner=hide_image_if_no_owner), (x, y))
 
         output_image.save(resized_image_bytes, format='WEBP')
 
