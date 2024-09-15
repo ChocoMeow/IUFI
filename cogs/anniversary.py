@@ -13,24 +13,12 @@ from views import AnniversarySellView
 
 LEADERBOARD_EMOJIS: list[str] = ["🥇", "🥈", "🥉", "🏅"]
 
-
-# Task processor to handle the queue
-async def task_processor():
-    while True:
-        task = await iufi.trade_queue.get()
-        try:
-            await task()  # Execute the task
-        finally:
-            iufi.trade_queue.task_done()
-
 class Anniversary(commands.Cog):
     def __init__(self, bot: commands.Bot) -> None:
         self.bot = bot
         self.debut_anniversary.start()
         self.invisible = False
         self.emoji = "🎵"
-        self.bot.loop.create_task(task_processor())  # Start the processor
-
 
     @commands.command(hidden=True)
     async def sendMessage(self, ctx: commands.Context, channel: discord.TextChannel, *, message: str) -> None:

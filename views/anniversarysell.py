@@ -1,33 +1,29 @@
 import asyncio
 import random
-
+import iufi
 import discord
 import functions as func
+
 from discord.ext import commands
-
-import iufi
-from iufi import Card
-
-
 
 class AnniversarySellView(discord.ui.View):
     def __init__(
-            self,
-            seller: commands.Bot,
-            buyer: discord.Member | None,
-            card: Card,
-            candies: int,
-            timeout: float | None = 43_200,
+        self,
+        seller: commands.Bot,
+        buyer: discord.Member | None,
+        card: iufi.Card,
+        candies: int,
+        timeout: float | None = 43_200,
     ) -> None:
         super().__init__(timeout=timeout)
 
         self.seller: commands.Bot = seller
         self.buyer: discord.Member | None = buyer
-        self.card: Card = card
+        self.card: iufi.Card = card
         self.candies: int = candies
 
-        self.is_loading: bool = False
         self.message: discord.Message = None
+        self._lock: asyncio.Lock = asyncio.Lock()
 
     async def on_timeout(self) -> None:
         for child in self.children:
@@ -46,58 +42,50 @@ class AnniversarySellView(discord.ui.View):
 
     @discord.ui.button(label='Buy', style=discord.ButtonStyle.green)
     async def trade(self, interaction: discord.Interaction, button: discord.ui.Button):
-
-
-        # Add trade to the queue to be processed
-        await iufi.trade_queue.put(lambda: self.process_trade(interaction))
-
-    async def process_trade(self, interaction):
-        buyer = self.buyer or interaction.user
-
-        if interaction.user != buyer:
-            return await interaction.response.send_message(f"This card is being bought by {buyer.mention}",
-                                                           ephemeral=True)
-
-        if interaction.user == self.seller:
-            return await interaction.response.send_message("You can't trade with yourself!", ephemeral=True)
-
-        if self.is_loading:
-            return await interaction.response.send_message(
-                "This sale is currently being processed for another user. Please try again later!", ephemeral=True)
-        self.is_loading = True
-        _buyer = await func.get_user(buyer.id)
-
-        if _buyer["candies"] < self.candies:
-            self.is_loading = False
-            return await interaction.response.send_message(
-                f"You don't have enough Musical Notes! You only have `{_buyer['candies']}` Musical Notes",
-                ephemeral=True)
-
-        if len(_buyer["cards"]) >= func.settings.MAX_CARDS:
-            self.is_loading = False
-            return await interaction.response.send_message(f"**Your inventory is full.**", ephemeral=True)
-
-        self.card.change_owner(buyer.id)
         await interaction.response.defer()
+        async with self._lock:
+            buyer = self.buyer or interaction.user
 
-        # Buyer
-        buyer_query = func.update_quest_progress(_buyer, "TRADE_ANY_CARD", query={"$push": {"cards": self.card.id},
-                                                                                  "$inc": {"candies": -self.candies}})
-        await func.update_user(buyer.id, buyer_query)
-        await func.update_card(self.card.id, {"$set": {"owner_id": buyer.id}})
+            if interaction.user != buyer:
+                return await interaction.followup.send(f"This card is being bought by {buyer.mention}",ephemeral=True)
 
-        embed = discord.Embed(title="🎊 Mystery Card", color=discord.Color.random())
-        embed.description = f"```{self.card.display_id}\n" \
-                            f"{self.card.display_tag}\n" \
-                            f"{self.card.display_frame}\n" \
-                            f"{self.card.tier[0]} {self.card.tier[1].capitalize()}\n" \
-                            f"{self.card.display_stars}```\n"
+            if interaction.user == self.seller:
+                return await interaction.followup.send("You can't trade with yourself!", ephemeral=True)
 
-        image_bytes, image_format = await asyncio.to_thread(self.card.image_bytes), self.card.format
-        embed.set_image(url=f"attachment://image.{self.card.format}")
+            _buyer = await func.get_user(buyer.id)
 
-        self.is_loading = False
-        await self.on_timeout()
-        await interaction.followup.send(content=random.choice(iufi.BUY_MESSAGE).format(interaction.user.mention),
-                                        embed=embed,
-                                        file=discord.File(image_bytes, filename=f'image.{image_format}'))
+            if _buyer["candies"] < self.candies:
+                return await interaction.followup.send(
+                    f"You don't have enough Musical Notes! You only have `{_buyer['candies']}` Musical Notes",
+                    ephemeral=True)
+
+            if len(_buyer["cards"]) >= func.settings.MAX_CARDS:
+                return await interaction.followup.send(f"**Your inventory is full.**", ephemeral=True)
+
+            self.card.change_owner(buyer.id)
+
+            # Buyer
+            buyer_query = func.update_quest_progress(_buyer, "TRADE_ANY_CARD",
+                query={"$push": {"cards": self.card.id},
+                "$inc": {"candies": -self.candies}}
+            )
+            
+            await func.update_user(buyer.id, buyer_query)
+            await func.update_card(self.card.id, {"$set": {"owner_id": buyer.id}})
+
+            embed = discord.Embed(title="🎊 Mystery Card", color=discord.Color.random())
+            embed.description = f"```{self.card.display_id}\n" \
+                                f"{self.card.display_tag}\n" \
+                                f"{self.card.display_frame}\n" \
+                                f"{self.card.tier[0]} {self.card.tier[1].capitalize()}\n" \
+                                f"{self.card.display_stars}```\n"
+
+            image_bytes, image_format = await asyncio.to_thread(self.card.image_bytes), self.card.format
+            embed.set_image(url=f"attachment://image.{self.card.format}")
+
+            await self.on_timeout()
+            await interaction.followup.send(
+                content=random.choice(iufi.BUY_MESSAGE).format(interaction.user.mention),
+                embed=embed,
+                file=discord.File(image_bytes, filename=f'image.{image_format}')
+            )
