@@ -312,7 +312,7 @@ class Card(commands.Cog):
             return await ctx.reply("You are not the owner of this card.")
         
         if time.time() - card.last_trade_time < 86400:
-            return await ctx.reply("Oopsie! You need to wait a little longer~ You can trade this card again after 24 hours have passed.")
+            return await ctx.reply(f"Oopsie! You need to wait a little longer~ You can trade this card again <t:{int(card.last_trade_time + 86400)}:R>")
         
         view = TradeView(ctx.author, member, card, candies)
         view.message = await ctx.reply(
@@ -335,7 +335,7 @@ class Card(commands.Cog):
             return await ctx.reply("You are not the owner of this card.")
         
         if time.time() - card.last_trade_time < 86400:
-            return await ctx.reply("Oopsie! You need to wait a little longer~ You can trade this card again after 24 hours have passed.")
+            return await ctx.reply(f"Oopsie! You need to wait a little longer~ You can trade this card again <t:{int(card.last_trade_time + 86400)}:R>")
         
         view = TradeView(ctx.author, None, card, candies)
         view.message = await ctx.reply(
@@ -368,7 +368,7 @@ class Card(commands.Cog):
             return await ctx.reply("You are not the owner of this card.")
         
         if time.time() - card.last_trade_time < 86400:
-            return await ctx.reply("Oopsie! You need to wait a little longer~ You can trade this card again after 24 hours have passed.")
+            return await ctx.reply(f"Oopsie! You need to wait a little longer~ You can trade this card again <t:{int(card.last_trade_time + 86400)}:R>")
         
         view = TradeView(ctx.author, member, card, candies)
         view.message = await ctx.reply(
@@ -397,7 +397,7 @@ class Card(commands.Cog):
             return await ctx.reply("You are not the owner of this card.")
         
         if time.time() - card.last_trade_time < 86400:
-            return await ctx.reply("Oopsie! You need to wait a little longer~ You can trade this card again after 24 hours have passed.")
+            return await ctx.reply(f"Oopsie! You need to wait a little longer~ You can trade this card again <t:{int(card.last_trade_time + 86400)}:R>")
         
         view = TradeView(ctx.author, None, card, candies)
         view.message = await ctx.reply(

@@ -76,10 +76,6 @@ class Tasks(commands.Cog):
     async def cache_clear(self):
         func.USERS_BUFFER.clear()
 
-        # Purging Cached Image Data
-        for card in iufi.CardPool._cards.values():
-            card._image = None
-
         # Syncing Question Data with Database
         for q in iufi.QuestionPool._questions:
             if q.is_updated:

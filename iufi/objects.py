@@ -30,6 +30,11 @@ QUIZ_LEVEL_BASE: dict[str, tuple[int, tuple[int, int, hex]]] = {
 }
 
 class CardObject:
+    __slots__ = ("is_gif")
+
+    def __init__(self) -> None:
+        self.is_gif: bool = False;
+    
     def _round_corners(self, image: Image.Image, radius: int = 8) -> Image.Image:
         """Creates a rounded corner image"""
         radius = min(image.size) * radius // 100
@@ -49,16 +54,14 @@ class CardObject:
 
         return output
     
-    def _load_image(self, path: str, *, size_rate: float = SIZE_RATE) -> Union[List[Image.Image], Image.Image]:
+    def _load_image(self, path: str, *, size_rate: float = SIZE_RATE, **kwargs) -> Union[List[Image.Image], Image.Image]:
         """Load and process the image"""
         try:
             with Image.open(path) as img:
                 img_size = (int(CARD_SIZE[0] * size_rate), int(CARD_SIZE[1] * size_rate))
                 images = [self._round_corners(frame.resize(img_size)) for frame in ImageSequence.Iterator(img)]
-                if len(images) > 1:
-                    return images
-
-                return images[0]
+                self.is_gif = len(images) > 1
+                return images if len(images) > 1 else images[0]
             
         except Exception as e:
             raise ImageLoadError(f"Unable to load the image. Reason: {e}")
@@ -72,7 +75,9 @@ class Card(CardObject):
         "stars",
         "tag",
         "_frame",
-        "_emoji"
+        "_emoji",
+        "is_gif",
+        "last_trade_time"
     )
 
     def __init__(
@@ -94,6 +99,7 @@ class Card(CardObject):
         self.stars: int = stars if stars else 0
         self.tag: str = tag
         self._frame: str = frame
+        self.is_gif: bool = False
         self.last_trade_time = last_trade_time or 0
 
         self._emoji: str = func.settings.TIERS_BASE.get(self._tier)[0]
@@ -120,17 +126,15 @@ class Card(CardObject):
     def _load_image(self, *, size_rate: float = SIZE_RATE, hide_image_if_no_owner: bool = False) -> Union[list[Image.Image], Image.Image]:
         """Load and process the image"""
         if hide_image_if_no_owner and not self.owner_id:
-            return TempCard(f"cover/level{random.randint(1, 3)}.webp").image
+            return TempCard(f"cover/level{random.randint(1, 3)}.webp").image()
         
         try:
             image_path = os.path.join(func.ROOT_DIR, "images", self._tier)
 
             with Image.open(os.path.join(image_path, f"{self.id}.webp")) as img:
                 images = [self._load_frame(frame.convert('RGBA'), size_rate=size_rate) for frame in ImageSequence.Iterator(img)]
-                if len(images) > 1:
-                    return images
-                
-                return images[0]
+                self.is_gif = len(images) > 1
+                return images if len(images) > 1 else images[0]
                     
         except Exception as e:
             raise ImageLoadError(f"Unable to load the image. Reason: {e}")
@@ -190,7 +194,7 @@ class Card(CardObject):
     def image_bytes(self, hide_image_if_no_owner: bool = False) -> BytesIO:
         image_bytes = BytesIO()
 
-        image = TempCard(f"cover/level{random.randint(1, 3)}.webp").image if hide_image_if_no_owner and not self.owner_id else self.image
+        image = self.image(hide_image_if_no_owner=hide_image_if_no_owner)
 
         if self.is_gif:
             image[0].save(image_bytes, format="GIF", save_all=True, append_images=image[1:], loop=0)
@@ -200,6 +204,10 @@ class Card(CardObject):
 
         return image_bytes
     
+    def image(self, *, size_rate: float = SIZE_RATE, hide_image_if_no_owner: bool = False) -> list[Image.Image] | Image.Image:
+        """Return the image"""
+        return self._load_image(size_rate=size_rate, hide_image_if_no_owner=hide_image_if_no_owner)
+
     @property
     def cost(self) -> int:
         price = func.settings.TIERS_BASE.get(self._tier)[1]
@@ -216,15 +224,6 @@ class Card(CardObject):
     @property
     def frame(self) -> tuple[str, str]:
         return func.settings.FRAMES_BASE.get(self._frame)[0], self._frame
-    
-    @property
-    def image(self) -> list[Image.Image] | Image.Image:
-        """Return the image"""
-        return self._load_image()
-
-    @property
-    def is_gif(self) -> bool:
-        return isinstance(self.image, list)
 
     @property
     def format(self) -> str:
@@ -259,21 +258,16 @@ class TempCard(CardObject):
         image_bytes = BytesIO()
 
         if self.is_gif:
-            self.image[0].save(image_bytes, format="GIF", save_all=True, append_images=self.image[1:], loop=0)
+            self.image()[0].save(image_bytes, format="GIF", save_all=True, append_images=self.image[1:], loop=0)
         else:
-            self.image.save(image_bytes, format='PNG')
+            self.image().save(image_bytes, format='PNG')
         image_bytes.seek(0)
 
         return image_bytes
     
-    @property
-    def image(self) -> list[Image.Image] | Image.Image:
+    def image(self, *, size_rate: float = SIZE_RATE, hide_image_if_no_owner: bool = False) -> list[Image.Image] | Image.Image:
         """Return the image"""
-        return self._load_image(self._path)
-
-    @property
-    def is_gif(self) -> bool:
-        return isinstance(self.image, list)
+        return self._load_image(self._path, size_rate=size_rate, hide_image_if_no_owner=hide_image_if_no_owner)
 
     @property
     def format(self) -> str:
