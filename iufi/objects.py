@@ -10,7 +10,8 @@ from typing import (
     Optional,
     Union,
     List,
-    TYPE_CHECKING
+    TYPE_CHECKING,
+    Dict
 )
 
 from .exceptions import ImageLoadError, IUFIException
@@ -77,8 +78,11 @@ class Card(CardObject):
         "_frame",
         "_emoji",
         "is_gif",
-        "last_trade_time"
+        "last_trade_time",
+        "_image"
     )
+
+    _frame_cache: Dict[str, Union[List[Image.Image], Image.Image]] = {}  # Path to Frame
 
     def __init__(
         self,
@@ -103,23 +107,31 @@ class Card(CardObject):
         self.last_trade_time = last_trade_time or 0
 
         self._emoji: str = func.settings.TIERS_BASE.get(self._tier)[0]
+        self._image: Optional[Union[List[Image.Image], Image.Image]] = None
 
     def _load_frame(self, image: Image.Image, frame: str = None, *, size_rate: float = SIZE_RATE) -> Image.Image:
         try:
             frame = frame or self._frame
             new_size_rate = size_rate - (FRAME_SIZE_INCREMENT[0] if frame else FRAME_SIZE_INCREMENT[1])
             img_size = (int(CARD_SIZE[0] * new_size_rate), int(CARD_SIZE[1] * new_size_rate))
-            
-            with Image.open(os.path.join(func.ROOT_DIR, "frames", f"{frame or self._tier}.webp")) as frame_img:
-                size = (int(CARD_SIZE[0] * size_rate), int(CARD_SIZE[1] * size_rate))
-                frame_img = frame_img.resize(size, Image.LANCZOS)
-                
-                result = Image.new('RGBA', size)
-                image = self._round_corners(image.resize(img_size, Image.LANCZOS))
-                result.paste(image, ((size[0] - img_size[0]) // 2, (size[1] - img_size[1]) // 2))
-                result.paste(frame_img, (0, 0), frame_img)
-                return result
-                
+            frame_size = (int(CARD_SIZE[0] * size_rate), int(CARD_SIZE[1] * size_rate))
+            # Check if the frame is in cache
+            if frame not in Card._frame_cache:
+                with Image.open(os.path.join(func.ROOT_DIR, "frames", f"{frame or self._tier}.webp")) as frame_img:
+
+                    # Resize and cache the frame image
+                    Card._frame_cache[frame] = frame_img.resize(frame_size, Image.LANCZOS)
+
+            # Get the cached frame image
+            frame_img = Card._frame_cache[frame]
+
+            # Create the final image with rounded corners and frame
+            result = Image.new('RGBA', frame_size)
+            image = self._round_corners(image.resize(img_size, Image.LANCZOS))
+            result.paste(image, ((frame_size[0] - img_size[0]) // 2, (frame_size[1] - img_size[1]) // 2))
+            result.paste(frame_img, (0, 0), frame_img)
+            return result
+        
         except FileNotFoundError:
             return self._round_corners(image.resize(img_size, Image.LANCZOS))
 
@@ -199,14 +211,16 @@ class Card(CardObject):
         if self.is_gif:
             image[0].save(image_bytes, format="GIF", save_all=True, append_images=image[1:], loop=0)
         else:
-            image.save(image_bytes, format='PNG')
+            image.save(image_bytes, format='WEBP')
         image_bytes.seek(0)
 
         return image_bytes
     
     def image(self, *, size_rate: float = SIZE_RATE, hide_image_if_no_owner: bool = False) -> list[Image.Image] | Image.Image:
         """Return the image"""
-        return self._load_image(size_rate=size_rate, hide_image_if_no_owner=hide_image_if_no_owner)
+        if not self._image:
+            self._image = self._load_image(size_rate=size_rate, hide_image_if_no_owner=hide_image_if_no_owner)
+        return self._image
 
     @property
     def cost(self) -> int:
@@ -249,26 +263,35 @@ class Card(CardObject):
         return f"{self._emoji} {self.id.zfill(5)} " + (f"({self.tag})" if self.tag else "")
 
 class TempCard(CardObject):
+    _image_cache: Dict[str, Union[List[Image.Image], Image.Image]] = {}  # Path to Image
+
     def __init__(self, path: str) -> None:
         super().__init__()
-
-        self._path = path
+        self._path: str = path
 
     def image_bytes(self) -> BytesIO:
+        """Return the image as bytes."""
         image_bytes = BytesIO()
+        images = self.image()
 
         if self.is_gif:
-            self.image()[0].save(image_bytes, format="GIF", save_all=True, append_images=self.image[1:], loop=0)
+            images[0].save(image_bytes, format="GIF", save_all=True, append_images=images[1:], loop=0)
         else:
-            self.image().save(image_bytes, format='PNG')
-        image_bytes.seek(0)
+            images.save(image_bytes, format='WEBP')
 
+        image_bytes.seek(0)
         return image_bytes
     
-    def image(self, *, size_rate: float = SIZE_RATE, hide_image_if_no_owner: bool = False) -> list[Image.Image] | Image.Image:
-        """Return the image"""
-        return self._load_image(self._path, size_rate=size_rate, hide_image_if_no_owner=hide_image_if_no_owner)
-
+    def image(self, *, size_rate: float = SIZE_RATE, hide_image_if_no_owner: bool = False) -> Union[List[Image.Image], Image.Image]:
+        """Load and return the image."""
+        if self._path not in TempCard._image_cache:
+            TempCard._image_cache[self._path] = self._load_image(
+                self._path,
+                size_rate=size_rate,
+                hide_image_if_no_owner=hide_image_if_no_owner
+            )
+        return TempCard._image_cache[self._path]
+    
     @property
     def format(self) -> str:
         return "gif" if self.is_gif else "webp"
