@@ -156,7 +156,7 @@ BUY_MESSAGE: list[str] = [
     "🚨 Alert! {0} bought the mystery card! Time to unveil the surprise!"
 ]
 
-MILESTONES = [500, 2000, 5844, 10000, 20000] #will decide the milestone 5 progress number when people almost reach milestone 4
+MILESTONES = [500, 2000, 5844, 10000, 16593] #will decide the milestone 5 progress number when people almost reach milestone 4
 MILESTONE_ONE_REWARD = [["🎵", "candies", 50]]
 MILESTONE_TWO_REWARD = [["🌸", "roll.rare", 2]]
 MILESTONE_THREE_REWARD = [["🌸", "roll.rare", 1], ["💎", "roll.epic", 1]]

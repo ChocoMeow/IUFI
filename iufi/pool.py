@@ -73,6 +73,9 @@ class CardPool:
     #     cls.search_image.run_index()
 
     @classmethod
+    def get_all_cards(cls) -> list[Card]:
+        return list(cls._cards.values())
+    @classmethod
     def add_available_card(cls, card: Card) -> None:
         card.change_owner()
         cls._available_cards[card.tier[1]].append(card)

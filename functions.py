@@ -226,6 +226,9 @@ async def get_user(user_id: int, *, insert: bool = True) -> Dict[str, Any]:
         user = USERS_BUFFER[user_id] = user if user else copy.deepcopy(settings.USER_BASE) | {"_id": user_id}
     return user
 
+async def get_all_users() -> List[Dict[str, Any]]:
+    return [user async for user in USERS_DB.find()]
+
 
 def update_quest_progress(user: Dict[str, Any], completed_quests: Union[str, List[str]], progress: int = 1, *,
                           query: Dict[str, Any] = None) -> Dict[str, Any]:
