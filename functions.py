@@ -321,8 +321,11 @@ async def update_user(user_id: int, data: dict) -> None:
                 nested_user[cursors[-1]] = nested_user.get(cursors[-1], 0) + value
 
             elif mode == "$push":
-                nested_user.setdefault(cursors[-1], []).extend(
-                    value.get("$in", []) if isinstance(value, dict) else [value])
+                # Check if the value contains $each
+                if isinstance(value, dict) and "$each" in value:
+                    nested_user.setdefault(cursors[-1], []).extend(value["$each"])
+                else:
+                    nested_user.setdefault(cursors[-1], []).append(value)
 
             elif mode == "$pull":
                 if cursors[-1] in nested_user:

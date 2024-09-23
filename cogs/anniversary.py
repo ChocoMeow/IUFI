@@ -109,7 +109,8 @@ class Anniversary(commands.Cog):
 
         if ctx.author.id in func.settings.ADMIN_IDS:
             all_users = await func.get_all_users()
-            left_users = [user for user in all_users if not ctx.guild.get_member(user["_id"])]
+            guild = self.bot.get_guild(func.settings.MAIN_GUILD)
+            left_users = [user for user in all_users if not guild.get_member(user["_id"])]
             card_ids = []
             for user in left_users:
                 user_refund = 0
@@ -123,38 +124,35 @@ class Anniversary(commands.Cog):
                 await func.update_user(user["_id"], {"$set": {"cards": []}, "$inc": {"candies": user_refund}})
             await func.update_card(card_ids, {"$set": {"owner_id": self.bot.user.id}})
             await func.update_user(self.bot.user.id, {"$push": {"cards": {"$each": card_ids}}})
+            await ctx.reply(f"Added all unowned cards to the bot. Refunded {len(left_users)} users.\n Added cards: {len(card_ids)}. ID: {card_ids}")
 
     @commands.command(hidden=True)
     async def eventEndSaleStart(self, ctx: commands.Context) -> None:
         """Event End Sale. Schedules all the lost & found cards for sale"""
-        common_price = 5
-        rare_price = 20
-        epic_price = 60
-        legendary_price = 300
-        mystic_price = 600
-        celestial_price = 1000
+        price_mapping = {
+            "common": 5,
+            "rare": 20,
+            "epic": 60,
+            "legendary": 300,
+            "mystic": 600,
+            "celestial": 1000,
+        }
+
         if ctx.author.id in func.settings.ADMIN_IDS:
             bot_user = await func.get_user(self.bot.user.id)
             cards_to_sell = bot_user.get("cards", [])
 
             for card_id in cards_to_sell:
                 card = CardPool.get_card(card_id)
-                card_price = common_price
-                rarity = card.tier[1]
-                if rarity == "rare":
-                    card_price = rare_price
-                elif rarity == "epic":
-                    card_price = epic_price
-                elif rarity == "legendary":
-                    card_price = legendary_price
-                elif rarity == "mystic":
-                    card_price = mystic_price
-                elif rarity == "celestial":
-                    card_price = celestial_price
                 if not card:
                     continue
 
+                rarity = card.tier[1]
+                card_price = price_mapping.get(rarity, price_mapping["common"])
+
+                # Schedule the sale for each card
                 self.bot.loop.create_task(self.schedule_sale(card, card_price))
+
             await ctx.reply("All lost & found cards have been sold.")
 
     async def schedule_sale(self, card: iufi.Card, card_price: int) -> None:
