@@ -415,7 +415,12 @@ async def give_anniversary_rewards(users: List[Dict[str, Any]], current_mileston
     rewards = iufi.ANNIVERSARY_QUEST_REWARDS[current_milestone]
 
     for user_data in users:
-        query = { "$inc": {reward_name: amount} for reward_emoji, reward_name, amount in rewards }
+        query = {}
+
+        for reward_emoji, reward_name, amount in rewards:
+            if "$inc" not in query:
+                query["$inc"] = {}
+            query["$inc"][reward_name] = query["$inc"].get(reward_name, 0) + amount
         await update_user(user_data["_id"], query)
 
 
