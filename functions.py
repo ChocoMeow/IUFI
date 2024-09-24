@@ -33,6 +33,7 @@ class Settings:
     def __init__(self):
         self.MAX_CARDS: int = 0
         self.DEFAULT_EXP: int = 0
+        self.LAST_TRADE_TIMER: int = 0
         self.MAIN_GUILD: int = 0
         self.MUSIC_TEXT_CHANNEL: int = 0
         self.MUSIC_VOICE_CHANNEL: int = 0
@@ -57,6 +58,7 @@ class Settings:
         settings = open_json("settings.json")
         self.MAX_CARDS = settings.get("MAX_CARDS")
         self.DEFAULT_EXP = settings.get("DEFAULT_EXP")
+        self.LAST_TRADE_TIMER = settings.get("LAST_TRADE_TIMER")
         self.MAIN_GUILD = settings.get("MAIN_GUILD")
         self.MUSIC_TEXT_CHANNEL = settings.get("MUSIC_TEXT_CHANNEL")
         self.MUSIC_VOICE_CHANNEL = settings.get("MUSIC_VOICE_CHANNEL")
