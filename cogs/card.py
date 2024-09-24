@@ -295,8 +295,8 @@ class Card(commands.Cog):
         await ctx.reply(embed=embed)
 
     @commands.command(aliases=["t"])
-    async def trade(self, ctx: commands.Context, member: discord.Member, card_id: str, candies: int):
-        """Trades your card with a member."""
+    async def trade(self, ctx: commands.Context, member: discord.Member, candies: int, *, card_ids: str):
+        """Trades your card(s) with a member."""
         if member.bot:
             return await ctx.reply("You are not able to trade with a bot.")
         if member == ctx.author:
@@ -304,45 +304,64 @@ class Card(commands.Cog):
         if candies < 0:
             return await ctx.reply("The candy count cannot be set to a negative value.")
         
-        card = iufi.CardPool.get_card(card_id)
-        if not card:
-            return await ctx.reply("The card was not found. Please try again.")
+        cards = []
+        card_ids = card_ids.split(" ")
+        for card_id in card_ids:
+            card = iufi.CardPool.get_card(card_id)
+            if not card:
+                return await ctx.reply(f"The `{card_id}` card was not found. Please try again.")
 
-        if card.owner_id != ctx.author.id:
-            return await ctx.reply("You are not the owner of this card.")
-        
-        if time.time() - card.last_trade_time < 86400:
-            return await ctx.reply(f"Oopsie! You need to wait a little longer~ You can trade this card again <t:{int(card.last_trade_time + 86400)}:R>")
-        
-        view = TradeView(ctx.author, member, card, candies)
+            if card.owner_id != ctx.author.id:
+                return await ctx.reply(f"You are not the owner of this `{card_id}` card.")
+            
+            if time.time() - card.last_trade_time < func.settings.LAST_TRADE_TIMER:
+                return await ctx.reply(f"Oopsie! You need to wait a little longer~ You can trade this `{card_id}` card again <t:{int(card.last_trade_time + func.settings.LAST_TRADE_TIMER)}:R>")
+
+            cards.append(card)
+
+        if len(cards) > 1:
+            image_bytes, image_format = await asyncio.to_thread(iufi.gen_cards_view, cards, 4)
+        else:
+            image_bytes, image_format = await asyncio.to_thread(card.image_bytes, True), card.format
+
+        view = TradeView(ctx.author, member, cards, candies)
         view.message = await ctx.reply(
             content=f"{member.mention}, {ctx.author.mention} want to trade with you.",
-            file=discord.File(await asyncio.to_thread(card.image_bytes), filename=f"image.{card.format}"),
-            embed=view.build_embed(), view=view
+            file=discord.File(image_bytes, filename=f"image.{image_format}"),
+            embed=view.build_embed(image_format), view=view
         )
 
     @commands.command(aliases=["te"])
-    async def tradeeveryone(self, ctx: commands.Context, card_id: str, candies: int):
-        """Trades your card with everyone."""
+    async def tradeeveryone(self, ctx: commands.Context, candies: int, *, card_ids: str):
+        """Trades your card(s) with everyone."""
         if candies < 0:
             return await ctx.reply("The candy count cannot be set to a negative value.")
 
-        card = iufi.CardPool.get_card(card_id)
-        if not card:
-            return await ctx.reply("The card was not found. Please try again.")
+        cards = []
+        card_ids = card_ids.split(" ")
+        for card_id in card_ids:
+            card = iufi.CardPool.get_card(card_id)
+            if not card:
+                return await ctx.reply(f"The `{card_id}` card was not found. Please try again.")
 
-        if card.owner_id != ctx.author.id:
-            return await ctx.reply("You are not the owner of this card.")
-        
-        if time.time() - card.last_trade_time < 86400:
-            return await ctx.reply(f"Oopsie! You need to wait a little longer~ You can trade this card again <t:{int(card.last_trade_time + 86400)}:R>")
-        
-        view = TradeView(ctx.author, None, card, candies)
+            if card.owner_id != ctx.author.id:
+                return await ctx.reply(f"You are not the owner of this `{card_id}` card.")
+            
+            if time.time() - card.last_trade_time < func.settings.LAST_TRADE_TIMER:
+                return await ctx.reply(f"Oopsie! You need to wait a little longer~ You can trade this `{card_id}` card again <t:{int(card.last_trade_time + func.settings.LAST_TRADE_TIMER)}:R>")
+
+            cards.append(card)
+
+        if len(cards) > 1:
+            image_bytes, image_format = await asyncio.to_thread(iufi.gen_cards_view, cards, 4)
+        else:
+            image_bytes, image_format = await asyncio.to_thread(card.image_bytes, True), card.format
+
+        view = TradeView(ctx.author, None, cards, candies)
         view.message = await ctx.reply(
             content=f"{ctx.author.mention} wants to trade",
-            file=discord.File(await asyncio.to_thread(card.image_bytes), filename=f"image.{card.format}"),
-            embed=view.build_embed(),
-            view=view
+            file=discord.File(image_bytes, filename=f"image.{image_format}"),
+            embed=view.build_embed(image_format), view=view
         )
 
     @commands.command(aliases=["tl"])
@@ -367,14 +386,14 @@ class Card(commands.Cog):
         if card.owner_id != ctx.author.id:
             return await ctx.reply("You are not the owner of this card.")
         
-        if time.time() - card.last_trade_time < 86400:
-            return await ctx.reply(f"Oopsie! You need to wait a little longer~ You can trade this card again <t:{int(card.last_trade_time + 86400)}:R>")
+        if time.time() - card.last_trade_time < func.settings.LAST_TRADE_TIMER:
+            return await ctx.reply(f"Oopsie! You need to wait a little longer~ You can trade this card again <t:{int(card.last_trade_time + func.settings.LAST_TRADE_TIMER)}:R>")
         
-        view = TradeView(ctx.author, member, card, candies)
+        view = TradeView(ctx.author, member, [card], candies)
         view.message = await ctx.reply(
             content=f"{member.mention}, {ctx.author.mention} want to trade with you.",
             file=discord.File(await asyncio.to_thread(card.image_bytes), filename=f"image.{card.format}"),
-            embed=view.build_embed(),
+            embed=view.build_embed(card.format),
             view=view
         )
 
@@ -396,14 +415,14 @@ class Card(commands.Cog):
         if card.owner_id != ctx.author.id:
             return await ctx.reply("You are not the owner of this card.")
         
-        if time.time() - card.last_trade_time < 86400:
-            return await ctx.reply(f"Oopsie! You need to wait a little longer~ You can trade this card again <t:{int(card.last_trade_time + 86400)}:R>")
+        if time.time() - card.last_trade_time < func.settings.LAST_TRADE_TIMER:
+            return await ctx.reply(f"Oopsie! You need to wait a little longer~ You can trade this card again <t:{int(card.last_trade_time + func.settings.LAST_TRADE_TIMER)}:R>")
         
-        view = TradeView(ctx.author, None, card, candies)
+        view = TradeView(ctx.author, None, [card], candies)
         view.message = await ctx.reply(
             content=f"{ctx.author.mention} wants to trade",
             file=discord.File(await asyncio.to_thread(card.image_bytes), filename=f"image.{card.format}"),
-            embed=view.build_embed(),
+            embed=view.build_embed(card.format),
             view=view
         )
 

@@ -1,23 +1,25 @@
 import discord, time, asyncio
 import functions as func
 
+from typing import List
+
 from iufi import Card
 
 class TradeView(discord.ui.View):
     def __init__(
-            self,
-            seller: discord.Member,
-            buyer: discord.Member | None,
-            card: Card,
-            candies: int,
-            timeout: float | None = 43_200,
-        ) -> None:
+        self,
+        seller: discord.Member,
+        buyer: discord.Member | None,
+        cards: List[Card],
+        candies: int,
+        timeout: float | None = 43_200,
+    ) -> None:
         
         super().__init__(timeout=timeout)
 
         self.seller: discord.Member = seller
         self.buyer: discord.Member | None = buyer
-        self.card: Card = card
+        self.cards: List[Card] = cards
         self.candies: int = candies
 
         self._lock: asyncio.Lock = asyncio.Lock()
@@ -28,19 +30,28 @@ class TradeView(discord.ui.View):
             child.disabled = True
         
         await self.message.edit(view=self)
+        self.stop()
 
-    def build_embed(self) -> discord.Embed:
+    def build_embed(self, image_format: str) -> discord.Embed:
         embed = discord.Embed(title="⤵️ Trade", color=discord.Color.random())
         embed.description = f"```Seller: {self.seller.display_name}\n" \
-                            f"Buyer: {self.buyer.display_name if self.buyer else 'Anyone'}\n" \
-                            f"Candies: 🍬 {self.candies}\n\n" \
-                            f"{self.card.display_id}\n" \
-                            f"{self.card.display_tag}\n" \
-                            f"{self.card.display_frame}\n" \
-                            f"{self.card.tier[0]} {self.card.tier[1].capitalize()}\n" \
-                            f"{self.card.display_stars}```\n"
-        
-        embed.set_image(url=f"attachment://image.{self.card.format}")
+               f"Buyer: {self.buyer.display_name if self.buyer else 'Anyone'}\n" \
+               f"Candies: 🍬 {self.candies}\n\n"
+
+        if len(self.cards) > 1:
+            for card in self.cards:
+                embed.description += f"{card.display_id} {card.display_tag} {card.display_frame} {card.display_stars} {card.tier[0]}\n"
+
+        else:
+            card = self.cards[0]
+            embed.description += f"{card.display_id}\n" \
+                                 f"{card.display_tag}\n" \
+                                 f"{card.display_frame}\n" \
+                                 f"{card.tier[0]} {card.tier[1].capitalize()}\n" \
+                                 f"{card.display_stars}\n" 
+        embed.description += "```"
+
+        embed.set_image(url=f"attachment://image.{image_format}")
         return embed
 
     @discord.ui.button(label='Trade Now', style=discord.ButtonStyle.green)
@@ -55,9 +66,8 @@ class TradeView(discord.ui.View):
             if interaction.user == self.seller:
                 return await interaction.followup.send("You can't trade with yourself!", ephemeral=True)
             
-            if self.card.owner_id != self.seller.id:
+            if any(card.owner_id != self.seller.id for card in self.cards):
                 await self.on_timeout()
-                self.stop()
                 return await interaction.followup.send(f"This card is ineligible for trading because its owner has already converted it!", ephemeral=True)
             
             _buyer = await func.get_user(buyer.id)
@@ -67,24 +77,27 @@ class TradeView(discord.ui.View):
             if len(_buyer["cards"]) >= func.settings.MAX_CARDS:
                 return await interaction.followup.send(f"**Your inventory is full.**", ephemeral=True)
             
-            self.card.change_owner(buyer.id)
-            self.card.last_trade_time = time.time()
+            last_trade_time = time.time()
+            card_ids = [card.id for card in self.cards]
+            for card in self.cards:
+                card.change_owner(buyer.id)
+                card.last_trade_time = last_trade_time
 
             # Seller
             _seller = await func.get_user(self.seller.id)
-            seller_query = func.update_quest_progress(_seller, "TRADE_ANY_CARD", query={"$pull": {"cards": self.card.id}, "$inc": {"candies": self.candies}})
+            seller_query = func.update_quest_progress(_seller, "TRADE_ANY_CARD", query={"$pull": {"cards": {"$in": card_ids}}, "$inc": {"candies": self.candies}})
             await func.update_user(self.seller.id, seller_query)
             
             # Buyer
-            buyer_query = func.update_quest_progress(_buyer, "TRADE_ANY_CARD", query={"$push": {"cards": self.card.id}, "$inc": {"candies": -self.candies}})
+            buyer_query = func.update_quest_progress(_buyer, "TRADE_ANY_CARD", query={"$push": {"cards": {"$in": card_ids}}, "$inc": {"candies": -self.candies}})
             await func.update_user(buyer.id, buyer_query)
-            await func.update_card(self.card.id, {"$set": {"owner_id": buyer.id, "last_trade_time": self.card.last_trade_time}})
+            await func.update_card(card_ids, {"$set": {"owner_id": buyer.id, "last_trade_time": last_trade_time}})
 
             embed = discord.Embed(title="✅ Traded", color=discord.Color.random())
-            embed.description = f"```{self.card.display_id}\n🍬 - {self.candies}```"
+            embed.description = f"```🆔 {', '.join(card.display_id for card in self.cards)}\n🍬 - {self.candies}```"
 
             await self.on_timeout()
-            await interaction.followup.send(content=f"{self.seller.mention}, {buyer.mention} has made a trade with you for the card!", embed=embed)
+            await interaction.followup.send(content=f"{self.seller.mention}, {buyer.mention} has made a trade with you for the card(s)!", embed=embed)
 
     @discord.ui.button(label="Cancel", style=discord.ButtonStyle.red)
     async def cancel(self, interaction: discord.Interaction, button: discord.ui.Button):
