@@ -85,16 +85,16 @@ class TradeView(discord.ui.View):
 
             # Seller
             _seller = await func.get_user(self.seller.id)
-            seller_query = func.update_quest_progress(_seller, "TRADE_ANY_CARD", query={"$pull": {"cards": {"$in": card_ids}}, "$inc": {"candies": self.candies}})
+            seller_query = func.update_quest_progress(_seller, "TRADE_ANY_CARD", progress=len(self.cards), query={"$pull": {"cards": {"$in": card_ids}}, "$inc": {"candies": self.candies}})
             await func.update_user(self.seller.id, seller_query)
             
             # Buyer
-            buyer_query = func.update_quest_progress(_buyer, "TRADE_ANY_CARD", query={"$push": {"cards": {"$in": card_ids}}, "$inc": {"candies": -self.candies}})
+            buyer_query = func.update_quest_progress(_buyer, "TRADE_ANY_CARD", progress=len(self.cards), query={"$push": {"cards": {"$each": card_ids}}, "$inc": {"candies": -self.candies}})
             await func.update_user(buyer.id, buyer_query)
             await func.update_card(card_ids, {"$set": {"owner_id": buyer.id, "last_trade_time": last_trade_time}})
 
             embed = discord.Embed(title="✅ Traded", color=discord.Color.random())
-            embed.description = f"```🆔 {', '.join(card.display_id for card in self.cards)}\n🍬 - {self.candies}```"
+            embed.description = f"```{', '.join(card.display_id for card in self.cards)}\n🍬 - {self.candies}```"
 
             await self.on_timeout()
             await interaction.followup.send(content=f"{self.seller.mention}, {buyer.mention} has made a trade with you for the card(s)!", embed=embed)

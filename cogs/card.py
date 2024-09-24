@@ -317,10 +317,11 @@ class Card(commands.Cog):
             if time.time() - card.last_trade_time < func.settings.LAST_TRADE_TIMER:
                 return await ctx.reply(f"Oopsie! You need to wait a little longer~ You can trade this `{card_id}` card again <t:{int(card.last_trade_time + func.settings.LAST_TRADE_TIMER)}:R>")
 
-            cards.append(card)
+            if card not in cards:
+                cards.append(card)
 
         if len(cards) > 1:
-            image_bytes, image_format = await asyncio.to_thread(iufi.gen_cards_view, cards, 4)
+            image_bytes, image_format = await asyncio.to_thread(iufi.gen_cards_view, cards, max(3, min((len(cards) // 2.5), 8)))
         else:
             image_bytes, image_format = await asyncio.to_thread(card.image_bytes, True), card.format
 
@@ -350,10 +351,11 @@ class Card(commands.Cog):
             if time.time() - card.last_trade_time < func.settings.LAST_TRADE_TIMER:
                 return await ctx.reply(f"Oopsie! You need to wait a little longer~ You can trade this `{card_id}` card again <t:{int(card.last_trade_time + func.settings.LAST_TRADE_TIMER)}:R>")
 
-            cards.append(card)
+            if card not in cards:
+                cards.append(card)
 
         if len(cards) > 1:
-            image_bytes, image_format = await asyncio.to_thread(iufi.gen_cards_view, cards, 4)
+            image_bytes, image_format = await asyncio.to_thread(iufi.gen_cards_view, cards, max(3, min((len(cards) // 2.5), 8)))
         else:
             image_bytes, image_format = await asyncio.to_thread(card.image_bytes, True), card.format
 
