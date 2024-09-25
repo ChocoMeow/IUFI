@@ -162,9 +162,9 @@ class Anniversary(commands.Cog):
         price_mapping = {
             "common": 3,
             "rare": 25,
-            "epic": 69,
-            "legendary": 250,
-            "mystic": 900,
+            "epic": 85,
+            "legendary": 350,
+            "mystic": 1809,
             "celestial": 1993,
         }
 
