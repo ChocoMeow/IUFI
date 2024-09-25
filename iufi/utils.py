@@ -23,20 +23,25 @@ def gen_cards_view(cards: list[Card | TempCard | None], cards_per_row: int = 3, 
     num_rows = (len(cards) + cards_per_row - 1) // cards_per_row  # calculate number of rows
 
     output_image = Image.new(
-        'RGBA', 
+        'RGBA',
         ((card_width * cards_per_row) + (PADDING * (cards_per_row - 1)), 
         (card_height * num_rows) + (PADDING * (num_rows - 1))), 
         (0, 0, 0, 0)
     )
 
+    temp_cards: dict[str, list[Image.Image] | Image.Image] = {
+        i: card.image(size_rate=size_rate, hide_image_if_no_owner=hide_image_if_no_owner) if card else None 
+        for i, card in enumerate(cards)
+    }
+    
     resized_image_bytes = BytesIO()
     # Paste images into the output image with 10 pixels padding
     if is_gif := any([card.is_gif for card in cards if card]):
         gif_lists = [
-            (card._load_image(size_rate=size_rate, hide_image_if_no_owner=hide_image_if_no_owner) if size_rate != SIZE_RATE else card.image(hide_image_if_no_owner=hide_image_if_no_owner)) if card and card.is_gif else
-            [card._load_image(size_rate=size_rate, hide_image_if_no_owner=hide_image_if_no_owner) if size_rate != SIZE_RATE else card.image(hide_image_if_no_owner=hide_image_if_no_owner)] if card else [None]
-            for card in cards
-        ]                    
+            (card) if card and isinstance(card, list) else [card] if card else [None]
+            for card in temp_cards.values()
+        ]
+        
         extended_gifs = extend_lists(gif_lists)
         modified_frames: list[Image.Image] = []
         
@@ -51,14 +56,15 @@ def gen_cards_view(cards: list[Card | TempCard | None], cards_per_row: int = 3, 
                     output_image.paste(frame, (x, y))
 
             modified_frames.append(output_image)
-        modified_frames[0].save(resized_image_bytes, format="GIF", save_all=True, append_images=modified_frames[1:], loop=0)
+        modified_frames[0].save(resized_image_bytes, format="GIF", save_all=True, append_images=modified_frames[1:], loop=0, optimize=False)
     
     else:
-        for i, card in enumerate(cards):
+        for i, card in enumerate(temp_cards.values()):
             if card:  # if card is not None
                 x = (card_width + PADDING) * (i % cards_per_row)
                 y = (card_height + PADDING) * (i // cards_per_row)
-                output_image.paste(card._load_image(size_rate=size_rate, hide_image_if_no_owner=hide_image_if_no_owner) if size_rate != SIZE_RATE else card.image(hide_image_if_no_owner=hide_image_if_no_owner), (x, y))
+
+                output_image.paste(card, (x, y))
 
         output_image.save(resized_image_bytes, format='WEBP')
 

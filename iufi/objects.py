@@ -82,7 +82,7 @@ class Card(CardObject):
         "_image"
     )
 
-    _frame_cache: Dict[str, Union[List[Image.Image], Image.Image]] = {}  # Path to Frame
+    _frame_cache: Dict[str, Dict[str, Union[List[Image.Image], Image.Image]]] = {}  # Path to Frame
 
     def __init__(
         self,
@@ -111,19 +111,22 @@ class Card(CardObject):
 
     def _load_frame(self, image: Image.Image, frame: str = None, *, size_rate: float = SIZE_RATE) -> Image.Image:
         try:
-            frame = frame or self._frame
+            frame = frame or self._frame or self._tier
             new_size_rate = size_rate - (FRAME_SIZE_INCREMENT[0] if frame else FRAME_SIZE_INCREMENT[1])
             img_size = (int(CARD_SIZE[0] * new_size_rate), int(CARD_SIZE[1] * new_size_rate))
             frame_size = (int(CARD_SIZE[0] * size_rate), int(CARD_SIZE[1] * size_rate))
+
             # Check if the frame is in cache
-            if frame not in Card._frame_cache:
-                with Image.open(os.path.join(func.ROOT_DIR, "frames", f"{frame or self._tier}.webp")) as frame_img:
+            frame_cache = Card._frame_cache.setdefault(str(size_rate), {})
+
+            if frame not in frame_cache:
+                with Image.open(os.path.join(func.ROOT_DIR, "frames", f"{frame}.webp")) as frame_img:
 
                     # Resize and cache the frame image
-                    Card._frame_cache[frame] = frame_img.resize(frame_size, Image.LANCZOS)
+                    frame_cache[frame] = frame_img.resize(frame_size, Image.LANCZOS)
 
             # Get the cached frame image
-            frame_img = Card._frame_cache[frame]
+            frame_img = frame_cache[frame]
 
             # Create the final image with rounded corners and frame
             result = Image.new('RGBA', frame_size)
@@ -179,10 +182,10 @@ class Card(CardObject):
 
                 if self.tag and self.tag.lower() in self._pool._tag_cards:
                     self._pool._tag_cards.pop(self.tag.lower())
-                self.tag = None
+                
+                self.tag, self._frame, self.last_trade_time = None, None, 0
 
-                self._frame = None
-                self.last_trade_time = 0
+            self.clear_image_cache()
 
     def change_tag(self, tag: str | None = None) -> None:
         if self.tag == tag:
@@ -196,6 +199,7 @@ class Card(CardObject):
             raise IUFIException("This frame is already assigned to this card.")
         
         self._frame = frame.lower() if frame else None
+        self.clear_image_cache()
 
     def change_stars(self, stars: int) -> None:
         if self.stars != stars:
@@ -209,18 +213,39 @@ class Card(CardObject):
         image = self.image(hide_image_if_no_owner=hide_image_if_no_owner)
 
         if self.is_gif:
-            image[0].save(image_bytes, format="GIF", save_all=True, append_images=image[1:], loop=0)
+            image[0].save(image_bytes, format="GIF", save_all=True, append_images=image[1:], loop=0, optimize=False)
         else:
             image.save(image_bytes, format='WEBP')
         image_bytes.seek(0)
 
         return image_bytes
     
-    def image(self, *, size_rate: float = SIZE_RATE, hide_image_if_no_owner: bool = False) -> list[Image.Image] | Image.Image:
-        """Return the image"""
+    def image(self, *, size_rate: float = SIZE_RATE, hide_image_if_no_owner: bool = False) -> Image.Image | list[Image.Image]:
+        """Return the image or a list of images based on ownership status."""
+        
+        # Check if the image should be hidden due to no owner
+        if hide_image_if_no_owner and not self.owner_id:
+            return self._load_image(size_rate=size_rate, hide_image_if_no_owner=True)
+        
+        if size_rate != SIZE_RATE:
+            return self._load_image(size_rate=size_rate, hide_image_if_no_owner=hide_image_if_no_owner)
+        
+        # Load the image if it doesn't already exist
         if not self._image:
             self._image = self._load_image(size_rate=size_rate, hide_image_if_no_owner=hide_image_if_no_owner)
+        
         return self._image
+
+
+    def clear_image_cache(self) -> None:
+        if self._image:
+            if isinstance(self._image, list):
+                for img in self._image:
+                    img.close()
+            else:
+                self._image.close()
+
+            self._image = None
 
     @property
     def cost(self) -> int:
@@ -263,7 +288,7 @@ class Card(CardObject):
         return f"{self._emoji} {self.id.zfill(5)} " + (f"({self.tag})" if self.tag else "")
 
 class TempCard(CardObject):
-    _image_cache: Dict[str, Union[List[Image.Image], Image.Image]] = {}  # Path to Image
+    _image_cache: Dict[str, Dict[str, Union[List[Image.Image], Image.Image]]] = {}  # Path to Image
 
     def __init__(self, path: str) -> None:
         super().__init__()
@@ -275,7 +300,7 @@ class TempCard(CardObject):
         images = self.image()
 
         if self.is_gif:
-            images[0].save(image_bytes, format="GIF", save_all=True, append_images=images[1:], loop=0)
+            images[0].save(image_bytes, format="GIF", save_all=True, append_images=images[1:], loop=0, optimize=False)
         else:
             images.save(image_bytes, format='WEBP')
 
@@ -283,14 +308,17 @@ class TempCard(CardObject):
         return image_bytes
     
     def image(self, *, size_rate: float = SIZE_RATE, hide_image_if_no_owner: bool = False) -> Union[List[Image.Image], Image.Image]:
-        """Load and return the image."""
-        if self._path not in TempCard._image_cache:
-            TempCard._image_cache[self._path] = self._load_image(
+        """Load and return the image, caching it by size rate and path."""
+        cache = TempCard._image_cache.setdefault(str(size_rate), {})
+        
+        if self._path not in cache:
+            cache[self._path] = self._load_image(
                 self._path,
                 size_rate=size_rate,
                 hide_image_if_no_owner=hide_image_if_no_owner
             )
-        return TempCard._image_cache[self._path]
+
+        return cache[self._path]
     
     @property
     def format(self) -> str:
