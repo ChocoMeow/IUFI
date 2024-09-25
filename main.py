@@ -1,4 +1,4 @@
-import discord, os, iufi, traceback
+import discord, os, iufi
 import functions as func
 
 from random import randint
@@ -111,33 +111,33 @@ class IUFI(commands.Bot):
         print(f"Loaded {len(self.iufi._cards)} images")
         print(f"Loaded {len(self.questions._questions)} questions")
 
-    # async def on_command_error(self, ctx: commands.Context, exception, /) -> None:
-    #     error = getattr(exception, 'original', exception)
-    #     if ctx.interaction:
-    #         error = getattr(error, 'original', error)
+    async def on_command_error(self, ctx: commands.Context, exception, /) -> None:
+        error = getattr(exception, 'original', exception)
+        if ctx.interaction:
+            error = getattr(error, 'original', error)
 
-    #     if isinstance(error, commands.CommandNotFound):
-    #         return
+        if isinstance(error, commands.CommandNotFound):
+            return
 
-    #     elif isinstance(error, (commands.CommandOnCooldown, commands.MissingPermissions, commands.RangeError, commands.BadArgument)):
-    #         pass
+        elif isinstance(error, (commands.CommandOnCooldown, commands.MissingPermissions, commands.RangeError, commands.BadArgument)):
+            pass
 
-    #     elif isinstance(error, (commands.MissingRequiredArgument, commands.MissingRequiredAttachment)):
-    #         command = f"{ctx.prefix}" + (f"{ctx.command.parent.qualified_name} " if ctx.command.parent else "") + f"{ctx.command.name} {ctx.command.signature}"
-    #         position = command.find(f"<{ctx.current_parameter.name}>") + 1
-    #         description = f"**Correct Usage:**\n```{command}\n" + " " * position + "^" * len(ctx.current_parameter.name) + "```\n"
-    #         if ctx.command.aliases:
-    #             description += f"**Aliases:**\n`{', '.join([f'{ctx.prefix}{alias}' for alias in ctx.command.aliases])}`\n\n"
-    #         description += f"**Description:**\n{ctx.command.help}\n\u200b"
+        elif isinstance(error, (commands.MissingRequiredArgument, commands.MissingRequiredAttachment)):
+            command = f"{ctx.prefix}" + (f"{ctx.command.parent.qualified_name} " if ctx.command.parent else "") + f"{ctx.command.name} {ctx.command.signature}"
+            position = command.find(f"<{ctx.current_parameter.name}>") + 1
+            description = f"**Correct Usage:**\n```{command}\n" + " " * position + "^" * len(ctx.current_parameter.name) + "```\n"
+            if ctx.command.aliases:
+                description += f"**Aliases:**\n`{', '.join([f'{ctx.prefix}{alias}' for alias in ctx.command.aliases])}`\n\n"
+            description += f"**Description:**\n{ctx.command.help}\n\u200b"
 
-    #         embed = discord.Embed(description=description, color=discord.Color.random())
-    #         embed.set_footer(icon_url=ctx.me.display_avatar.url, text="More Help: Ask the staff!")
-    #         return await ctx.reply(embed=embed)
+            embed = discord.Embed(description=description, color=discord.Color.random())
+            embed.set_footer(icon_url=ctx.me.display_avatar.url, text="More Help: Ask the staff!")
+            return await ctx.reply(embed=embed)
 
-    #     try:
-    #         return await ctx.reply(error)
-    #     except:
-    #         pass
+        try:
+            return await ctx.reply(error)
+        except:
+            pass
 
 func.settings.load()
 intents = discord.Intents.default()
@@ -145,7 +145,7 @@ intents.members = True
 intents.message_content = True
 
 bot = IUFI(
-    command_prefix=["t", "T"],
+    command_prefix=["q", "Q"],
     help_command=None,
     chunk_guilds_at_startup=True,
     activity=discord.Activity(type=discord.ActivityType.listening, name="qhelp"),

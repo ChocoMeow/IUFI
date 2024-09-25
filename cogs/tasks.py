@@ -79,7 +79,13 @@ class Tasks(commands.Cog):
         func.USERS_BUFFER.clear()
 
         for card in iufi.CardPool._cards.values():
-            card.clear_image_cache()
+            if card._image:
+                if isinstance(card._image, list):
+                    for img in card._image:
+                        img.close()  # Close each image if it's a list
+                else:
+                    card._image.close()  # Close the single image
+            card._image = None  # Clear the reference
 
         # Syncing Question Data with Database
         for q in iufi.QuestionPool._questions:
