@@ -49,16 +49,19 @@ class Anniversary(commands.Cog):
     async def removeAssignedCards(self, ctx: commands.Context) -> None:
         """Removes all assigned cards from the bot"""
         if ctx.author.id in func.settings.ADMIN_IDS:
-            all_cards = iufi.GetAllCards()
+            bot_user = await func.get_user(self.bot.user.id)
+            cards_to_remove = bot_user.get("cards", [])
             card_ids = []
-            for card_id, card_price in all_cards:
+            for card_id in cards_to_remove:
                 card = CardPool.get_card(card_id)
-                if card.owner_id != self.bot.user.id:
+                if not card:
                     continue
                 card_ids.append(card_id)
+                card.change_owner(None)
                 CardPool.add_available_card(card)
             await func.update_card(card_ids, {"$set": {"owner_id": None}})
-            await ctx.reply("All assigned cards have been removed.")
+            await func.update_user(self.bot.user.id, {"$set": {"cards": []}})
+            await ctx.reply("All assigned cards have been removed from the bot.")
 
     @commands.command(hidden=True)
     async def startSale(self, ctx: commands.Context) -> None:
@@ -142,12 +145,12 @@ class Anniversary(commands.Cog):
     async def eventEndSaleStart(self, ctx: commands.Context) -> None:
         """Event End Sale. Schedules all the lost & found cards for sale"""
         price_mapping = {
-            "common": 5,
-            "rare": 20,
-            "epic": 60,
-            "legendary": 300,
-            "mystic": 600,
-            "celestial": 1000,
+            "common": 3,
+            "rare": 25,
+            "epic": 69,
+            "legendary": 250,
+            "mystic": 900,
+            "celestial": 1993,
         }
 
         if ctx.author.id in func.settings.ADMIN_IDS:
@@ -160,6 +163,8 @@ class Anniversary(commands.Cog):
                     continue
 
                 rarity = card.tier[1]
+                if rarity == "celestial":
+                    continue
                 card_price = price_mapping.get(rarity, price_mapping["common"])
 
                 # Schedule the sale for each card
