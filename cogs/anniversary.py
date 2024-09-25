@@ -142,6 +142,21 @@ class Anniversary(commands.Cog):
             await ctx.reply(f"Added all unowned cards to the bot. Refunded {len(left_users)} users.\n Added cards: {len(card_ids)}. ID: {card_ids}")
 
     @commands.command(hidden=True)
+    async def countBotCards(self, ctx: commands.Context) -> None:
+        """Counts all cards owned by the bot"""
+        if ctx.author.id in func.settings.ADMIN_IDS:
+            bot_user = await func.get_user(self.bot.user.id)
+            rarity_count = {}
+            all_cards = bot_user.get("cards", [])
+            for card_id in all_cards:
+                card = CardPool.get_card(card_id)
+                if not card:
+                    continue
+                rarity = card.tier[1]
+                rarity_count[rarity] = rarity_count.get(rarity, 0) + 1
+            await ctx.reply(f"Bot has {len(all_cards)} cards.\n{rarity_count}")
+
+    @commands.command(hidden=True)
     async def eventEndSaleStart(self, ctx: commands.Context) -> None:
         """Event End Sale. Schedules all the lost & found cards for sale"""
         price_mapping = {
