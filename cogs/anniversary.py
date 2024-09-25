@@ -103,6 +103,18 @@ class Anniversary(commands.Cog):
                     )
 
     @commands.command(hidden=True)
+    async def countAllLeftUsers(self, ctx: commands.Context) -> None:
+        """Counts all users who left the server"""
+        if ctx.author.id in func.settings.ADMIN_IDS:
+            all_users = await func.get_all_users()
+            guild = self.bot.get_guild(func.settings.MAIN_GUILD)
+            left_users = [user for user in all_users if not guild.get_member(user["_id"])]
+            card_count = 0
+            for user in left_users:
+                card_count += len(user["cards"])
+            await ctx.reply(f"Total users who left the server: {len(left_users)}\nTotal cards: {card_count}")
+
+    @commands.command(hidden=True)
     async def eventEndSaleAssignUnownedCards(self,
                                              ctx: commands.Context) -> None:  # selling the cards of users who left the server
         """Assigns all unowned cards to the bot"""
