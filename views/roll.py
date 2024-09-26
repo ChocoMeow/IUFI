@@ -49,6 +49,8 @@ class RollButton(discord.ui.Button):
         await func.update_user(interaction.user.id, query)
         await func.update_card(self.card.id, {"$set": {"owner_id": interaction.user.id}})
 
+        func.logger.info(f"User {interaction.user.name}({interaction.user.id}) has successfully claimed the card: {self.card}.")
+
         await self.view.message.edit(view=self.view)
         await interaction.followup.send(f"{interaction.user.mention} has claimed ` {self.custom_id} | {self.card.display_id} | {self.card.tier[0]} | {self.card.display_stars} `")
         

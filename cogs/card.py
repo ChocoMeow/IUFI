@@ -469,7 +469,7 @@ class Card(commands.Cog):
             f"User {ctx.author.name} ({ctx.author.id}) initiated a trade with everyone. "
             f"Trading card [{card.id}] and offering {candies} candies."
         )
-        
+
         view = TradeView(ctx.author, None, [card], candies)
         view.message = await ctx.reply(
             content=f"{ctx.author.mention} wants to trade",
@@ -513,7 +513,7 @@ class Card(commands.Cog):
 
         func.logger.info(
             f"User {ctx.author.name} ({ctx.author.id}) upgraded a card [{card.id}] from {upgrade_card.stars} to {upgraded_stars}). "
-            f"With cards: [{", ".join([card.id for card in converted_cards])}]"
+            f"With cards: [{', '.join([card.id for card in converted_cards])}]"
         )
 
         embed = discord.Embed(title="🆙 Upgraded", color=discord.Color.random())

@@ -33,6 +33,7 @@ class FrameView(discord.ui.View):
         self.author: discord.Member = author
         self.card: Card = card
 
+        self._og_frame: card.frame[1]
         self._selected_frame: str = ""
         self._price: int = 0
         self.response: discord.Message = None
@@ -74,6 +75,8 @@ class FrameView(discord.ui.View):
         await func.update_user(self.author.id, query)
         await func.update_card(self.card.id, {"$set": {"frame": self._selected_frame}})
         await self.response.edit(view=None)
+
+        func.logger.info(f"User {interaction.user.name}({interaction.user.id}) changed card frame [{self.card.id}] from {self._og_frame} to {self._selected_frame}")
 
         embed = discord.Embed(title="🖼️  Set Frame", color=discord.Color.random())
         embed.description = f"```🆔 {self.card.tier[0]} {self.card.id}\n{self.card.display_frame}```"

@@ -245,6 +245,17 @@ class QuizView(discord.ui.View):
                 embed.description += "```"
 
         await func.update_user(self.author.id, query)
+
+        func.logger.info(
+            f"User {self.author.name}({self.author.id}) completed a quiz. "
+            f"Start time: {self._start_time}, End time: {self._ended_time}. "
+            f"Average time: {average_time}s, "
+            f"Correct answers: {self._results.count(True)}, "
+            f"Wrong answers: {self._results.count(False)}, "
+            f"Unanswered: {self._results.count(None)}. "
+            f"Total points: {total_points}, Current points: {state['points']}."
+        )
+
         await self.response.edit(content="This quiz has expired.", embed=embed, view=None)
         self.stop()
         

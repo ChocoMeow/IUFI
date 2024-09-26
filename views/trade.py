@@ -92,6 +92,13 @@ class TradeView(discord.ui.View):
             buyer_query = func.update_quest_progress(_buyer, "TRADE_ANY_CARD", progress=len(self.cards), query={"$push": {"cards": {"$each": card_ids}}, "$inc": {"candies": -self.candies}})
             await func.update_user(buyer.id, buyer_query)
             await func.update_card(card_ids, {"$set": {"owner_id": buyer.id, "last_trade_time": last_trade_time}})
+            
+            func.logger.info(
+                f"User {buyer.name}({buyer.id}) traded a card from "
+                f"User '{self.seller.name}({self.seller.id}). "
+                f"Cards involved: [{', '.join(card_ids)}] "
+                f"for {self.candies} candies."
+            )
 
             embed = discord.Embed(title="✅ Traded", color=discord.Color.random())
             embed.description = f"```{', '.join(card.display_id for card in self.cards)}\n🍬 - {self.candies}```"
