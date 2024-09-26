@@ -160,7 +160,7 @@ class Anniversary(commands.Cog):
     async def eventEndSaleStart(self, ctx: commands.Context) -> None:
         """Event End Sale. Schedules all the lost & found cards for sale"""
         price_mapping = {
-            "common": 3,
+            "common": 2,
             "rare": 25,
             "epic": 85,
             "legendary": 350,
