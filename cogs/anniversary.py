@@ -174,7 +174,7 @@ class Anniversary(commands.Cog):
 
             for card_id in cards_to_sell:
                 card = CardPool.get_card(card_id)
-                if not card:
+                if not card or card.owner_id != self.bot.user.id:
                     continue
 
                 rarity = card.tier[1]
@@ -188,7 +188,7 @@ class Anniversary(commands.Cog):
             await ctx.reply("All lost & found cards have been sold.")
 
     async def schedule_sale(self, card: iufi.Card, card_price: int) -> None:
-        random_wait = random.randint(1, 86400)
+        random_wait = random.randint(1, 79200)
         await asyncio.sleep(random_wait)
         channel = self.bot.get_channel(iufi.MARKET_ID)
         view = AnniversarySellView(self.bot.user, None, card, card_price)
