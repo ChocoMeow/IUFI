@@ -54,7 +54,7 @@ class Anniversary(commands.Cog):
             card_ids = []
             for card_id in cards_to_remove:
                 card = CardPool.get_card(card_id)
-                if not card:
+                if not card or card.owner_id != self.bot.user.id:
                     continue
                 card_ids.append(card_id)
                 card.change_owner(None)
@@ -94,7 +94,7 @@ class Anniversary(commands.Cog):
                 if not card:
                     continue
                 if card.owner_id == self.bot.user.id:
-                    view = AnniversarySellView(self.bot, None, card, card_price)
+                    view = AnniversarySellView(self.bot.user, None, card, card_price)
                     covered_card: iufi.TempCard = iufi.TempCard(f"cover/level{random.randint(1, 3)}.webp")
                     image_bytes, image_format = await asyncio.to_thread(covered_card.image_bytes), covered_card.format
                     sale_message = random.choice(iufi.SALE_MESSAGE)
@@ -191,7 +191,7 @@ class Anniversary(commands.Cog):
         random_wait = random.randint(1, 86400)
         await asyncio.sleep(random_wait)
         channel = self.bot.get_channel(iufi.MARKET_ID)
-        view = AnniversarySellView(self.bot, None, card, card_price)
+        view = AnniversarySellView(self.bot.user, None, card, card_price)
         covered_card: iufi.TempCard = iufi.TempCard(f"cover/level{random.randint(1, 3)}.webp")
         image_bytes, image_format = await asyncio.to_thread(covered_card.image_bytes), covered_card.format
         sale_message = random.choice(iufi.SALE_MESSAGE)

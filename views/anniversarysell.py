@@ -3,21 +3,23 @@ import random
 import iufi
 import discord
 import functions as func
+from iufi import CardPool
 
 from discord.ext import commands
 
+
 class AnniversarySellView(discord.ui.View):
     def __init__(
-        self,
-        seller: commands.Bot,
-        buyer: discord.Member | None,
-        card: iufi.Card,
-        candies: int,
-        timeout: float | None = 43_200,
+            self,
+            seller: discord.ClientUser,
+            buyer: discord.Member | None,
+            card: iufi.Card,
+            candies: int,
+            timeout: float | None = 43_200,
     ) -> None:
         super().__init__(timeout=timeout)
 
-        self.seller: commands.Bot = seller
+        self.seller: discord.ClientUser = seller
         self.buyer: discord.Member | None = buyer
         self.card: iufi.Card = card
         self.candies: int = candies
@@ -47,10 +49,7 @@ class AnniversarySellView(discord.ui.View):
             buyer = self.buyer or interaction.user
 
             if interaction.user != buyer:
-                return await interaction.followup.send(f"This card is being bought by {buyer.mention}",ephemeral=True)
-
-            if interaction.user == self.seller:
-                return await interaction.followup.send("You can't trade with yourself!", ephemeral=True)
+                return await interaction.followup.send(f"This card is being bought by {buyer.mention}", ephemeral=True)
 
             _buyer = await func.get_user(buyer.id)
 
@@ -62,14 +61,26 @@ class AnniversarySellView(discord.ui.View):
             if len(_buyer["cards"]) >= func.settings.MAX_CARDS:
                 return await interaction.followup.send(f"**Your inventory is full.**", ephemeral=True)
 
+            self.card = CardPool.get_card(self.card.id)
+            if self.card.owner_id != self.seller.id:
+                await self.on_timeout()
+                self.stop()
+                return await interaction.followup.send(
+                    f"This card is ineligible for trading because its owner has already converted it or being traded to another user!", ephemeral=True)
+
             self.card.change_owner(buyer.id)
 
             # Buyer
             buyer_query = func.update_quest_progress(_buyer, "TRADE_ANY_CARD",
-                query={"$push": {"cards": self.card.id},
-                "$inc": {"candies": -self.candies}}
-            )
-            
+                                                     query={"$push": {"cards": self.card.id},
+                                                            "$inc": {"candies": -self.candies}}
+                                                     )
+
+            seller_query = {"$pull": {"cards": self.card.id},
+                            "$inc": {"candies": self.candies}}
+
+            await func.update_user(self.seller.id, seller_query)
+
             await func.update_user(buyer.id, buyer_query)
             await func.update_card(self.card.id, {"$set": {"owner_id": buyer.id}})
 
