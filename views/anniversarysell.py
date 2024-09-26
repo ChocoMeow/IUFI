@@ -61,7 +61,6 @@ class AnniversarySellView(discord.ui.View):
             if len(_buyer["cards"]) >= func.settings.MAX_CARDS:
                 return await interaction.followup.send(f"**Your inventory is full.**", ephemeral=True)
 
-            self.card = CardPool.get_card(self.card.id)
             if self.card.owner_id != self.seller.id:
                 await self.on_timeout()
                 self.stop()
