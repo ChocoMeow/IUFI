@@ -51,6 +51,12 @@ class AnniversarySellView(discord.ui.View):
             if interaction.user != buyer:
                 return await interaction.followup.send(f"This card is being bought by {buyer.mention}", ephemeral=True)
 
+            if self.card.owner_id != self.seller.id:
+                await self.on_timeout()
+                self.stop()
+                return await interaction.followup.send(
+                    f"This card is ineligible for trading because its owner has already converted it or being traded to another user!", ephemeral=True)
+
             _buyer = await func.get_user(buyer.id)
 
             if _buyer["candies"] < self.candies:
@@ -60,12 +66,6 @@ class AnniversarySellView(discord.ui.View):
 
             if len(_buyer["cards"]) >= func.settings.MAX_CARDS:
                 return await interaction.followup.send(f"**Your inventory is full.**", ephemeral=True)
-
-            if self.card.owner_id != self.seller.id:
-                await self.on_timeout()
-                self.stop()
-                return await interaction.followup.send(
-                    f"This card is ineligible for trading because its owner has already converted it or being traded to another user!", ephemeral=True)
 
             self.card.change_owner(buyer.id)
 
