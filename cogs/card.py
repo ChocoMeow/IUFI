@@ -1,4 +1,4 @@
-import discord, iufi, asyncio
+import discord, iufi, asyncio, time
 import functions as func
 
 from discord.ext import commands
@@ -34,7 +34,7 @@ class Card(commands.Cog):
                 desc += f"{card.display_id} {card.display_tag} {card.display_frame} {card.display_stars} {card.tier[0]} 👤{member.display_name if member else 'None':5}\n"
             desc += "```"
 
-            image_bytes, image_format = await asyncio.to_thread(iufi.gen_cards_view, cards, 4)
+            image_bytes, image_format = await asyncio.to_thread(iufi.gen_cards_view, cards, 4, hide_image_if_no_owner=True)
         else:
             desc = f"```{card.display_id}\n" \
                    f"{card.display_tag}\n" \
@@ -43,7 +43,7 @@ class Card(commands.Cog):
                    f"{card.display_stars}```\n" \
                    "**Owned by: **" + (f"<@{card.owner_id}>" if card.owner_id else "None")
 
-            image_bytes, image_format = await asyncio.to_thread(card.image_bytes), card.format
+            image_bytes, image_format = await asyncio.to_thread(card.image_bytes, True), card.format
 
         embed = discord.Embed(title=f"ℹ️ Card Info", description=desc, color=0x949fb8)
         embed.set_image(url=f"attachment://image.{image_format}")
@@ -71,7 +71,7 @@ class Card(commands.Cog):
                             "**Owned by: **" + (f"<@{card.owner_id}>" if card.owner_id else "None")
         
         embed.set_image(url=f"attachment://image.{card.format}")
-        await ctx.reply(file=discord.File(await asyncio.to_thread(card.image_bytes), filename=f"image.{card.format}"), embed=embed)
+        await ctx.reply(file=discord.File(await asyncio.to_thread(card.image_bytes, True), filename=f"image.{card.format}"), embed=embed)
 
     @commands.command(aliases=["c"])
     async def convert(self, ctx: commands.Context, *, card_ids: str):
@@ -93,7 +93,7 @@ class Card(commands.Cog):
             "$inc": {"candies": candies}
         })
         await func.update_user(ctx.author.id, query)
-        await func.update_card(card_ids, {"$set": {"owner_id": None, "tag": None, "frame": None}})
+        await func.update_card(card_ids, {"$set": {"owner_id": None, "tag": None, "frame": None, "last_trade_time": 0}})
         
         func.logger.info(
             f"User {ctx.author.name}({ctx.author.id}) converted {len(converted_cards)} card(s): ["
@@ -139,10 +139,10 @@ class Card(commands.Cog):
             "$inc": {"candies": card.cost}
         })
         await func.update_user(ctx.author.id, query)
-        await func.update_card(card.id, {"$set": {"owner_id": None, "tag": None, "frame": None}})
+        await func.update_card(card.id, {"$set": {"owner_id": None, "tag": None, "frame": None, "last_trade_time": 0}})
         
         func.logger.info(f"User {ctx.author.name}({ctx.author.id}) converted 1 card(s): [{card.id}]. Gained {card.cost} candies.")
-        
+
         embed.title="✨ Converted"
         await message.edit(embed=embed, view=None) if message else await ctx.reply(embed=embed)
         
@@ -183,7 +183,7 @@ class Card(commands.Cog):
                 "$inc": {"candies": candies}
             })
             await func.update_user(ctx.author.id, query)
-            await func.update_card(card_ids, {"$set": {"owner_id": None, "tag": None, "frame": None}})
+            await func.update_card(card_ids, {"$set": {"owner_id": None, "tag": None, "frame": None, "last_trade_time": 0}})
 
             func.logger.info(
                 f"User {ctx.author.name}({ctx.author.id}) converted {len(converted_cards)} card(s): ["
@@ -240,7 +240,7 @@ class Card(commands.Cog):
                 "$inc": {"candies": candies}
             })
             await func.update_user(ctx.author.id, query)
-            await func.update_card(card_ids, {"$set": {"owner_id": None, "tag": None, "frame": None}})
+            await func.update_card(card_ids, {"$set": {"owner_id": None, "tag": None, "frame": None, "last_trade_time": 0}})
 
             func.logger.info(
                 f"User {ctx.author.name}({ctx.author.id}) converted {len(converted_cards)} card(s): ["
@@ -325,8 +325,8 @@ class Card(commands.Cog):
         await ctx.reply(embed=embed)
 
     @commands.command(aliases=["t"])
-    async def trade(self, ctx: commands.Context, member: discord.Member, card_id: str, candies: int):
-        """Trades your card with a member."""
+    async def trade(self, ctx: commands.Context, member: discord.Member, candies: int, *, card_ids: str):
+        """Trades your card(s) with a member."""
         if member.bot:
             return await ctx.reply("You are not able to trade with a bot.")
         if member == ctx.author:
@@ -334,49 +334,76 @@ class Card(commands.Cog):
         if candies < 0:
             return await ctx.reply("The candy count cannot be set to a negative value.")
         
-        card = iufi.CardPool.get_card(card_id)
-        if not card:
-            return await ctx.reply("The card was not found. Please try again.")
+        cards = []
+        card_ids = card_ids.split(" ")
+        for card_id in card_ids:
+            card = iufi.CardPool.get_card(card_id)
+            if not card:
+                return await ctx.reply(f"The `{card_id}` card was not found. Please try again.")
 
-        if card.owner_id != ctx.author.id:
-            return await ctx.reply("You are not the owner of this card.")
-        
+            if card.owner_id != ctx.author.id:
+                return await ctx.reply(f"You are not the owner of this `{card_id}` card.")
+            
+            if time.time() - card.last_trade_time < func.settings.LAST_TRADE_TIMER:
+                return await ctx.reply(f"Oopsie! You need to wait a little longer~ You can trade this `{card_id}` card again <t:{int(card.last_trade_time + func.settings.LAST_TRADE_TIMER)}:R>")
+
+            if card not in cards:
+                cards.append(card)
+
+        if len(cards) > 1:
+            image_bytes, image_format = await asyncio.to_thread(iufi.gen_cards_view, cards, max(3, min((len(cards) // 2.5), 8)))
+        else:
+            image_bytes, image_format = await asyncio.to_thread(card.image_bytes, True), card.format
+
         func.logger.info(
             f"User {ctx.author.name} ({ctx.author.id}) initiated a trade with {member.name}({member.id}). "
             f"Trading card [{card.id}] and offering {candies} candies."
         )
 
-        view = TradeView(ctx.author, member, card, candies)
+        view = TradeView(ctx.author, member, cards, candies)
         view.message = await ctx.reply(
             content=f"{member.mention}, {ctx.author.mention} want to trade with you.",
-            file=discord.File(await asyncio.to_thread(card.image_bytes), filename=f"image.{card.format}"),
-            embed=view.build_embed(), view=view
+            file=discord.File(image_bytes, filename=f"image.{image_format}"),
+            embed=view.build_embed(image_format), view=view
         )
 
     @commands.command(aliases=["te"])
-    async def tradeeveryone(self, ctx: commands.Context, card_id: str, candies: int):
-        """Trades your card with everyone."""
+    async def tradeeveryone(self, ctx: commands.Context, candies: int, *, card_ids: str):
+        """Trades your card(s) with everyone."""
         if candies < 0:
             return await ctx.reply("The candy count cannot be set to a negative value.")
 
-        card = iufi.CardPool.get_card(card_id)
-        if not card:
-            return await ctx.reply("The card was not found. Please try again.")
+        cards = []
+        card_ids = card_ids.split(" ")
+        for card_id in card_ids:
+            card = iufi.CardPool.get_card(card_id)
+            if not card:
+                return await ctx.reply(f"The `{card_id}` card was not found. Please try again.")
 
-        if card.owner_id != ctx.author.id:
-            return await ctx.reply("You are not the owner of this card.")
+            if card.owner_id != ctx.author.id:
+                return await ctx.reply(f"You are not the owner of this `{card_id}` card.")
+            
+            if time.time() - card.last_trade_time < func.settings.LAST_TRADE_TIMER:
+                return await ctx.reply(f"Oopsie! You need to wait a little longer~ You can trade this `{card_id}` card again <t:{int(card.last_trade_time + func.settings.LAST_TRADE_TIMER)}:R>")
+
+            if card not in cards:
+                cards.append(card)
+
+        if len(cards) > 1:
+            image_bytes, image_format = await asyncio.to_thread(iufi.gen_cards_view, cards, max(3, min((len(cards) // 2.5), 8)))
+        else:
+            image_bytes, image_format = await asyncio.to_thread(card.image_bytes, True), card.format
 
         func.logger.info(
             f"User {ctx.author.name} ({ctx.author.id}) initiated a trade with everyone. "
             f"Trading card [{card.id}] and offering {candies} candies."
         )
 
-        view = TradeView(ctx.author, None, card, candies)
+        view = TradeView(ctx.author, None, cards, candies)
         view.message = await ctx.reply(
             content=f"{ctx.author.mention} wants to trade",
-            file=discord.File(await asyncio.to_thread(card.image_bytes), filename=f"image.{card.format}"),
-            embed=view.build_embed(),
-            view=view
+            file=discord.File(image_bytes, filename=f"image.{image_format}"),
+            embed=view.build_embed(image_format), view=view
         )
 
     @commands.command(aliases=["tl"])
@@ -401,16 +428,19 @@ class Card(commands.Cog):
         if card.owner_id != ctx.author.id:
             return await ctx.reply("You are not the owner of this card.")
         
+        if time.time() - card.last_trade_time < func.settings.LAST_TRADE_TIMER:
+            return await ctx.reply(f"Oopsie! You need to wait a little longer~ You can trade this card again <t:{int(card.last_trade_time + func.settings.LAST_TRADE_TIMER)}:R>")
+        
         func.logger.info(
             f"User {ctx.author.name} ({ctx.author.id}) initiated a trade with {member.name}({member.id}). "
             f"Trading card [{card.id}] and offering {candies} candies."
         )
 
-        view = TradeView(ctx.author, member, card, candies)
+        view = TradeView(ctx.author, member, [card], candies)
         view.message = await ctx.reply(
             content=f"{member.mention}, {ctx.author.mention} want to trade with you.",
             file=discord.File(await asyncio.to_thread(card.image_bytes), filename=f"image.{card.format}"),
-            embed=view.build_embed(),
+            embed=view.build_embed(card.format),
             view=view
         )
 
@@ -432,16 +462,19 @@ class Card(commands.Cog):
         if card.owner_id != ctx.author.id:
             return await ctx.reply("You are not the owner of this card.")
         
+        if time.time() - card.last_trade_time < func.settings.LAST_TRADE_TIMER:
+            return await ctx.reply(f"Oopsie! You need to wait a little longer~ You can trade this card again <t:{int(card.last_trade_time + func.settings.LAST_TRADE_TIMER)}:R>")
+        
         func.logger.info(
             f"User {ctx.author.name} ({ctx.author.id}) initiated a trade with everyone. "
             f"Trading card [{card.id}] and offering {candies} candies."
         )
-
-        view = TradeView(ctx.author, None, card, candies)
+        
+        view = TradeView(ctx.author, None, [card], candies)
         view.message = await ctx.reply(
             content=f"{ctx.author.mention} wants to trade",
             file=discord.File(await asyncio.to_thread(card.image_bytes), filename=f"image.{card.format}"),
-            embed=view.build_embed(),
+            embed=view.build_embed(card.format),
             view=view
         )
 
@@ -475,7 +508,7 @@ class Card(commands.Cog):
             "$pull": {"cards": {"$in": (card_ids := [card.id for card in converted_cards])}}
         })
         await func.update_user(ctx.author.id, query)
-        await func.update_card(card_ids, {"$set": {"owner_id": None, "tag": None, "frame": None}})
+        await func.update_card(card_ids, {"$set": {"owner_id": None, "tag": None, "frame": None, "last_trade_time": 0}})
         upgraded_stars = upgrade_card.stars + len(converted_cards)
 
         func.logger.info(

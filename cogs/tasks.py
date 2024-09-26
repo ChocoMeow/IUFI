@@ -72,13 +72,14 @@ class Tasks(commands.Cog):
                     view=view
                 )
 
-    @tasks.loop(hours=1.0)
+    @tasks.loop(minutes=15.0)
     async def cache_clear(self):
+        await self.bot.wait_until_ready()
+
         func.USERS_BUFFER.clear()
 
-        # Purging Cached Image Data
         for card in iufi.CardPool._cards.values():
-            card._image = None
+            card.clear_image_cache()
 
         # Syncing Question Data with Database
         for q in iufi.QuestionPool._questions:
