@@ -30,6 +30,8 @@ class Listeners(commands.Cog):
         })
         await func.update_card(card_ids, {"$set": {"owner_id": None, "tag": None, "frame": None}})
         
+        func.logger.info(f"User {member.name}({member.id}) has been banned from {guild.name}({guild.id}). All their cards will be returned to the card pool.")
+
     async def start_nodes(self) -> None:
         """Connect and intiate nodes."""
         await self.bot.wait_until_ready()
@@ -41,7 +43,7 @@ class Listeners(commands.Cog):
             )
             
         except Exception as e:
-            print(f'Node DEFAULT is not able to connect! - Reason: {e}')
+            func.logger.error(f'Node DEFAULT is not able to connect!', exc_info=e)
 
     @commands.Cog.listener()
     async def on_iufi_track_end(self, player: iufi.Player, track, _):

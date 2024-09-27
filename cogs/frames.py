@@ -67,6 +67,9 @@ class Frames(commands.Cog):
         
         card.change_frame()
         await func.update_card(card.id, {"$set": {"frame": None}})
+
+        func.logger.info(f"User {ctx.author.name}({ctx.author.id}) removed frame from card [{card.id}].")
+
         embed = discord.Embed(title="🖼️  Set Frame", color=discord.Color.random())
         embed.description = f"```🆔 {card.tier[0]} {card.id}\n{card.display_frame}```"
         await ctx.reply(embed=embed)

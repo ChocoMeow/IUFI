@@ -185,6 +185,15 @@ class MatchGame(discord.ui.View):
             }
 
         await func.update_user(self.author.id, update_data)
+
+        func.logger.info(
+            f"User {self.author.name}({self.author.id}) completed a match game. "
+            f"Start time: {self._start_time}, End time: {self._ended_time}. "
+            f"Time Used: {func.convert_seconds(self.used_time)}"
+            f"Card Matched: {matched_raw}, "
+            f"Click Lefts: {self.click_left}"
+        )
+
         await self.response.channel.send(content=f"<@{self.author.id}>", embed=embed)
         self.stop()
         
