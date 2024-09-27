@@ -5,3 +5,4 @@ questions.json
 /frames
 *.pyc
 /.idea
+logs

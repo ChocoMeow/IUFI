@@ -61,6 +61,8 @@ class DropView(discord.ui.View):
             await func.update_user(interaction.user.id, {"$push": {"cards": self.card.id}})
             await func.update_card(self.card.id, {"$set": {"owner_id": interaction.user.id}})
 
+            func.logger.info(f"User {interaction.user.name}({interaction.user.id}) has successfully claimed a card from a random drop: {self.card}.")
+
             embed = discord.Embed(title="🎊 Random Drop", color=discord.Color.random())
             embed.description = f"```{self.card.display_id}\n" \
                                 f"{self.card.display_tag}\n" \

@@ -44,6 +44,8 @@ class Potion(commands.Cog):
         data = func.update_quest_progress(user, "USE_ANY_POTION", query=data)
         await func.update_user(ctx.author.id, data)
 
+        func.logger.info(f"User {ctx.author.name}({ctx.author.id}) used a {potion_name}({level}) potion, which will expire in {expire}.")
+
         await ctx.reply(f"You have used a {potion_name} potion. It will expire in <t:{round(expire)}:R>")
 
 async def setup(bot: commands.Bot) -> None:

@@ -65,6 +65,8 @@ class Dropdown(discord.ui.Select):
                     })
                     await func.update_user(interaction.user.id, query)
 
+                    func.logger.info(f"User {interaction.user.name}({interaction.user.id}) purchased {modal.quantity} {selected_item.lower()} for {price} candies.")
+
                     embed = discord.Embed(title="🛒 Shop Purchase", color=discord.Color.random())
                     embed.description = f"```{item[0]} + {modal.quantity}\n🍬 - {price}```"
 

@@ -86,6 +86,9 @@ class Profile(commands.Cog):
             return await ctx.reply(content="Please shorten the bio as it is too long. (No more than 30 chars)")
         
         await func.update_user(ctx.author.id, {"$set": {"profile.bio": bio}})
+
+        func.logger.info(f"User {ctx.author.name}({ctx.author.id}) changed the bio to [{bio}].")
+
         embed = discord.Embed(description=f"Bio has been set to\n```{bio}```", color=discord.Color.random())
         await ctx.reply(embed=embed)
     
@@ -139,6 +142,8 @@ class Profile(commands.Cog):
         if len(user.get("collections")) >= 5:
             return await ctx.reply(content=f"{ctx.author.mention} you have reached the maximum limit of 5 collections.")
         
+        func.logger.info(f"User {ctx.author.name}({ctx.author.id}) created a collection named as [{name}].")
+
         await func.update_user(ctx.author.id, {"$set": {f"collections.{name}": [None] * 6}})
         await ctx.reply(content=f"{ctx.author.mention} collection successfully created with the name `{name.title()}`. You can now use qsetcollection to edit your collection.")
     
@@ -162,6 +167,8 @@ class Profile(commands.Cog):
                 return await ctx.reply("You are not the owner of this card.")
 
         await func.update_user(ctx.author.id, {"$set": {f"collections.{name}.{slot - 1}": card.id if card_id else None}})
+
+        func.logger.info(f"User {ctx.author.name}({ctx.author.id}) added card [{card.id}] to [{name}] collection in slot [{slot}].")
 
         embed = discord.Embed(title="💕 Collection Set", color=discord.Color.random())
         embed.description = f"```📮 {name.title()}\n🆔 {card.id.zfill(5) if card_id else None}\n🎰 {slot}\n```"
@@ -191,6 +198,8 @@ class Profile(commands.Cog):
 
         await func.update_user(ctx.author.id, {"$set": {f"collections.{name}.{slot - 1}": card.id}})
 
+        func.logger.info(f"User {ctx.author.name}({ctx.author.id}) added card [{card.id}] to [{name}] collection in slot [{slot}].")
+
         embed = discord.Embed(title="💕 Collection Set", color=discord.Color.random())
         embed.description = f"```📮 {name.title()}\n{card.display_id}\n🎰 {slot}\n```"
         await ctx.reply(embed=embed)
@@ -205,6 +214,9 @@ class Profile(commands.Cog):
             return await ctx.reply(content=f"{ctx.author.mention} no collection with the name `{name}` was found.")
         
         await func.update_user(ctx.author.id, {"$unset": {f"collections.{name}": ""}})
+
+        func.logger.info(f"User {ctx.author.name}({ctx.author.id}) removed [{name}] collection.")
+
         await ctx.reply(content=f"{ctx.author.mention}, the collection with the name `{name}` has been successfully removed.")
 
     @commands.command(aliases=["f"])
@@ -240,6 +252,8 @@ class Profile(commands.Cog):
             "$set": {"claimed": claimed, "cooldown.daily": time.time() + func.settings.COOLDOWN_BASE["daily"][1]},
             "$inc": reward
         })
+
+        func.logger.info(f"User {ctx.author.name}({ctx.author.id}) claimed their daily reward. Strike: [{claimed}]")
 
         embed = discord.Embed(title="📅   Daily Reward", color=discord.Color.random())
         embed.description = f"Daily reward claimed! + {'🍬 5' if claimed % 5 else f'{WEEKLY_REWARDS[(claimed//5) - 1][0]} {WEEKLY_REWARDS[(claimed//5) - 1][2]}'}"

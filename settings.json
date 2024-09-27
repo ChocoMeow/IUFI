@@ -436,5 +436,16 @@
                 "10": ["candies",  100]
             }
         }
+    },
+    "LOGGING": {
+        "file": {
+            "path": "./logs",
+            "enable": true
+        },
+        "level": {
+            "discord": "INFO",
+            "iufi": "INFO"
+        },
+        "max-history": 30
     }
 }

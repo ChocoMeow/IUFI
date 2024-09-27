@@ -1,9 +1,11 @@
 import discord, os, iufi
+import discord, os, iufi, logging
 import functions as func
 
 from random import randint
 from discord.ext import commands
 from motor.motor_asyncio import AsyncIOMotorClient
+from logging.handlers import TimedRotatingFileHandler
 
 class IUFI(commands.Bot):
     def __init__(self, *args, **kwargs):
@@ -55,7 +57,7 @@ class IUFI(commands.Bot):
             await func.MONGO_DB.server_info()
             if db_name not in await func.MONGO_DB.list_database_names():
                 raise Exception(f"{db_name} does not exist in your mongoDB!")
-            print("Successfully connected to MongoDB!")
+            func.logger.info("Successfully connected to MongoDB!")
 
         except Exception as e:
             raise Exception("Not able to connect MongoDB! Reason:", e)
@@ -92,7 +94,7 @@ class IUFI(commands.Bot):
                         await func.update_card(card_id, {"$set": {"stars": (stars := randint(1, 5))}}, insert=True)
                         self.iufi.add_card(_id=card_id, tier=category, stars=stars)
 
-                        print(f"Added New Image {new_image}({category}) -> ID: {card_id}")
+                        func.logger.info(f"Added New Image {new_image}({category}) -> ID: {card_id}")
 
         async for question_doc in func.QUESTIONS_DB.find():
             iufi.QuestionPool.add_question(iufi.Question(**question_doc))
@@ -100,16 +102,16 @@ class IUFI(commands.Bot):
         for module in os.listdir(os.path.join(func.ROOT_DIR, 'cogs')):
             if module.endswith(".py"):
                 await self.load_extension(f"cogs.{module[:-3]}")
-                print(f"Loaded {module[:-3]}")
+                func.logger.info(f"Loaded {module[:-3]}")
 
     async def on_ready(self):
-        print("------------------")
-        print(f"Logging As {self.user}")
-        print(f"Bot ID: {self.user.id}")
-        print("------------------")
-        print(f"Discord Version: {discord.__version__}")
-        print(f"Loaded {len(self.iufi._cards)} images")
-        print(f"Loaded {len(self.questions._questions)} questions")
+        func.logger.info("------------------")
+        func.logger.info(f"Logging As {self.user}")
+        func.logger.info(f"Bot ID: {self.user.id}")
+        func.logger.info("------------------")
+        func.logger.info(f"Discord Version: {discord.__version__}")
+        func.logger.info(f"Loaded {len(self.iufi._cards)} images")
+        func.logger.info(f"Loaded {len(self.questions._questions)} questions")
 
     async def on_command_error(self, ctx: commands.Context, exception, /) -> None:
         error = getattr(exception, 'original', exception)
@@ -134,12 +136,32 @@ class IUFI(commands.Bot):
             embed.set_footer(icon_url=ctx.me.display_avatar.url, text="More Help: Ask the staff!")
             return await ctx.reply(embed=embed)
 
+        elif not issubclass(error.__class__, iufi.IUFIException):
+            error = "An unexpected error occurred. Please try again later!"
+            func.logger.error(f"An unexpected error occurred in the `{ctx.command.name}` command on the {ctx.guild.name}({ctx.guild.id}) executed by {ctx.author.name}({ctx.author.id}).", exc_info=exception)
+           
         try:
             return await ctx.reply(error)
         except:
             pass
 
 func.settings.load()
+LOG_SETTINGS = func.settings.LOGGING
+if (LOG_FILE := LOG_SETTINGS.get("file", {})).get("enable", True):
+    log_path = os.path.abspath(LOG_FILE.get("path", "./logs"))
+    if not os.path.exists(log_path):
+        os.makedirs(log_path)
+
+    file_handler = TimedRotatingFileHandler(filename=f'{log_path}/iufi.log', encoding="utf-8", backupCount=LOG_SETTINGS.get("max-history", 30), when="d")
+    file_handler.namer = lambda name: name.replace(".log", "") + ".log"
+    file_handler.setFormatter(logging.Formatter('{asctime} [{levelname:<8}] {name}: {message}', '%Y-%m-%d %H:%M:%S', style='{'))
+
+    for log_name, log_level in LOG_SETTINGS.get("level", {}).items():
+        _logger = logging.getLogger(log_name)
+        _logger.setLevel(log_level)
+        
+    logging.getLogger().addHandler(file_handler)
+
 intents = discord.Intents.default()
 intents.members = True
 intents.message_content = True
@@ -154,4 +176,4 @@ bot = IUFI(
 )
   
 if __name__ == "__main__":
-    bot.run(token=func.tokens.token)
+    bot.run(token=func.tokens.token, root_logger=True)

@@ -48,78 +48,101 @@ class Tasks(commands.Cog):
                 await member.remove_roles(role)
 
         users = func.USERS_DB.find({f"game_state.quiz_game.last_update": {"$gt":start_time, "$lte":end_time}})
+        updated_users: dict[str, int] = {}
         async for user_data in users:
             user = guild.get_member(user_data["_id"])
             if user:
                 rank = iufi.QuestionPool.get_rank(user_data["game_state"]["quiz_game"]["points"])[0]
                 if rank in roles.keys() and roles[rank] is not None:
+                    updated_users[rank] = updated_users.get(rank, 0) + 1
                     await user.add_roles(roles[rank])
+        
+        func.logger.info("Updated user roles: %s", ", ".join(f"{role_name}: {count}" for role_name, count in updated_users.items()))
 
     @tasks.loop(minutes=5.0)
     async def drop_card(self) -> None:
         await self.bot.wait_until_ready()
-        if random.randint(1, 6) == 1:
-            cards = iufi.CardPool.roll(amount=1)
-            channel = self.bot.get_channel(random.choice(func.settings.GAME_CHANNEL_IDS))
-            if channel:
-                view = DropView(cards[0])
-                covered_card: iufi.TempCard = iufi.TempCard(f"cover/level{random.randint(1, 3)}.webp")
-                image_bytes, image_format = await asyncio.to_thread(covered_card.image_bytes), covered_card.format
-                view.message = await channel.send(
-                    content=f"**Hurry up! This claim ends in: <t:{round(time.time()) + 70}:R>**",
-                    embed=view.build_embed(),
-                    file=discord.File(image_bytes, filename=f'image.{image_format}'),
-                    view=view
-                )
+
+        try:
+            if random.randint(1, 6) == 1:
+                cards = iufi.CardPool.roll(amount=1)
+                channel = self.bot.get_channel(random.choice(func.settings.GAME_CHANNEL_IDS))
+                if channel:
+                    view = DropView(cards[0])
+                    covered_card: iufi.TempCard = iufi.TempCard(f"cover/level{random.randint(1, 3)}.webp")
+                    image_bytes, image_format = await asyncio.to_thread(covered_card.image_bytes), covered_card.format
+                    view.message = await channel.send(
+                        content=f"**Hurry up! This claim ends in: <t:{round(time.time()) + 70}:R>**",
+                        embed=view.build_embed(),
+                        file=discord.File(image_bytes, filename=f'image.{image_format}'),
+                        view=view
+                    )
+
+                    func.logger.info(f"A card has been dropped in {channel.name}({channel.id}) with card [{cards[0].id}]")
+
+        except Exception as e:
+            func.logger.error("An exception occurred in the drop card task.", exc_info=e)
 
     @tasks.loop(minutes=15.0)
     async def cache_clear(self):
         await self.bot.wait_until_ready()
 
-        func.USERS_BUFFER.clear()
+        try:
+            func.USERS_BUFFER.clear()
 
-        for card in iufi.CardPool._cards.values():
-            card.clear_image_cache()
+            for card in iufi.CardPool._cards.values():
+                card.clear_image_cache()
 
-        # Syncing Question Data with Database
-        for q in iufi.QuestionPool._questions:
-            if q.is_updated:
-                await func.QUESTIONS_DB.update_one({"_id": q.id}, {"$set": q.toDict()})
-        
-        # Syncing Music Data with Database
-        playlist = iufi.NodePool._questions
-        if playlist:
-            for track in playlist.tracks:
-                if track.is_updated:
-                    await func.MUSIC_DB.update_one({"_id": track.identifier}, {"$set": track.db_data})
-                    track.is_updated = False
+            # Syncing Question Data with Database
+            for q in iufi.QuestionPool._questions:
+                if q.is_updated:
+                    await func.QUESTIONS_DB.update_one({"_id": q.id}, {"$set": q.toDict()})
+            
+            # Syncing Music Data with Database
+            playlist = iufi.NodePool._questions
+            if playlist:
+                for track in playlist.tracks:
+                    if track.is_updated:
+                        await func.MUSIC_DB.update_one({"_id": track.identifier}, {"$set": track.db_data})
+                        track.is_updated = False
 
-        # Verifying and Updating Quiz Reward Data in Database
-        self.bot.loop.create_task(self.distribute_monthly_quiz_rewards())
+            # Verifying and Updating Quiz Reward Data in Database
+            self.bot.loop.create_task(self.distribute_monthly_quiz_rewards())
+
+        except Exception as e:
+            func.logger.error("An exception occurred in the cache clear task.", exc_info=e)
 
     @tasks.loop(minutes=10.0)
     async def reminder(self) -> None:
-        # Querying the Game’s Ready Time for the Next 10 Minutes Range
-        time_range = {"$gt": (current_time := time.time()), "$lt": current_time + 600}
-        query = {
-            "$and":[
-                {"reminder": True},
-                {"$or": [
-                    {f"cooldown.{name}": time_range}
-                    for name in func.settings.COOLDOWN_BASE.keys() if name != "claim"
+        try:
+            # Querying the Game’s Ready Time for the Next 10 Minutes Range
+            time_range = {"$gt": (current_time := time.time()), "$lt": current_time + 600}
+            query = {
+                "$and":[
+                    {"reminder": True},
+                    {"$or": [
+                        {f"cooldown.{name}": time_range}
+                        for name in func.settings.COOLDOWN_BASE.keys() if name != "claim"
+                ]}
             ]}
-        ]}
 
-        # Verifying and Dispatching Game Readiness Notification to Player
-        async for doc in func.USERS_DB.find(query):
-            user = self.bot.get_user(doc["_id"])
-            if not user:
-                continue
+            # Verifying and Dispatching Game Readiness Notification to Player
+            notification_count = 0
+            async for doc in func.USERS_DB.find(query):
+                user = self.bot.get_user(doc["_id"])
+                if not user:
+                    continue
 
-            cd: dict[str, float] = doc["cooldown"]
-            for name, (emoji, _) in func.settings.COOLDOWN_BASE.items():
-                if name != "claim":
-                    await self.check_and_schedule(user, current_time, cd.get(name, 0), f"{emoji} Your {name.split('_')[0]} is ready! Join <#{random.choice(func.settings.GAME_CHANNEL_IDS)}> and roll now.")        
+                cd: dict[str, float] = doc["cooldown"]
+                for name, (emoji, _) in func.settings.COOLDOWN_BASE.items():
+                    if name != "claim":
+                        await self.check_and_schedule(user, current_time, cd.get(name, 0), f"{emoji} Your {name.split('_')[0]} is ready! Join <#{random.choice(func.settings.GAME_CHANNEL_IDS)}> and roll now.")        
+                        notification_count += 1
+
+            func.logger.info(f"Notifications sent to {notification_count} users regarding game readiness.")
+
+        except Exception as e:
+            func.logger.error("An exception occurred in the reminder task.", exc_info=e)
 
 async def setup(bot: commands.Bot):
     await bot.add_cog(Tasks(bot))

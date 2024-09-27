@@ -25,6 +25,8 @@ class CaptionModal(discord.ui.Modal):
                 content=f"{caption}\nSent by {interaction.user.mention}",
                 file=discord.File(image_bytes, filename=f'image.{image_format}')
             )
+        
+        func.logger.info(f"User {interaction.user.name}({interaction.user.id}) has sent a collection to {gallery_channel.name}({gallery_channel.id}) with caption [{caption}]")
 
 class EditBtn(discord.ui.Button):
     def __init__(self) -> None:
@@ -101,6 +103,7 @@ class EditModal(discord.ui.Modal):
 
         self.view.collections[self.view.sel_collection][slot - 1] = card_id
         await func.update_user(interaction.user.id, {"$set": {f"collections.{name}.{slot - 1}": card.id if card_id else None}})
+        func.logger.info(f"User {interaction.user.name}({interaction.user.id}) added card [{card.id}] to [{name}] collection in slot [{slot - 1}].")
         await self.view.send_msg()
 
 class CollectionDropdown(discord.ui.Select):
