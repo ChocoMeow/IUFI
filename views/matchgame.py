@@ -189,7 +189,7 @@ class MatchGame(discord.ui.View):
         func.logger.info(
             f"User {self.author.name}({self.author.id}) completed a match game. "
             f"Start time: {self._start_time}, End time: {self._ended_time}. "
-            f"Time Used: {func.convert_seconds(self.used_time)}"
+            f"Time Used: {func.convert_seconds(self.used_time)} "
             f"Card Matched: {matched_raw}, "
             f"Click Lefts: {self.click_left}"
         )

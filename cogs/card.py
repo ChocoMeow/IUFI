@@ -97,7 +97,7 @@ class Card(commands.Cog):
         
         func.logger.info(
             f"User {ctx.author.name}({ctx.author.id}) converted {len(converted_cards)} card(s): ["
-            f"{', '.join([str(card) for card in converted_cards])}]. Gained {candies} candies."
+            f"{', '.join([card.id for card in converted_cards])}]. Gained {candies} candies."
         )
         
         embed = discord.Embed(title="✨ Convert", color=discord.Color.random())
@@ -187,7 +187,7 @@ class Card(commands.Cog):
 
             func.logger.info(
                 f"User {ctx.author.name}({ctx.author.id}) converted {len(converted_cards)} card(s): ["
-                f"{', '.join([str(card) for card in converted_cards])}]. Gained {candies} candies."
+                f"{', '.join([card.id for card in converted_cards])}]. Gained {candies} candies."
             )
 
             embed.title = "✨ Converted"
@@ -244,7 +244,7 @@ class Card(commands.Cog):
 
             func.logger.info(
                 f"User {ctx.author.name}({ctx.author.id}) converted {len(converted_cards)} card(s): ["
-                f"{', '.join([str(card) for card in converted_cards])}]. Gained {candies} candies."
+                f"{', '.join([card.id for card in converted_cards])}]. Gained {candies} candies."
             )
 
             embed.title = "✨ Converted"
