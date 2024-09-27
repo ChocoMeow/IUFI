@@ -178,7 +178,7 @@ class Anniversary(commands.Cog):
                     continue
 
                 rarity = card.tier[1]
-                if rarity == "celestial":
+                if rarity == "celestial" or rarity == "common":
                     continue
                 card_price = price_mapping.get(rarity, price_mapping["common"])
 
@@ -188,7 +188,7 @@ class Anniversary(commands.Cog):
             await ctx.reply("All lost & found cards have been sold.")
 
     async def schedule_sale(self, card: iufi.Card, card_price: int) -> None:
-        random_wait = random.randint(1, 79200)
+        random_wait = random.randint(1, 7200)
         await asyncio.sleep(random_wait)
         channel = self.bot.get_channel(iufi.MARKET_ID)
         view = AnniversarySellView(self.bot.user, None, card, card_price)
