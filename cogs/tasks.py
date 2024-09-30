@@ -99,12 +99,7 @@ class Tasks(commands.Cog):
                     await func.QUESTIONS_DB.update_one({"_id": q.id}, {"$set": q.toDict()})
             
             # Syncing Music Data with Database
-            playlist = iufi.NodePool._questions
-            if playlist:
-                for track in playlist.tracks:
-                    if track.is_updated:
-                        await func.MUSIC_DB.update_one({"_id": track.identifier}, {"$set": track.db_data})
-                        track.is_updated = False
+            await iufi.MusicPool.save()
 
             # Verifying and Updating Quiz Reward Data in Database
             self.bot.loop.create_task(self.distribute_monthly_quiz_rewards())

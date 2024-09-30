@@ -1,17 +1,25 @@
 from __future__ import annotations
 
-import random, os, asyncio, Levenshtein, re
+import random, os, asyncio, Levenshtein, re, json, yt_dlp
 import functions as func
 
 from PIL import Image, ImageDraw, ImageSequence
 from io import BytesIO
 from difflib import SequenceMatcher
+
+from discord import (
+    PCMVolumeTransformer,
+    FFmpegPCMAudio,
+    Member
+)
+
 from typing import (
     Optional,
     Union,
     List,
     TYPE_CHECKING,
-    Dict
+    Dict,
+    Any
 )
 
 from .exceptions import ImageLoadError, IUFIException
@@ -29,6 +37,22 @@ QUIZ_LEVEL_BASE: dict[str, tuple[int, tuple[int, int, hex]]] = {
     "medium": (20, (3, 2, 0xF9E853)),
     "hard": (30, (5, 3, 0xD75C4B))
 }
+
+YTDL_FORMAT_OPTIONS: Dict[str, str] = {
+    'format': 'bestaudio/best',
+    'outtmpl': os.path.join(func.MUSIC_TRACKS_FOLDER, '%(id)s.%(ext)s'),
+    'restrictfilenames': True,
+    'noplaylist': True,
+    'nocheckcertificate': True,
+    'ignoreerrors': False,
+    'logtostderr': False,
+    'quiet': True,
+    'no_warnings': True,
+    'default_search': 'auto',
+    'source_address': '0.0.0.0',
+}
+
+YTDL = yt_dlp.YoutubeDL(YTDL_FORMAT_OPTIONS)
 
 class CardObject:
     __slots__ = ("is_gif")
@@ -464,3 +488,119 @@ class Question:
             return 0
         
         return 100 - self.correct_rate
+
+class Track(PCMVolumeTransformer):
+    def __init__(
+        self,
+        source: FFmpegPCMAudio,
+        data: Dict[str, Any]
+    ):  
+        super().__init__(source)
+
+        self.data: Dict[str, Any] = data
+        self.is_updated: bool = False
+
+    @classmethod
+    async def load_data(cls, url, *, stream=False) -> Dict[str, Any]:
+        try:
+            loop = asyncio.get_event_loop()
+            data = await loop.run_in_executor(None, lambda: YTDL.extract_info(url, download=not stream))
+            return {
+                "title": data.get("title", ""),
+                "duration": data.get("duration", 0),
+                "album": data.get("album", ""),
+                "artists": data.get("artists", []),
+                "release_year": data.get("release_year", "")
+            }
+        
+        except Exception as e:
+            func.logger.info("An exception occurred while loading track info from YouTube.", exc_info=e)
+    
+    def check_answer(self, answer: str, threshold: float = .75) -> bool:
+        answer = answer.lower()
+        title = re.sub(r"\(.*?\)|\[.*?\]", "", self.title.lower())
+
+        string1 = set(title.split())
+        string2 = set(answer.split())
+        jac_similarity = len(string1 & string2) / len(string1 | string2)
+
+        string1 = title.replace(" ", "")
+        string2 = answer.replace(" ", "")
+        lev_similarity = Levenshtein.ratio(string1, string2)
+        seq_similarity = SequenceMatcher(None, string1, string2).ratio()
+
+        if lev_similarity >= threshold or jac_similarity >= threshold or seq_similarity >= threshold:
+            return True
+        return False
+
+    def update_state(self, member: Member, time_used: float, result: bool) -> None:
+        self.is_updated = True
+
+        if self.total >= 0:
+            self.data["average_time"] += time_used
+        else:
+            self.data["average_time"] = ((self.data["average_time"] * self.total) + time_used) / (self.total + 1)
+
+        current_best_time = self.data["best_record"]["time"]
+        if result and (current_best_time is None or current_best_time > time_used):
+            self.data["best_record"]["member"] = member.id
+            self.data["best_record"]["time"] = time_used
+
+        key = "correct" if result else "wrong"
+        self.data[key] = self.data.get(key, 0) + 1
+
+    @property
+    def id(self) -> str:
+        return self.data.get("_id")
+
+    @property
+    def url(self) -> str:
+        return self.data.get("url")
+    
+    @property
+    def thumbnail(self) -> str:
+        return f"https://i.ytimg.com/vi/{self.id}/maxresdefault.webp"
+    
+    @property
+    def title(self) -> str:
+        return self.data["yt_data"]["title"]
+
+    @property
+    def duration(self) -> int:
+        return self.data["yt_data"]["duration"]
+    
+    @property
+    def album(self) -> str:
+        return self.data["yt_data"]["album"]
+    
+    @property
+    def artists(self) -> List[str]:
+        return self.data["yt_data"]["artists"]
+    
+    @property
+    def release_year(self) -> str:
+        return self.data["yt_data"]["release_year"]
+    
+    @property
+    def total(self) -> int:
+        return self.data["correct"] + self.data["wrong"]
+    
+    @property
+    def average_time(self) -> float:
+        return self.data["average_time"]
+    
+    @property
+    def correct_rate(self) -> float:
+        total = self.total
+        if not total:
+            return 0
+        return round(self.data["correct"] / total, 2) * 100
+    
+    @property
+    def wrong_rate(self) -> float:
+        return 100 - self.correct_rate
+
+    @property
+    def best_record(self) -> tuple[int, float]:
+        br = self.data["best_record"]
+        return br["member"], br["time"]

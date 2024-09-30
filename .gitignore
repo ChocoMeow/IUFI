@@ -2,6 +2,7 @@
 questions.json
 /images
 /newImages
+/musicTracks
 /frames
 *.pyc
 /.idea

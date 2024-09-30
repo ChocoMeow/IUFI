@@ -57,7 +57,7 @@ class IUFI(commands.Bot):
             await func.MONGO_DB.server_info()
             if db_name not in await func.MONGO_DB.list_database_names():
                 raise Exception(f"{db_name} does not exist in your mongoDB!")
-            func.logger.info("Successfully connected to MongoDB!")
+            func.logger.info(f"Successfully connected to [{db_name}] MongoDB!")
 
         except Exception as e:
             raise Exception("Not able to connect MongoDB! Reason:", e)
@@ -99,6 +99,8 @@ class IUFI(commands.Bot):
         async for question_doc in func.QUESTIONS_DB.find():
             iufi.QuestionPool.add_question(iufi.Question(**question_doc))
 
+        await iufi.MusicPool.fetch_data()
+        
         for module in os.listdir(os.path.join(func.ROOT_DIR, 'cogs')):
             if module.endswith(".py"):
                 await self.load_extension(f"cogs.{module[:-3]}")

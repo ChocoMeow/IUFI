@@ -383,16 +383,6 @@
             }
         }
     },
-    "TRACK_BASE": {
-        "correct": 0,
-        "wrong": 0,
-        "average_time": 0,
-        "likes": 0,
-        "best_record": {
-            "member": null,
-            "time": null
-        }
-    },
     "MATCH_GAME_SETTINGS": {
         "1": {
             "cooldown": 3600,

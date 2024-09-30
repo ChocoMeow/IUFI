@@ -1,17 +1,17 @@
 from __future__ import annotations
 
-import re, copy
 import functions as func
 
 from collections import Counter
 
 from typing import (
-    TYPE_CHECKING,
-    Dict
+    Dict,
+    Any
 )
 
-if TYPE_CHECKING:
-    from .music import Track
+from discord import (
+    FFmpegPCMAudio
+)
 
 from random import (
     choice,
@@ -23,7 +23,8 @@ from random import (
 from .objects import (
     Card,
     Question,
-    QUIZ_LEVEL_BASE
+    QUIZ_LEVEL_BASE,
+    Track
 )
 
 from .exceptions import IUFIException, DuplicatedCardError, DuplicatedTagError
@@ -41,13 +42,9 @@ DROP_RATES = {
     "celestial": .00005
 }
 
-URL_REGEX = re.compile(
-    r"https?://(?:www\.)?.+"
-)
-
-NODE_VERSION = "v4"
-CALL_METHOD = ["PATCH", "DELETE"]
-
+FFMPEG_OPTIONS: Dict[str, str] = {
+    'options': '-vn',
+}
 
 class CardPool:
     _cards: dict[str, Card] = {}
@@ -217,11 +214,18 @@ class MusicPool:
     _questions: Dict[str, Track] = {}
 
     @classmethod
-    def add_question(cls, data: Dict) -> None:
-        cls._questions[data["id"]] = Track(data=data)
+    async def add_question(cls, data: Dict[str, Any]) -> None:
+        if "yt_data" not in data:
+            data["yt_data"] = await Track.load_data(data["url"])
+
+        source = FFmpegPCMAudio(source=f"{func.MUSIC_TRACKS_FOLDER}/{data['_id']}.webm", **FFMPEG_OPTIONS)
+        cls._questions[data["_id"]] = Track(source, data=data)
 
     @classmethod
-    def get_question(cls, id: str) -> Track:
+    async def get_question(cls, id: str) -> Track:
+        if not cls._questions:
+            await cls.fetch_data()
+
         return cls._questions.get(id)
 
     @classmethod
@@ -229,16 +233,25 @@ class MusicPool:
         if not cls._questions:
             await cls.fetch_data()
         
-        track: Track = choice(cls._questions.values())
-        if not track.db_data:
-            track_data = await func.MUSIC_DB.find_one({"_id": track.identifier})
-            if not track_data:
-                await func.MUSIC_DB.insert_one({ "_id": track.identifier, **func.TRACK_BASE})
-
-            track.db_data = track_data or copy.deepcopy(func.TRACK_BASE)
-            
-        return track
+        return choice(list(cls._questions.values()))
 
     @classmethod
     async def fetch_data(cls) -> None:
-        ...
+        async for music_quiz in func.MUSIC_DB.find():
+            await cls.add_question(music_quiz)
+    
+    @classmethod
+    async def save(cls) -> None:
+        if not cls._questions:
+            return
+        
+        for track in cls._questions.values():
+            if track.is_updated:
+                await func.MUSIC_DB.update_one({"_id": track.id}, {"$set": track.data})
+                track.is_updated = False
+
+    @classmethod
+    async def reflesh(cls) -> None:
+        await cls.save()
+        cls._questions.clear()
+        await cls.fetch_data()

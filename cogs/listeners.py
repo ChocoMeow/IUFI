@@ -1,4 +1,4 @@
-import discord, iufi, asyncio
+import discord, iufi
 import functions as func
 
 from discord.ext import commands
@@ -8,9 +8,6 @@ class Listeners(commands.Cog):
         self.bot: commands.Bot = bot
         self.emoji: str = ""
         self.invisible: bool = True
-        
-        self.iufi: iufi.NodePool = iufi.NodePool()
-        bot.loop.create_task(self.start_nodes())
 
     @commands.Cog.listener()
     async def on_member_ban(self, guild: discord.Guild, member: discord.Member) -> None:
@@ -31,19 +28,6 @@ class Listeners(commands.Cog):
         await func.update_card(card_ids, {"$set": {"owner_id": None, "tag": None, "frame": None}})
         
         func.logger.info(f"User {member.name}({member.id}) has been banned from {guild.name}({guild.id}). All their cards will be returned to the card pool.")
-
-    async def start_nodes(self) -> None:
-        """Connect and intiate nodes."""
-        await self.bot.wait_until_ready()
-        
-        try:
-            await self.iufi.create_node(
-                bot = self.bot,
-                **func.settings.MUSIC_NODE
-            )
-            
-        except Exception as e:
-            func.logger.error(f'Node DEFAULT is not able to connect!', exc_info=e)
 
     @commands.Cog.listener()
     async def on_voice_state_update(self, member: discord.Member, before: discord.VoiceState, after: discord.VoiceState) -> None:
