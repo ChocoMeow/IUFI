@@ -200,7 +200,7 @@ class Player(VoiceProtocol):
                 )
                 await func.update_user(message.author.id, query)
 
-                func.logger.info(f"User {message.author.name}({message.author.id}) earned {points} points for answering in {time_used} seconds.")
+                func.logger.info(f"User {message.author.name}({message.author.id}) earned {points} points in the music quiz by answering in {time_used:.2f} seconds.")
 
                 await message.reply(random.choice(MESSAGES).format(time=func.convert_seconds(time_used), points=points))
                 await self.invoke_controller()
