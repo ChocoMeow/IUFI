@@ -44,10 +44,6 @@ DROP_RATES = {
     "celestial": .00005
 }
 
-FFMPEG_OPTIONS: Dict[str, str] = {
-    'options': '-vn',
-}
-
 class CardPool:
     _cards: dict[str, Card] = {}
     _tag_cards: dict[str, Card] = {}

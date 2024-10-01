@@ -512,22 +512,22 @@ class Track():
         except Exception as e:
             func.logger.info("An exception occurred while loading track info from YouTube.", exc_info=e)
     
-    def check_answer(self, answer: str, threshold: float = .75) -> bool:
+    def check_answer(self, answer: str, threshold: float = .85) -> bool:
         answer = answer.lower()
-        title = re.sub(r"\(.*?\)|\[.*?\]", "", self.title.lower())
 
-        string1 = set(title.split())
-        string2 = set(answer.split())
-        jac_similarity = len(string1 & string2) / len(string1 | string2)
+        for correct_answer in self.answers:
+            string1 = set(correct_answer.split())
+            string2 = set(answer.split())
+            jac_similarity = len(string1 & string2) / len(string1 | string2)
 
-        string1 = title.replace(" ", "")
-        string2 = answer.replace(" ", "")
-        lev_similarity = Levenshtein.ratio(string1, string2)
-        seq_similarity = SequenceMatcher(None, string1, string2).ratio()
+            string1 = correct_answer.replace(" ", "")
+            string2 = answer.replace(" ", "")
+            lev_similarity = Levenshtein.ratio(string1, string2)
+            seq_similarity = SequenceMatcher(None, string1, string2).ratio()
 
-        if lev_similarity >= threshold or jac_similarity >= threshold or seq_similarity >= threshold:
-            return True
-        return False
+            if lev_similarity >= threshold or jac_similarity >= threshold or seq_similarity >= threshold:
+                return True
+            return False
 
     def update_state(self, member: Member, time_used: float, result: bool) -> None:
         self.is_updated = True
@@ -603,3 +603,7 @@ class Track():
     def best_record(self) -> tuple[int, float]:
         br = self.data["best_record"]
         return br["member"], br["time"]
+
+    @property
+    def answers(self) -> List[str]:
+        return self.data["answers"]
