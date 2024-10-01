@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-import random, os, asyncio, Levenshtein, re, json, yt_dlp
+import random, os, asyncio, Levenshtein, re, yt_dlp
 import functions as func
 
 from PIL import Image, ImageDraw, ImageSequence

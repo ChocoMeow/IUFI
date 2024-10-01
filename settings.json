@@ -69,6 +69,12 @@
             "rewards": [["🍬", "candies", [10, 20]]],
             "type": "QUIZ"
         },
+        "PLAY_MUSIC_QUIZ_GAME": {
+            "title": "Earn 50 points in music quiz",
+            "amount": 50,
+            "rewards": [["🍬", "candies", [10, 20]]],
+            "type": "MUSIC_QUIZ"
+        },
         "PLAY_MATCH_GAME_LVL_1": {
             "title": "Play level 1 match game 5 times",
             "amount": 5,
@@ -160,6 +166,12 @@
             "amount": 50,
             "rewards": [["🍬", "candies", [100, 200]]],
             "type": "QUIZ"
+        },
+        "PLAY_MUSIC_QUIZ_GAME": {
+            "title": "Earn 200 points in music quiz",
+            "amount": 200,
+            "rewards": [["🍬", "candies", [100, 200]]],
+            "type": "MUSIC_QUIZ"
         },
         "PLAY_MATCH_GAME_LVL_1": {
             "title": "Play level 1 match game 50 times",

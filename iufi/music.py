@@ -25,16 +25,16 @@ from .objects import Track
 from .pool import MusicPool
 
 MESSAGES = [
-    "Yay! You got it in `{time}`! 🎉 I'm so proud of you! 🎶",
-    "Wow, you nailed it in just `{time}`! 🎊 That’s amazing! 🎤",
-    "You’re so good at this! 🌟 You guessed it in `{time}`! 🎵",
-    "Awesome! You did it in `{time}`! This song is truly a classic! 👏",
-    "Yes! You guessed the song in `{time}`! Keep shining! 🙌",
-    "Spot on! You really know your stuff—guessed it in `{time}`! 🎧",
-    "You’re on fire! 🚀 You got it in `{time}`! 🔥",
-    "Well done! You have such a great ear for music—guessed it in `{time}`! 🎉",
-    "Oh wow, you got it right in `{time}`! 🎶 You're really impressive! 🥳",
-    "Fantastic! You guessed it in `{time}`! You're totally in sync with the music! 🌈"
+    "Yay! You got it in `{time}`! 🎉 You've gained `{points}` points! 🎶",
+    "Wow, you nailed it in just `{time}`! 🎊 That's amazing! You've earned `{points}` points! 🎤",
+    "You’re so good at this! 🌟 You guessed it in `{time}` and gained `{points}` points! 🎵",
+    "Awesome! You did it in `{time}`! This song is truly a classic! You've earned `{points}` points! 👏",
+    "Yes! You guessed the song in `{time}`! Keep shining! You've gained `{points}` points! 🙌",
+    "Spot on! You really know your stuff—guessed it in `{time}` and earned `{points}` points! 🎧",
+    "You’re on fire! 🚀 You got it in `{time}` and gained `{points}` points! 🔥",
+    "Well done! You have such a great ear for music—guessed it in `{time}` and earned `{points}` points! 🎉",
+    "Oh wow, you got it right in `{time}`! 🎶 You're really impressive! You've gained `{points}` points! 🥳",
+    "Fantastic! You guessed it in `{time}`! You're totally in sync with the music and gained `{points}` points! 🌈"
 ]
 
 class InteractionView(discord.ui.View):
@@ -190,12 +190,20 @@ class Player(VoiceProtocol):
 
             if result:
                 self.guesser = message.author
-                await message.reply(random.choice(MESSAGES).format(time = func.convert_seconds(time_used)))
-                await self.invoke_controller()
-
                 at = self.current.average_time
                 points = 2 + (0 if at * (1 - .3) < time_used < at * (1 + .3) else 1 if time_used < at else -1)
-                await func.update_user(message.author.id, {"$inc": {"game_state.music_game.points": points}})
+                query = func.update_quest_progress(
+                    await func.get_user(message.author.id),
+                    "PLAY_MUSIC_QUIZ_GAME",
+                    progress=points,
+                    query={"$inc": {"game_state.music_game.points": points}}
+                )
+                await func.update_user(message.author.id, query)
+
+                func.logger.info(f"User {message.author.name}({message.author.id}) earned {points} points for answering in {time_used} seconds.")
+
+                await message.reply(random.choice(MESSAGES).format(time=func.convert_seconds(time_used), points=points))
+                await self.invoke_controller()
 
                 await asyncio.sleep(10)
                 self.stop()

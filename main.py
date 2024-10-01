@@ -1,4 +1,3 @@
-import discord, os, iufi
 import discord, os, iufi, logging
 import functions as func
 
