@@ -56,6 +56,7 @@ class Settings:
         self.RANK_BASE: Dict[Dict, Dict[str, Any]] = {}
         self.MATCH_GAME_SETTINGS: Dict[str, Dict[str, Any]] = {}
         self.ADMIN_IDS: List[int] = []
+        self.OPUS_PATH: str = ""
         self.LOGGING: Dict[Union[str, Dict[str, Union[str, bool]]]] = {}
 
     def load(self):
@@ -81,6 +82,7 @@ class Settings:
         self.RANK_BASE = settings.get("RANK_BASE")
         self.MATCH_GAME_SETTINGS = settings.get("MATCH_GAME_SETTINGS")
         self.ADMIN_IDS = settings.get("ADMIN_IDS")
+        self.OPUS_PATH = settings.get("OPUS_PATH")
         self.LOGGING = settings.get("LOGGING", {})
 
 tokens: TOKEN = TOKEN()

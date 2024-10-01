@@ -100,7 +100,7 @@ class IUFI(commands.Bot):
 
         await iufi.MusicPool.fetch_data()
         if not discord.opus.is_loaded():
-            discord.opus.load_opus("/opt/homebrew/Cellar/opus/1.5.2/lib/libopus.dylib")
+            discord.opus.load_opus(func.settings.OPUS_PATH)
 
         for module in os.listdir(os.path.join(func.ROOT_DIR, 'cogs')):
             if module.endswith(".py"):
