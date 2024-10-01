@@ -19,8 +19,8 @@ class IUFI(commands.Bot):
             return False
 
         if message.channel.id == func.settings.MUSIC_TEXT_CHANNEL:
-            player: iufi.Player = message.guild.voice_client
-            if player:
+            player: iufi.Player = iufi.MusicPool.get_player(message.guild.id)
+            if player and message.author in player.channel.members:
                 await player.check_answer(message)
 
         if message.channel.id == 1147547592469782548:
@@ -100,7 +100,9 @@ class IUFI(commands.Bot):
             iufi.QuestionPool.add_question(iufi.Question(**question_doc))
 
         await iufi.MusicPool.fetch_data()
-        
+        if not discord.opus.is_loaded():
+            discord.opus.load_opus("/opt/homebrew/Cellar/opus/1.5.2/lib/libopus.dylib")
+
         for module in os.listdir(os.path.join(func.ROOT_DIR, 'cogs')):
             if module.endswith(".py"):
                 await self.load_extension(f"cogs.{module[:-3]}")

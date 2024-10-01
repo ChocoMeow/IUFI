@@ -5,12 +5,11 @@ import functions as func
 from collections import Counter
 
 from typing import (
+    Optional,
+    TYPE_CHECKING,
     Dict,
-    Any
-)
-
-from discord import (
-    FFmpegPCMAudio
+    Any,
+    List
 )
 
 from random import (
@@ -33,6 +32,9 @@ from .exceptions import IUFIException, DuplicatedCardError, DuplicatedTagError
 #     Search_Setup
 # )
 
+if TYPE_CHECKING:
+    from .music import Player
+
 DROP_RATES = {
     'common': .93,
     'rare': .05,
@@ -49,10 +51,10 @@ FFMPEG_OPTIONS: Dict[str, str] = {
 class CardPool:
     _cards: dict[str, Card] = {}
     _tag_cards: dict[str, Card] = {}
-    _available_cards: dict[str, list[Card]] = {
+    _available_cards: dict[str, List[Card]] = {
         category: [] for category in DROP_RATES
     }
-    _match_game_cards: list[Card] = []
+    _match_game_cards: List[Card] = []
 
     #DeepSearch
     # search_image: Search_Setup | None = None
@@ -128,7 +130,7 @@ class CardPool:
         return card
     
     @classmethod
-    def roll(cls, amount: int = 3, *, included: list[str] = None, avoid: list[str] = None, luck_rates: float = None) -> list[Card]:
+    def roll(cls, amount: int = 3, *, included: List[str] = None, avoid: List[str] = None, luck_rates: float = None) -> List[Card]:
         results = included if included else []
 
         drop_rates = DROP_RATES.copy()
@@ -150,12 +152,12 @@ class CardPool:
         return cards
 
     @classmethod
-    def get_random_cards_for_match_game(cls, amount: int = 3) -> list[Card]:
+    def get_random_cards_for_match_game(cls, amount: int = 3) -> List[Card]:
         cards = sample(cls._match_game_cards,amount)
         return cards
 
 class QuestionPool:
-    _questions: list[Question] = []
+    _questions: List[Question] = []
 
     @classmethod
     def add_question(cls, question: Question) -> None:
@@ -174,7 +176,7 @@ class QuestionPool:
         return None
 
     @classmethod
-    def get_question_distribution_by_rank(cls, rank: str) -> list[tuple[str, int]]:
+    def get_question_distribution_by_rank(cls, rank: str) -> List[tuple[str, int]]:
         rank_details = func.settings.RANK_BASE.get(rank)
         if not rank_details:
             raise IUFIException(f"Rank '{rank}' not found!")
@@ -182,11 +184,11 @@ class QuestionPool:
         return rank_details["questions"]
 
     @classmethod
-    def get_question(cls, rank: str, number: int) -> list[Question]:
+    def get_question(cls, rank: str, number: int) -> List[Question]:
         if rank not in QUIZ_LEVEL_BASE.keys():
             raise IUFIException(f"{rank} is not found in the quiz!")
         
-        questions: dict[str, list[Question]] = {
+        questions: dict[str, List[Question]] = {
             level: [q for q in cls._questions if q.level == level]
             for level in QUIZ_LEVEL_BASE.keys()
         }
@@ -197,8 +199,8 @@ class QuestionPool:
         return sample(questions[rank], k=num_to_return)
     
     @classmethod
-    def get_question_by_rank(cls, ranks: list[tuple[str, int]]) -> list[Question]:
-        questions: list[Question] = []
+    def get_question_by_rank(cls, ranks: List[tuple[str, int]]) -> List[Question]:
+        questions: List[Question] = []
         
         for (rank_name, return_num) in ranks:
             if rank_name not in QUIZ_LEVEL_BASE.keys():
@@ -211,15 +213,36 @@ class QuestionPool:
 
 class MusicPool:
 
+    _voice_clients: Dict[int, Player] = {}
     _questions: Dict[str, Track] = {}
 
     @classmethod
+    def get_player(cls, guild_id: int) -> Optional[Player]:
+        player = cls._voice_clients.get(guild_id)
+        if player and not player.voice_client:
+            del cls._voice_clients[guild_id]
+        
+        return cls._voice_clients.get(guild_id)
+    
+    @classmethod
+    async def add_player(cls, guild_id: int, player: Player) -> None:
+        existing_player = cls.get_player(guild_id=guild_id)
+        if existing_player:
+            await existing_player.disconnect()
+        
+        if player is not None:
+            cls._voice_clients[guild_id] = player
+        
+    @classmethod
     async def add_question(cls, data: Dict[str, Any]) -> None:
-        if "yt_data" not in data:
+        is_updated = "yt_data" not in data
+        if is_updated:
             data["yt_data"] = await Track.load_data(data["url"])
 
-        source = FFmpegPCMAudio(source=f"{func.MUSIC_TRACKS_FOLDER}/{data['_id']}.webm", **FFMPEG_OPTIONS)
-        cls._questions[data["_id"]] = Track(source, data=data)
+        # Create track instance and update questions dictionary
+        track = Track(data=data)
+        track.is_updated = is_updated
+        cls._questions[data["_id"]] = track
 
     @classmethod
     async def get_question(cls, id: str) -> Track:
@@ -229,11 +252,17 @@ class MusicPool:
         return cls._questions.get(id)
 
     @classmethod
-    async def get_random_question(cls) -> Track:
+    async def get_random_question(cls, history: List[str]) -> Optional[Track]:
         if not cls._questions:
             await cls.fetch_data()
-        
-        return choice(list(cls._questions.values()))
+
+        # Filter the questions to exclude those in the history
+        available_questions = [q for q in cls._questions.values() if q.id not in history]
+
+        if not available_questions:
+            return None
+
+        return choice(available_questions)
 
     @classmethod
     async def fetch_data(cls) -> None:

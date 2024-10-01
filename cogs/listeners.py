@@ -35,7 +35,7 @@ class Listeners(commands.Cog):
             return
         
         joined_voice_channel: bool = (not before.channel and after.channel) or (before.channel != after.channel)
-        player: iufi.Player | None = member.guild.voice_client
+        player: iufi.Player | None = iufi.MusicPool.get_player(member.guild.id)
 
         if joined_voice_channel and after.channel and after.channel.id == func.settings.MUSIC_VOICE_CHANNEL:
             if not player:
@@ -43,7 +43,9 @@ class Listeners(commands.Cog):
                 if check.connect == False or check.speak == False:
                     return
 
-                player: iufi.Player = await after.channel.connect(cls=iufi.Player(self.bot, after.channel), self_deaf=True)
+                player = iufi.Player(self.bot, after.channel)
+                await iufi.MusicPool.add_player(member.guild.id, player)
+                await player.connect(reconnect=True, timeout=30, self_deaf=True)
 
             if not player.is_playing:
                 await player.do_next()

@@ -8,7 +8,6 @@ from io import BytesIO
 from difflib import SequenceMatcher
 
 from discord import (
-    PCMVolumeTransformer,
     FFmpegPCMAudio,
     Member
 )
@@ -489,14 +488,11 @@ class Question:
         
         return 100 - self.correct_rate
 
-class Track(PCMVolumeTransformer):
+class Track():
     def __init__(
         self,
-        source: FFmpegPCMAudio,
         data: Dict[str, Any]
     ):  
-        super().__init__(source)
-
         self.data: Dict[str, Any] = data
         self.is_updated: bool = False
 
@@ -542,13 +538,16 @@ class Track(PCMVolumeTransformer):
             self.data["average_time"] = ((self.data["average_time"] * self.total) + time_used) / (self.total + 1)
 
         current_best_time = self.data["best_record"]["time"]
-        if result and (current_best_time is None or current_best_time > time_used):
+        if result and (not current_best_time or current_best_time > time_used):
             self.data["best_record"]["member"] = member.id
             self.data["best_record"]["time"] = time_used
 
         key = "correct" if result else "wrong"
         self.data[key] = self.data.get(key, 0) + 1
 
+    def source(self, start: float = 0) -> FFmpegPCMAudio:
+        return FFmpegPCMAudio(os.path.join(func.MUSIC_TRACKS_FOLDER, self.id + ".webm"), options=f'-vn -ss {start}')
+    
     @property
     def id(self) -> str:
         return self.data.get("_id")
@@ -559,7 +558,7 @@ class Track(PCMVolumeTransformer):
     
     @property
     def thumbnail(self) -> str:
-        return f"https://i.ytimg.com/vi/{self.id}/maxresdefault.webp"
+        return f"https://i.ytimg.com/vi/{self.id}/maxresdefault.jpg"
     
     @property
     def title(self) -> str:
