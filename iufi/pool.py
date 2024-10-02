@@ -231,14 +231,8 @@ class MusicPool:
         
     @classmethod
     async def add_question(cls, data: Dict[str, Any]) -> None:
-        is_updated = "yt_data" not in data
-        if is_updated:
-            data["yt_data"] = await Track.load_data(data["url"])
-
         # Create track instance and update questions dictionary
-        track = Track(data=data)
-        track.is_updated = is_updated
-        cls._questions[data["_id"]] = track
+        cls._questions[data["_id"]] = Track(data=data)
 
     @classmethod
     async def get_question(cls, id: str) -> Track:

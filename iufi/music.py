@@ -128,12 +128,15 @@ class Player(VoiceProtocol):
             if not track:
                 return await self.teardown()
 
+            if not track.is_loaded:
+                await track.load_data()
+
             # Determine a random start time within the track's duration
-            start_time = random.uniform(track.duration * 0.2, track.duration * 0.8)
+            start_time = random.uniform(track.duration * 0.2, track.duration * 0.6)
 
             # Set the current track and play it
             self._current = track
-            self.voice_client.play(track.source(start_time), after=lambda e: self.bot.loop.create_task(self.do_next()))
+            self.voice_client.play(await track.source(start_time), after=lambda e: self.bot.loop.create_task(self.do_next()))
             
             # Update guesser, history and track usage time
             self.guesser = None
@@ -143,6 +146,8 @@ class Player(VoiceProtocol):
             self.skip_votes.clear()
 
             await self.invoke_controller()
+
+            func.logger.info(f"Music Quiz is now playing: {track.title}")
 
         except Exception as e:
             func.logger.error("Error in do_next", exc_info=e)
@@ -225,14 +230,14 @@ class Player(VoiceProtocol):
         
         if not self.guesser:
             title = "What song do you think is on right now?"
-            description = "```📀 Song Title: ???\n🖼️ Album: ??\n✅ Correct: ??%\n⏱ Avg Time: ??s\n🏅 Record: ??:??s (????)```"
+            description = "```📀 Song Title: ???\n🎤 Singer: ??\n🖼️ Album: ??\n✅ Correct: ??%\n⏱ Avg Time: ??s\n🏅 Record: ??:??s (????)```"
             thumbnail = "https://cdn.discordapp.com/attachments/1183364758175498250/1202590915093467208/74961f7708c7871fed5c7bee00e76418.png"
         
         else:
             member_id, best_time = current.best_record
             member_name = member.display_name if (member := self.guild.get_member(member_id)) else "???"
             title = f"{self.guesser.display_name}, You guessed it right!"
-            description = f"**To hear more: [Click Me]({current.url})**\n```📀 Song Title: {current.title}\n\n🖼️ Album: {current.album}\n✅ Correct: {current.correct_rate:.1f}%\n🕓 Avg Time: {func.convert_seconds(current.average_time)}\n🏅 Record: {member_name} ({func.convert_seconds(best_time)})```"
+            description = f"**To hear more: [Click Me]({current.url})**\n```📀 Song Title: {current.title}\n\n🎤 Singer: {', '.join(current.artists)}\n🖼️ Album: {current.album}\n✅ Correct: {current.correct_rate:.1f}%\n🕓 Avg Time: {func.convert_seconds(current.average_time)}\n🏅 Record: {member_name} ({func.convert_seconds(best_time)})```"
             thumbnail = current.thumbnail
 
         embed = Embed(title=title, description=description, color=Color.random())

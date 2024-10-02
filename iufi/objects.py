@@ -406,10 +406,7 @@ class Question:
         if not self.is_updated:
             self.is_updated = True
 
-        if self.total >= 0:
-            self._average_time += time
-        else:
-            self._average_time = ((self._average_time * self.total) + time) / (self.total + 1)
+        self._average_time = ((self._average_time * self.total) + time) / (self.total + 1) if self.total > 0 else time
 
     def update_user(self, user_id: int, answer: str, response_time: float, is_correct: bool = None) -> None:
         if not self.is_updated:
@@ -496,46 +493,54 @@ class Track():
         self.data: Dict[str, Any] = data
         self.is_updated: bool = False
 
-    @classmethod
-    async def load_data(cls, url, *, stream=False) -> Dict[str, Any]:
+    async def load_data(self, *, stream=False) -> Dict[str, Any]:
         try:
             loop = asyncio.get_event_loop()
-            data = await loop.run_in_executor(None, lambda: YTDL.extract_info(url, download=not stream))
-            return {
-                "title": data.get("title", ""),
+            data = await loop.run_in_executor(None, lambda: YTDL.extract_info(self.url, download=not stream))
+            
+            self.data["yt_data"] = {
+                "title": data.get("title", "--"),
                 "duration": data.get("duration", 0),
-                "album": data.get("album", ""),
+                "album": data.get("album", "--"),
                 "artists": data.get("artists", []),
-                "release_year": data.get("release_year", "")
+                "release_year": data.get("release_year", "----")
             }
+            self.is_updated = True
         
         except Exception as e:
             func.logger.info("An exception occurred while loading track info from YouTube.", exc_info=e)
     
-    def check_answer(self, answer: str, threshold: float = .85) -> bool:
+    async def get_audio_file_path(self) -> Optional[str]:
+        for item in os.listdir(func.MUSIC_TRACKS_FOLDER):
+            if os.path.splitext(item)[0] == self.id:
+                return os.path.join(func.MUSIC_TRACKS_FOLDER, item)
+        
+        await self.load_data()
+        return self.get_audio_file_path(self)
+
+    def check_answer(self, answer: str, threshold: float = .9) -> bool:
         answer = answer.lower()
 
-        for correct_answer in self.answers:
-            string1 = set(correct_answer.split())
+        for model_answer in self.answers:
+            model_answer = model_answer.lower()
+
+            string1 = set(model_answer.split())
             string2 = set(answer.split())
             jac_similarity = len(string1 & string2) / len(string1 | string2)
 
-            string1 = correct_answer.replace(" ", "")
+            string1 = model_answer.replace(" ", "")
             string2 = answer.replace(" ", "")
             lev_similarity = Levenshtein.ratio(string1, string2)
             seq_similarity = SequenceMatcher(None, string1, string2).ratio()
 
             if lev_similarity >= threshold or jac_similarity >= threshold or seq_similarity >= threshold:
                 return True
-            return False
+        return False
 
     def update_state(self, member: Member, time_used: float, result: bool) -> None:
         self.is_updated = True
 
-        if self.total >= 0:
-            self.data["average_time"] += time_used
-        else:
-            self.data["average_time"] = ((self.data["average_time"] * self.total) + time_used) / (self.total + 1)
+        self.data["average_time"] = ((self.data["average_time"] * self.total) + time_used) / (self.total + 1) if self.total > 0 else time_used
 
         current_best_time = self.data["best_record"]["time"]
         if result and (not current_best_time or current_best_time > time_used):
@@ -545,8 +550,12 @@ class Track():
         key = "correct" if result else "wrong"
         self.data[key] = self.data.get(key, 0) + 1
 
-    def source(self, start: float = 0) -> FFmpegPCMAudio:
-        return FFmpegPCMAudio(os.path.join(func.MUSIC_TRACKS_FOLDER, self.id + ".webm"), options=f'-vn -ss {start}')
+    async def source(self, start: float = 0) -> FFmpegPCMAudio:
+        return FFmpegPCMAudio(await Track.get_audio_file_path(self), options=f'-vn -ss {start}')
+    
+    @property
+    def is_loaded(self) -> bool:
+        return "yt_data" in self.data
     
     @property
     def id(self) -> str:
