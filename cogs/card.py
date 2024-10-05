@@ -504,9 +504,12 @@ class Card(commands.Cog):
         for card in converted_cards:
             iufi.CardPool.add_available_card(card)
         
-        query = func.update_quest_progress(await func.get_user(ctx.author.id), "UPGRADE_CARD", query={
-            "$pull": {"cards": {"$in": (card_ids := [card.id for card in converted_cards])}}
-        })
+        query = func.update_quest_progress(
+            await func.get_user(ctx.author.id),
+            "UPGRADE_CARD",
+            progress=len(converted_cards), 
+            query={"$pull": {"cards": {"$in": (card_ids := [card.id for card in converted_cards])}}}
+        )
         await func.update_user(ctx.author.id, query)
         await func.update_card(card_ids, {"$set": {"owner_id": None, "tag": None, "frame": None, "last_trade_time": 0}})
         upgraded_stars = upgrade_card.stars + len(converted_cards)
