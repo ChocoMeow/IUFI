@@ -10,6 +10,7 @@
     "IGNORE_CHANNEL_IDS": [1004494130874953769, 987354694236131418],
     "GAME_CHANNEL_IDS": [1155772660979093555, 1155772719909044224, 1155772738858913792, 1155772756730859580],
     "ADMIN_IDS": [605776164744724512, 705783356767338648],
+    "OPUS_PATH": "",
     "MUSIC_NODE": {
         "host": "127.0.0.1",
         "port": 2333,
@@ -68,6 +69,12 @@
             "amount": 5,
             "rewards": [["🍬", "candies", [10, 20]]],
             "type": "QUIZ"
+        },
+        "PLAY_MUSIC_QUIZ_GAME": {
+            "title": "Earn 50 points in music quiz",
+            "amount": 50,
+            "rewards": [["🍬", "candies", [10, 20]]],
+            "type": "MUSIC_QUIZ"
         },
         "PLAY_MATCH_GAME_LVL_1": {
             "title": "Play level 1 match game 5 times",
@@ -160,6 +167,12 @@
             "amount": 50,
             "rewards": [["🍬", "candies", [100, 200]]],
             "type": "QUIZ"
+        },
+        "PLAY_MUSIC_QUIZ_GAME": {
+            "title": "Earn 200 points in music quiz",
+            "amount": 200,
+            "rewards": [["🍬", "candies", [100, 200]]],
+            "type": "MUSIC_QUIZ"
         },
         "PLAY_MATCH_GAME_LVL_1": {
             "title": "Play level 1 match game 50 times",
@@ -381,16 +394,6 @@
                 "4": ["roll.legendary", 1],
                 "5": [["potions.speed_iii", 1], ["potions.luck_iii", 1]]
             }
-        }
-    },
-    "TRACK_BASE": {
-        "correct": 0,
-        "wrong": 0,
-        "average_time": 0,
-        "likes": 0,
-        "best_record": {
-            "member": null,
-            "time": null
         }
     },
     "MATCH_GAME_SETTINGS": {

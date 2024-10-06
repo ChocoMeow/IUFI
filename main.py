@@ -1,4 +1,3 @@
-import discord, os, iufi
 import discord, os, iufi, logging
 import functions as func
 
@@ -19,8 +18,8 @@ class IUFI(commands.Bot):
             return False
 
         if message.channel.id == func.settings.MUSIC_TEXT_CHANNEL:
-            player: iufi.Player = message.guild.voice_client
-            if player:
+            player: iufi.Player = iufi.MusicPool.get_player(message.guild.id)
+            if player and message.author in player.channel.members:
                 await player.check_answer(message)
 
         if message.channel.id == 1147547592469782548:
@@ -57,7 +56,7 @@ class IUFI(commands.Bot):
             await func.MONGO_DB.server_info()
             if db_name not in await func.MONGO_DB.list_database_names():
                 raise Exception(f"{db_name} does not exist in your mongoDB!")
-            func.logger.info("Successfully connected to MongoDB!")
+            func.logger.info(f"Successfully connected to [{db_name}] MongoDB!")
 
         except Exception as e:
             raise Exception("Not able to connect MongoDB! Reason:", e)
@@ -98,6 +97,10 @@ class IUFI(commands.Bot):
 
         async for question_doc in func.QUESTIONS_DB.find():
             iufi.QuestionPool.add_question(iufi.Question(**question_doc))
+
+        await iufi.MusicPool.fetch_data()
+        if not discord.opus.is_loaded():
+            discord.opus.load_opus(func.settings.OPUS_PATH)
 
         for module in os.listdir(os.path.join(func.ROOT_DIR, 'cogs')):
             if module.endswith(".py"):

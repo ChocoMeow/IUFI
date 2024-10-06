@@ -21,6 +21,10 @@ from dotenv import load_dotenv
 
 ROOT_DIR = os.path.dirname(os.path.abspath(__file__))
 
+MUSIC_TRACKS_FOLDER = os.path.join(ROOT_DIR, 'musicTracks')
+if not os.path.exists(MUSIC_TRACKS_FOLDER):
+    os.makedirs(MUSIC_TRACKS_FOLDER)
+
 class TOKEN:
     def __init__(self) -> None:
         load_dotenv()
@@ -50,9 +54,9 @@ class Settings:
         self.FRAMES_BASE: Dict[str, List[str, str]] = {}
         self.POTIONS_BASE: Dict[str, Union[str, Dict[str, float]]] = {}
         self.RANK_BASE: Dict[Dict, Dict[str, Any]] = {}
-        self.TRACK_BASE: Dict[str, Any] = {}
         self.MATCH_GAME_SETTINGS: Dict[str, Dict[str, Any]] = {}
         self.ADMIN_IDS: List[int] = []
+        self.OPUS_PATH: str = ""
         self.LOGGING: Dict[Union[str, Dict[str, Union[str, bool]]]] = {}
 
     def load(self):
@@ -76,9 +80,9 @@ class Settings:
         self.FRAMES_BASE = settings.get("FRAMES_BASE")
         self.POTIONS_BASE = settings.get("POTIONS_BASE")
         self.RANK_BASE = settings.get("RANK_BASE")
-        self.TRACK_BASE = settings.get("TRACK_BASE")
         self.MATCH_GAME_SETTINGS = settings.get("MATCH_GAME_SETTINGS")
         self.ADMIN_IDS = settings.get("ADMIN_IDS")
+        self.OPUS_PATH = settings.get("OPUS_PATH")
         self.LOGGING = settings.get("LOGGING", {})
 
 tokens: TOKEN = TOKEN()

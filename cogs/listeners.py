@@ -1,4 +1,4 @@
-import discord, iufi, asyncio
+import discord, iufi
 import functions as func
 
 from discord.ext import commands
@@ -8,9 +8,6 @@ class Listeners(commands.Cog):
         self.bot: commands.Bot = bot
         self.emoji: str = ""
         self.invisible: bool = True
-        
-        self.iufi: iufi.NodePool = iufi.NodePool()
-        bot.loop.create_task(self.start_nodes())
 
     @commands.Cog.listener()
     async def on_member_ban(self, guild: discord.Guild, member: discord.Member) -> None:
@@ -32,43 +29,13 @@ class Listeners(commands.Cog):
         
         func.logger.info(f"User {member.name}({member.id}) has been banned from {guild.name}({guild.id}). All their cards will be returned to the card pool.")
 
-    async def start_nodes(self) -> None:
-        """Connect and intiate nodes."""
-        await self.bot.wait_until_ready()
-        
-        try:
-            await self.iufi.create_node(
-                bot = self.bot,
-                **func.settings.MUSIC_NODE
-            )
-            
-        except Exception as e:
-            func.logger.error(f'Node DEFAULT is not able to connect!', exc_info=e)
-
-    @commands.Cog.listener()
-    async def on_iufi_track_end(self, player: iufi.Player, track, _):
-        await player.do_next()
-
-    @commands.Cog.listener()
-    async def on_iufi_track_stuck(self, player: iufi.Player, track, _):
-        await asyncio.sleep(10)
-        await player.do_next()
-
-    @commands.Cog.listener()
-    async def on_iufi_track_exception(self, player: iufi.Player, track, error: dict):
-        try:
-            player._track_is_stuck = True
-            await player.text_channel.send(f"{error['message']}! The next song will begin in the next 5 seconds.", delete_after=10)
-        except:
-            pass
-    
     @commands.Cog.listener()
     async def on_voice_state_update(self, member: discord.Member, before: discord.VoiceState, after: discord.VoiceState) -> None:
         if member.bot:
             return
         
         joined_voice_channel: bool = (not before.channel and after.channel) or (before.channel != after.channel)
-        player: iufi.Player | None = member.guild.voice_client
+        player: iufi.Player | None = iufi.MusicPool.get_player(member.guild.id)
 
         if joined_voice_channel and after.channel and after.channel.id == func.settings.MUSIC_VOICE_CHANNEL:
             if not player:
@@ -76,7 +43,9 @@ class Listeners(commands.Cog):
                 if check.connect == False or check.speak == False:
                     return
 
-                player: iufi.Player = await after.channel.connect(cls=iufi.Player(self.bot, after.channel))
+                player = iufi.Player(self.bot, after.channel)
+                await iufi.MusicPool.add_player(member.guild.id, player)
+                await player.connect(reconnect=True, timeout=30, self_deaf=True)
 
             if not player.is_playing:
                 await player.do_next()
