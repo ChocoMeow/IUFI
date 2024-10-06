@@ -17,7 +17,7 @@ from discord import (
     Guild,
     Embed,
     Member,
-    Color,
+    Color
 )
 
 from .objects import Track
@@ -42,7 +42,7 @@ class InteractionView(discord.ui.View):
         super().__init__(timeout=timeout)
 
         self.player: Player = player
-        self.likes: list[int] = []
+        self.likes = set()
 
     def update_btn(self, btn_name: str, disabled: bool) -> None:
         for child in self.children:
@@ -58,12 +58,13 @@ class InteractionView(discord.ui.View):
     
     @discord.ui.button(emoji="❤️")
     async def love(self, interaction: discord.Interaction, button: discord.ui.Button):
-        if interaction.user.id in self.likes:
-            self.likes.append(interaction.user.id)
-            return await interaction.response.send_message("You have already liked this song!", ephemeral=True)
-        
         await interaction.response.defer()
+
         current = self.player.current
+        if interaction.user in self.likes or not current:
+            return
+        
+        self.likes.add(interaction.user)
         if current:
             current.data["likes"] += 1
 
