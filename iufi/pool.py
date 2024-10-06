@@ -270,7 +270,22 @@ class MusicPool:
                 track.is_updated = False
 
     @classmethod
-    async def reflesh(cls) -> None:
+    async def reset(cls) -> None:
+        await func.MUSIC_DB.update_many({}, {"$set": {
+            "correct": 0,
+            "wrong": 0,
+            "average_time": 0,
+            "likes": 0,
+            "best_record": {
+                "member": None,
+                "time": 0
+            }
+        }})
+        cls._questions.clear()
+        await cls.fetch_data()
+
+    @classmethod
+    async def refresh(cls) -> None:
         await cls.save()
         cls._questions.clear()
         await cls.fetch_data()
