@@ -205,8 +205,12 @@ class Info(commands.Cog):
 
     @commands.command(aliases=["h"])
     async def help(self, ctx: commands.Context, *, command: str = None):
-        "Lists all the commands in IUFI."
-
+        """Lists all the commands in IUFI.
+        
+        **Example:**
+        qhelp roll
+        qh roll
+        """
         if command:
             command: commands.Command = self.bot.get_command(command)
             if command and not command.hidden:

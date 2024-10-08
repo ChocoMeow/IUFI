@@ -21,7 +21,12 @@ class Gameplay(commands.Cog):
     @commands.command(aliases=["r"])
     @commands.cooldown(1, 5, commands.BucketType.user)
     async def roll(self, ctx: commands.Context, *, tier: str = None):
-        """Rolls a set of photocards for claiming."""
+        """Rolls a set of photocards for claiming.
+
+        **Exampls:**
+        qroll
+        qr rare
+        """
         user = await func.get_user(ctx.author.id)
         if not tier and (retry := user["cooldown"]["roll"]) > time.time():
             return await ctx.reply(f"{ctx.author.mention} your next roll is <t:{round(retry)}:R>", delete_after=10)
@@ -66,7 +71,12 @@ class Gameplay(commands.Cog):
 
     @commands.command(aliases=["mg"])
     async def game(self, ctx: commands.Context, level: str):
-        """IUFI Matching game."""
+        """IUFI Matching game.
+
+        **Exampls:**
+        qgame 1
+        qmg 2
+        """
         if level not in (levels := func.settings.MATCH_GAME_SETTINGS.keys()):
             return await ctx.reply(f"Invalid level selection! Please select a valid level: `{', '.join(levels)}`")
 
@@ -91,7 +101,12 @@ class Gameplay(commands.Cog):
 
     @commands.command(aliases=["q"])
     async def quiz(self, ctx: commands.Context):
-        """IUFI Quiz"""
+        """IUFI Quiz
+        
+        **Exampls:**
+        qquiz
+        qq
+        """
         # Fetch the user data
         user = await func.get_user(ctx.author.id)
 
@@ -128,7 +143,12 @@ class Gameplay(commands.Cog):
 
     @commands.command(aliases=["cd"])
     async def cooldown(self, ctx: commands.Context):
-        """Shows all your cooldowns."""
+        """Shows all your cooldowns.
+
+        **Exampls:**
+        qcooldown
+        qcd
+        """
         user = await func.get_user(ctx.author.id)
 
         cooldown: dict[str, float] = user.get("cooldown", {})
@@ -149,7 +169,12 @@ class Gameplay(commands.Cog):
 
     @commands.command(aliases=["s"])
     async def shop(self, ctx: commands.Context):
-        """Brings up the IUFI shop."""
+        """Brings up the IUFI shop.
+
+        **Exampls:**
+        qshop
+        qs
+        """
         view = ShopView(ctx.author)
         view.message = await ctx.reply(embed=await view.build_embed(), view=view)
 

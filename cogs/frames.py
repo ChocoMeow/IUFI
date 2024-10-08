@@ -12,7 +12,12 @@ class Frames(commands.Cog):
         
     @commands.command(aliases=["sf"])
     async def setframe(self, ctx: commands.Context, card_id: str):
-        """Sets the frame for the photocard. Both card and frame can be identified by id or given tag."""
+        """Sets the frame for the photocard. Both card and frame can be identified by id or given tag.
+
+        **Exampls:**
+        qsetframe 01
+        qsf 01
+        """
         card = iufi.CardPool.get_card(card_id)
         if not card:
             return await ctx.reply("The card was not found. Please try again.")
@@ -32,7 +37,12 @@ class Frames(commands.Cog):
         
     @commands.command(aliases=["sfl"])
     async def setframelast(self, ctx: commands.Context):
-        """Sets the frame for the last photocard. Frame can be identified by its id or given tag."""
+        """Sets the frame for the last photocard. Frame can be identified by its id or given tag.
+        
+        **Exampls:**
+        qsetframelast
+        qsfl
+        """
         user = await func.get_user(ctx.author.id)  
         if not user["cards"]:
             return await ctx.reply(f"**{ctx.author.mention} you have no photocards.**", delete_after=5)
@@ -57,7 +67,12 @@ class Frames(commands.Cog):
 
     @commands.command(aliases=["rf"])
     async def removeframe(self, ctx: commands.Context, card_id: str):
-        """Removes the frame from the photocard. Card can be identified by its ID or given tag."""
+        """Removes the frame from the photocard. Card can be identified by its ID or given tag.
+        
+        **Exampls:**
+        qremoveframe 01
+        qrf 01
+        """
         card = iufi.CardPool.get_card(card_id)
         if not card:
             return await ctx.reply("The card was not found. Please try again.")

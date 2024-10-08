@@ -11,8 +11,12 @@ class Settings(commands.Cog):
 
     @commands.command(aliases=["tr"])
     async def togglereminder(self, ctx: commands.Context) -> None:
-        """Turns reminders on for your cooldowns. Make sure you are not blocking DMs."""
-
+        """Turns reminders on for your cooldowns. Make sure you are not blocking DMs.
+        
+        **Exampls:**
+        qtogglereminder
+        qtr
+        """
         user = await func.get_user(ctx.author.id)
         toggle = not user.get("reminder", False)
         await func.update_user(ctx.author.id, {"$set": {"reminder": toggle}})

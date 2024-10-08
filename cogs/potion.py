@@ -12,7 +12,12 @@ class Potion(commands.Cog):
     @commands.command(aliases=["up"])
     @commands.cooldown(1, 5, commands.BucketType.user)
     async def usepotion(self, ctx: commands.Context, potion_name: str, level: str):
-        """Use a potion on the user"""
+        """Use a potion on the user
+
+        **Exampls:**
+        qusepotion speed i
+        qup luck ii
+        """
         potion_name, level = potion_name.lower(), level.lower()
 
         if potion_name not in (potions := func.settings.POTIONS_BASE.keys()):

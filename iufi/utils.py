@@ -54,7 +54,7 @@ def gen_cards_view(cards: list[Card | TempCard | None], cards_per_row: int = 3, 
                     output_image.paste(frame, (x, y))
 
             modified_frames.append(output_image)
-        modified_frames[0].save(resized_image_bytes, format="GIF", save_all=True, append_images=modified_frames[1:], loop=0, optimize=False)
+        modified_frames[0].save(resized_image_bytes, format="GIF", save_all=True, append_images=modified_frames, loop=0, duration=100, optimize=False)
     
     else:
         for i, card in enumerate(temp_cards.values()):

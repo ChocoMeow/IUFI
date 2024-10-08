@@ -15,7 +15,12 @@ class Card(commands.Cog):
 
     @commands.command(aliases=["i"])
     async def cardinfo(self, ctx: commands.Context, *, card_ids: str):
-        """Shows the details of a photocard. Card can be identified by its ID or given tag."""
+        """Shows the details of a photocard. Card can be identified by its ID or given tag.
+        
+        **Exampls:**
+        qcardinfo 01
+        qi 01 02 03
+        """
         cards: list[iufi.Card] = []
 
         card_ids = card_ids.split(" ")
@@ -51,7 +56,12 @@ class Card(commands.Cog):
 
     @commands.command(aliases=["il"])
     async def cardinfolast(self, ctx: commands.Context):
-        """Shows the details of your last photocard."""
+        """Shows the details of your last photocard.
+        
+        **Exampls:**
+        qcardinfolast
+        qil
+        """
         user = await func.get_user(ctx.author.id)
 
         if not user["cards"]:
@@ -75,7 +85,12 @@ class Card(commands.Cog):
 
     @commands.command(aliases=["c"])
     async def convert(self, ctx: commands.Context, *, card_ids: str):
-        """Converts the photocards into starcandies. Card can be identified by its ID or given tag. The amount of starcandies received is dependent on the card's rarity."""
+        """Converts the photocards into starcandies. Card can be identified by its ID or given tag. The amount of starcandies received is dependent on the card's rarity.
+
+        **Exampls:**
+        qconcert 01
+        qc 01 02
+        """
         converted_cards: list[iufi.Card] = []
 
         card_ids = card_ids.split(" ")
@@ -106,7 +121,12 @@ class Card(commands.Cog):
 
     @commands.command(aliases=["cl"])
     async def convertlast(self, ctx: commands.Context):
-        """Converts the last photocard of your collection."""
+        """Converts the last photocard of your collection.
+
+        **Exampls:**
+        qconvertlast
+        qcl
+        """
         user = await func.get_user(ctx.author.id)
 
         if not user["cards"]:
@@ -148,7 +168,12 @@ class Card(commands.Cog):
         
     @commands.command(aliases=["ca"])
     async def convertall(self, ctx: commands.Context):
-        """Converts all photocard of your collection."""
+        """Converts all photocard of your collection.
+
+        **Exampls:**
+        qconvertall
+        qca
+        """
         user = await func.get_user(ctx.author.id)
 
         if not user["cards"]:
@@ -195,7 +220,12 @@ class Card(commands.Cog):
     
     @commands.command(aliases=["cm"])
     async def convertmass(self, ctx: commands.Context, *, categorys: str):
-        """Converts photocards that fit the given mode."""
+        """Converts photocards that fit the given mode.
+
+        **Exampls:**
+        qconvertmass notag
+        qcm notag common rare
+        """
         user = await func.get_user(ctx.author.id)
         category_list = categorys.split(" ")
         categories = [func.match_string(category.lower(), set(func.settings.TIERS_BASE.keys()) | {"notag"}) for category in category_list]
@@ -252,7 +282,12 @@ class Card(commands.Cog):
 
     @commands.command(aliases=["st"])
     async def settag(self, ctx: commands.Context, card_id: str, tag: str):
-        """Sets the photocard's tag. Card can be identified by its ID or previous tag."""
+        """Sets the photocard's tag. Card can be identified by its ID or previous tag.
+
+        **Exampls:**
+        qsettag 01 IUISBEST
+        qst 01 IUISBEST
+        """
         tag = func.clean_text(tag, allow_spaces=False)
         if tag and len(tag) > 10:
             return await ctx.reply(content="Please shorten the tag name as it is too long. (No more than 10 chars)")
@@ -277,7 +312,12 @@ class Card(commands.Cog):
 
     @commands.command(aliases=["stl"])
     async def settaglast(self, ctx: commands.Context, tag: str):
-        """Sets the tag of the last photocard in your collection."""
+        """Sets the tag of the last photocard in your collection.
+
+        **Exampls:**
+        qsettaglast IUISBEST
+        qstl IUISBEST
+        """
         tag = func.clean_text(tag, allow_spaces=False)
         if tag and len(tag) > 10:
             return await ctx.reply(content="Please shorten the tag name as it is too long. (No more than 10 chars)")
@@ -305,7 +345,12 @@ class Card(commands.Cog):
 
     @commands.command(aliases=["rt"])
     async def removetag(self, ctx: commands.Context, card_id: str):
-        """Removes the photocard's tag. Card can be identified by its ID or given tag."""
+        """Removes the photocard's tag. Card can be identified by its ID or given tag.
+
+        **Exampls:**
+        qremovetag 01
+        qrt 01
+        """
         card = iufi.CardPool.get_card(card_id)
         if not card:
             return await ctx.reply("The card was not found. Please try again.")
@@ -326,7 +371,12 @@ class Card(commands.Cog):
 
     @commands.command(aliases=["t"])
     async def trade(self, ctx: commands.Context, member: discord.Member, candies: int, *, card_ids: str):
-        """Trades your card(s) with a member."""
+        """Trades your card(s) with a member.
+
+        **Exampls:**
+        qtade IU 10 01
+        qt IU 10 01
+        """
         if member.bot:
             return await ctx.reply("You are not able to trade with a bot.")
         if member == ctx.author:
@@ -369,7 +419,12 @@ class Card(commands.Cog):
 
     @commands.command(aliases=["te"])
     async def tradeeveryone(self, ctx: commands.Context, candies: int, *, card_ids: str):
-        """Trades your card(s) with everyone."""
+        """Trades your card(s) with everyone.
+        
+        **Exampls:**
+        qtradeeveryone 10 01
+        qte 10 01
+        """
         if candies < 0:
             return await ctx.reply("The candy count cannot be set to a negative value.")
 
@@ -408,7 +463,12 @@ class Card(commands.Cog):
 
     @commands.command(aliases=["tl"])
     async def tradelast(self, ctx: commands.Context, member: discord.Member, candies: int):
-        """Trades your last card with a member."""
+        """Trades your last card with a member.
+
+        **Exampls:**
+        qtradelast IU 10
+        qtl IU 10
+        """
         if member.bot:
             return await ctx.reply("You are not able to trade with a bot.")
         if member == ctx.author:
@@ -446,7 +506,12 @@ class Card(commands.Cog):
 
     @commands.command(aliases=["tel"])
     async def tradeeveryonelast(self, ctx: commands.Context, candies: int):
-        """Trades your last card with everyone."""
+        """Trades your last card with everyone.
+
+        **Exampls:**
+        qtradeeveryonelast 10
+        qtel 10
+        """
         if candies < 0:
             return await ctx.reply("The candy count cannot be set to a negative value.")
 
@@ -480,7 +545,12 @@ class Card(commands.Cog):
 
     @commands.command(aliases=["u"])
     async def upgrade(self, ctx: commands.Context, upgrade_card_id: str, *, card_ids: str) -> None:
-        """Use cards of the same type to upgrade your card star."""
+        """Use cards of the same type to upgrade your card star.
+
+        **Exampls:**
+        qupgrade 01 02
+        qu 01 02 03 04 05
+        """
         upgrade_card = iufi.CardPool.get_card(upgrade_card_id)
         if not upgrade_card:
             return await ctx.reply("The card was not found. Please try again.")
