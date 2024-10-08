@@ -114,6 +114,17 @@ class CardPool:
                 func.logger.info(f"Added New Image {new_image}({category}) -> ID: {card_id}")
 
     @classmethod
+    async def refresh(cls, process_new_cards: bool = False) -> None:
+        cls._cards.clear()
+        cls._tag_cards.clear()
+        cls._available_cards.clear()
+        cls._match_game_cards.clear()
+        await cls.fetch_data()
+
+        if process_new_cards:
+            await cls.process_new_cards()
+
+    @classmethod
     def add_available_card(cls, card: Card) -> None:
         card.change_owner()
         cls._available_cards[card.tier[1]].append(card)
@@ -211,6 +222,11 @@ class QuestionPool:
         async for question_doc in func.QUESTIONS_DB.find():
             cls.add_question(Question(**question_doc))
 
+    @classmethod
+    async def refresh(cls) -> None:
+        cls._questions.clear()
+        await cls.fetch_data()
+        
     @classmethod
     def add_question(cls, question: Question) -> None:
         cls._questions.append(question)
