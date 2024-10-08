@@ -247,8 +247,8 @@ class Player(VoiceProtocol):
         return embed
     
     def add_to_history(self, track: Track):
-        """Check if the history exceeds 10 elements"""
-        if len(self._history) >= 1:
+        """Check if the history exceeds 20 elements"""
+        if len(self._history) >= 20:
             self._history.pop(0)  # Remove the oldest element
         self._history.append(track.id)  # Add the new track id
 

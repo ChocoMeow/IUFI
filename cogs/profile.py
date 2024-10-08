@@ -45,7 +45,7 @@ class Profile(commands.Cog):
     async def profile(self, ctx: commands.Context, member: discord.Member = None):
         """Shows the profile of a member. If called without a member, shows your own profile.
 
-        **Exampls:**
+        **Examples:**
         qprofile
         qp IU
         """
@@ -87,7 +87,7 @@ class Profile(commands.Cog):
     async def setbio(self, ctx: commands.Context, *, bio: str = None):
         """Sets your profile bio
 
-        **Exampls:**
+        **Examples:**
         qsetbio IU is the best
         qsb IU is the best
         """
@@ -106,7 +106,7 @@ class Profile(commands.Cog):
     async def main(self, ctx: commands.Context, card_id: str = None):
         """Sets the photocard as your profile display. Card can be identified by its ID or given tag.
 
-        **Exampls:**
+        **Examples:**
         qmain 01
         qm 01
         """
@@ -127,7 +127,7 @@ class Profile(commands.Cog):
     async def mainlast(self, ctx: commands.Context):
         """Sets the last photocard in your collection as your profile display.
 
-        **Exampls:**
+        **Examples:**
         qmainlast
         qml
         """
@@ -152,7 +152,7 @@ class Profile(commands.Cog):
     async def createcollection(self, ctx: commands.Context, name: str):
         """Creates a collection.
 
-        **Exampls:**
+        **Examples:**
         qcreatecollection IU
         qcc IU
         """
@@ -176,7 +176,7 @@ class Profile(commands.Cog):
     async def setcollection(self, ctx: commands.Context, name:str, slot: int, card_id: str = None):
         """Sets a photocard in the given slot [1 to 6] as your collection. Card can be identified by its ID or given tag.
         
-        **Exampls:**
+        **Examples:**
         qsetcollection IU 1 01
         qsc IU 2 04
         """
@@ -208,7 +208,7 @@ class Profile(commands.Cog):
     async def setcollectionlast(self, ctx: commands.Context, name:str, slot: int):
         """Sets your last photocard as a collection in the given slot [1 to 6].
 
-        **Exampls:**
+        **Examples:**
         qsetcollectionlast IU 1
         qscl IU 2
         """
@@ -243,7 +243,7 @@ class Profile(commands.Cog):
     async def removecollection(self, ctx: commands.Context, name: str):
         """Removes the collection.
 
-        **Exampls:**
+        **Examples:**
         qremovecollection IU
         qrc IU
         """
@@ -263,7 +263,7 @@ class Profile(commands.Cog):
     async def showcollection(self, ctx: commands.Context, member: discord.Member = None):
         """Shows the given member's collection photocards. If not specified, shows your own.
 
-        **Exampls:**
+        **Examples:**
         qshowcollection
         qf IU
         """
@@ -282,7 +282,7 @@ class Profile(commands.Cog):
     async def daily(self, ctx: commands.Context):
         """Claims your daily reward.
 
-        **Exampls:**
+        **Examples:**
         qdaily
         qd
         """
@@ -325,7 +325,7 @@ class Profile(commands.Cog):
     async def view(self, ctx: commands.Context):
         """View your photocard collection.
 
-        **Exampls:**
+        **Examples:**
         qview
         qv
         """
@@ -342,7 +342,7 @@ class Profile(commands.Cog):
     async def inventory(self, ctx: commands.Context):
         """Shows the items that you own.
         
-        **Exampls:**
+        **Examples:**
         qinventory
         qin
         """
@@ -371,7 +371,7 @@ class Profile(commands.Cog):
     async def quests(self, ctx: commands.Context):
         """Shows the daily quests
 
-        **Exampls:**
+        **Examples:**
         qquests
         qqu
         """

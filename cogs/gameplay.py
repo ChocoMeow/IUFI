@@ -23,7 +23,7 @@ class Gameplay(commands.Cog):
     async def roll(self, ctx: commands.Context, *, tier: str = None):
         """Rolls a set of photocards for claiming.
 
-        **Exampls:**
+        **Examples:**
         qroll
         qr rare
         """
@@ -73,7 +73,7 @@ class Gameplay(commands.Cog):
     async def game(self, ctx: commands.Context, level: str):
         """IUFI Matching game.
 
-        **Exampls:**
+        **Examples:**
         qgame 1
         qmg 2
         """
@@ -103,7 +103,7 @@ class Gameplay(commands.Cog):
     async def quiz(self, ctx: commands.Context):
         """IUFI Quiz
         
-        **Exampls:**
+        **Examples:**
         qquiz
         qq
         """
@@ -145,7 +145,7 @@ class Gameplay(commands.Cog):
     async def cooldown(self, ctx: commands.Context):
         """Shows all your cooldowns.
 
-        **Exampls:**
+        **Examples:**
         qcooldown
         qcd
         """
@@ -171,7 +171,7 @@ class Gameplay(commands.Cog):
     async def shop(self, ctx: commands.Context):
         """Brings up the IUFI shop.
 
-        **Exampls:**
+        **Examples:**
         qshop
         qs
         """

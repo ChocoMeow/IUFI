@@ -14,7 +14,7 @@ class Frames(commands.Cog):
     async def setframe(self, ctx: commands.Context, card_id: str):
         """Sets the frame for the photocard. Both card and frame can be identified by id or given tag.
 
-        **Exampls:**
+        **Examples:**
         qsetframe 01
         qsf 01
         """
@@ -39,7 +39,7 @@ class Frames(commands.Cog):
     async def setframelast(self, ctx: commands.Context):
         """Sets the frame for the last photocard. Frame can be identified by its id or given tag.
         
-        **Exampls:**
+        **Examples:**
         qsetframelast
         qsfl
         """
@@ -69,7 +69,7 @@ class Frames(commands.Cog):
     async def removeframe(self, ctx: commands.Context, card_id: str):
         """Removes the frame from the photocard. Card can be identified by its ID or given tag.
         
-        **Exampls:**
+        **Examples:**
         qremoveframe 01
         qrf 01
         """

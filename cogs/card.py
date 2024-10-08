@@ -17,7 +17,7 @@ class Card(commands.Cog):
     async def cardinfo(self, ctx: commands.Context, *, card_ids: str):
         """Shows the details of a photocard. Card can be identified by its ID or given tag.
         
-        **Exampls:**
+        **Examples:**
         qcardinfo 01
         qi 01 02 03
         """
@@ -58,7 +58,7 @@ class Card(commands.Cog):
     async def cardinfolast(self, ctx: commands.Context):
         """Shows the details of your last photocard.
         
-        **Exampls:**
+        **Examples:**
         qcardinfolast
         qil
         """
@@ -87,7 +87,7 @@ class Card(commands.Cog):
     async def convert(self, ctx: commands.Context, *, card_ids: str):
         """Converts the photocards into starcandies. Card can be identified by its ID or given tag. The amount of starcandies received is dependent on the card's rarity.
 
-        **Exampls:**
+        **Examples:**
         qconcert 01
         qc 01 02
         """
@@ -123,7 +123,7 @@ class Card(commands.Cog):
     async def convertlast(self, ctx: commands.Context):
         """Converts the last photocard of your collection.
 
-        **Exampls:**
+        **Examples:**
         qconvertlast
         qcl
         """
@@ -170,7 +170,7 @@ class Card(commands.Cog):
     async def convertall(self, ctx: commands.Context):
         """Converts all photocard of your collection.
 
-        **Exampls:**
+        **Examples:**
         qconvertall
         qca
         """
@@ -222,7 +222,7 @@ class Card(commands.Cog):
     async def convertmass(self, ctx: commands.Context, *, categorys: str):
         """Converts photocards that fit the given mode.
 
-        **Exampls:**
+        **Examples:**
         qconvertmass notag
         qcm notag common rare
         """
@@ -284,7 +284,7 @@ class Card(commands.Cog):
     async def settag(self, ctx: commands.Context, card_id: str, tag: str):
         """Sets the photocard's tag. Card can be identified by its ID or previous tag.
 
-        **Exampls:**
+        **Examples:**
         qsettag 01 IUISBEST
         qst 01 IUISBEST
         """
@@ -314,7 +314,7 @@ class Card(commands.Cog):
     async def settaglast(self, ctx: commands.Context, tag: str):
         """Sets the tag of the last photocard in your collection.
 
-        **Exampls:**
+        **Examples:**
         qsettaglast IUISBEST
         qstl IUISBEST
         """
@@ -347,7 +347,7 @@ class Card(commands.Cog):
     async def removetag(self, ctx: commands.Context, card_id: str):
         """Removes the photocard's tag. Card can be identified by its ID or given tag.
 
-        **Exampls:**
+        **Examples:**
         qremovetag 01
         qrt 01
         """
@@ -373,7 +373,7 @@ class Card(commands.Cog):
     async def trade(self, ctx: commands.Context, member: discord.Member, candies: int, *, card_ids: str):
         """Trades your card(s) with a member.
 
-        **Exampls:**
+        **Examples:**
         qtade IU 10 01
         qt IU 10 01
         """
@@ -421,7 +421,7 @@ class Card(commands.Cog):
     async def tradeeveryone(self, ctx: commands.Context, candies: int, *, card_ids: str):
         """Trades your card(s) with everyone.
         
-        **Exampls:**
+        **Examples:**
         qtradeeveryone 10 01
         qte 10 01
         """
@@ -465,7 +465,7 @@ class Card(commands.Cog):
     async def tradelast(self, ctx: commands.Context, member: discord.Member, candies: int):
         """Trades your last card with a member.
 
-        **Exampls:**
+        **Examples:**
         qtradelast IU 10
         qtl IU 10
         """
@@ -508,7 +508,7 @@ class Card(commands.Cog):
     async def tradeeveryonelast(self, ctx: commands.Context, candies: int):
         """Trades your last card with everyone.
 
-        **Exampls:**
+        **Examples:**
         qtradeeveryonelast 10
         qtel 10
         """
@@ -547,7 +547,7 @@ class Card(commands.Cog):
     async def upgrade(self, ctx: commands.Context, upgrade_card_id: str, *, card_ids: str) -> None:
         """Use cards of the same type to upgrade your card star.
 
-        **Exampls:**
+        **Examples:**
         qupgrade 01 02
         qu 01 02 03 04 05
         """

@@ -14,7 +14,7 @@ class Potion(commands.Cog):
     async def usepotion(self, ctx: commands.Context, potion_name: str, level: str):
         """Use a potion on the user
 
-        **Exampls:**
+        **Examples:**
         qusepotion speed i
         qup luck ii
         """

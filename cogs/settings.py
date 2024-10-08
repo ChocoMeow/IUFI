@@ -13,7 +13,7 @@ class Settings(commands.Cog):
     async def togglereminder(self, ctx: commands.Context) -> None:
         """Turns reminders on for your cooldowns. Make sure you are not blocking DMs.
         
-        **Exampls:**
+        **Examples:**
         qtogglereminder
         qtr
         """
