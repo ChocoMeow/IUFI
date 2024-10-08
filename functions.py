@@ -21,6 +21,14 @@ from dotenv import load_dotenv
 
 ROOT_DIR = os.path.dirname(os.path.abspath(__file__))
 
+CARDS_FOLDER = os.path.join(ROOT_DIR, 'images')
+if not os.path.exists(CARDS_FOLDER):
+    os.makedirs(CARDS_FOLDER)
+
+NEW_CARDS_FOLDER = os.path.join(ROOT_DIR, 'newImages')
+if not os.path.exists(NEW_CARDS_FOLDER):
+    os.makedirs(NEW_CARDS_FOLDER)
+
 MUSIC_TRACKS_FOLDER = os.path.join(ROOT_DIR, 'musicTracks')
 if not os.path.exists(MUSIC_TRACKS_FOLDER):
     os.makedirs(MUSIC_TRACKS_FOLDER)

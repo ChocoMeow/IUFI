@@ -22,7 +22,7 @@ class Developer(commands.Cog):
         )
         self.bot.tree.add_command(self.ctx_menu)
         
-    @commands.command()
+    @commands.command(hidden=True)
     @commands.is_owner()
     async def debug(self, ctx: commands.Context):
         """For developer to debug"""

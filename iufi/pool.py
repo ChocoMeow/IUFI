@@ -1,8 +1,10 @@
 from __future__ import annotations
 
+import os
 import functions as func
 
 from collections import Counter
+from random import randint
 
 from typing import (
     Optional,
@@ -62,6 +64,56 @@ class CardPool:
     #     cls.search_image.run_index()
 
     @classmethod
+    async def fetch_data(cls) -> None:
+        # Fetch all card data from the database
+        all_card_data: Dict[str, Any] = {doc["_id"]: doc async for doc in func.CARDS_DB.find()}
+
+        # Process existing cards in the cards folder
+        for category in os.listdir(func.CARDS_FOLDER):
+            if category.startswith("."):
+                continue
+
+            for image in os.listdir(os.path.join(func.CARDS_FOLDER, category)):
+                if image.startswith("."):
+                    continue
+
+                card_id = os.path.splitext(image)[0]
+                card_data = all_card_data.get(card_id, {"_id": card_id})
+
+                # Initialize stars if not present
+                if "stars" not in card_data:
+                    card_data["stars"] = (stars := randint(1, 5))
+                    await func.update_card(card_id, {"$set": {"stars": stars}})
+                cls.add_card(tier=category, **card_data)
+
+    @classmethod
+    async def process_new_cards(cls) -> None:
+        # Process new images in the new cards folder
+        new_images_dir = os.listdir(func.NEW_CARDS_FOLDER)
+        if not new_images_dir:
+            return
+        
+        available_ids = [str(index) for index in range(1, len(cls._cards) + len(new_images_dir) + 1000) if str(index) not in cls._cards]
+        for new_image in new_images_dir:
+            for category in os.listdir(func.CARDS_FOLDER):
+                if not new_image.startswith(category):
+                    continue
+
+                # Get the next available ID
+                card_id = available_ids.pop(0)
+
+                # Move the new image to the cards folder with a new ID
+                new_image_path = os.path.join(func.NEW_CARDS_FOLDER, new_image)
+                target_image_path = os.path.join(func.CARDS_FOLDER, category, f"{card_id}.webp")
+                os.rename(new_image_path, target_image_path)
+
+                # Set initial stars for the new card
+                await func.update_card(card_id, {"$set": {"stars": (stars := randint(1, 5))}}, insert=True)
+                cls.add_card(_id=card_id, tier=category, stars=stars)
+
+                func.logger.info(f"Added New Image {new_image}({category}) -> ID: {card_id}")
+
+    @classmethod
     def add_available_card(cls, card: Card) -> None:
         card.change_owner()
         cls._available_cards[card.tier[1]].append(card)
@@ -100,8 +152,7 @@ class CardPool:
     def add_card(cls, _id: str, tier: str, **kwargs) -> Card:
         card = Card(cls, _id, tier, **kwargs)
         if card.id in cls._cards:
-            return
-            # raise DuplicatedCardError(f"Card {card.id} in {tier} already added into the pool.")
+            raise DuplicatedCardError(f"Card {card.id} in {tier} already added into the pool.")
         
         cls._cards[card.id] = card
         if not card.owner_id:
@@ -156,6 +207,11 @@ class QuestionPool:
     _questions: List[Question] = []
 
     @classmethod
+    async def fetch_data(cls) -> None:
+        async for question_doc in func.QUESTIONS_DB.find():
+            cls.add_question(Question(**question_doc))
+
+    @classmethod
     def add_question(cls, question: Question) -> None:
         cls._questions.append(question)
 
@@ -208,7 +264,6 @@ class QuestionPool:
         return questions
 
 class MusicPool:
-
     _voice_clients: Dict[int, Player] = {}
     _questions: Dict[str, Track] = {}
 
@@ -282,10 +337,8 @@ class MusicPool:
             }
         }})
         cls._questions.clear()
-        await cls.fetch_data()
 
     @classmethod
     async def refresh(cls) -> None:
         await cls.save()
         cls._questions.clear()
-        await cls.fetch_data()

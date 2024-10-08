@@ -209,7 +209,7 @@ class Info(commands.Cog):
 
         if command:
             command: commands.Command = self.bot.get_command(command)
-            if command:
+            if command and not command.hidden:
                 command_str = f"{ctx.prefix}" + (f"{command.parent.qualified_name} " if command.parent else "") + f"{command.name} {command.signature}"
                 description = f"**Usage:**\n```{command_str}```\n"
                 if command.aliases:
@@ -221,7 +221,7 @@ class Info(commands.Cog):
                 return await ctx.reply(embed=embed)
 
         view = HelpView(self.bot, ctx.author, ctx.prefix)
-        view.response = await ctx.reply(embed=view.build_embed(), view=view)
+        await ctx.reply(embed=view.build_embed(), view=view)
 
 async def setup(bot: commands.Bot) -> None:
     await bot.add_cog(Info(bot))
