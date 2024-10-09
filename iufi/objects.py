@@ -120,12 +120,12 @@ class Card(CardObject):
     ):  
         self.id: str = id
         self._tier: str = tier
+        self._frame: str = frame
         self._pool: CardPool = pool
 
         self.owner_id: int = owner_id
         self.stars: int = stars if stars else 0
         self.tag: str = tag
-        self._frame: str = frame
         self.is_gif: bool = False
         self.last_trade_time = last_trade_time or 0
 
