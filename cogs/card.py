@@ -401,7 +401,7 @@ class Card(commands.Cog):
                 cards.append(card)
 
         if len(cards) > 1:
-            image_bytes, image_format = await asyncio.to_thread(iufi.gen_cards_view, cards, max(3, min((len(cards) // 2.5), 8)))
+            image_bytes, image_format = await asyncio.to_thread(iufi.gen_cards_view, cards, max(3, min((len(cards) // 2), 8)))
         else:
             image_bytes, image_format = await asyncio.to_thread(card.image_bytes, True), card.format
 
@@ -445,7 +445,7 @@ class Card(commands.Cog):
                 cards.append(card)
 
         if len(cards) > 1:
-            image_bytes, image_format = await asyncio.to_thread(iufi.gen_cards_view, cards, max(3, min((len(cards) // 2.5), 8)))
+            image_bytes, image_format = await asyncio.to_thread(iufi.gen_cards_view, cards, max(3, min((len(cards) // 2), 8)))
         else:
             image_bytes, image_format = await asyncio.to_thread(card.image_bytes, True), card.format
 
