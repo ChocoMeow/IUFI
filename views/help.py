@@ -12,7 +12,6 @@ class HelpView(discord.ui.View):
         self.author: discord.Member = author
         self.bot: commands.Bot = bot
         self.prefix: str = prefix
-        self.response: discord.Message = None
 
         self.add_item(discord.ui.Button(label='Github', emoji=':github:1098265017268322406', url='https://github.com/ChocoMeow/IUFI'))
         self.add_item(discord.ui.Button(label='Beginner Guide', emoji='📗', url='https://docs.google.com/document/d/1VAD20wZQ56S_wDeMJlwIKn_jImIPuxh2lgy1fn17z0c/edit'))

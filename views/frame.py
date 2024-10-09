@@ -33,7 +33,7 @@ class FrameView(discord.ui.View):
         self.author: discord.Member = author
         self.card: Card = card
 
-        self._og_frame: card.frame[1]
+        self._og_frame: str = card.frame[1]
         self._selected_frame: str = ""
         self._price: int = 0
         self.response: discord.Message = None

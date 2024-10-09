@@ -120,12 +120,12 @@ class Card(CardObject):
     ):  
         self.id: str = id
         self._tier: str = tier
+        self._frame: str = frame
         self._pool: CardPool = pool
 
         self.owner_id: int = owner_id
         self.stars: int = stars if stars else 0
         self.tag: str = tag
-        self._frame: str = frame
         self.is_gif: bool = False
         self.last_trade_time = last_trade_time or 0
 
@@ -236,7 +236,7 @@ class Card(CardObject):
         image = self.image(hide_image_if_no_owner=hide_image_if_no_owner)
 
         if self.is_gif:
-            image[0].save(image_bytes, format="GIF", save_all=True, append_images=image[1:], loop=0, optimize=False)
+            image[0].save(image_bytes, format="GIF", save_all=True, append_images=image, loop=0, duration=100, optimize=False)
         else:
             image.save(image_bytes, format='WEBP')
         image_bytes.seek(0)
@@ -322,7 +322,7 @@ class TempCard(CardObject):
         images = self.image()
 
         if self.is_gif:
-            images[0].save(image_bytes, format="GIF", save_all=True, append_images=images[1:], loop=0, optimize=False)
+            images[0].save(image_bytes, format="GIF", save_all=True, append_images=images, loop=0, duration=100, optimize=False)
         else:
             images.save(image_bytes, format='WEBP')
 
