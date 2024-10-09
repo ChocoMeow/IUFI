@@ -1,4 +1,4 @@
-import discord, os, iufi, logging
+import discord, os, iufi, logging, ctypes, ctypes.util
 import functions as func
 
 from discord.ext import commands
@@ -87,9 +87,13 @@ class IUFI(commands.Bot):
         await iufi.CardPool.process_new_cards()
         await iufi.QuestionPool.fetch_data()
         await iufi.MusicPool.fetch_data()
-        
-        if not discord.opus.is_loaded():
-            discord.opus.load_opus(func.settings.OPUS_PATH)
+
+        try:
+            if not discord.opus.is_loaded():
+                opus_library = ctypes.util.find_library('opus')
+                discord.opus.load_opus(func.settings.OPUS_PATH or opus_library)
+        except Exception as e:
+            func.logger.error("Not able to load opus!", exc_info=e)
 
         # Load cog modules
         for module in os.listdir(os.path.join(func.ROOT_DIR, 'cogs')):
