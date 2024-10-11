@@ -16,9 +16,10 @@ class IUFI(commands.Bot):
 
         # Handle messages in the music text channel
         if message.channel.id == func.settings.MUSIC_TEXT_CHANNEL:
-            player: iufi.Player = iufi.MusicPool.get_player(message.guild.id)
-            if player and message.author in player.channel.members:
-                await player.check_answer(message)
+            if message.content.split(" ")[0].lower() not in ["ql"]:
+                player: iufi.Player = iufi.MusicPool.get_player(message.guild.id)
+                if player and message.author in player.channel.members:
+                    return await player.check_answer(message)
 
         # Handle reactions for a card suggection channel
         if message.channel.id == 1147547592469782548:

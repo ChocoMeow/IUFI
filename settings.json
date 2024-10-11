@@ -440,6 +440,31 @@
             }
         }
     },
+    "MUSIC_GAME_SETTINGS": {
+        "next_song_interval": 15,
+        "GAME_REWARDS": [
+            {
+                "amount": 200,
+                "rewards": [["⚔️", "exp", 10], [["⚡", "potions.speed_i", 1], ["🍀", "potions.luck_i", 1]]]
+            },
+            {
+                "amount": 300,
+                "rewards": [["⚔️", "exp", 50], ["🌸", "roll.rare", 1]]
+            },
+            {
+                "amount": 500,
+                "rewards": [["⚔️", "exp", 70], [["⚡", "potions.speed_ii", 1], ["🍀", "potions.luck_ii", 1]]]
+            },
+            {   
+                "amount": 1000,
+                "rewards": [["⚔️", "exp", 100], ["💎", "roll.epic", 1]]
+            },
+            {   
+                "amount": 5000,
+                "rewards": [["⚔️", "exp", 200], ["👑", "roll.legendary", 1]]
+            }
+        ]
+    },
     "LOGGING": {
         "file": {
             "path": "./logs",

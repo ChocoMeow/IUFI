@@ -318,7 +318,7 @@ class MusicPool:
             await cls.fetch_data()
 
         # Filter the questions to exclude those in the history
-        available_questions = [q for q in cls._questions.values() if q.id not in history]
+        available_questions = [track for id, track in cls._questions.items() if id not in history]
 
         if not available_questions:
             return None
