@@ -41,11 +41,14 @@ MESSAGES = [
 ]
 
 class InteractionView(discord.ui.View):
-    def __init__(self, player, timeout: float = None) -> None:
-        super().__init__(timeout=timeout)
+    def __init__(self, player) -> None:
+        super().__init__(timeout=player.current.duration // 2)
 
         self.player: Player = player
+        self.current: Track = self.player.current
         self.likes = set()
+
+        self.response: Message = None
 
     def update_btn(self, btn_name: str, disabled: bool) -> None:
         for child in self.children:
@@ -53,7 +56,20 @@ class InteractionView(discord.ui.View):
                 child.disabled = disabled
                 return
 
+    async def on_timeout(self) -> None:
+        for child in self.children:
+            child.TextStyle = discord.ButtonStyle.grey
+            child.disabled = True
+        
+        try:
+            await self.response.edit(view=self)
+        except:
+            pass
+
     async def interaction_check(self, interaction: discord.Interaction) -> bool:
+        if self.player.current != self.current:
+            return await interaction.response.defer()
+        
         if interaction.user not in self.player.channel.members:
             await interaction.response.send_message(f"Join {self.player.channel.mention} to play IUFI Music!", ephemeral=True)
             return False
@@ -118,7 +134,6 @@ class Player(VoiceProtocol):
         self._current: Track = None
         self._history: List[str] = []
         self._max_history_size: int = int(len(MusicPool._questions) * .7)
-        self._is_updating: bool = False
         self._is_skipping: bool = False
 
         self.start_guess_time: float = 0
@@ -136,7 +151,7 @@ class Player(VoiceProtocol):
             # Fetch a random track, checking history
             track = await MusicPool.get_random_question(self._history)
             if not track:
-                return await self.teardown()
+                return await self.disconnect()
 
             if not track.is_loaded:
                 await track.load_data()
@@ -146,7 +161,7 @@ class Player(VoiceProtocol):
 
             # Set the current track and play it
             self._current = track
-            self.voice_client.play(await track.source(self.track_start_time), after=lambda e: self.bot.loop.create_task(self.do_next()))
+            self.voice_client.play(await track.source(self.track_start_time), after=lambda e: self.bot.loop.create_task(self.skip_song()))
             
             # Update guesser, history and track usage time
             self.guesser = None
@@ -156,45 +171,14 @@ class Player(VoiceProtocol):
             self.skip_votes.clear()
             self._is_skipping = False
 
-            await self.invoke_controller()
+            view = InteractionView(self)
+            view.response = await self._text_channel.send(embed=self.build_embed(), view=view)
 
             func.logger.info(f"Music Quiz is now playing: {track.title}")
 
         except Exception as e:
             func.logger.error("Error in do_next", exc_info=e)
-
-    async def is_position_fresh(self):
-        try:
-            async for message in self._text_channel.history(limit=5):
-                if message.id == self._message.id:
-                    return True
-        except:
-            pass
-
-        return False
     
-    async def invoke_controller(self) -> None:
-        if self._is_updating or not self.channel or not self._text_channel:
-            return
-        
-        self._is_updating = True
-
-        embed = self.build_embed()
-        view = InteractionView(self)
-        view.update_btn("Skip", self.guesser is not None)
-        
-        if not self._message:
-            self._message = await self._text_channel.send(embed=embed, view=view)
-
-        elif not await self.is_position_fresh():
-            await self._message.delete()
-            self._message = await self._text_channel.send(embed=embed, view=view)
-
-        else:
-            await self._message.edit(embed=embed, view=view)
-
-        self._is_updating = False
-
     async def check_answer(self, message: Message) -> None:
         async with self._lock:
             if not self.current or self.guesser:
@@ -207,7 +191,7 @@ class Player(VoiceProtocol):
             if result:
                 self.guesser = message.author
                 await self.calculate_reward(message, time_used)
-                await self.invoke_controller()
+                await self._text_channel.send(embed=self.build_embed(True))
 
                 if not self._is_skipping and (self.current.duration - self.track_start_time - time_used) > (func.settings.MUSIC_GAME_SETTINGS["next_song_interval"] + 5):
                     self._is_skipping = True
@@ -270,6 +254,12 @@ class Player(VoiceProtocol):
     async def connect(self, *, reconnect: bool, timeout: float, self_deaf: bool = False, self_mute: bool = False) -> None:
         await self.channel.connect(reconnect=reconnect, timeout=timeout, self_deaf=self_deaf, self_mute=self_mute)
 
+    async def skip_song(self) -> None:
+        if not self.guesser:
+            await self._text_channel.send(embed=self.build_embed(True))
+
+        await self.do_next()
+
     async def stop(self, after_seconds: int = None) -> None:
         if not self.voice_client:
             return
@@ -279,26 +269,23 @@ class Player(VoiceProtocol):
         return self.voice_client.stop()
     
     async def teardown(self) -> None:
-        try:
-            await self._message.delete()
-        except:
-            pass
-        await self.voice_client.disconnect()
+        if self.voice_client:
+            await self.voice_client.disconnect()
     
-    def build_embed(self) -> Embed:
+    def build_embed(self, show_answer: bool = False) -> Embed:
         current: Track = self._current
         if not current:
             return
         
-        if not self.guesser:
+        if not show_answer:
             title = "What song do you think is on right now?"
             description = "```📀 Song Title: ???\n🎤 Singer: ??\n🖼️ Album: ??\n✅ Correct: ??%\n⏱ Avg Time: ??s\n🏅 Record: ??:??s (????)```"
             thumbnail = "https://cdn.discordapp.com/attachments/1183364758175498250/1202590915093467208/74961f7708c7871fed5c7bee00e76418.png"
         
         else:
             member_id, best_time = current.best_record
-            member_name = member.display_name if (member := self.guild.get_member(member_id)) else "???"
-            title = f"{self.guesser.display_name}, You guessed it right!"
+            member_name = member.display_name if member_id and (member := self.guild.get_member(member_id)) else "???"
+            title = f"{self.guesser.display_name}, You guessed it right!" if self.guesser else "No one seems to have the answer just yet"
             description = f"**To hear more: [Click Me]({current.url})**\n```📀 Song Title: {current.title}\n\n🎤 Singer: {', '.join(current.artists)}\n🖼️ Album: {current.album}\n✅ Correct: {current.correct_rate:.1f}%\n🕓 Avg Time: {func.convert_seconds(current.average_time)}\n🏅 Record: {member_name} ({func.convert_seconds(best_time)})```"
             thumbnail = current.thumbnail
 
