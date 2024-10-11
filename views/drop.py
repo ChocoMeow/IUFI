@@ -70,7 +70,7 @@ class DropView(discord.ui.View):
                                 f"{self.card.tier[0]} {self.card.tier[1].capitalize()}\n" \
                                 f"{self.card.display_stars}```\n"
             
-            image_bytes, image_format = await asyncio.to_thread(self.card.image_bytes), self.card.format
+            image_bytes, image_format = await self.card.image_bytes(), self.card.format
             embed.set_image(url=f"attachment://image.{self.card.format}")
 
             await self.on_timeout()

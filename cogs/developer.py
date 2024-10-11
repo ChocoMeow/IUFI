@@ -85,7 +85,7 @@ class Developer(commands.Cog):
                     desc += f"{card.display_id} {card.display_tag} {card.display_frame} {card.display_stars} {card.tier[0]}\n"
                 desc += "```"
                 
-                image_bytes, image_format = await asyncio.to_thread(iufi.gen_cards_view, cards, 4)
+                image_bytes, image_format = await iufi.gen_cards_view(cards, 4)
             else:
                 desc = f"```{card.display_id}\n" \
                     f"{card.display_tag}\n" \
@@ -94,7 +94,7 @@ class Developer(commands.Cog):
                     f"{card.display_stars}```\n" \
                     "**Owned by: **" + (f"<@{card.owner_id}>" if card.owner_id else "None")
 
-                image_bytes, image_format = await asyncio.to_thread(card.image_bytes), card.format
+                image_bytes, image_format = await card.image_bytes(), card.format
 
             embed = discord.Embed(title=f"ℹ️ Card Info", description=desc, color=0x949fb8)
             embed.set_image(url=f"attachment://image.{image_format}")

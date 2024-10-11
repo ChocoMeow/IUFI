@@ -58,7 +58,7 @@ class Gameplay(commands.Cog):
             await ctx.reply(f"**Welcome to IUFI! Please have a look at the guide or use `qhelp` to begin.**", view=view)
 
         cards = iufi.CardPool.roll(included=[tier] if tier else None, luck_rates=None if tier else actived_potions.get("luck", None))
-        image_bytes, image_format = await asyncio.to_thread(iufi.gen_cards_view, cards)
+        image_bytes, image_format = await iufi.gen_cards_view(cards)
 
         view = RollView(ctx.author, cards)
         view.message = await ctx.send(

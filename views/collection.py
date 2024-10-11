@@ -19,7 +19,7 @@ class CaptionModal(discord.ui.Modal):
         await interaction.response.defer()
 
         caption = self.children[0].value or ""
-        image_bytes, image_format = await asyncio.to_thread(iufi.gen_cards_view, self.cards, size_rate=1)
+        image_bytes, image_format = await iufi.gen_cards_view(self.cards, size_rate=1)
         if self.cards and (gallery_channel := interaction.guild.get_channel(func.settings.GALLERY_CHANNEL_ID)):
             await gallery_channel.send(
                 content=f"{caption}\nSent by {interaction.user.mention}",
@@ -174,7 +174,7 @@ class CollectionView(discord.ui.View):
             self.cards.append(None)
             
         embed.description += "```"
-        image_bytes, image_format = await asyncio.to_thread(iufi.gen_cards_view, self.cards, size_rate=size_rate)
+        image_bytes, image_format = await iufi.gen_cards_view(self.cards, size_rate=size_rate)
         embed.set_image(url=f"attachment://image.{image_format}")
         image_file = discord.File(image_bytes, filename=f'image.{image_format}')
 

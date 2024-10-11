@@ -205,7 +205,7 @@ class MatchGame(discord.ui.View):
             color=self.embed_color
         )   
 
-        bytes, image_format = await asyncio.to_thread(gen_cards_view, [card for card in self.guessed.values()], cards_per_row=self._data.get("elem_per_row"))
+        bytes, image_format = await gen_cards_view([card for card in self.guessed.values()], cards_per_row=self._data.get("elem_per_row"))
         embed.set_image(url=f"attachment://image.{image_format}")
 
         return embed, discord.File(bytes, filename=f"image.{image_format}")

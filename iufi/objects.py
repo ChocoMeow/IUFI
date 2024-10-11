@@ -78,7 +78,7 @@ class CardObject:
 
         return output
     
-    def _load_image(self, path: str, *, size_rate: float = SIZE_RATE, **kwargs) -> Union[List[Image.Image], Image.Image]:
+    def _load_image(self, path: str, *, size_rate: float = SIZE_RATE) -> Union[List[Image.Image], Image.Image]:
         """Load and process the image"""
         try:
             with Image.open(path) as img:
@@ -102,7 +102,7 @@ class Card(CardObject):
         "_emoji",
         "is_gif",
         "last_trade_time",
-        "_image"
+        "_lock"
     )
 
     _frame_cache: Dict[str, Dict[str, Union[List[Image.Image], Image.Image]]] = {}  # Path to Frame
@@ -130,7 +130,7 @@ class Card(CardObject):
         self.last_trade_time = last_trade_time or 0
 
         self._emoji: str = func.settings.TIERS_BASE.get(self._tier)[0]
-        self._image: Optional[Union[List[Image.Image], Image.Image]] = None
+        self._lock: asyncio.Lock = asyncio.Lock()
 
     def _load_frame(self, image: Image.Image, frame: str = None, *, size_rate: float = SIZE_RATE) -> Image.Image:
         try:
@@ -161,11 +161,8 @@ class Card(CardObject):
         except FileNotFoundError:
             return self._round_corners(image.resize(img_size, Image.LANCZOS))
 
-    def _load_image(self, *, size_rate: float = SIZE_RATE, hide_image_if_no_owner: bool = False) -> Union[list[Image.Image], Image.Image]:
+    def _load_image(self, *, size_rate: float = SIZE_RATE) -> Union[list[Image.Image], Image.Image]:
         """Load and process the image"""
-        if hide_image_if_no_owner and not self.owner_id:
-            return TempCard(f"cover/level{random.randint(1, 3)}.webp").image()
-        
         try:
             image_path = os.path.join(func.ROOT_DIR, "images", self._tier)
 
@@ -208,8 +205,6 @@ class Card(CardObject):
                 
                 self.tag, self._frame, self.last_trade_time = None, None, 0
 
-            self.clear_image_cache()
-
     def change_tag(self, tag: str | None = None) -> None:
         if self.tag == tag:
             return
@@ -222,7 +217,6 @@ class Card(CardObject):
             raise IUFIException("This frame is already assigned to this card.")
         
         self._frame = frame.lower() if frame else None
-        self.clear_image_cache()
 
     def change_stars(self, stars: int) -> None:
         if self.stars != stars:
@@ -230,10 +224,9 @@ class Card(CardObject):
 
             asyncio.create_task(func.update_card(self.id, {"$set": {"stars": stars}}))
 
-    def image_bytes(self, hide_image_if_no_owner: bool = False) -> BytesIO:
+    async def image_bytes(self, hide_image_if_no_owner: bool = False) -> BytesIO:
+        image = await self.image(hide_image_if_no_owner=hide_image_if_no_owner)
         image_bytes = BytesIO()
-
-        image = self.image(hide_image_if_no_owner=hide_image_if_no_owner)
 
         if self.is_gif:
             image[0].save(image_bytes, format="GIF", save_all=True, append_images=image, loop=0, duration=100, optimize=False)
@@ -243,31 +236,14 @@ class Card(CardObject):
 
         return image_bytes
     
-    def image(self, *, size_rate: float = SIZE_RATE, hide_image_if_no_owner: bool = False) -> Image.Image | list[Image.Image]:
+    async def image(self, *, size_rate: float = SIZE_RATE, hide_image_if_no_owner: bool = False) -> Image.Image | list[Image.Image]:
         """Return the image or a list of images based on ownership status."""
-        
-        # Check if the image should be hidden due to no owner
-        if hide_image_if_no_owner and not self.owner_id:
-            return self._load_image(size_rate=size_rate, hide_image_if_no_owner=True)
-        
-        if size_rate != SIZE_RATE:
-            return self._load_image(size_rate=size_rate, hide_image_if_no_owner=hide_image_if_no_owner)
-        
-        # Load the image if it doesn't already exist
-        if not self._image:
-            self._image = self._load_image(size_rate=size_rate, hide_image_if_no_owner=hide_image_if_no_owner)
-        
-        return self._image
-    
-    def clear_image_cache(self) -> None:
-        if self._image:
-            if isinstance(self._image, list):
-                for img in self._image:
-                    img.close()
-            else:
-                self._image.close()
-
-            self._image = None
+        async with self._lock:
+            # Check if the image should be hidden due to no owner
+            if hide_image_if_no_owner and not self.owner_id:
+                return await TempCard(f"cover/level{random.randint(1, 3)}.webp").image(size_rate=size_rate)
+            
+            return await asyncio.to_thread(self._load_image, size_rate=size_rate)
 
     @property
     def cost(self) -> int:
@@ -284,7 +260,11 @@ class Card(CardObject):
 
     @property
     def frame(self) -> tuple[str, str]:
-        return func.settings.FRAMES_BASE.get(self._frame)[0], self._frame
+        frame_emoji = func.settings.FRAMES_BASE.get(self._frame)
+        if frame_emoji:
+            return frame_emoji, self._frame
+        
+        return "None", "None"
 
     @property
     def format(self) -> str:
@@ -315,11 +295,12 @@ class TempCard(CardObject):
     def __init__(self, path: str) -> None:
         super().__init__()
         self._path: str = path
+        self._lock: asyncio.Lock = asyncio.Lock()
 
-    def image_bytes(self) -> BytesIO:
+    async def image_bytes(self) -> BytesIO:
         """Return the image as bytes."""
+        images = await self.image()
         image_bytes = BytesIO()
-        images = self.image()
 
         if self.is_gif:
             images[0].save(image_bytes, format="GIF", save_all=True, append_images=images, loop=0, duration=100, optimize=False)
@@ -329,18 +310,16 @@ class TempCard(CardObject):
         image_bytes.seek(0)
         return image_bytes
     
-    def image(self, *, size_rate: float = SIZE_RATE, hide_image_if_no_owner: bool = False) -> Union[List[Image.Image], Image.Image]:
+    async def image(self, *, size_rate: float = SIZE_RATE, hide_image_if_no_owner: bool = False) -> Union[List[Image.Image], Image.Image]:
         """Load and return the image, caching it by size rate and path."""
-        cache = TempCard._image_cache.setdefault(str(size_rate), {})
-        
-        if self._path not in cache:
-            cache[self._path] = self._load_image(
-                self._path,
-                size_rate=size_rate,
-                hide_image_if_no_owner=hide_image_if_no_owner
-            )
+        async with self._lock:
+            if self._path not in TempCard._image_cache:
+                TempCard._image_cache[self._path] = {}
 
-        return cache[self._path]
+            if size_rate not in TempCard._image_cache[self._path]:
+                TempCard._image_cache[self._path][size_rate] = await asyncio.to_thread(self._load_image, self._path, size_rate=size_rate)
+                
+            return TempCard._image_cache[self._path][size_rate]
     
     @property
     def format(self) -> str:

@@ -70,7 +70,7 @@ class Tasks(commands.Cog):
                 if channel:
                     view = DropView(cards[0])
                     covered_card: iufi.TempCard = iufi.TempCard(f"cover/level{random.randint(1, 3)}.webp")
-                    image_bytes, image_format = await asyncio.to_thread(covered_card.image_bytes), covered_card.format
+                    image_bytes, image_format = await covered_card.image_bytes(), covered_card.format
                     view.message = await channel.send(
                         content=f"**Hurry up! This claim ends in: <t:{round(time.time()) + 70}:R>**",
                         embed=view.build_embed(),
@@ -83,15 +83,12 @@ class Tasks(commands.Cog):
         except Exception as e:
             func.logger.error("An exception occurred in the drop card task.", exc_info=e)
 
-    @tasks.loop(minutes=15.0)
+    @tasks.loop(minutes=30.0)
     async def cache_clear(self):
         await self.bot.wait_until_ready()
 
         try:
             func.USERS_BUFFER.clear()
-
-            for card in iufi.CardPool._cards.values():
-                card.clear_image_cache()
 
             # Syncing Question Data with Database
             for q in iufi.QuestionPool._questions:
