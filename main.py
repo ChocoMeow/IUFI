@@ -1,7 +1,6 @@
-import discord, os, iufi, logging
+import discord, os, iufi, logging, ctypes, ctypes.util
 import functions as func
 
-from random import randint
 from discord.ext import commands
 from motor.motor_asyncio import AsyncIOMotorClient
 from logging.handlers import TimedRotatingFileHandler
@@ -10,18 +9,21 @@ class IUFI(commands.Bot):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
-        self.iufi: iufi.CardPool = iufi.CardPool()
-        self.questions: iufi.QuestionPool = iufi.QuestionPool()
-
     async def on_message(self, message: discord.Message, /) -> None:
+        # Ignore messages from bots or outside of guilds
         if message.author.bot or not message.guild:
             return False
 
+        # Handle messages in the music text channel
         if message.channel.id == func.settings.MUSIC_TEXT_CHANNEL:
+            if message.content.split(" ")[0].lower() not in ["ql"]:
+                return
+            
             player: iufi.Player = iufi.MusicPool.get_player(message.guild.id)
             if player and message.author in player.channel.members:
                 await player.check_answer(message)
 
+        # Handle reactions for a card suggection channel
         if message.channel.id == 1147547592469782548:
             emojis = ()
             for attachment in message.attachments:
@@ -35,16 +37,25 @@ class IUFI(commands.Bot):
             for emoji in emojis:
                 await message.add_reaction(emoji)
 
+        # Check if the channel is allowed for the game
         if message.channel.category_id not in func.settings.ALLOWED_CATEGORY_IDS:
             return False
         
+        # Ignore messages in certain channels
         if message.channel.id in func.settings.IGNORE_CHANNEL_IDS:
             return False
         
+        # Validate commands for a specific channel
         elif message.channel.id == 987354574304190476:
-            if message.content.split(" ")[0].lower() not in ("qi", "qcardinfo", "qil", "qcardinfolast", "qt", "qtl", "qtade", "qtadelast", "qte", "qtradeeveryone", "qtel", "qtradeeveryonelast"):
+            valid_commands = {
+                "qi", "qcardinfo", "qil", "qcardinfolast",
+                "qt", "qtl", "qtade", "qtadelast",
+                "qte", "qtradeeveryone", "qtel", "qtradeeveryonelast"
+            }
+            if message.content.split(" ")[0].lower() not in valid_commands:
                 return False
-            
+        
+        # Process commands normally
         await self.process_commands(message)
 
     async def connect_db(self) -> None:
@@ -52,56 +63,42 @@ class IUFI(commands.Bot):
             raise Exception("MONGODB_NAME and MONGODB_URL can't not be empty in .env")
 
         try:
+            # Establish a connection to the MongoDB server
             func.MONGO_DB = AsyncIOMotorClient(host=db_url, serverSelectionTimeoutMS=5000)
             await func.MONGO_DB.server_info()
+
+            # Check if the specified database exists
             if db_name not in await func.MONGO_DB.list_database_names():
                 raise Exception(f"{db_name} does not exist in your mongoDB!")
+            
             func.logger.info(f"Successfully connected to [{db_name}] MongoDB!")
 
         except Exception as e:
             raise Exception("Not able to connect MongoDB! Reason:", e)
         
+        # Initialize database collections
         func.CARDS_DB = func.MONGO_DB[db_name]["cards"]
         func.USERS_DB = func.MONGO_DB[db_name]["users"]
         func.QUESTIONS_DB = func.MONGO_DB[db_name]["questions"]
         func.MUSIC_DB = func.MONGO_DB[db_name]["musics"]
 
     async def setup_hook(self) -> None:
+        # Connecting to MongoDB
         await self.connect_db()
 
-        all_card_data: dict[str, dict] = {doc["_id"]: doc async for doc in func.CARDS_DB.find()}
-        image_folder = os.path.join(func.ROOT_DIR, 'images')
-
-        for category in os.listdir(image_folder):
-            if category.startswith("."): continue
-            for image in os.listdir(os.path.join(image_folder, category)):
-                card_id = os.path.basename(image).split(".")[0]
-                card_data = all_card_data.get(card_id, {"_id": card_id})
-
-                if "stars" not in card_data:
-                    card_data["stars"] = (stars := randint(1, 5))
-                    await func.update_card(card_id, {"$set": {"stars": stars}}, insert=True)
-                self.iufi.add_card(tier=category, **card_data)
-
-        if len(NEW_IMAGES_DIR := os.listdir(os.path.join(func.ROOT_DIR, "newImages"))):
-            available_ids = [str(index) for index in range(1, 10000) if str(index) not in self.iufi._cards]
-            for new_image in NEW_IMAGES_DIR:
-                for category in os.listdir(image_folder):
-                    if new_image.startswith(category):
-                        card_id = available_ids.pop(0)
-                        os.rename(os.path.join(func.ROOT_DIR, "newImages", new_image), os.path.join(image_folder, category, f"{card_id}.webp"))
-                        await func.update_card(card_id, {"$set": {"stars": (stars := randint(1, 5))}}, insert=True)
-                        self.iufi.add_card(_id=card_id, tier=category, stars=stars)
-
-                        func.logger.info(f"Added New Image {new_image}({category}) -> ID: {card_id}")
-
-        async for question_doc in func.QUESTIONS_DB.find():
-            iufi.QuestionPool.add_question(iufi.Question(**question_doc))
-
+        await iufi.CardPool.fetch_data()
+        await iufi.CardPool.process_new_cards()
+        await iufi.QuestionPool.fetch_data()
         await iufi.MusicPool.fetch_data()
-        if not discord.opus.is_loaded():
-            discord.opus.load_opus(func.settings.OPUS_PATH)
 
+        try:
+            if not discord.opus.is_loaded():
+                opus_library = ctypes.util.find_library('opus')
+                discord.opus.load_opus(func.settings.OPUS_PATH or opus_library)
+        except Exception as e:
+            func.logger.error("Not able to load opus!", exc_info=e)
+
+        # Load cog modules
         for module in os.listdir(os.path.join(func.ROOT_DIR, 'cogs')):
             if module.endswith(".py"):
                 await self.load_extension(f"cogs.{module[:-3]}")
@@ -113,8 +110,9 @@ class IUFI(commands.Bot):
         func.logger.info(f"Bot ID: {self.user.id}")
         func.logger.info("------------------")
         func.logger.info(f"Discord Version: {discord.__version__}")
-        func.logger.info(f"Loaded {len(self.iufi._cards)} images")
-        func.logger.info(f"Loaded {len(self.questions._questions)} questions")
+        func.logger.info(f"Loaded {len(iufi.CardPool._cards)} images")
+        func.logger.info(f"Loaded {len(iufi.QuestionPool._questions)} questions")
+        func.logger.info(f"Loaded {len(iufi.MusicPool._questions)} questions")
 
     async def on_command_error(self, ctx: commands.Context, exception, /) -> None:
         error = getattr(exception, 'original', exception)
@@ -141,14 +139,20 @@ class IUFI(commands.Bot):
 
         elif not issubclass(error.__class__, iufi.IUFIException):
             error = "An unexpected error occurred. Please try again later!"
-            func.logger.error(f"An unexpected error occurred in the `{ctx.command.name}` command on the {ctx.guild.name}({ctx.guild.id}) executed by {ctx.author.name}({ctx.author.id}).", exc_info=exception)
+            func.logger.error(
+                f"An unexpected error occurred in the `{ctx.command.name}` command on the {ctx.guild.name}({ctx.guild.id}) executed by {ctx.author.name}({ctx.author.id}).",
+                exc_info=exception
+            )
            
         try:
             return await ctx.reply(error)
         except:
             pass
 
+# Load IUFI Settings
 func.settings.load()
+
+# Initialize logging settings for the bot to ensure proper monitoring and debugging
 LOG_SETTINGS = func.settings.LOGGING
 if (LOG_FILE := LOG_SETTINGS.get("file", {})).get("enable", True):
     log_path = os.path.abspath(LOG_FILE.get("path", "./logs"))
@@ -165,10 +169,12 @@ if (LOG_FILE := LOG_SETTINGS.get("file", {})).get("enable", True):
         
     logging.getLogger().addHandler(file_handler)
 
+# Configure the Discord intents for the bot
 intents = discord.Intents.default()
 intents.members = True
 intents.message_content = True
 
+# Initialize the bot with specified parameters
 bot = IUFI(
     command_prefix=["q", "Q"],
     help_command=None,
@@ -177,6 +183,7 @@ bot = IUFI(
     case_insensitive=True,
     intents=intents
 )
-  
+
+# Run the bot if this script is executed directly
 if __name__ == "__main__":
     bot.run(token=func.tokens.token, root_logger=True)

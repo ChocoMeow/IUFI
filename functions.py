@@ -21,6 +21,14 @@ from dotenv import load_dotenv
 
 ROOT_DIR = os.path.dirname(os.path.abspath(__file__))
 
+CARDS_FOLDER = os.path.join(ROOT_DIR, 'images')
+if not os.path.exists(CARDS_FOLDER):
+    os.makedirs(CARDS_FOLDER)
+
+NEW_CARDS_FOLDER = os.path.join(ROOT_DIR, 'newImages')
+if not os.path.exists(NEW_CARDS_FOLDER):
+    os.makedirs(NEW_CARDS_FOLDER)
+
 MUSIC_TRACKS_FOLDER = os.path.join(ROOT_DIR, 'musicTracks')
 if not os.path.exists(MUSIC_TRACKS_FOLDER):
     os.makedirs(MUSIC_TRACKS_FOLDER)
@@ -55,6 +63,7 @@ class Settings:
         self.POTIONS_BASE: Dict[str, Union[str, Dict[str, float]]] = {}
         self.RANK_BASE: Dict[Dict, Dict[str, Any]] = {}
         self.MATCH_GAME_SETTINGS: Dict[str, Dict[str, Any]] = {}
+        self.MUSIC_GAME_SETTINGS: Dict[str, Any] = {}
         self.ADMIN_IDS: List[int] = []
         self.OPUS_PATH: str = ""
         self.LOGGING: Dict[Union[str, Dict[str, Union[str, bool]]]] = {}
@@ -81,6 +90,7 @@ class Settings:
         self.POTIONS_BASE = settings.get("POTIONS_BASE")
         self.RANK_BASE = settings.get("RANK_BASE")
         self.MATCH_GAME_SETTINGS = settings.get("MATCH_GAME_SETTINGS")
+        self.MUSIC_GAME_SETTINGS = settings.get("MUSIC_GAME_SETTINGS")
         self.ADMIN_IDS = settings.get("ADMIN_IDS")
         self.OPUS_PATH = settings.get("OPUS_PATH")
         self.LOGGING = settings.get("LOGGING", {})

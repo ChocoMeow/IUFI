@@ -43,7 +43,12 @@ class Profile(commands.Cog):
 
     @commands.command(aliases=["p"])
     async def profile(self, ctx: commands.Context, member: discord.Member = None):
-        """Shows the profile of a member. If called without a member, shows your own profile."""
+        """Shows the profile of a member. If called without a member, shows your own profile.
+
+        **Examples:**
+        qprofile
+        qp IU
+        """
         if not member:
             member = ctx.author
         
@@ -74,13 +79,18 @@ class Profile(commands.Cog):
         card = iufi.CardPool.get_card(user["profile"]["main"])
         if card and card.owner_id == user["_id"]:
             embed.set_thumbnail(url=f"attachment://image.{card.format}")
-            return await ctx.reply(file=discord.File(await asyncio.to_thread(card.image_bytes), filename=f"image.{card.format}"), embed=embed)
+            return await ctx.reply(file=discord.File(await card.image_bytes(), filename=f"image.{card.format}"), embed=embed)
         
         await ctx.reply(embed=embed)
 
     @commands.command(aliases=["sb"])
     async def setbio(self, ctx: commands.Context, *, bio: str = None):
-        """Sets your profile bio"""
+        """Sets your profile bio
+
+        **Examples:**
+        qsetbio IU is the best
+        qsb IU is the best
+        """
         bio = func.clean_text(bio)
         if bio and len(bio) > 30:
             return await ctx.reply(content="Please shorten the bio as it is too long. (No more than 30 chars)")
@@ -94,7 +104,12 @@ class Profile(commands.Cog):
     
     @commands.command(aliases=["m"])
     async def main(self, ctx: commands.Context, card_id: str = None):
-        """Sets the photocard as your profile display. Card can be identified by its ID or given tag."""
+        """Sets the photocard as your profile display. Card can be identified by its ID or given tag.
+
+        **Examples:**
+        qmain 01
+        qm 01
+        """
         if card_id:
             card = iufi.CardPool.get_card(card_id)
             if not card:
@@ -110,7 +125,12 @@ class Profile(commands.Cog):
 
     @commands.command(aliases=["ml"])
     async def mainlast(self, ctx: commands.Context):
-        """Sets the last photocard in your collection as your profile display."""
+        """Sets the last photocard in your collection as your profile display.
+
+        **Examples:**
+        qmainlast
+        qml
+        """
         user = await func.get_user(ctx.author.id)
         if not user["cards"]:
             return await ctx.reply(f"**{ctx.author.mention} you have no photocards.**", delete_after=5)
@@ -130,7 +150,12 @@ class Profile(commands.Cog):
 
     @commands.command(aliases=["cc"])
     async def createcollection(self, ctx: commands.Context, name: str):
-        """Creates a collection."""
+        """Creates a collection.
+
+        **Examples:**
+        qcreatecollection IU
+        qcc IU
+        """
         name = func.clean_text(name, allow_spaces=False, convert_to_lower=True)
         if len(name) > 10:
             return await ctx.reply(content="Please shorten the collection name as it is too long. (No more than 10 chars)")
@@ -149,7 +174,12 @@ class Profile(commands.Cog):
     
     @commands.command(aliases=["sc"])
     async def setcollection(self, ctx: commands.Context, name:str, slot: int, card_id: str = None):
-        """Sets a photocard in the given slot [1 to 6] as your collection. Card can be identified by its ID or given tag."""
+        """Sets a photocard in the given slot [1 to 6] as your collection. Card can be identified by its ID or given tag.
+        
+        **Examples:**
+        qsetcollection IU 1 01
+        qsc IU 2 04
+        """
         if not (1 <= slot <= 6):
             return await ctx.reply(content=f"{ctx.author.mention} the slot must be within `the range of 1 to 6`.")
         
@@ -176,7 +206,12 @@ class Profile(commands.Cog):
 
     @commands.command(aliases=["scl"])
     async def setcollectionlast(self, ctx: commands.Context, name:str, slot: int):
-        """Sets your last photocard as a collection in the given slot [1 to 6]."""
+        """Sets your last photocard as a collection in the given slot [1 to 6].
+
+        **Examples:**
+        qsetcollectionlast IU 1
+        qscl IU 2
+        """
         if not (1 <= slot <= 6):
             return await ctx.reply(content=f"{ctx.author.mention} the slot must be within `the range of 1 to 6`.")
         
@@ -206,7 +241,12 @@ class Profile(commands.Cog):
 
     @commands.command(aliases=["rc"])
     async def removecollection(self, ctx: commands.Context, name: str):
-        """Removes the collection."""
+        """Removes the collection.
+
+        **Examples:**
+        qremovecollection IU
+        qrc IU
+        """
         user = await func.get_user(ctx.author.id)
 
         name = name.lower()
@@ -221,7 +261,12 @@ class Profile(commands.Cog):
 
     @commands.command(aliases=["f"])
     async def showcollection(self, ctx: commands.Context, member: discord.Member = None):
-        """Shows the given member's collection photocards. If not specified, shows your own."""
+        """Shows the given member's collection photocards. If not specified, shows your own.
+
+        **Examples:**
+        qshowcollection
+        qf IU
+        """
         if not member:
             member = ctx.author
 
@@ -235,7 +280,12 @@ class Profile(commands.Cog):
     @commands.command(aliases=["d"])
     @commands.cooldown(1, 5, commands.BucketType.user)
     async def daily(self, ctx: commands.Context):
-        """Claims your daily reward."""
+        """Claims your daily reward.
+
+        **Examples:**
+        qdaily
+        qd
+        """
         user = await func.get_user(ctx.author.id)
 
         end_time: float = user.get("cooldown", {}).get("daily", None)
@@ -273,7 +323,12 @@ class Profile(commands.Cog):
 
     @commands.command(aliases=["v"])
     async def view(self, ctx: commands.Context):
-        """View your photocard collection."""
+        """View your photocard collection.
+
+        **Examples:**
+        qview
+        qv
+        """
         user = await func.get_user(ctx.author.id)
 
         if not user["cards"]:
@@ -285,7 +340,12 @@ class Profile(commands.Cog):
 
     @commands.command(aliases=["in"])
     async def inventory(self, ctx: commands.Context):
-        """Shows the items that you own."""
+        """Shows the items that you own.
+        
+        **Examples:**
+        qinventory
+        qin
+        """
         user = await func.get_user(ctx.author.id)
         embed = discord.Embed(title=f"🎒 {ctx.author.display_name}'s Inventory", color=0x5cb045)
         embed.description = f"```{'🍬 Starcandies':<20} x{user['candies']}\n"
@@ -309,7 +369,12 @@ class Profile(commands.Cog):
 
     @commands.command(aliases=["qu"])
     async def quests(self, ctx: commands.Context):
-        """Shows the daily quests"""
+        """Shows the daily quests
+
+        **Examples:**
+        qquests
+        qqu
+        """
         user = await func.get_user(ctx.author.id)
 
         embed = discord.Embed(color=discord.Color.random())

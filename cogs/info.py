@@ -2,7 +2,7 @@ import discord, iufi
 import functions as func
 
 from discord.ext import commands
-from views import HelpView
+from views import HelpView, MusicLeaderboardView
 
 LEADERBOARD_EMOJIS: list[str] = ["🥇", "🥈", "🥉", "🏅"]
 
@@ -110,7 +110,7 @@ class Info(commands.Cog):
         }) if user else 0) + 1
         
         embed = discord.Embed(title=f"🏆   Level {level} Matching Game Leaderboard", color=discord.Color.random())
-        embed.description = (f"**Your current position is `{rank}`**" if user else "**You haven't play any match game!**") + "\n"
+        embed.description = (f"**Your current position is `{rank}`**" if user else "**You haven't played any match game!**") + "\n"
 
         description = ""
         for index, top_user in enumerate(users):
@@ -167,7 +167,7 @@ class Info(commands.Cog):
         if not description:
             description = "The leaderboard is currently empty."
 
-        embed.description = f"**The next reset is <t:{int(end_time)}:R>**\n**" + (f"Your current position is `{rank}`" if user else "You haven't play any quiz game!") + f"**\n{description}"
+        embed.description = f"**The next reset is <t:{int(end_time)}:R>**\n**" + (f"Your current position is `{rank}`" if user else "You haven't played any quiz game!") + f"**\n{description}"
         embed.set_thumbnail(url=icon.url if (icon := ctx.guild.icon) else None)
         await ctx.reply(embed=embed)
 
@@ -177,11 +177,11 @@ class Info(commands.Cog):
         users = await func.USERS_DB.find().sort("game_state.music_game.points", -1).limit(10).to_list(10)
         user = await func.get_user(ctx.author.id)
         user = user.get("game_state", {}).get("music_game", {})
-        rank = await func.USERS_DB.count_documents({'game_state.music_game': {'$gt': user.get('points', 0)}}) + 1
-        
+        rank = await func.USERS_DB.count_documents({'game_state.music_game.points': {'$gt': user.get('points', 0)}}) + 1
+
         embed = discord.Embed(title="🏆   Music Leaderboard", color=discord.Color.random())
-        embed.description = (f"**Your current position is `{rank}`**" if user else "**You haven't play any match game!**") + "\n"
-        
+        embed.description = (f"**Your current position is `{rank}`**" if user else "**You haven't played any music quiz!**") + "\n"
+
         description = ""
         for index, user_data in enumerate(users):
             game_state: dict[str, float | int] = user_data.get("game_state", {}).get("music_game", {})
@@ -191,7 +191,7 @@ class Info(commands.Cog):
             member = self.bot.get_user(user_data['_id'])
             if member:
                 description += f"{LEADERBOARD_EMOJIS[index if index <= 2 else 3]} " + highlight_text(f"{func.truncate_string(member.display_name):<18} {user_data['game_state']['music_game']['points']:>6} 𝄞", member == ctx.author)
-        
+
         if user and rank > len(users):
             description += ("┇\n" if rank > len(users) + 1 else "") + f"{LEADERBOARD_EMOJIS[3]} " + highlight_text(f"{func.truncate_string(ctx.author.display_name):<18} {user['points']:>6} 𝄞", member == ctx.author)
 
@@ -201,15 +201,20 @@ class Info(commands.Cog):
         embed.description += f"```ansi\n{description}```"
         embed.set_thumbnail(url=icon.url if (icon := ctx.guild.icon) else None)
 
-        await ctx.reply(embed=embed)
+        view = MusicLeaderboardView(ctx.author)
+        view.message = await ctx.reply(embed=embed, view=view)
 
     @commands.command(aliases=["h"])
     async def help(self, ctx: commands.Context, *, command: str = None):
-        "Lists all the commands in IUFI."
-
+        """Lists all the commands in IUFI.
+        
+        **Example:**
+        qhelp roll
+        qh roll
+        """
         if command:
             command: commands.Command = self.bot.get_command(command)
-            if command:
+            if command and not command.hidden:
                 command_str = f"{ctx.prefix}" + (f"{command.parent.qualified_name} " if command.parent else "") + f"{command.name} {command.signature}"
                 description = f"**Usage:**\n```{command_str}```\n"
                 if command.aliases:
@@ -221,7 +226,7 @@ class Info(commands.Cog):
                 return await ctx.reply(embed=embed)
 
         view = HelpView(self.bot, ctx.author, ctx.prefix)
-        view.response = await ctx.reply(embed=view.build_embed(), view=view)
+        await ctx.reply(embed=view.build_embed(), view=view)
 
 async def setup(bot: commands.Bot) -> None:
     await bot.add_cog(Info(bot))

@@ -146,7 +146,7 @@ class PhotoCardView(discord.ui.View):
         embed.set_footer(text="Pages: {}/{}".format(self.current_page, self.page))
 
         if self.toggle_cards_view:
-            image_bytes, image_format = await asyncio.to_thread(gen_cards_view, cards, 4)
+            image_bytes, image_format = await gen_cards_view(cards, 4)
             embed.set_image(url=f"attachment://image.{image_format}")
             return embed, discord.File(image_bytes, filename=f"image.{image_format}")
         else:
