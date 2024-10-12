@@ -595,3 +595,7 @@ class Track():
     @property
     def answers(self) -> List[str]:
         return self.data["answers"]
+
+    @property
+    def likes(self) -> int:
+        return self.data["likes"]

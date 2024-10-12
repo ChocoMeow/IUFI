@@ -2,7 +2,7 @@ import discord, iufi
 import functions as func
 
 from discord.ext import commands
-from views import HelpView
+from views import HelpView, MusicLeaderboardView
 
 LEADERBOARD_EMOJIS: list[str] = ["🥇", "🥈", "🥉", "🏅"]
 
@@ -201,7 +201,8 @@ class Info(commands.Cog):
         embed.description += f"```ansi\n{description}```"
         embed.set_thumbnail(url=icon.url if (icon := ctx.guild.icon) else None)
 
-        await ctx.reply(embed=embed)
+        view = MusicLeaderboardView(ctx.author)
+        view.message = await ctx.reply(embed=embed, view=view)
 
     @commands.command(aliases=["h"])
     async def help(self, ctx: commands.Context, *, command: str = None):
