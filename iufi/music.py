@@ -151,7 +151,7 @@ class Player(VoiceProtocol):
             # Fetch a random track, checking history
             track = await MusicPool.get_random_question(self._history)
             if not track:
-                return await self.disconnect()
+                return await self.teardown()
 
             if not track.is_loaded:
                 await track.load_data()
