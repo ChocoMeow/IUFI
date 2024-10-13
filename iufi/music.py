@@ -138,6 +138,7 @@ class Player(VoiceProtocol):
 
         self.start_guess_time: float = 0
         self.track_start_time: float = 0
+        self.last_answer_time: float = 0
         self.guesser: Member = None
 
         self.skip_votes = set()
@@ -147,7 +148,11 @@ class Player(VoiceProtocol):
             # Check if the bot is connected and ready to play
             if not self.is_connected or self.is_playing or not self.channel:
                 return
-
+            
+            # Prevent AFK player
+            if (time.time() - self.last_answer_time) >= 600:
+                return await self.teardown()
+            
             # Fetch a random track, checking history
             track = await MusicPool.get_random_question(self._history)
             if not track:
@@ -187,6 +192,7 @@ class Player(VoiceProtocol):
             time_used = time.time() - self.start_guess_time
             result = self.current.check_answer(message.content)
             self.current.update_state(message.author, time_used, result)
+            self.last_answer_time = time.time()
 
             if result:
                 self.guesser = message.author
@@ -262,11 +268,12 @@ class Player(VoiceProtocol):
         await self.do_next()
 
     async def stop(self, after_seconds: int = None) -> None:
+        if after_seconds:
+            await asyncio.sleep(after_seconds)
+
         if not self.voice_client:
             return
         
-        if after_seconds:
-            await asyncio.sleep(after_seconds)
         return self.voice_client.stop()
     
     async def teardown(self) -> None:

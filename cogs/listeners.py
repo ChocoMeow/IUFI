@@ -1,4 +1,4 @@
-import discord, iufi
+import discord, iufi, time
 import functions as func
 
 from discord.ext import commands
@@ -47,6 +47,7 @@ class Listeners(commands.Cog):
                 await iufi.MusicPool.add_player(member.guild.id, player)
                 await player.connect(reconnect=True, timeout=30, self_deaf=True)
 
+            player.last_answer_time = time.time()
             if not player.is_playing:
                 await player.do_next()
 
