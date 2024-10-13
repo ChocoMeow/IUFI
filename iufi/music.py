@@ -241,6 +241,7 @@ class Player(VoiceProtocol):
                 reward_message += f"{r_emoji} {f'{format_name} {r_display_name[0].title()}':<18} x{r_amount}\n"
 
         # Update user data in the database
+        query = func.update_quest_progress(user, "PLAY_MUSIC_QUIZ_GAME", progress=points, query=query)
         await func.update_user(message.author.id, query)
         func.logger.info(f"User {message.author.name}({message.author.id}) earned {points} points in the music quiz by answering in {time_used:.2f} seconds.")
 

@@ -72,7 +72,7 @@
         },
         "PLAY_MUSIC_QUIZ_GAME": {
             "title": "Earn 50 points in music quiz",
-            "amount": 50,
+            "amount": 20,
             "rewards": [["🍬", "candies", [10, 20]]],
             "type": "MUSIC_QUIZ"
         },
@@ -170,7 +170,7 @@
         },
         "PLAY_MUSIC_QUIZ_GAME": {
             "title": "Earn 200 points in music quiz",
-            "amount": 200,
+            "amount": 100,
             "rewards": [["🍬", "candies", [100, 200]]],
             "type": "MUSIC_QUIZ"
         },
