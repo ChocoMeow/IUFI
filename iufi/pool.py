@@ -313,6 +313,13 @@ class MusicPool:
         return cls._questions.get(id)
 
     @classmethod
+    async def get_all_questions(cls) -> List[Track]:
+        if not cls._questions:
+            await cls.fetch_data()
+
+        return list(cls._questions.values())
+    
+    @classmethod
     async def get_random_question(cls, history: List[str]) -> Optional[Track]:
         if not cls._questions:
             await cls.fetch_data()
