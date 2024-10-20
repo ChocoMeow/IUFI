@@ -3,8 +3,8 @@
 IUFI is a Discord bot designed for card collecting and mini-games specifically for the IU community. Built entirely with Python, this bot offers an engaging experience for users to collect cards and participate in fun mini-games.
 
 ## Screenshots
-<img width="500" alt="Screenshot 2024-10-20 at 10 03 13 PM" src="https://github.com/user-attachments/assets/c6e315cf-2afa-48a4-a32a-bd4712f8b909">
-<img width="400" alt="Screenshot 2024-10-20 at 10 05 59 PM" src="https://github.com/user-attachments/assets/76992956-ff11-481b-84bd-b957d8b3dfbb">+
+<img width="400" alt="Screenshot 2024-10-20 at 10 03 13 PM" src="https://github.com/user-attachments/assets/c6e315cf-2afa-48a4-a32a-bd4712f8b909">
+<img width="400" alt="Screenshot 2024-10-20 at 10 05 59 PM" src="https://github.com/user-attachments/assets/76992956-ff11-481b-84bd-b957d8b3dfbb">
 <img width="400" alt="Screenshot 2024-10-20 at 10 05 13 PM" src="https://github.com/user-attachments/assets/09067d6a-705f-420f-b4c9-3b4b246ad52b">
 <img width="400" alt="Screenshot 2024-10-20 at 10 03 48 PM" src="https://github.com/user-attachments/assets/0fa6b5de-35b8-45c2-ba5f-61a836f0ca29">
 <img width="400" alt="Screenshot 2024-10-20 at 10 06 40 PM" src="https://github.com/user-attachments/assets/8d0be8f5-eaa0-4b15-9813-638c059ad8a6">
