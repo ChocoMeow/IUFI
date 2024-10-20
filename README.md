@@ -42,6 +42,15 @@ pip install -r requirements.txt
 4. Create a .env file in the root directory and add your Discord bot token and MongoDB details.
 5. Modify the settings.json file as needed to customize your bot settings.
 
+## Enabling Music Quiz
+To enable the music quiz feature in the bot, you must install `ffmpeg` in your environment. You can specify the path for the OPUS library in your `settings.json` file as follows:
+```
+{
+  "OPUS_PATH": "path/to/your/opus/library"
+}
+```
+*If you do not provide the OPUS_PATH, the program will attempt to auto-detect the OPUS library. If detection fails, you will need to manually specify the path in the settings.json file.*
+
 ## Running the Bot
 To start the bot, run the following command:
 ```
