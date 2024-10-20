@@ -114,7 +114,7 @@ class Gameplay(commands.Cog):
         if (retry := user.get("cooldown", {}).setdefault("quiz_game", 0)) > time.time():
             price = max(5, int(QUIZ_SETTINGS['reset_price'] * ((retry - time.time()) / func.settings.COOLDOWN_BASE["quiz_game"][1])))
             view = ResetAttemptView(ctx, user, price)
-            view.response = await ctx.reply(f"{ctx.author.mention} your quiz is <t:{round(retry)}:R>. If you’d like to bypass this cooldown, you can do so by paying `🍬 {price}` candies.", delete_after=20, view=view)
+            view.response = await ctx.reply(f"{ctx.author.mention} your quiz is <t:{round(retry)}:R>. If you’d like to bypass this cooldown, you can do so by paying `🎃 {price}` Pumpkins.", delete_after=20, view=view)
             return 
         
         # Get the rank and questions for the user
