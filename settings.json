@@ -55,7 +55,8 @@
         "claim": ["🎮", 180],
         "daily": ["📅", 82800],
         "match_game": ["🃏", 0],
-        "quiz_game": ["💯", 600]
+        "quiz_game": ["💯", 600],
+        "trick_or_treat": ["🎃", 1800]
     },
     "DAILY_QUESTS": {
         "ROLL": {
