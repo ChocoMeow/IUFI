@@ -25,8 +25,9 @@ class MusicLeaderboardView(discord.ui.View):
     async def most_liked(self, interaction: discord.Interaction, button: discord.ui.Button) -> None:
         await interaction.response.defer()
 
-        description = ""
-        sorted_tracks = sorted(list(MusicPool._questions.values()), key=lambda track: track.likes, reverse=True)
+        questions = await MusicPool.get_all_questions()
+        description = "" if questions else "No music questions were found!"
+        sorted_tracks = sorted(list(questions), key=lambda track: track.likes, reverse=True)
         spaces = (len(str(sorted_tracks[0].likes)) if len(sorted_tracks) > 0 else 1) + 1
         for track in sorted_tracks[:15]:
             description += f"‪‪❤︎‬ ` {track.likes:<{spaces}}` [{func.truncate_string(track.title, 42 - spaces)}]({track.url})\n"
@@ -44,9 +45,11 @@ class MusicLeaderboardView(discord.ui.View):
         await interaction.response.defer()
 
         records = {}
-        description = ""
+
+        questions = await MusicPool.get_all_questions()
+        description = "" if questions else "No music questions were found!"
         
-        for track in MusicPool._questions.values():
+        for track in questions:
             member_id, _ = track.best_record
             if member_id:
                 records[member_id] = records.get(member_id, 0) + 1
