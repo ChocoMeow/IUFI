@@ -5,6 +5,8 @@ import functions as func
 
 from discord.ext import commands
 
+from iufi import CardPool
+
 
 # tricks - nothing, roll cooldown set to 1 hour/2 hour/3 hour later, same for quiz, match game, and trick or treat, lose x pumpkins, lose last card, show celestial like they got it and few seconds later, boom you got nothing
 # treats - treat, roll cooldown reset, quiz cooldown reset, match game cooldown reset, gain x pumpkins, gain a random card, gain a random potion
@@ -31,34 +33,51 @@ class Halloween(commands.Cog):
         query = await self.get_trick_or_treat_cooldown_query()
 
         if random.choice([True, False]):
-            type = await self.get_trick_type()
-            if type == "nothing":
+            trick_type = await self.get_trick_type()
+            if trick_type == "nothing":
                 await ctx.reply(f"{ctx.author.mention} you got nothing! 🎃")
-            elif type == "cooldown_increase":
+            elif trick_type == "cooldown_increase":
                 await self.on_cooldown_increase(ctx, query, user)
-            elif type == "pumpkins_loss":
+            elif trick_type == "pumpkins_loss":
                 await self.on_pumpkin_loss(ctx, query)
-            elif type == "last_card_loss":
+            elif trick_type == "last_card_loss":
                 await self.on_last_card_loss(ctx, query, user)
-            elif type == "celestial_fake":
+            elif trick_type == "celestial_fake":
                 await self.on_phake_celestial(ctx)
         else:
-            type = await self.get_treat_type()
+            treat_type = await self.get_treat_type()
 
-            if type == "treat":
+            if treat_type == "treat":
                 await ctx.reply(f"{ctx.author.mention} you got a treat! 🎃") #need to add treats to a leaderboard
-            elif type == "cooldown_reset":
+            elif treat_type == "cooldown_reset":
                 await self.on_cooldown_reset(ctx, query)
-            elif type == "pumpkins_gain":
+            elif treat_type == "pumpkins_gain":
                 await self.on_pumpkin_gain(ctx, query)
-            elif type == "random_card":
-                #implement this
-                pass
-            elif type == "random_potion":
-                #implement this
-                pass
+            elif treat_type == "random_card":
+                await self.on_random_card_gain(ctx, query)
+            elif treat_type == "random_potion":
+                await self.on_potion_gain(ctx, query)
 
         await func.update_user(ctx.author.id, query)
+
+    async def on_potion_gain(self, ctx, query):
+        potion = random.choices(
+            ["potions.speed_i", "potions.speed_ii", "potions.speed_iii", "potions.luck_i", "potions.luck_ii",
+             "potions.luck_iii"],
+            weights=[0.2, 0.05, 0.001, 0.2, 0.05, 0.001],
+            k=1
+        )[0]
+        query["$push"] = {"actived_potions": potion}
+        await ctx.reply(f"{ctx.author.mention} you got a `{potion}` potion! 🎃")
+
+    async def on_random_card_gain(self, ctx, query):
+        cards = iufi.CardPool.roll(amount=1, avoid=["mystic", "celestial"])
+        card = cards[0]
+        query["$push"] = {"cards": card.id}
+        card.change_owner(ctx.author.id)
+        CardPool.remove_available_card(card)
+        emoji, name = card.tier
+        await ctx.reply(f"{ctx.author.mention} you got a {name} card! {emoji}")
 
     async def get_trick_or_treat_cooldown_query(self):
         query = {"$set": {"cooldown.trick_or_treat": time.time() + func.settings.COOLDOWN_BASE["trick_or_treat"][1]}}
