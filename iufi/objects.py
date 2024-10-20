@@ -241,7 +241,7 @@ class Card(CardObject):
         async with self._lock:
             # Check if the image should be hidden due to no owner
             if hide_image_if_no_owner and not self.owner_id:
-                return await TempCard(f"cover/level{random.randint(1, 3)}.webp").image(size_rate=size_rate)
+                return await TempCard(f"cover/level{random.randint(1, 6)}.webp").image(size_rate=size_rate)
             
             return await asyncio.to_thread(self._load_image, size_rate=size_rate)
 
