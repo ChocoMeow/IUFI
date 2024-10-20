@@ -67,7 +67,7 @@ class Halloween(commands.Cog):
             weights=[0.2, 0.05, 0.001, 0.2, 0.05, 0.001],
             k=1
         )[0]
-        query["$push"] = {"actived_potions": potion}
+        query["$inc"] = {potion: 1}
         await ctx.reply(f"{ctx.author.mention} you got a `{potion}` potion! 🎃")
 
     async def on_random_card_gain(self, ctx, query):
@@ -113,7 +113,7 @@ class Halloween(commands.Cog):
     async def on_phake_celestial(self, ctx):
         await ctx.reply(f"{ctx.author.mention} you got a Celestial card! 💫", delete_after=3)
         await asyncio.sleep(3)
-        await ctx.reply(f"   Just kidding! You got nothing! 🎃")
+        await ctx.reply(f"Just kidding! You got nothing! 🎃")
 
     async def on_last_card_loss(self, ctx, query, user):
         if not user["cards"]:
