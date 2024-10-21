@@ -1,3 +1,4 @@
+import random
 import discord, asyncio, time
 import functions as func
 
@@ -95,7 +96,8 @@ class MatchGame(discord.ui.View):
         self._need_wait: bool = False
         self.clicked: int = 0
         self._last_clicked: discord.ui.Button = None
-        self.covered_card: TempCard = TempCard(f"cover/level{self._level}.webp")
+        self.covered_card: TempCard = TempCard(
+            f"cover/level{random.choice([int(self._level), int(self._level) + 3])}.webp")
 
         cards: list[Card] = CardPool.get_random_cards_for_match_game(self._cards)
         cards.extend(cards)
@@ -151,7 +153,7 @@ class MatchGame(discord.ui.View):
 
             rewards += ("✅" if is_matched else "⬛") + f"  {matched:<3}"
             if reward_name[0] == "candies":
-                rewards += f"    {'🍬 Candies':<18} x{amount}\n"
+                rewards += f"    {'🎃 Pumpkins':<18} x{amount}\n"
             
             elif reward_name[0] == "exp":
                 rewards += f"    {'⚔️ Exp':<19} x{amount}\n"

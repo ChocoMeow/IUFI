@@ -87,7 +87,7 @@ class Card(commands.Cog):
 
     @commands.command(aliases=["c"])
     async def convert(self, ctx: commands.Context, *, card_ids: str):
-        """Converts the photocards into starcandies. Card can be identified by its ID or given tag. The amount of starcandies received is dependent on the card's rarity.
+        """Converts the photocards into Pumpkins. Card can be identified by its ID or given tag. The amount of Pumpkins received is dependent on the card's rarity.
 
         **Examples:**
         qconcert 01
@@ -114,11 +114,11 @@ class Card(commands.Cog):
         
         func.logger.info(
             f"User {ctx.author.name}({ctx.author.id}) converted {len(converted_cards)} card(s): ["
-            f"{', '.join([card.id for card in converted_cards])}]. Gained {candies} candies."
+            f"{', '.join([card.id for card in converted_cards])}]. Gained {candies} Pumpkins."
         )
         
         embed = discord.Embed(title="✨ Convert", color=discord.Color.random())
-        embed.description = f"```🆔 {', '.join([f'{card}' for card in converted_cards])} \n🍬 + {candies}```"
+        embed.description = f"```🆔 {', '.join([f'{card}' for card in converted_cards])} \n🎃 + {candies}```"
         await ctx.reply(embed=embed)
 
     @commands.command(aliases=["cl"])
@@ -138,7 +138,7 @@ class Card(commands.Cog):
             return
         
         embed = discord.Embed(color=discord.Color.random())
-        embed.description = f"```🆔 {card} \n🍬 + {card.cost}```"
+        embed.description = f"```🆔 {card} \n🎃 + {card.cost}```"
         message: discord.Message = None
 
         if card.tier[1] not in ["common", "rare"] or card.tag:
@@ -163,7 +163,7 @@ class Card(commands.Cog):
         await func.update_user(ctx.author.id, query)
         await func.update_card(card.id, {"$set": {"owner_id": None, "tag": None, "frame": None, "last_trade_time": 0}})
         
-        func.logger.info(f"User {ctx.author.name}({ctx.author.id}) converted 1 card(s): [{card.id}]. Gained {card.cost} candies.")
+        func.logger.info(f"User {ctx.author.name}({ctx.author.id}) converted 1 card(s): [{card.id}]. Gained {card.cost} Pumpkins.")
 
         embed.title="✨ Converted"
         await message.edit(embed=embed, view=None) if message else await ctx.reply(embed=embed)
@@ -192,7 +192,7 @@ class Card(commands.Cog):
         candies = sum([card.cost for card in converted_cards])
                        
         embed = discord.Embed(title="✨ Confirm to convert?", color=discord.Color.random())
-        embed.description = f"```🆔 {', '.join([f'{card}' for card in converted_cards])} \n🍬 + {candies}```"
+        embed.description = f"```🆔 {', '.join([f'{card}' for card in converted_cards])} \n🎃 + {candies}```"
 
         view = ConfirmView(ctx.author)
         view.message = await ctx.reply(embed=embed, view=view)
@@ -254,7 +254,7 @@ class Card(commands.Cog):
         candies = sum([card.cost for card in converted_cards])
                        
         embed = discord.Embed(title="✨ Confirm to convert?", color=discord.Color.random())
-        embed.description = f"```🆔 {', '.join([f'{card}' for card in converted_cards])} \n🍬 + {candies}```"
+        embed.description = f"```🆔 {', '.join([f'{card}' for card in converted_cards])} \n🎃 + {candies}```"
 
         view = ConfirmView(ctx.author)
         view.message = await ctx.reply(embed=embed, view=view)
