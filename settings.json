@@ -48,7 +48,8 @@
                 "progresses": {},
                 "next_update": 0
             }
-        }
+        },
+        "halloween_treats": 0
     },
     "COOLDOWN_BASE": {
         "roll": ["🎲", 600],

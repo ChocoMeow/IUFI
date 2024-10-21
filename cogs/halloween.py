@@ -7,14 +7,54 @@ from discord.ext import commands
 
 from iufi import CardPool
 
+LEADERBOARD_EMOJIS: list[str] = ["🥇", "🥈", "🥉", "🏅"]
 
-# tricks - nothing, roll cooldown set to 1 hour/2 hour/3 hour later, same for quiz, match game, and trick or treat, lose x pumpkins, lose last card, show celestial like they got it and few seconds later, boom you got nothing
-# treats - treat, roll cooldown reset, quiz cooldown reset, match game cooldown reset, gain x pumpkins, gain a random card, gain a random potion
+def highlight_text(text: str, need: bool = True) -> str:
+    if not need:
+        return text + "\n"
+    return "[0;1;35m" + text + " [0m\n"
+
 class Halloween(commands.Cog):
     def __init__(self, bot: commands.Bot) -> None:
         self.bot = bot
         self.emoji = "🎃"
         self.invisible = False
+
+    @commands.command(aliases=["totl"])
+    async def trickortreatleaderboard(self, ctx: commands.Context):
+        """Shows the leaderboard for the trick or treat event.
+
+        **Examples:**
+        qtrickortreatleaderboard
+        qtotl
+        """
+        user = await func.get_user(ctx.author.id)
+        users = await func.USERS_DB.find().sort("halloween_treats", -1).limit(10).to_list(10)
+        rank = await func.USERS_DB.count_documents({'halloween_treats': {'$gt': user.get('halloween_treats', 0)}}) + 1
+        embed = discord.Embed(title="🎃   Trick Or Treat Leaderboard", color=discord.Color.random())
+        embed.description = f"**Your current position is `{rank}`**\n"
+
+        description = ""
+        for index, top_user in enumerate(users):
+            level = top_user.get("halloween_treats",0)
+            member = self.bot.get_user(top_user['_id'])
+
+            if member:
+                description += f"{LEADERBOARD_EMOJIS[index if index <= 2 else 3]} " + highlight_text(
+                    f"{func.truncate_string(member.display_name):<18} {level:>5} 🍬", member == ctx.author)
+
+        if rank > len(users):
+            level= user.get('halloween_treats',0)
+            description += ("┇\n" if rank > len(users) + 1 else "") + f"{LEADERBOARD_EMOJIS[3]} " + highlight_text(
+                f"{func.truncate_string(ctx.author.display_name):<18} {level:>5} 🍬")
+
+        if not description:
+            description = "The leaderboard is currently empty."
+
+        embed.description += f"```ansi\n{description}```"
+        embed.set_thumbnail(url=icon.url if (icon := ctx.guild.icon) else None)
+
+        await ctx.reply(embed=embed)
 
     @commands.command(aliases=["tot"])
     #@commands.cooldown(1, 10, commands.BucketType.user)
@@ -39,7 +79,7 @@ class Halloween(commands.Cog):
             elif trick_type == "cooldown_increase":
                 await self.on_cooldown_increase(ctx, query, user)
             elif trick_type == "pumpkins_loss":
-                await self.on_pumpkin_loss(ctx, query)
+                await self.on_pumpkin_loss(ctx, query, user)
             elif trick_type == "last_card_loss":
                 await self.on_last_card_loss(ctx, query, user)
             elif trick_type == "celestial_fake":
@@ -48,17 +88,33 @@ class Halloween(commands.Cog):
             treat_type = await self.get_treat_type()
 
             if treat_type == "treat":
-                await ctx.reply(f"{ctx.author.mention} you got a treat! 🎃") #need to add treats to a leaderboard
+                await self.on_treat(ctx, query)
             elif treat_type == "cooldown_reset":
                 await self.on_cooldown_reset(ctx, query)
             elif treat_type == "pumpkins_gain":
                 await self.on_pumpkin_gain(ctx, query)
             elif treat_type == "random_card":
-                await self.on_random_card_gain(ctx, query)
+                await self.on_random_card_gain(ctx, query, user)
             elif treat_type == "random_potion":
                 await self.on_potion_gain(ctx, query)
+            elif treat_type == "random_roll":
+                await self.on_random_roll(ctx, query)
 
         await func.update_user(ctx.author.id, query)
+
+    async def on_treat(self, ctx, query):
+        query["$inc"] = {"halloween_treats": 1}
+        await ctx.reply(f"{ctx.author.mention} you got a treat! 🍬")
+
+    async def on_random_roll(self, ctx, query):
+        roll_type = random.choices(
+            ["roll.rare", "roll.epic", "roll.legendary"],
+            weights=[0.2, 0.05, 0.001],
+            k=1
+        )[0]
+        query["$inc"] = {roll_type: 1}
+        roll_message = roll_type.split(".")[1]
+        await ctx.reply(f"{ctx.author.mention} you got a `{roll_message}` roll! 🎃")
 
     async def on_potion_gain(self, ctx, query):
         potion = random.choices(
@@ -70,7 +126,9 @@ class Halloween(commands.Cog):
         query["$inc"] = {potion: 1}
         await ctx.reply(f"{ctx.author.mention} you got a `{potion}` potion! 🎃")
 
-    async def on_random_card_gain(self, ctx, query):
+    async def on_random_card_gain(self, ctx, query, user):
+        if len(user["cards"]) >= func.settings.MAX_CARDS:
+            return await self.on_random_roll(ctx, query)
         cards = iufi.CardPool.roll(amount=1, avoid=["mystic", "celestial"])
         card = cards[0]
         query["$push"] = {"cards": card.id}
@@ -78,6 +136,16 @@ class Halloween(commands.Cog):
         CardPool.remove_available_card(card)
         emoji, name = card.tier
         await ctx.reply(f"{ctx.author.mention} you got a {name} card! {emoji}")
+        embed = discord.Embed(title=f"ℹ️ Card Info", color=0x949fb8)
+        embed.description = f"```{card.display_id}\n" \
+                            f"{card.display_tag}\n" \
+                            f"{card.display_frame}\n" \
+                            f"{card.tier[0]} {card.tier[1].capitalize()}\n" \
+                            f"{card.display_stars}```\n" \
+                            "**Owned by: **" + (f"<@{card.owner_id}>" if card.owner_id else "None")
+
+        embed.set_image(url=f"attachment://image.{card.format}")
+        await ctx.reply(file=discord.File(await card.image_bytes(True), filename=f"image.{card.format}"), embed=embed)
 
     async def get_trick_or_treat_cooldown_query(self):
         query = {"$set": {"cooldown.trick_or_treat": time.time() + func.settings.COOLDOWN_BASE["trick_or_treat"][1]}}
@@ -96,8 +164,8 @@ class Halloween(commands.Cog):
 
     async def get_treat_type(self):
         type = random.choices(
-            ["treat", "cooldown_reset", "pumpkins_gain", "random_card", "random_potion"],
-            weights=[0.1, 0.5, 0.5, 0.2, 0.1],
+            ["treat", "cooldown_reset", "pumpkins_gain", "random_card", "random_potion","random_roll"],
+            weights=[0.1, 0.5, 0.5, 0.2, 0.1, 0.2],
             k=1
         )[0]
         return type
@@ -130,7 +198,9 @@ class Halloween(commands.Cog):
             else:
                 await ctx.reply(f"{ctx.author.mention} you got nothing! 🎃")
 
-    async def on_pumpkin_loss(self, ctx, query):
+    async def on_pumpkin_loss(self, ctx, query, user):
+        if user.get("candies", 0) < 5:
+            return await ctx.reply(f"{ctx.author.mention} you got nothing! 🎃")
         loss = random.randint(1, 5)
         query["$inc"] = {"candies": -loss}
         await ctx.reply(f"{ctx.author.mention} you lost {loss} pumpkins! 🎃")
