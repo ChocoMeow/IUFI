@@ -57,7 +57,7 @@
         "daily": ["📅", 82800],
         "match_game": ["🃏", 0],
         "quiz_game": ["💯", 600],
-        "trick_or_treat": ["🎃", 1800]
+        "trick_or_treat": ["🎃", 600]
     },
     "DAILY_QUESTS": {
         "ROLL": {

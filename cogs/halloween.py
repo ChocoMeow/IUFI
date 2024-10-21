@@ -8,11 +8,14 @@ from discord.ext import commands
 from iufi import CardPool
 
 LEADERBOARD_EMOJIS: list[str] = ["🥇", "🥈", "🥉", "🏅"]
+MIN_PUMPKINS = 20
+MAX_PUMPKINS = 50
 
 def highlight_text(text: str, need: bool = True) -> str:
     if not need:
         return text + "\n"
     return "[0;1;35m" + text + " [0m\n"
+
 
 class Halloween(commands.Cog):
     def __init__(self, bot: commands.Bot) -> None:
@@ -36,7 +39,7 @@ class Halloween(commands.Cog):
 
         description = ""
         for index, top_user in enumerate(users):
-            level = top_user.get("halloween_treats",0)
+            level = top_user.get("halloween_treats", 0)
             member = self.bot.get_user(top_user['_id'])
 
             if member:
@@ -44,7 +47,7 @@ class Halloween(commands.Cog):
                     f"{func.truncate_string(member.display_name):<18} {level:>5} 🍬", member == ctx.author)
 
         if rank > len(users):
-            level= user.get('halloween_treats',0)
+            level = user.get('halloween_treats', 0)
             description += ("┇\n" if rank > len(users) + 1 else "") + f"{LEADERBOARD_EMOJIS[3]} " + highlight_text(
                 f"{func.truncate_string(ctx.author.display_name):<18} {level:>5} 🍬")
 
@@ -57,7 +60,7 @@ class Halloween(commands.Cog):
         await ctx.reply(embed=embed)
 
     @commands.command(aliases=["tot"])
-    #@commands.cooldown(1, 10, commands.BucketType.user)
+    # @commands.cooldown(1, 10, commands.BucketType.user)
     async def trickortreat(self, ctx: commands.Context):
         """Will you get a trick or a treat?
 
@@ -74,9 +77,7 @@ class Halloween(commands.Cog):
 
         if random.choice([True, False]):
             trick_type = await self.get_trick_type()
-            if trick_type == "nothing":
-                await ctx.reply(f"{ctx.author.mention} you got nothing! 🎃")
-            elif trick_type == "cooldown_increase":
+            if trick_type == "cooldown_increase":
                 await self.on_cooldown_increase(ctx, query, user)
             elif trick_type == "pumpkins_loss":
                 await self.on_pumpkin_loss(ctx, query, user)
@@ -124,6 +125,8 @@ class Halloween(commands.Cog):
             k=1
         )[0]
         query["$inc"] = {potion: 1}
+        potion = potion.split(".")[1]
+        potion = potion.replace("_", " ").capitalize()
         await ctx.reply(f"{ctx.author.mention} you got a `{potion}` potion! 🎃")
 
     async def on_random_card_gain(self, ctx, query, user):
@@ -134,6 +137,7 @@ class Halloween(commands.Cog):
         query["$push"] = {"cards": card.id}
         card.change_owner(ctx.author.id)
         CardPool.remove_available_card(card)
+        await func.update_card(card.id, {"$set": {"owner_id": ctx.author.id}})
         emoji, name = card.tier
         await ctx.reply(f"{ctx.author.mention} you got a {name} card! {emoji}")
         embed = discord.Embed(title=f"ℹ️ Card Info", color=0x949fb8)
@@ -152,7 +156,7 @@ class Halloween(commands.Cog):
         return query
 
     async def on_pumpkin_gain(self, ctx, query):
-        gain = random.randint(1, 5)
+        gain = random.randint(MIN_PUMPKINS, MAX_PUMPKINS)
         query["$inc"] = {"candies": gain}
         await ctx.reply(f"{ctx.author.mention} you gained {gain} pumpkins! 🎃")
 
@@ -164,7 +168,7 @@ class Halloween(commands.Cog):
 
     async def get_treat_type(self):
         type = random.choices(
-            ["treat", "cooldown_reset", "pumpkins_gain", "random_card", "random_potion","random_roll"],
+            ["treat", "cooldown_reset", "pumpkins_gain", "random_card", "random_potion", "random_roll"],
             weights=[0.1, 0.5, 0.5, 0.2, 0.1, 0.2],
             k=1
         )[0]
@@ -172,8 +176,8 @@ class Halloween(commands.Cog):
 
     async def get_trick_type(self):
         type = random.choices(
-            ["nothing", "cooldown_increase", "pumpkins_loss", "last_card_loss", "celestial_fake"],
-            weights=[0.1, 0.5, 0.5, 0.05, 0.01],
+            ["cooldown_increase", "pumpkins_loss", "last_card_loss", "celestial_fake"],
+            weights=[0.5, 0.5, 0.05, 0.01],
             k=1
         )[0]
         return type
@@ -199,9 +203,10 @@ class Halloween(commands.Cog):
                 await ctx.reply(f"{ctx.author.mention} you got nothing! 🎃")
 
     async def on_pumpkin_loss(self, ctx, query, user):
-        if user.get("candies", 0) < 5:
+        if user.get("candies", 0) <= 0:
             return await ctx.reply(f"{ctx.author.mention} you got nothing! 🎃")
-        loss = random.randint(1, 5)
+        loss = random.randint(MIN_PUMPKINS, MAX_PUMPKINS)
+        loss = min(loss, user["candies"])
         query["$inc"] = {"candies": -loss}
         await ctx.reply(f"{ctx.author.mention} you lost {loss} pumpkins! 🎃")
 
@@ -209,13 +214,20 @@ class Halloween(commands.Cog):
         cooldowns = ["roll", "quiz_game", "match_game", "trick_or_treat"]
         cooldown = random.choice(cooldowns)
         increase = random.randint(1, 3)
+        increase_multiplier = 600  # 10 minutes
+        if cooldown == "match_game":
+            increase_multiplier = 3_600  # 1 hour
         prev_cooldown = user["cooldown"].get(cooldown, 0)
         if prev_cooldown > time.time():
-            query["$set"][f"cooldown.{cooldown}"] = (prev_cooldown + (increase * 3_600))
+            query["$set"][f"cooldown.{cooldown}"] = (prev_cooldown + (increase * increase_multiplier))
         else:
-            query["$set"][f"cooldown.{cooldown}"] = (time.time() + (increase * 3_600))
-        await ctx.reply(
-            f"{ctx.author.mention} your `{cooldown}` cooldown has been increased by {increase} hours! 🎃")
+            query["$set"][f"cooldown.{cooldown}"] = (time.time() + (increase * increase_multiplier))
+        if cooldown == "match_game" or cooldown == "trick_or_treat":
+            hour = "hour" if increase == 1 else "hours"
+            message = f"{ctx.author.mention} your `{cooldown}` cooldown has been increased by {increase} {hour}! 🎃"
+        else:
+            message = f"{ctx.author.mention} your `{cooldown}` cooldown has been increased by {increase * 10} minutes! 🎃"
+        await ctx.reply(message)
 
 
 async def setup(bot: commands.Bot) -> None:
