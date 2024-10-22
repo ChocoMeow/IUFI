@@ -222,7 +222,7 @@ class Halloween(commands.Cog):
             query["$set"][f"cooldown.{cooldown}"] = (prev_cooldown + (increase * increase_multiplier))
         else:
             query["$set"][f"cooldown.{cooldown}"] = (time.time() + (increase * increase_multiplier))
-        if cooldown == "match_game" or cooldown == "trick_or_treat":
+        if cooldown == "match_game":
             hour = "hour" if increase == 1 else "hours"
             message = f"{ctx.author.mention} your `{cooldown}` cooldown has been increased by {increase} {hour}! 🎃"
         else:
