@@ -11,12 +11,6 @@
     "GAME_CHANNEL_IDS": [1155772660979093555, 1155772719909044224, 1155772738858913792, 1155772756730859580],
     "ADMIN_IDS": [605776164744724512, 705783356767338648],
     "OPUS_PATH": "",
-    "MUSIC_NODE": {
-        "host": "127.0.0.1",
-        "port": 2333,
-        "password": "youshallnotpass",
-        "identifier": "DEFAULT"
-    },
     "USER_BASE": {
         "candies": 0,
         "exp": 0,
