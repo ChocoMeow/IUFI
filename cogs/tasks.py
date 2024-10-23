@@ -69,7 +69,7 @@ class Tasks(commands.Cog):
                 channel = self.bot.get_channel(random.choice(func.settings.GAME_CHANNEL_IDS))
                 if channel:
                     view = DropView(cards[0])
-                    covered_card: iufi.TempCard = iufi.TempCard(f"cover/level{random.randint(1, 6)}.webp")
+                    covered_card: iufi.TempCard = iufi.TempCard(f"cover/level{random.randint(1, 3)}.webp")
                     image_bytes, image_format = await covered_card.image_bytes(), covered_card.format
                     view.message = await channel.send(
                         content=f"**Hurry up! This claim ends in: <t:{round(time.time()) + 70}:R>**",
