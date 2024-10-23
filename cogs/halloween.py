@@ -129,7 +129,7 @@ class Halloween(commands.Cog):
 
         query = {"$set": {"cooldown.trick_or_treat": time.time() + func.settings.COOLDOWN_BASE["trick_or_treat"][1]}}
 
-        actions = self.tricks if random.choice([True, False]) else self.treats
+        actions = random.choices([self.tricks, self.treats], weights=[40, 60])[0]
         action_type = random.choices(list(actions.keys()), weights=[info["weight"] for info in actions.values()], k=1)[0]
 
         await actions[action_type]["func"](ctx, query, user)
