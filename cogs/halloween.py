@@ -87,13 +87,15 @@ class Halloween(commands.Cog):
         rank = await func.USERS_DB.count_documents({'game_state.halloween_event.treats': {'$gt': user.get('treats', 0)}}) + 1
         embed = discord.Embed(title="🎃   Trick Or Treat Leaderboard", color=discord.Color.random())
         embed.description = f"**Your current position is `{rank}`**\n"
-
+        rank_1_user = None
         description = ""
         for index, top_user in enumerate(users):
             level = top_user.get("treats", 0)
             member = self.bot.get_user(top_user['_id'])
 
             if member:
+                if index == 0:
+                    rank_1_user = member
                 description += f"{LEADERBOARD_EMOJIS[index if index <= 2 else 3]} " + highlight_text(
                     f"{func.truncate_string(member.display_name):<18} {level:>5} 🍬", member == ctx.author)
 
@@ -104,10 +106,9 @@ class Halloween(commands.Cog):
 
         if not description:
             description = "The leaderboard is currently empty."
-
+        icon = rank_1_user.display_avatar if rank_1_user else ctx.guild.icon
         embed.description += f"```ansi\n{description}```"
-        embed.set_thumbnail(url=icon.url if (icon := ctx.guild.icon) else None)
-
+        embed.set_thumbnail(url=icon.url if (icon := icon) else None)
         await ctx.reply(embed=embed)
 
     @commands.command(aliases=["tot"])
@@ -187,7 +188,7 @@ class Halloween(commands.Cog):
         cooldowns = ["roll", "quiz_game", "match_game"]
         cooldown = random.choice(cooldowns)
         query["$set"][f"cooldown.{cooldown}"] = 0
-        await ctx.reply(f"{ctx.author.mention} your `{cooldown.replace("_", " ").upper()}` cooldown has been reset! 🎃")
+        await ctx.reply(f"{ctx.author.mention} your `{cooldown.replace('_', ' ').upper()}` cooldown has been reset! 🎃")
 
     async def on_phake_celestial(self, ctx: commands.Context, query: Dict[str, Any], user: Dict[str, Any]) -> None:
         await ctx.reply(f"{ctx.author.mention} you got a Celestial card! 💫", delete_after=3)
@@ -225,9 +226,9 @@ class Halloween(commands.Cog):
         query["$set"][f"cooldown.{cooldown}"] = (increase * increase_multiplier) + max(prev_cooldown, time.time())
 
         if cooldown in ["match_game"]:
-            message = f"{ctx.author.mention} your `{cooldown.replace("_", " ").upper()}` cooldown has been increased by {increase} hour{'s' if increase > 1 else ''}! 🎃"
+            message = f"{ctx.author.mention} your `{cooldown.replace('_', ' ').upper()}` cooldown has been increased by {increase} hour{'s' if increase > 1 else ''}! 🎃"
         else:
-            message = f"{ctx.author.mention} your `{cooldown.replace("_", " ").upper()}` cooldown has been increased by {increase * 10} minutes! 🎃"
+            message = f"{ctx.author.mention} your `{cooldown.replace('_', ' ').upper()}` cooldown has been increased by {increase * 10} minutes! 🎃"
         await ctx.reply(message)
 
 async def setup(bot: commands.Bot) -> None:
