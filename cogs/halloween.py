@@ -50,15 +50,15 @@ class Halloween(commands.Cog):
         self.treats: Dict[str, Dict[str, Union[Callable, float]]] = {
             "treat": {
                 "func": self.on_treat,
-                "weight": .9
+                "weight": .1
             },
             "cooldown_reset": {
                 "func": self.on_cooldown_reset,
-                "weight": .0
+                "weight": .5
             },
             "pumpkins_gain": {
                 "func": self.on_pumpkin_gain,
-                "weight": .0
+                "weight": .5
             },
             "random_card": {
                 "func": self.on_random_card_gain,
