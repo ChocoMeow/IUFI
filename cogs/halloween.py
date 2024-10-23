@@ -50,15 +50,15 @@ class Halloween(commands.Cog):
         self.treats: Dict[str, Dict[str, Union[Callable, float]]] = {
             "treat": {
                 "func": self.on_treat,
-                "weight": .1
+                "weight": .9
             },
             "cooldown_reset": {
                 "func": self.on_cooldown_reset,
-                "weight": .5
+                "weight": .0
             },
             "pumpkins_gain": {
                 "func": self.on_pumpkin_gain,
-                "weight": .5
+                "weight": .0
             },
             "random_card": {
                 "func": self.on_random_card_gain,
@@ -90,7 +90,7 @@ class Halloween(commands.Cog):
         rank_1_user = None
         description = ""
         for index, top_user in enumerate(users):
-            level = top_user.get("treats", 0)
+            level = top_user.get('game_state', {}).get('halloween_event', {}).get('treats', 0)
             member = self.bot.get_user(top_user['_id'])
 
             if member:
@@ -137,7 +137,7 @@ class Halloween(commands.Cog):
         func.logger.info(f"User {ctx.author.name}({ctx.author.id}) performed trick or treat action: {action_type}")
 
     async def on_treat(self, ctx: commands.Context, query: Dict[str, Any], user: Dict[str, Any]) -> None:
-        query["$inc"] = {"treats": 1}
+        query["$inc"] = {"game_state.halloween_event.treats": 1}
         await ctx.reply(f"{ctx.author.mention} you got a treat! 🍬")
 
     async def on_random_roll(self, ctx: commands.Context, query: Dict[str, Any], user: Dict[str, Any]) -> None:
