@@ -240,7 +240,7 @@ class Player(VoiceProtocol):
             r_emoji, r_amount = reward_data["emoji"], reward_data["amount"]
 
             if len(r_display_name) == 1:
-                reward_message += f"{r_emoji} {r_display_name[0].title():<18} x{reward_data["amount"]}\n"
+                reward_message += f"{r_emoji} {r_display_name[0].title():<18} x{reward_data['amount']}\n"
             else:
                 reward_parts = r_display_name[1].split("_")
                 format_name = f"{reward_parts[0].title()}" if len(reward_parts) == 1 else f"{reward_parts[0].title()} {reward_parts[1].upper()}"
@@ -288,7 +288,7 @@ class Player(VoiceProtocol):
         if not show_answer:
             title = "What song do you think is on right now?"
             description = "```📀 Song Title: ???\n🎤 Singer: ??\n🖼️ Album: ??\n✅ Correct: ??%\n⏱ Avg Time: ??s\n🏅 Record: ??:??s (????)```"
-            thumbnail = "https://cdn.discordapp.com/attachments/1183364758175498250/1202590915093467208/74961f7708c7871fed5c7bee00e76418.png"
+            thumbnail = "https://cdn.discordapp.com/attachments/1183364758175498250/1298625798189748326/p-replace-color.png"
         
         else:
             member_id, best_time = current.best_record
