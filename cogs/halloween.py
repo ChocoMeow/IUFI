@@ -84,7 +84,7 @@ class Halloween(commands.Cog):
         """
         user = await func.get_user(ctx.author.id)
         users = await func.USERS_DB.find().sort("game_state.halloween_event.treats", -1).limit(10).to_list(10)
-        rank = await func.USERS_DB.count_documents({'game_state.halloween_event.treats': {'$gt': user.get('treats', 0)}}) + 1
+        rank = await func.USERS_DB.count_documents({'game_state.halloween_event.treats': {'$gt': user.get('game_state', {}).get('halloween_event', {}).get('treats', 0)}}) + 1
         embed = discord.Embed(title="🎃   Trick Or Treat Leaderboard", color=discord.Color.random())
         embed.description = f"**Your current position is `{rank}`**\n"
         rank_1_user = None
@@ -100,7 +100,7 @@ class Halloween(commands.Cog):
                     f"{func.truncate_string(member.display_name):<18} {level:>5} 🍬", member == ctx.author)
 
         if rank > len(users):
-            level = user.get('treats', 0)
+            level = user.get('game_state', {}).get('halloween_event', {}).get('treats', 0)
             description += ("┇\n" if rank > len(users) + 1 else "") + f"{LEADERBOARD_EMOJIS[3]} " + highlight_text(
                 f"{func.truncate_string(ctx.author.display_name):<18} {level:>5} 🍬")
 
