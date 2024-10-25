@@ -25,7 +25,7 @@ class Frames(commands.Cog):
         if card.owner_id != ctx.author.id:
             return await ctx.reply("You are not the owner of this card.")
         
-        if card.tier in ["mystic", "celestial"]:
+        if card.tier[1] in ["mystic", "celestial"]:
             return await ctx.reply("The card does not support the frame!")
         
         if card.stars < 5:
@@ -55,7 +55,7 @@ class Frames(commands.Cog):
         if card.owner_id != ctx.author.id:
             return await ctx.reply("You are not the owner of this card.")
         
-        if card.tier in ["mystic", "celestial"]:
+        if card.tier[1] in ["mystic", "celestial"]:
             return await ctx.reply("The card does not support the frame!")
         
         if card.stars < 5:
