@@ -79,6 +79,32 @@ class Info(commands.Cog):
 
         await ctx.reply(embed=embed)
 
+    @leaderboard.command(aliases=["c"])
+    async def candies(self, ctx: commands.Context):
+        """Shows the IUFI Starcandies leaderboard."""
+        users = await func.USERS_DB.find().sort("candies", -1).limit(10).to_list(10)
+        user = await func.get_user(ctx.author.id)
+        rank = await func.USERS_DB.count_documents({'candies': {'$gt': user.get('candies', 0)}}) + 1
+
+        embed = discord.Embed(title="🏆   Starcandies Leaderboard", color=discord.Color.random())
+        embed.description = f"**Your current position is `{rank}`**\n"
+
+        description = ""
+        for index, top_user in enumerate(users):
+            member = self.bot.get_user(top_user['_id'])
+            if member:
+                description += f"{LEADERBOARD_EMOJIS[index if index <= 2 else 3]} " + highlight_text(f"{func.truncate_string(member.display_name):<18} {top_user['candies']:>5} 🍬", member == ctx.author)
+
+        if rank > len(users):
+            description += ("┇\n" if rank > len(users) + 1 else "") + f"{LEADERBOARD_EMOJIS[3]} " + highlight_text(f"{func.truncate_string(ctx.author.display_name):<18} {user.get('candies', 0):>5} 🍬", member == ctx.author)
+
+        if not description:
+            description = "The leaderboard is currently empty."
+
+        embed.description += f"```ansi\n{description}```"
+        embed.set_thumbnail(url=icon.url if (icon := ctx.guild.icon) else None)
+        await ctx.reply(embed=embed)
+
 
     @leaderboard.command(aliases=["mg"])
     async def matchgame(self, ctx: commands.Context, level: str = "1"):
