@@ -10,11 +10,11 @@ class FrameDropDown(discord.ui.Select):
         super().__init__(
             options=[
                 discord.SelectOption(
-                    emoji=data[0],
+                    emoji=emoji,
                     label=frame_name.title(),
-                    description=f"🍬 {data[1]}"
+                    description=f"🍬 {price}"
                 )
-                for frame_name, data in func.settings.FRAMES_BASE.items()
+                for frame_name, (emoji, price, available) in func.settings.FRAMES_BASE.items() if available
             ],
             placeholder="Select a frame to view...",
             min_values=1, max_values=1, row=0
