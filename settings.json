@@ -1,4 +1,5 @@
 {
+    "BOT_PREFIX": ["q", "Q"],
     "MAX_CARDS": 100,
     "DEFAULT_EXP": 100,
     "LAST_TRADE_TIMER": 43200,

@@ -176,7 +176,7 @@ intents.message_content = True
 
 # Initialize the bot with specified parameters
 bot = IUFI(
-    command_prefix=["q", "Q"],
+    command_prefix=func.settings.BOT_PREFIX,
     help_command=None,
     chunk_guilds_at_startup=True,
     activity=discord.Activity(type=discord.ActivityType.listening, name="qhelp"),
