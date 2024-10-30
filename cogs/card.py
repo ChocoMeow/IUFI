@@ -378,7 +378,7 @@ class Card(commands.Cog):
         """Trades your card(s) with a member.
 
         **Examples:**
-        @prefix@tade IU 10 01
+        @prefix@trade IU 10 01
         @prefix@t IU 10 01
         """
         if member.bot:
