@@ -31,14 +31,11 @@ class IUFI(commands.Bot):
         if message.channel.id in func.settings.IGNORE_CHANNEL_IDS:
             return False
         
-        # Validate commands for a specific channel
-        elif message.channel.id == 987354574304190476:
-            valid_commands = {
-                "qi", "qcardinfo", "qil", "qcardinfolast",
-                "qt", "qtl", "qtade", "qtadelast",
-                "qte", "qtradeeveryone", "qtel", "qtradeeveryonelast"
-            }
-            if message.content.split(" ")[0].lower() not in valid_commands:
+        # Validate commands for a market channel
+        elif message.channel.id == func.settings.MARKET_CHANNEL:
+            cmd = message.content.split(" ")[0].lower()
+            valid_commands = {"i", "t", "cardinfo"}
+            if not any(cmd.startswith(bot.command_prefix[0] + command) for command in valid_commands):
                 return False
         
         # Process commands normally
