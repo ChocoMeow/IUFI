@@ -23,20 +23,6 @@ class IUFI(commands.Bot):
             if player and message.author in player.channel.members:
                 await player.check_answer(message)
 
-        # Handle reactions for a card suggection channel
-        if message.channel.id == 1147547592469782548:
-            emojis = ()
-            for attachment in message.attachments:
-                if attachment.filename.endswith((".png", ".jpg")):
-                    emojis = ("🥬", "🌸", "💎", "👑")
-                    break
-                elif attachment.filename.endswith(".gif"):
-                    emojis = ("✅", "❌")
-                    break
-            
-            for emoji in emojis:
-                await message.add_reaction(emoji)
-
         # Check if the channel is allowed for the game
         if message.channel.category_id not in func.settings.ALLOWED_CATEGORY_IDS:
             return False
