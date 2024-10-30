@@ -14,8 +14,8 @@ class Settings(commands.Cog):
         """Turns reminders on for your cooldowns. Make sure you are not blocking DMs.
         
         **Examples:**
-        qtogglereminder
-        qtr
+        @prefix@togglereminder
+        @prefix@tr
         """
         user = await func.get_user(ctx.author.id)
         toggle = not user.get("reminder", False)

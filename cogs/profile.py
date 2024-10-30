@@ -46,8 +46,8 @@ class Profile(commands.Cog):
         """Shows the profile of a member. If called without a member, shows your own profile.
 
         **Examples:**
-        qprofile
-        qp IU
+        @prefix@profile
+        @prefix@p IU
         """
         if not member:
             member = ctx.author
@@ -88,8 +88,8 @@ class Profile(commands.Cog):
         """Sets your profile bio
 
         **Examples:**
-        qsetbio IU is the best
-        qsb IU is the best
+        @prefix@setbio IU is the best
+        @prefix@sb IU is the best
         """
         bio = func.clean_text(bio)
         if bio and len(bio) > 30:
@@ -107,8 +107,8 @@ class Profile(commands.Cog):
         """Sets the photocard as your profile display. Card can be identified by its ID or given tag.
 
         **Examples:**
-        qmain 01
-        qm 01
+        @prefix@main 01
+        @prefix@m 01
         """
         if card_id:
             card = iufi.CardPool.get_card(card_id)
@@ -128,8 +128,8 @@ class Profile(commands.Cog):
         """Sets the last photocard in your collection as your profile display.
 
         **Examples:**
-        qmainlast
-        qml
+        @prefix@mainlast
+        @prefix@ml
         """
         user = await func.get_user(ctx.author.id)
         if not user["cards"]:
@@ -153,8 +153,8 @@ class Profile(commands.Cog):
         """Creates a collection.
 
         **Examples:**
-        qcreatecollection IU
-        qcc IU
+        @prefix@createcollection IU
+        @prefix@cc IU
         """
         name = func.clean_text(name, allow_spaces=False, convert_to_lower=True)
         if len(name) > 10:
@@ -177,8 +177,8 @@ class Profile(commands.Cog):
         """Sets a photocard in the given slot [1 to 6] as your collection. Card can be identified by its ID or given tag.
         
         **Examples:**
-        qsetcollection IU 1 01
-        qsc IU 2 04
+        @prefix@setcollection IU 1 01
+        @prefix@sc IU 2 04
         """
         if not (1 <= slot <= 6):
             return await ctx.reply(content=f"{ctx.author.mention} the slot must be within `the range of 1 to 6`.")
@@ -209,8 +209,8 @@ class Profile(commands.Cog):
         """Sets your last photocard as a collection in the given slot [1 to 6].
 
         **Examples:**
-        qsetcollectionlast IU 1
-        qscl IU 2
+        @prefix@setcollectionlast IU 1
+        @prefix@scl IU 2
         """
         if not (1 <= slot <= 6):
             return await ctx.reply(content=f"{ctx.author.mention} the slot must be within `the range of 1 to 6`.")
@@ -244,8 +244,8 @@ class Profile(commands.Cog):
         """Removes the collection.
 
         **Examples:**
-        qremovecollection IU
-        qrc IU
+        @prefix@removecollection IU
+        @prefix@rc IU
         """
         user = await func.get_user(ctx.author.id)
 
@@ -264,8 +264,8 @@ class Profile(commands.Cog):
         """Shows the given member's collection photocards. If not specified, shows your own.
 
         **Examples:**
-        qshowcollection
-        qf IU
+        @prefix@showcollection
+        @prefix@f IU
         """
         if not member:
             member = ctx.author
@@ -283,8 +283,8 @@ class Profile(commands.Cog):
         """Claims your daily reward.
 
         **Examples:**
-        qdaily
-        qd
+        @prefix@daily
+        @prefix@d
         """
         user = await func.get_user(ctx.author.id)
 
@@ -326,8 +326,8 @@ class Profile(commands.Cog):
         """View your photocard collection.
 
         **Examples:**
-        qview
-        qv
+        @prefix@view
+        @prefix@v
         """
         user = await func.get_user(ctx.author.id)
 
@@ -343,8 +343,8 @@ class Profile(commands.Cog):
         """Shows the items that you own.
         
         **Examples:**
-        qinventory
-        qin
+        @prefix@inventory
+        @prefix@in
         """
         user = await func.get_user(ctx.author.id)
         embed = discord.Embed(title=f"🎒 {ctx.author.display_name}'s Inventory", color=0x5cb045)
@@ -372,8 +372,8 @@ class Profile(commands.Cog):
         """Shows the daily quests
 
         **Examples:**
-        qquests
-        qqu
+        @prefix@quests
+        @prefix@qu
         """
         user = await func.get_user(ctx.author.id)
 

@@ -15,8 +15,8 @@ class Potion(commands.Cog):
         """Use a potion on the user
 
         **Examples:**
-        qusepotion speed i
-        qup luck ii
+        @prefix@usepotion speed i
+        @prefix@up luck ii
         """
         potion_name, level = potion_name.lower(), level.lower()
 

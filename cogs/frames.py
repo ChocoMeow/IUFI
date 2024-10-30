@@ -15,8 +15,8 @@ class Frames(commands.Cog):
         """Sets the frame for the photocard. Both card and frame can be identified by id or given tag.
 
         **Examples:**
-        qsetframe 01
-        qsf 01
+        @prefix@setframe 01
+        @prefix@sf 01
         """
         card = iufi.CardPool.get_card(card_id)
         if not card:
@@ -40,8 +40,8 @@ class Frames(commands.Cog):
         """Sets the frame for the last photocard. Frame can be identified by its id or given tag.
         
         **Examples:**
-        qsetframelast
-        qsfl
+        @prefix@setframelast
+        @prefix@sfl
         """
         user = await func.get_user(ctx.author.id)  
         if not user["cards"]:
@@ -70,8 +70,8 @@ class Frames(commands.Cog):
         """Removes the frame from the photocard. Card can be identified by its ID or given tag.
         
         **Examples:**
-        qremoveframe 01
-        qrf 01
+        @prefix@removeframe 01
+        @prefix@rf 01
         """
         card = iufi.CardPool.get_card(card_id)
         if not card:

@@ -24,8 +24,8 @@ class Gameplay(commands.Cog):
         """Rolls a set of photocards for claiming.
 
         **Examples:**
-        qroll
-        qr rare
+        @prefix@roll
+        @prefix@r rare
         """
         user = await func.get_user(ctx.author.id)
         if not tier and (retry := user["cooldown"]["roll"]) > time.time():
@@ -74,8 +74,8 @@ class Gameplay(commands.Cog):
         """IUFI Matching game.
 
         **Examples:**
-        qgame 1
-        qmg 2
+        @prefix@game 1
+        @prefix@mg 2
         """
         if level not in (levels := func.settings.MATCH_GAME_SETTINGS.keys()):
             return await ctx.reply(f"Invalid level selection! Please select a valid level: `{', '.join(levels)}`")
@@ -104,8 +104,8 @@ class Gameplay(commands.Cog):
         """IUFI Quiz
         
         **Examples:**
-        qquiz
-        qq
+        @prefix@quiz
+        @prefix@q
         """
         # Fetch the user data
         user = await func.get_user(ctx.author.id)
@@ -146,8 +146,8 @@ class Gameplay(commands.Cog):
         """Shows all your cooldowns.
 
         **Examples:**
-        qcooldown
-        qcd
+        @prefix@cooldown
+        @prefix@cd
         """
         user = await func.get_user(ctx.author.id)
 
@@ -172,8 +172,8 @@ class Gameplay(commands.Cog):
         """Brings up the IUFI shop.
 
         **Examples:**
-        qshop
-        qs
+        @prefix@shop
+        @prefix@s
         """
         view = ShopView(ctx.author)
         view.message = await ctx.reply(embed=await view.build_embed(), view=view)
