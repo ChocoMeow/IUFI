@@ -393,7 +393,7 @@ class Card(commands.Cog):
         for card_id in card_ids:
             card = iufi.CardPool.get_card(card_id)
             if not card:
-                return await ctx.reply(f"The `{card_id}` card was not found. Please try again.")
+                continue
 
             if card.owner_id != ctx.author.id:
                 return await ctx.reply(f"You are not the owner of this `{card_id}` card.")
@@ -404,6 +404,9 @@ class Card(commands.Cog):
             if card not in cards:
                 cards.append(card)
 
+        if not cards:
+            return await ctx.reply("No cards were found. Please enter a valid card ID!")
+        
         if len(cards) > 1:
             image_bytes, image_format = await iufi.gen_cards_view(cards, max(3, min((len(cards) // 2), 8)))
         else:
@@ -437,7 +440,7 @@ class Card(commands.Cog):
         for card_id in card_ids:
             card = iufi.CardPool.get_card(card_id)
             if not card:
-                return await ctx.reply(f"The `{card_id}` card was not found. Please try again.")
+                continue
 
             if card.owner_id != ctx.author.id:
                 return await ctx.reply(f"You are not the owner of this `{card_id}` card.")
@@ -448,6 +451,9 @@ class Card(commands.Cog):
             if card not in cards:
                 cards.append(card)
 
+        if not cards:
+            return await ctx.reply("No cards were found. Please enter a valid card ID!")
+        
         if len(cards) > 1:
             image_bytes, image_format = await iufi.gen_cards_view(cards, max(3, min((len(cards) // 2), 8)))
         else:
