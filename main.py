@@ -16,13 +16,17 @@ class IUFI(commands.Bot):
 
         # Handle messages in the music text channel
         if message.channel.id == func.settings.MUSIC_TEXT_CHANNEL:
-            if message.content.split(" ")[0].lower() not in ["ql"]:
-                return
-            
-            player: iufi.Player = iufi.MusicPool.get_player(message.guild.id)
-            if player and message.author in player.channel.members:
-                await player.check_answer(message)
+            cmd = message.content.split(" ")[0].lower()
+            if any(cmd.startswith(prefix + 'l') for prefix in bot.command_prefix):
+                pass
 
+            else:
+                player: iufi.Player = iufi.MusicPool.get_player(message.guild.id)
+                if player and message.author in player.channel.members:
+                    return await player.check_answer(message)
+
+            return False
+        
         # Check if the channel is allowed for the game
         if message.channel.category_id not in func.settings.ALLOWED_CATEGORY_IDS:
             return False
@@ -35,7 +39,7 @@ class IUFI(commands.Bot):
         elif message.channel.id == func.settings.MARKET_CHANNEL:
             cmd = message.content.split(" ")[0].lower()
             valid_commands = {"i", "t", "cardinfo"}
-            if not any(cmd.startswith(bot.command_prefix[0] + command) for command in valid_commands):
+            if not any(cmd.startswith(prefix + command) for prefix in bot.command_prefix for command in valid_commands):
                 return False
         
         # Process commands normally
