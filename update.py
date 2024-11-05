@@ -4,7 +4,7 @@ from io import BytesIO
 ROOT_DIR = os.path.dirname(os.path.abspath(__file__))
 
 IUFI_URL = "https://github.com/ChocoMeow/IUFI/archive/"
-IGNORE_FILES = ["images", "frames", "cover", "musicTracks", "newImages", "settings.json", "logs"]
+IGNORE_FILES = ["images", "frames", "cover", "musicTracks", "newImages", "settings.json", ".env", "logs"]
 
 class bcolors:
     WARNING = '\033[93m'
