@@ -30,29 +30,32 @@ class GuessButton(discord.ui.Button):
         await self.handle_matching()
         
     async def handle_matching(self):
-        self.view._need_wait = True
-        if self.view._is_matching:
-            await self.matching_process()
-        else:
-            self.view.guessed[self.custom_id] = self.card
-            self.disabled = True
+        try:
+            self.view._need_wait = True
+            if self.view._is_matching:
+                await self.matching_process()
+            else:
+                self.view.guessed[self.custom_id] = self.card
+                self.disabled = True
 
-        self.view._is_matching = not self.view._is_matching
-        self.view._last_clicked = self
-        self.view.clicked += 1
-        
-        if self.view.click_left <= 0:
-            await self.view.end_game()
+            self.view._is_matching = not self.view._is_matching
+            self.view._last_clicked = self
+            self.view.clicked += 1
             
-        elif self.view.matched() >= self.view._cards:
-            await self.view.end_game()
+            if self.view.click_left <= 0:
+                await self.view.end_game()
+                
+            elif self.view.matched() >= self.view._cards:
+                await self.view.end_game()
+            
+            embed, file = await self.view.build()
+            if self.view._ended_time:
+                await self.view.response.edit(content="This game has expired.", embed=embed, attachments=[file], view=self.view)
+            else:
+                await self.view.response.edit(embed=embed, attachments=[file], view=self.view)
         
-        embed, file = await self.view.build()
-        if self.view._ended_time:
-            await self.view.response.edit(content="This game has expired.", embed=embed, attachments=[file], view=self.view)
-        else:
-            await self.view.response.edit(embed=embed, attachments=[file], view=self.view)
-        self.view._need_wait = False
+        finally:
+            self.view._need_wait = False
 
     async def matching_process(self):
         for card in self.view.guessed.values():
