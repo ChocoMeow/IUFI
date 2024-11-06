@@ -81,7 +81,7 @@ class Settings:
         self.MAIN_GUILD = settings.get("MAIN_GUILD")
         self.MUSIC_TEXT_CHANNEL = settings.get("MUSIC_TEXT_CHANNEL")
         self.MUSIC_VOICE_CHANNEL = settings.get("MUSIC_VOICE_CHANNEL")
-        self.GALLERY_CHANNEL = settings.get("GALLERY_CHANNEL_ID")
+        self.GALLERY_CHANNEL = settings.get("GALLERY_CHANNEL")
         self.MARKET_CHANNEL = settings.get("MARKET_CHANNEL")
         self.ALLOWED_CATEGORY_IDS = settings.get("ALLOWED_CATEGORY_IDS")
         self.IGNORE_CHANNEL_IDS = settings.get("IGNORE_CHANNEL_IDS")
