@@ -16,27 +16,17 @@ class IUFI(commands.Bot):
 
         # Handle messages in the music text channel
         if message.channel.id == func.settings.MUSIC_TEXT_CHANNEL:
-            if message.content.split(" ")[0].lower() not in ["ql"]:
-                return
-            
-            player: iufi.Player = iufi.MusicPool.get_player(message.guild.id)
-            if player and message.author in player.channel.members:
-                await player.check_answer(message)
+            cmd = message.content.split(" ")[0].lower()
+            if any(cmd.startswith(prefix + 'l') for prefix in bot.command_prefix):
+                pass
 
-        # Handle reactions for a card suggection channel
-        if message.channel.id == 1147547592469782548:
-            emojis = ()
-            for attachment in message.attachments:
-                if attachment.filename.endswith((".png", ".jpg")):
-                    emojis = ("🥬", "🌸", "💎", "👑")
-                    break
-                elif attachment.filename.endswith(".gif"):
-                    emojis = ("✅", "❌")
-                    break
-            
-            for emoji in emojis:
-                await message.add_reaction(emoji)
+            else:
+                player: iufi.Player = iufi.MusicPool.get_player(message.guild.id)
+                if player and message.author in player.channel.members:
+                    return await player.check_answer(message)
 
+            return False
+        
         # Check if the channel is allowed for the game
         if message.channel.category_id not in func.settings.ALLOWED_CATEGORY_IDS:
             return False
@@ -45,14 +35,11 @@ class IUFI(commands.Bot):
         if message.channel.id in func.settings.IGNORE_CHANNEL_IDS:
             return False
         
-        # Validate commands for a specific channel
-        elif message.channel.id == 987354574304190476:
-            valid_commands = {
-                "qi", "qcardinfo", "qil", "qcardinfolast",
-                "qt", "qtl", "qtade", "qtadelast",
-                "qte", "qtradeeveryone", "qtel", "qtradeeveryonelast"
-            }
-            if message.content.split(" ")[0].lower() not in valid_commands:
+        # Validate commands for a market channel
+        elif message.channel.id == func.settings.MARKET_CHANNEL:
+            cmd = message.content.split(" ")[0].lower()
+            valid_commands = {"i", "t", "cardinfo"}
+            if not any(cmd.startswith(prefix + command) for prefix in bot.command_prefix for command in valid_commands):
                 return False
         
         # Process commands normally
@@ -126,16 +113,7 @@ class IUFI(commands.Bot):
             pass
 
         elif isinstance(error, (commands.MissingRequiredArgument, commands.MissingRequiredAttachment)):
-            command = f"{ctx.prefix}" + (f"{ctx.command.parent.qualified_name} " if ctx.command.parent else "") + f"{ctx.command.name} {ctx.command.signature}"
-            position = command.find(f"<{ctx.current_parameter.name}>") + 1
-            description = f"**Correct Usage:**\n```{command}\n" + " " * position + "^" * len(ctx.current_parameter.name) + "```\n"
-            if ctx.command.aliases:
-                description += f"**Aliases:**\n`{', '.join([f'{ctx.prefix}{alias}' for alias in ctx.command.aliases])}`\n\n"
-            description += f"**Description:**\n{ctx.command.help}\n\u200b"
-
-            embed = discord.Embed(description=description, color=discord.Color.random())
-            embed.set_footer(icon_url=ctx.me.display_avatar.url, text="More Help: Ask the staff!")
-            return await ctx.reply(embed=embed)
+            return await ctx.reply(embed=func.create_help_embed(ctx))
 
         elif not issubclass(error.__class__, iufi.IUFIException):
             error = "An unexpected error occurred. Please try again later!"
@@ -176,7 +154,7 @@ intents.message_content = True
 
 # Initialize the bot with specified parameters
 bot = IUFI(
-    command_prefix=["q", "Q"],
+    command_prefix=func.settings.BOT_PREFIX,
     help_command=None,
     chunk_guilds_at_startup=True,
     activity=discord.Activity(type=discord.ActivityType.listening, name="qhelp"),

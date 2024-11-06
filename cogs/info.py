@@ -241,15 +241,7 @@ class Info(commands.Cog):
         if command:
             command: commands.Command = self.bot.get_command(command)
             if command and not command.hidden:
-                command_str = f"{ctx.prefix}" + (f"{command.parent.qualified_name} " if command.parent else "") + f"{command.name} {command.signature}"
-                description = f"**Usage:**\n```{command_str}```\n"
-                if command.aliases:
-                    description += f"**Aliases:**\n`{', '.join([f'{ctx.prefix}{alias}' for alias in command.aliases])}`\n\n"
-                description += f"**Description:**\n{command.help}\n\u200b"
-
-                embed = discord.Embed(description=description, color=discord.Color.random())
-                embed.set_footer(icon_url=self.bot.user.display_avatar.url, text="More Help: Ask the staff!")
-                return await ctx.reply(embed=embed)
+                return await ctx.reply(embed=func.create_help_embed(ctx, command))
 
         view = HelpView(self.bot, ctx.author, ctx.prefix)
         await ctx.reply(embed=view.build_embed(), view=view)

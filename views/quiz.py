@@ -338,7 +338,8 @@ class QuizView(discord.ui.View):
             
             msg = self.gen_response(correct).format(time=f"`{func.convert_seconds(used_time)}`", correct_answer=f"`{self.currect_question.answers[0]}`", next=_next)
             self._results[self.current] = correct
-            question.update_average_time(used_time)
+            if correct:
+                question.update_average_time(used_time)
             question.update_user(self.author.id, modal.answer, used_time, correct)
 
         message: discord.Message = await interaction.followup.send(msg, ephemeral=True)

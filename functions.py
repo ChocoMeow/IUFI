@@ -1,4 +1,4 @@
-import os, time, copy, json, random, logging
+import os, time, copy, json, random, logging, discord
 
 from motor.motor_asyncio import (
     AsyncIOMotorClient,
@@ -16,6 +16,8 @@ from typing import (
     Any,
     Union
 )
+
+from discord.ext import commands
 
 from dotenv import load_dotenv
 
@@ -43,13 +45,15 @@ class TOKEN:
 
 class Settings:
     def __init__(self):
+        self.BOT_PREFIX: List[str] = []
         self.MAX_CARDS: int = 0
         self.DEFAULT_EXP: int = 0
         self.LAST_TRADE_TIMER: int = 0
         self.MAIN_GUILD: int = 0
         self.MUSIC_TEXT_CHANNEL: int = 0
         self.MUSIC_VOICE_CHANNEL: int = 0
-        self.GALLERY_CHANNEL_ID: int = 0
+        self.GALLERY_CHANNEL: int = 0
+        self.MARKET_CHANNEL: int = 0
         self.ALLOWED_CATEGORY_IDS: List[int] = []
         self.IGNORE_CHANNEL_IDS: List[int] = []
         self.GAME_CHANNEL_IDS: List[int] = []
@@ -70,13 +74,15 @@ class Settings:
 
     def load(self):
         settings = open_json("settings.json")
+        self.BOT_PREFIX = settings.get("BOT_PREFIX", [])
         self.MAX_CARDS = settings.get("MAX_CARDS")
         self.DEFAULT_EXP = settings.get("DEFAULT_EXP")
         self.LAST_TRADE_TIMER = settings.get("LAST_TRADE_TIMER")
         self.MAIN_GUILD = settings.get("MAIN_GUILD")
         self.MUSIC_TEXT_CHANNEL = settings.get("MUSIC_TEXT_CHANNEL")
         self.MUSIC_VOICE_CHANNEL = settings.get("MUSIC_VOICE_CHANNEL")
-        self.GALLERY_CHANNEL_ID = settings.get("GALLERY_CHANNEL_ID")
+        self.GALLERY_CHANNEL = settings.get("GALLERY_CHANNEL")
+        self.MARKET_CHANNEL = settings.get("MARKET_CHANNEL")
         self.ALLOWED_CATEGORY_IDS = settings.get("ALLOWED_CATEGORY_IDS")
         self.IGNORE_CHANNEL_IDS = settings.get("IGNORE_CHANNEL_IDS")
         self.GAME_CHANNEL_IDS = settings.get("GAME_CHANNEL_IDS")
@@ -282,6 +288,36 @@ def update_quest_progress(user: Dict[str, Any], completed_quests: Union[str, Lis
                         query["$inc"]["exp"] += 10
 
     return query
+
+def create_help_embed(ctx: commands.Context, cmd: commands.Command = None) -> discord.Embed:
+    if (correction_required := not cmd):
+        cmd = ctx.command
+
+    # Prepare command usage string
+    command_usage = f"{ctx.prefix}{cmd.parent.qualified_name + ' ' if cmd.parent else ''}{cmd.name} {cmd.signature}"
+    
+    # Build usage description
+    if correction_required:
+        param_position = command_usage.find(f"<{ctx.current_parameter.name}>") + 1
+        usage_description = f"**Correct Usage:**\n```{command_usage}\n" + " " * param_position + "^" * len(ctx.current_parameter.name) + "```\n"
+    else:
+        usage_description = f"**Usage:**\n```{command_usage}```\n"
+
+    # Add aliases if available
+    if cmd.aliases:
+        aliases = ', '.join([f'{ctx.prefix}{alias}' for alias in cmd.aliases])
+        usage_description += f"**Aliases:**\n`{aliases}`\n\n"
+
+    # Replace placeholders in command help
+    help_text = cmd.help.replace("@prefix@", settings.BOT_PREFIX[0])
+
+    # Complete the description
+    usage_description += f"**Description:**\n{help_text}\n\u200b"
+
+    # Create and return the embed
+    embed = discord.Embed(description=usage_description, color=discord.Color.random())
+    embed.set_footer(icon_url=ctx.me.display_avatar.url, text="More Help: Ask the staff!")
+    return embed
 
 async def update_user(user_id: int, data: dict) -> None:
     user = await get_user(user_id)

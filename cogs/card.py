@@ -1,7 +1,9 @@
-import discord, iufi, asyncio, time
+import discord, iufi, time
 import functions as func
 
+from discord import app_commands
 from discord.ext import commands
+
 from views import (
     ConfirmView,
     TradeView
@@ -18,8 +20,8 @@ class Card(commands.Cog):
         """Shows the details of a photocard. Card can be identified by its ID or given tag.
         
         **Examples:**
-        qcardinfo 01
-        qi 01 02 03
+        @prefix@cardinfo 01
+        @prefix@i 01 02 03
         """
         cards: list[iufi.Card] = []
 
@@ -61,8 +63,8 @@ class Card(commands.Cog):
         """Shows the details of your last photocard.
         
         **Examples:**
-        qcardinfolast
-        qil
+        @prefix@cardinfolast
+        @prefix@il
         """
         user = await func.get_user(ctx.author.id)
 
@@ -90,8 +92,8 @@ class Card(commands.Cog):
         """Converts the photocards into starcandies. Card can be identified by its ID or given tag. The amount of starcandies received is dependent on the card's rarity.
 
         **Examples:**
-        qconcert 01
-        qc 01 02
+        @prefix@concert 01
+        @prefix@c 01 02
         """
         converted_cards: list[iufi.Card] = []
 
@@ -126,8 +128,8 @@ class Card(commands.Cog):
         """Converts the last photocard of your collection.
 
         **Examples:**
-        qconvertlast
-        qcl
+        @prefix@convertlast
+        @prefix@cl
         """
         user = await func.get_user(ctx.author.id)
 
@@ -173,8 +175,8 @@ class Card(commands.Cog):
         """Converts all photocard of your collection.
 
         **Examples:**
-        qconvertall
-        qca
+        @prefix@convertall
+        @prefix@ca
         """
         user = await func.get_user(ctx.author.id)
 
@@ -225,8 +227,8 @@ class Card(commands.Cog):
         """Converts photocards that fit the given mode.
 
         **Examples:**
-        qconvertmass notag
-        qcm notag common rare
+        @prefix@convertmass notag
+        @prefix@cm notag common rare
         """
         user = await func.get_user(ctx.author.id)
         category_list = categorys.split(" ")
@@ -287,8 +289,8 @@ class Card(commands.Cog):
         """Sets the photocard's tag. Card can be identified by its ID or previous tag.
 
         **Examples:**
-        qsettag 01 IUISBEST
-        qst 01 IUISBEST
+        @prefix@settag 01 IUISBEST
+        @prefix@st 01 IUISBEST
         """
         tag = func.clean_text(tag, allow_spaces=False)
         if tag and len(tag) > 10:
@@ -317,8 +319,8 @@ class Card(commands.Cog):
         """Sets the tag of the last photocard in your collection.
 
         **Examples:**
-        qsettaglast IUISBEST
-        qstl IUISBEST
+        @prefix@settaglast IUISBEST
+        @prefix@stl IUISBEST
         """
         tag = func.clean_text(tag, allow_spaces=False)
         if tag and len(tag) > 10:
@@ -350,8 +352,8 @@ class Card(commands.Cog):
         """Removes the photocard's tag. Card can be identified by its ID or given tag.
 
         **Examples:**
-        qremovetag 01
-        qrt 01
+        @prefix@removetag 01
+        @prefix@rt 01
         """
         card = iufi.CardPool.get_card(card_id)
         if not card:
@@ -376,8 +378,8 @@ class Card(commands.Cog):
         """Trades your card(s) with a member.
 
         **Examples:**
-        qtade IU 10 01
-        qt IU 10 01
+        @prefix@trade IU 10 01
+        @prefix@t IU 10 01
         """
         if member.bot:
             return await ctx.reply("You are not able to trade with a bot.")
@@ -391,7 +393,7 @@ class Card(commands.Cog):
         for card_id in card_ids:
             card = iufi.CardPool.get_card(card_id)
             if not card:
-                return await ctx.reply(f"The `{card_id}` card was not found. Please try again.")
+                continue
 
             if card.owner_id != ctx.author.id:
                 return await ctx.reply(f"You are not the owner of this `{card_id}` card.")
@@ -402,6 +404,9 @@ class Card(commands.Cog):
             if card not in cards:
                 cards.append(card)
 
+        if not cards:
+            return await ctx.reply("No cards were found. Please enter a valid card ID!")
+        
         if len(cards) > 1:
             image_bytes, image_format = await iufi.gen_cards_view(cards, max(3, min((len(cards) // 2), 8)))
         else:
@@ -424,8 +429,8 @@ class Card(commands.Cog):
         """Trades your card(s) with everyone.
         
         **Examples:**
-        qtradeeveryone 10 01
-        qte 10 01
+        @prefix@tradeeveryone 10 01
+        @prefix@te 10 01
         """
         if candies < 0:
             return await ctx.reply("The candy count cannot be set to a negative value.")
@@ -435,7 +440,7 @@ class Card(commands.Cog):
         for card_id in card_ids:
             card = iufi.CardPool.get_card(card_id)
             if not card:
-                return await ctx.reply(f"The `{card_id}` card was not found. Please try again.")
+                continue
 
             if card.owner_id != ctx.author.id:
                 return await ctx.reply(f"You are not the owner of this `{card_id}` card.")
@@ -446,6 +451,9 @@ class Card(commands.Cog):
             if card not in cards:
                 cards.append(card)
 
+        if not cards:
+            return await ctx.reply("No cards were found. Please enter a valid card ID!")
+        
         if len(cards) > 1:
             image_bytes, image_format = await iufi.gen_cards_view(cards, max(3, min((len(cards) // 2), 8)))
         else:
@@ -468,8 +476,8 @@ class Card(commands.Cog):
         """Trades your last card with a member.
 
         **Examples:**
-        qtradelast IU 10
-        qtl IU 10
+        @prefix@tradelast IU 10
+        @prefix@tl IU 10
         """
         if member.bot:
             return await ctx.reply("You are not able to trade with a bot.")
@@ -511,8 +519,8 @@ class Card(commands.Cog):
         """Trades your last card with everyone.
 
         **Examples:**
-        qtradeeveryonelast 10
-        qtel 10
+        @prefix@tradeeveryonelast 10
+        @prefix@tel 10
         """
         if candies < 0:
             return await ctx.reply("The candy count cannot be set to a negative value.")
@@ -550,8 +558,8 @@ class Card(commands.Cog):
         """Use cards of the same type to upgrade your card star.
 
         **Examples:**
-        qupgrade 01 02
-        qu 01 02 03 04 05
+        @prefix@upgrade 01 02
+        @prefix@u 01 02 03 04 05
         """
         upgrade_card = iufi.CardPool.get_card(upgrade_card_id)
         if not upgrade_card:

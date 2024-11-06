@@ -1,13 +1,13 @@
 
-import discord, iufi, asyncio, time
+import discord, iufi, time
 import functions as func
 
 from discord.ext import commands
 
 class CaptionModal(discord.ui.Modal):
-    def __init__(self, cards: list[iufi.Card]) -> None:
+    def __init__(self, view: discord.ui.View) -> None:
         super().__init__(title="Add Caption")
-        self.cards = cards
+        self.view: CollectionView = view
         
         self.add_item(discord.ui.TextInput(
             label='Caption', 
@@ -19,12 +19,13 @@ class CaptionModal(discord.ui.Modal):
         await interaction.response.defer()
 
         caption = self.children[0].value or ""
-        image_bytes, image_format = await iufi.gen_cards_view(self.cards, size_rate=1)
-        if self.cards and (gallery_channel := interaction.guild.get_channel(func.settings.GALLERY_CHANNEL_ID)):
-            await gallery_channel.send(
+        image_bytes, image_format = await iufi.gen_cards_view(self.view.cards, size_rate=iufi.objects.SIZE_RATE if self.view.is_gif() else 1)
+        if self.view.cards and (gallery_channel := interaction.guild.get_channel(func.settings.GALLERY_CHANNEL)):
+            message = await gallery_channel.send(
                 content=f"{caption}\nSent by {interaction.user.mention}",
                 file=discord.File(image_bytes, filename=f'image.{image_format}')
             )
+            await message.add_reaction("📌")
         
         func.logger.info(f"User {interaction.user.name}({interaction.user.id}) has sent a collection to {gallery_channel.name}({gallery_channel.id}) with caption [{caption}]")
 
@@ -38,8 +39,12 @@ class EditBtn(discord.ui.Button):
 class HDBtn(discord.ui.Button):
     def __init__(self) -> None:
         super().__init__(emoji="⚡", label="HD Image")
+        self.view: CollectionView
     
     async def callback(self, interaction: discord.Interaction) -> None:
+        if self.view.is_gif():
+            return await interaction.response.send_message("Some cards in your current collection do not support HD.", ephemeral=True)
+        
         await interaction.response.defer()
         await self.view.send_msg(1)
 
@@ -56,7 +61,7 @@ class GalleryBtn(discord.ui.Button):
         if time.time() < (self.last_send_time + 30):
             return await interaction.response.send_message("Whoa, that was too fast! Could you please try again later?", ephemeral=True)
         self.last_send_time = time.time()
-        await interaction.response.send_modal(CaptionModal(self.view.cards))
+        await interaction.response.send_modal(CaptionModal(self.view))
 
 class EditModal(discord.ui.Modal):
     def __init__(self, view: discord.ui.View) -> None:
@@ -143,6 +148,7 @@ class CollectionView(discord.ui.View):
             self.add_item(EditBtn())
             self.add_item(GalleryBtn())
         self.add_item(HDBtn())
+
         if len(self.collections) > 1:
             self.add_item(CollectionDropdown(list(self.collections.keys())))
 
@@ -181,3 +187,6 @@ class CollectionView(discord.ui.View):
         if self.message:
             return await self.message.edit(attachments=[image_file], embed=embed, view=self)
         self.message = await self.ctx.reply(file=image_file, embed=embed, view=self)
+    
+    def is_gif(self) -> bool:
+        return any(card.is_gif for card in self.cards)
