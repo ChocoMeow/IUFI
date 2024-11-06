@@ -21,10 +21,11 @@ class CaptionModal(discord.ui.Modal):
         caption = self.children[0].value or ""
         image_bytes, image_format = await iufi.gen_cards_view(self.view.cards, size_rate=iufi.objects.SIZE_RATE if self.view.is_gif() else 1)
         if self.view.cards and (gallery_channel := interaction.guild.get_channel(func.settings.GALLERY_CHANNEL)):
-            await gallery_channel.send(
+            message = await gallery_channel.send(
                 content=f"{caption}\nSent by {interaction.user.mention}",
                 file=discord.File(image_bytes, filename=f'image.{image_format}')
             )
+            await message.add_reaction("📌")
         
         func.logger.info(f"User {interaction.user.name}({interaction.user.id}) has sent a collection to {gallery_channel.name}({gallery_channel.id}) with caption [{caption}]")
 

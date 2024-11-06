@@ -59,5 +59,19 @@ class Listeners(commands.Cog):
             if not any(False if member.bot or member.voice.self_deaf else True for member in members):
                 await player.teardown()
 
+    @commands.Cog.listener()
+    async def on_reaction_add(self, reaction: discord.Reaction, member: discord.Member) -> None:
+        if member.bot or reaction.message.channel.id != func.settings.GALLERY_CHANNEL:
+            return
+        
+        if reaction.message.author.id != self.bot.user.id:
+            return
+        
+        if reaction.emoji != "📌":
+            return
+        
+        if reaction.emoji.count > 15:
+            await reaction.message.pin(reason="Player has cast more than 15 votes to pin this collection")
+
 async def setup(bot: commands.Bot) -> None:
     await bot.add_cog(Listeners(bot))
