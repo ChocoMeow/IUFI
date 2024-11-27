@@ -156,7 +156,7 @@ bot = IUFI(
     command_prefix=func.settings.BOT_PREFIX,
     help_command=None,
     chunk_guilds_at_startup=True,
-    activity=discord.Activity(type=discord.ActivityType.listening, name="qhelp"),
+    activity=discord.Activity(type=discord.ActivityType.listening, name=f"{func.settings.BOT_PREFIX[0]}help"),
     case_insensitive=True,
     intents=intents
 )
