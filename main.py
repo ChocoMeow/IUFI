@@ -18,12 +18,11 @@ class IUFI(commands.Bot):
         if message.channel.id == func.settings.MUSIC_TEXT_CHANNEL:
             cmd = message.content.split(" ")[0].lower()
             if any(cmd.startswith(prefix + 'l') for prefix in bot.command_prefix):
-                pass
+                return await self.process_commands(message)
 
-            else:
-                player: iufi.Player = iufi.MusicPool.get_player(message.guild.id)
-                if player and message.author in player.channel.members:
-                    return await player.check_answer(message)
+            player: iufi.Player = iufi.MusicPool.get_player(message.guild.id)
+            if player and message.author in player.channel.members:
+                await player.check_answer(message)
 
             return False
         
