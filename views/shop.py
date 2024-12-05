@@ -92,7 +92,7 @@ class ShopView(discord.ui.View):
         user = await func.get_user(self.author.id)
 
         embed = discord.Embed(title="🛒 IUFI Shop", color=discord.Color.random())
-        embed.description = f"❄️ Starcandies: `{user.get('candies', 0)}`\n```"
+        embed.description = f"❄️ Snowflakes: `{user.get('candies', 0)}`\n```"
         
         for item in SHOP_BASE:
             embed.description += f"{item[0]} {(item[1].split('.')[1].title() + ' ' + item[1].split('.')[0].title()).upper():<20} {item[2]:>3} ❄️\n"

@@ -81,12 +81,12 @@ class Info(commands.Cog):
 
     @leaderboard.command(aliases=["c"])
     async def candies(self, ctx: commands.Context):
-        """Shows the IUFI Starcandies leaderboard."""
+        """Shows the IUFI Snowflakes leaderboard."""
         users = await func.USERS_DB.find().sort("candies", -1).limit(10).to_list(10)
         user = await func.get_user(ctx.author.id)
         rank = await func.USERS_DB.count_documents({'candies': {'$gt': user.get('candies', 0)}}) + 1
 
-        embed = discord.Embed(title="🏆   Starcandies Leaderboard", color=discord.Color.random())
+        embed = discord.Embed(title="🏆   Snowflakes Leaderboard", color=discord.Color.random())
         embed.description = f"**Your current position is `{rank}`**\n"
 
         description = ""

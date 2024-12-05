@@ -89,7 +89,7 @@ class Card(commands.Cog):
 
     @commands.command(aliases=["c"])
     async def convert(self, ctx: commands.Context, *, card_ids: str):
-        """Converts the photocards into starcandies. Card can be identified by its ID or given tag. The amount of starcandies received is dependent on the card's rarity.
+        """Converts the photocards into Snowflakes. Card can be identified by its ID or given tag. The amount of Snowflakes received is dependent on the card's rarity.
 
         **Examples:**
         @prefix@concert 01
