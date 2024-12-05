@@ -228,7 +228,7 @@ class QuizView(discord.ui.View):
 
                     embed.description += f"{index}. "
                     if reward_name[0] == "candies":
-                        embed.description += f"{'🍬 Candies':<18} x{amount}\n"
+                        embed.description += f"{'❄️ Candies':<18} x{amount}\n"
                     
                     elif reward_name[0] == "roll":
                         roll_data = func.settings.TIERS_BASE.get(reward_name[1])

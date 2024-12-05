@@ -36,7 +36,7 @@ class TradeView(discord.ui.View):
         embed = discord.Embed(title="⤵️ Trade", color=discord.Color.random())
         embed.description = f"```Seller: {self.seller.display_name}\n" \
                f"Buyer: {self.buyer.display_name if self.buyer else 'Anyone'}\n" \
-               f"Candies: 🍬 {self.candies}\n\n"
+               f"Candies: ❄️ {self.candies}\n\n"
 
         if len(self.cards) > 1:
             for card in self.cards:
@@ -101,7 +101,7 @@ class TradeView(discord.ui.View):
             )
 
             embed = discord.Embed(title="✅ Traded", color=discord.Color.random())
-            embed.description = f"```{', '.join(card.display_id for card in self.cards)}\n🍬 - {self.candies}```"
+            embed.description = f"```{', '.join(card.display_id for card in self.cards)}\n❄️ - {self.candies}```"
 
             await self.on_timeout()
             await interaction.followup.send(content=f"{self.seller.mention}, {buyer.mention} has made a trade with you for the card(s)!", embed=embed)
