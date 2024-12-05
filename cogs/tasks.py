@@ -65,7 +65,7 @@ class Tasks(commands.Cog):
 
         try:
             if random.randint(1, 6) == 1:
-                cards = iufi.CardPool.roll(amount=1)
+                cards = iufi.CardPool.roll(amount=1,luck_rates=6)
                 channel = self.bot.get_channel(random.choice(func.settings.GAME_CHANNEL_IDS))
                 if channel:
                     view = DropView(cards[0])
