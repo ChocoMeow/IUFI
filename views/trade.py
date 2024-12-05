@@ -36,7 +36,7 @@ class TradeView(discord.ui.View):
         embed = discord.Embed(title="⤵️ Trade", color=discord.Color.random())
         embed.description = f"```Seller: {self.seller.display_name}\n" \
                f"Buyer: {self.buyer.display_name if self.buyer else 'Anyone'}\n" \
-               f"Candies: ❄️ {self.candies}\n\n"
+               f"Snowflakes: ❄️ {self.candies}\n\n"
 
         if len(self.cards) > 1:
             for card in self.cards:
@@ -72,7 +72,7 @@ class TradeView(discord.ui.View):
             
             _buyer = await func.get_user(buyer.id)
             if _buyer["candies"] < self.candies:
-                return await interaction.followup.send(f"You don't have enough candies! You only have `{_buyer['candies']}` candies", ephemeral=True)
+                return await interaction.followup.send(f"You don't have enough Snowflakes! You only have `{_buyer['candies']}` Snowflakes", ephemeral=True)
 
             if (len(_buyer["cards"]) + len(self.cards)) > func.settings.MAX_CARDS:
                 return await interaction.followup.send(f"**Your inventory is full.**", ephemeral=True)
@@ -97,7 +97,7 @@ class TradeView(discord.ui.View):
                 f"User {buyer.name}({buyer.id}) traded a card from "
                 f"User '{self.seller.name}({self.seller.id}). "
                 f"Cards involved: [{', '.join(card_ids)}] "
-                f"for {self.candies} candies."
+                f"for {self.candies} Snowflakes."
             )
 
             embed = discord.Embed(title="✅ Traded", color=discord.Color.random())

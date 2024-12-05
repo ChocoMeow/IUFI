@@ -64,7 +64,7 @@ class FrameView(discord.ui.View):
 
         user = await func.get_user(self.author.id)
         if user["candies"] < self._price:
-            return await interaction.response.send_message(f"You don't have enough candies! You only have `{user['candies']}` candies", ephemeral=True)
+            return await interaction.response.send_message(f"You don't have enough Snowflakes! You only have `{user['candies']}` Snowflakes", ephemeral=True)
         
         try:
             self.card.change_frame(self._selected_frame)

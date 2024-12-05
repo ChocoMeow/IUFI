@@ -116,7 +116,7 @@ class Card(commands.Cog):
         
         func.logger.info(
             f"User {ctx.author.name}({ctx.author.id}) converted {len(converted_cards)} card(s): ["
-            f"{', '.join([card.id for card in converted_cards])}]. Gained {candies} candies."
+            f"{', '.join([card.id for card in converted_cards])}]. Gained {candies} Snowflakes."
         )
         
         embed = discord.Embed(title="✨ Convert", color=discord.Color.random())
@@ -216,7 +216,7 @@ class Card(commands.Cog):
 
             func.logger.info(
                 f"User {ctx.author.name}({ctx.author.id}) converted {len(converted_cards)} card(s): ["
-                f"{', '.join([card.id for card in converted_cards])}]. Gained {candies} candies."
+                f"{', '.join([card.id for card in converted_cards])}]. Gained {candies} Snowflakes."
             )
 
             embed.title = "✨ Converted"
@@ -278,7 +278,7 @@ class Card(commands.Cog):
 
             func.logger.info(
                 f"User {ctx.author.name}({ctx.author.id}) converted {len(converted_cards)} card(s): ["
-                f"{', '.join([card.id for card in converted_cards])}]. Gained {candies} candies."
+                f"{', '.join([card.id for card in converted_cards])}]. Gained {candies} Snowflakes."
             )
 
             embed.title = "✨ Converted"
@@ -414,7 +414,7 @@ class Card(commands.Cog):
 
         func.logger.info(
             f"User {ctx.author.name} ({ctx.author.id}) initiated a trade with {member.name}({member.id}). "
-            f"Trading card [{card.id}] and offering {candies} candies."
+            f"Trading card [{card.id}] and offering {candies} Snowflakes."
         )
 
         view = TradeView(ctx.author, member, cards, candies)
@@ -461,7 +461,7 @@ class Card(commands.Cog):
 
         func.logger.info(
             f"User {ctx.author.name} ({ctx.author.id}) initiated a trade with everyone. "
-            f"Trading card [{card.id}] and offering {candies} candies."
+            f"Trading card [{card.id}] and offering {candies} Snowflakes."
         )
 
         view = TradeView(ctx.author, None, cards, candies)
@@ -503,7 +503,7 @@ class Card(commands.Cog):
         
         func.logger.info(
             f"User {ctx.author.name} ({ctx.author.id}) initiated a trade with {member.name}({member.id}). "
-            f"Trading card [{card.id}] and offering {candies} candies."
+            f"Trading card [{card.id}] and offering {candies} Snowflakes."
         )
 
         view = TradeView(ctx.author, member, [card], candies)
@@ -542,7 +542,7 @@ class Card(commands.Cog):
         
         func.logger.info(
             f"User {ctx.author.name} ({ctx.author.id}) initiated a trade with everyone. "
-            f"Trading card [{card.id}] and offering {candies} candies."
+            f"Trading card [{card.id}] and offering {candies} Snowflakes."
         )
 
         view = TradeView(ctx.author, None, [card], candies)

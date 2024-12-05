@@ -58,7 +58,7 @@ class Dropdown(discord.ui.Select):
                     user = await func.get_user(interaction.user.id)
                     price = modal.quantity * item[2]
                     if user["candies"] < price:
-                        return await interaction.followup.send(f"You don't have enough candies! You only have `{user['candies']}` candies", ephemeral=True)
+                        return await interaction.followup.send(f"You don't have enough Snowflakes! You only have `{user['candies']}` Snowflakes", ephemeral=True)
                     
                     query = func.update_quest_progress(user, "BUY_ITEM", progress=modal.quantity, query={
                         "$inc": {"candies": -price, item[1]: modal.quantity}
