@@ -17,6 +17,7 @@ REPLY_MESSAGES = [
     "Hooray for {0}! You’ve won the random drop! Is it a card worthy of IU's collection or just a really shiny paper? Let’s find out!"
 ]
 
+NAUGHTY_LIST = [122062302865391616,160849769848242176]
 class DropView(discord.ui.View):
     def __init__(
         self,
@@ -50,6 +51,9 @@ class DropView(discord.ui.View):
                 await self.on_timeout()
                 self.stop()
                 return await interaction.followup.send("<:IUsad3:1071179718969266318> Oops! This card has already been claimed by someone else!", ephemeral=True)
+
+            if interaction.user.id in NAUGHTY_LIST:
+                return await interaction.followup.send(f"**No drops for you! You're on the naughty list!**", ephemeral=True)
             
             user_data = await func.get_user(interaction.user.id)
             if len(user_data["cards"]) >= func.settings.MAX_CARDS:
