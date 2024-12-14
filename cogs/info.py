@@ -230,6 +230,75 @@ class Info(commands.Cog):
         view = MusicLeaderboardView(ctx.author)
         view.message = await ctx.reply(embed=embed, view=view)
 
+
+    @leaderboard.command(aliases=["x"])
+    async def xmas(self, ctx: commands.Context):
+        """Shows the IUFI Christmas leaderboard."""
+
+        #find christmas_game_state and find top 1 in each, and show them in the leaderboard
+        # rolls, match_game.1, match_game.2, match_game.3, quiz_game, music_game
+        top_roll_user = await func.USERS_DB.find().sort("christmas_game_state.rolls", -1).limit(1).to_list(1)
+        top_match_game_1_user = await self.getMatchGameTopUser(1)
+        top_match_game_2_user = await self.getMatchGameTopUser(2)
+        top_match_game_3_user = await self.getMatchGameTopUser(3)
+        top_quiz_user = await func.USERS_DB.find().sort("christmas_game_state.quiz_game", -1).limit(1).to_list(1)
+        top_music_user = await func.USERS_DB.find().sort("christmas_game_state.music_quiz", -1).limit(1).to_list(1)
+
+        embed = discord.Embed(title="🏆   Christmas Leaderboard", color=discord.Color.random())
+        embed.description = "```ansi\n"
+        if top_roll_user and top_roll_user[0].get('christmas_game_state') and top_roll_user[0]['christmas_game_state'].get('rolls'):
+            top_roll_user = top_roll_user[0]
+            member = self.bot.get_user(top_roll_user['_id'])
+            embed.description += f"Top Roll : {func.truncate_string(member.display_name):<18} {top_roll_user['christmas_game_state']['rolls']:>6} 🎲\n"
+        else:
+            embed.description += "No rolls have been made yet.\n"
+
+        if top_match_game_1_user and top_match_game_1_user[0].get('christmas_game_state') and top_match_game_1_user[0]['christmas_game_state'].get('match_game') and top_match_game_1_user[0]['christmas_game_state']['match_game'].get('1'):
+            top_match_game_1_user = top_match_game_1_user[0]
+            member = self.bot.get_user(top_match_game_1_user['_id'])
+            embed.description += f"Top MG 1 : {func.truncate_string(member.display_name):<18} {top_match_game_1_user['christmas_game_state']['match_game']['1']['matched']:>6} 🃏\n"
+        else:
+            embed.description += "No match game level 1 has been played yet.\n"
+
+        if top_match_game_2_user and top_match_game_2_user[0].get('christmas_game_state') and top_match_game_2_user[0]['christmas_game_state'].get('match_game') and top_match_game_2_user[0]['christmas_game_state']['match_game'].get('2'):
+            top_match_game_2_user = top_match_game_2_user[0]
+            member = self.bot.get_user(top_match_game_2_user['_id'])
+            embed.description += f"Top MG 2 : {func.truncate_string(member.display_name):<18} {top_match_game_2_user['christmas_game_state']['match_game']['2']['matched']:>6} 🃏\n"
+        else:
+            embed.description += "No match game level 2 has been played yet.\n"
+
+        if top_match_game_3_user and top_match_game_3_user[0].get('christmas_game_state') and top_match_game_3_user[0]['christmas_game_state'].get('match_game') and top_match_game_3_user[0]['christmas_game_state']['match_game'].get('3'):
+            top_match_game_3_user = top_match_game_3_user[0]
+            member = self.bot.get_user(top_match_game_3_user['_id'])
+            embed.description += f"Top MG 3 : {func.truncate_string(member.display_name):<18} {top_match_game_3_user['christmas_game_state']['match_game']['3']['matched']:>6} 🃏\n"
+        else:
+            embed.description += "No match game level 3 has been played yet.\n"
+
+        if top_quiz_user and top_quiz_user[0].get('christmas_game_state') and top_quiz_user[0]['christmas_game_state'].get('quiz_game'):
+            top_quiz_user = top_quiz_user[0]
+            member = self.bot.get_user(top_quiz_user['_id'])
+            embed.description += f"Top Quiz : {func.truncate_string(member.display_name):<18} {top_quiz_user['christmas_game_state']['quiz_game']:>6} 🔥\n"
+        else:
+            embed.description += "No quiz game has been played yet.\n"
+
+        if top_music_user and top_music_user[0].get('christmas_game_state') and top_music_user[0]['christmas_game_state'].get('music_quiz'):
+            top_music_user = top_music_user[0]
+            member = self.bot.get_user(top_music_user['_id'])
+            embed.description += f"Top Music : {func.truncate_string(member.display_name):<18} {top_music_user['christmas_game_state']['music_quiz']:>6} 𝄞\n"
+        else:
+            embed.description += "No music game has been played yet.\n"
+
+        embed.description += "```"
+        embed.set_thumbnail(url=icon.url if (icon := ctx.guild.icon) else None)
+        await ctx.reply(embed=embed)
+
+    async def getMatchGameTopUser(self, level):
+        return await func.USERS_DB.find().sort([
+            (f"game_state.match_game.{level}.matched", -1),
+            (f"game_state.match_game.{level}.click_left", -1),
+            (f"game_state.match_game.{level}.finished_time", 1)
+        ]).limit(1).to_list(1)
+
     @commands.command(aliases=["h"])
     async def help(self, ctx: commands.Context, *, command: str = None):
         """Lists all the commands in IUFI.

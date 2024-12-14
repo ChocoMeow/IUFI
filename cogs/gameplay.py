@@ -38,6 +38,13 @@ class Gameplay(commands.Cog):
         query = {}
         if not tier:
             query["$set"] = {"cooldown.roll": time.time() + (func.settings.COOLDOWN_BASE["roll"][1] * (1 - actived_potions.get("speed", 0)))}
+            query["$inc"] = {"christmas_game_state.rolls": 1}
+
+        elif tier.lower() == "xmas" or tier.lower() == "x":
+            if user.get("roll", {}).get("xmas", 0) <= 0:
+                return await ctx.reply(f"You’ve used up all your `XMAS` rolls for now.")
+            tier = "xmas"
+            query["$inc"] = {"roll.xmas": -1}
 
         else:
             tier = func.match_string(tier.lower(), func.settings.TIERS_BASE.keys())

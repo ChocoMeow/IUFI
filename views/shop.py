@@ -1,10 +1,11 @@
 import discord
 import functions as func
 
-SHOP_BASE: list[tuple[str, str, int]] = [
-    (func.settings.TIERS_BASE.get("rare")[0], "roll.rare", 30),
-    (func.settings.TIERS_BASE.get("epic")[0], "roll.epic", 100),
-    (func.settings.TIERS_BASE.get("legendary")[0], "roll.legendary", 250)
+SHOP_BASE: list[tuple[str, str, int, str]] = [
+    (func.settings.TIERS_BASE.get("rare")[0], "roll.rare", 30, "RARE ROLL"),
+    (func.settings.TIERS_BASE.get("epic")[0], "roll.epic", 100, "EPIC ROLL"),
+    (func.settings.TIERS_BASE.get("legendary")[0], "roll.legendary", 250, "LEGENDARY ROLL"),
+    ("🎄", "roll.xmas", 1, "XMAS ROLL"),
 ]
 
 class QuantityModal(discord.ui.Modal):
@@ -36,7 +37,7 @@ class QuantityModal(discord.ui.Modal):
 class Dropdown(discord.ui.Select):
     def __init__(self) -> None:
         options = [
-            discord.SelectOption(label=f"{item[1].split('.')[1].title()} {item[1].split('.')[0].title()}", emoji=item[0])
+            discord.SelectOption(label=f"{item[3].title()}", emoji=item[0])
             for item in SHOP_BASE
         ]
 
@@ -47,9 +48,9 @@ class Dropdown(discord.ui.Select):
         )
 
     async def callback(self, interaction: discord.Interaction) -> None:
-        selected_item = self.values[0].split(" ")[0]
+        selected_item = self.values[0].upper()
         for item in SHOP_BASE:
-            if item[1].split(".")[1] == selected_item.lower():
+            if item[3] == selected_item:
                 modal = QuantityModal()
                 await interaction.response.send_modal(modal)
                 await modal.wait()

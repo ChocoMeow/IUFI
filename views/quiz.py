@@ -177,6 +177,7 @@ class QuizView(discord.ui.View):
 
         user = await func.get_user(self.author.id)
         state = user.get("game_state", {}).get("quiz_game", copy.deepcopy(QUIZ_SETTINGS["default"]))
+        christmas_quiz_points = user.get("christmas_game_state", {}).get("quiz_game", 0)
 
         start_time, end_time = func.get_month_unix_timestamps()
         if not (start_time <= state["last_update"] <= end_time):
@@ -185,6 +186,7 @@ class QuizView(discord.ui.View):
         # Increase points by total_points and ensure it's not less than 0 and update the highest_points
         old_highest_points = state["highest_points"]
         state["points"] = max(0, state["points"] + total_points)
+        christmas_quiz_points = max(0, christmas_quiz_points + total_points)
         if state["points"] > old_highest_points:
             state["highest_points"] = state["points"]
             new_record = True
@@ -201,6 +203,7 @@ class QuizView(discord.ui.View):
         total_average_time = state["correct"] + state["wrong"] + state["timeout"]
         state["average_time"] = round(((total_average_time * state["average_time"]) + average_time) / (total_average_time + 1), 1) if state["average_time"] else average_time
         query["$set"] = {"game_state.quiz_game": state}
+        query["$set"]["christmas_game_state.quiz_game"] = christmas_quiz_points
 
         embed = discord.Embed(title="Quiz Result", color=discord.Color.random())
         embed.description = f"```{summary}```" \

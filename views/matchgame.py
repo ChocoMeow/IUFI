@@ -18,17 +18,17 @@ class GuessButton(discord.ui.Button):
 
         self.card: Card = card
         super().__init__(*args, **kwargs)
-    
+
     async def callback(self, interaction: discord.Interaction) -> None:
         if self.disabled:
             return await interaction.response.defer()
-        
+
         if self.view._need_wait:
             return await interaction.response.send_message("Too fast! Pwease slow down, pwetty pwease!", ephemeral=True)
-        
+
         await interaction.response.defer()
         await self.handle_matching()
-        
+
     async def handle_matching(self):
         try:
             self.view._need_wait = True
@@ -41,19 +41,19 @@ class GuessButton(discord.ui.Button):
             self.view._is_matching = not self.view._is_matching
             self.view._last_clicked = self
             self.view.clicked += 1
-            
+
             if self.view.click_left <= 0:
                 await self.view.end_game()
-                
+
             elif self.view.matched() >= self.view._cards:
                 await self.view.end_game()
-            
+
             embed, file = await self.view.build()
             if self.view._ended_time:
                 await self.view.response.edit(content="This game has expired.", embed=embed, attachments=[file], view=self.view)
             else:
                 await self.view.response.edit(embed=embed, attachments=[file], view=self.view)
-        
+
         finally:
             self.view._need_wait = False
 
@@ -69,7 +69,7 @@ class GuessButton(discord.ui.Button):
 
             embed, file = await self.view.build()
             await self.view.response.edit(embed=embed, attachments=[file], view=self.view)
-            
+
             await asyncio.sleep(5)
             self.reset_cards()
 
@@ -114,16 +114,16 @@ class MatchGame(discord.ui.View):
 
             self.guessed.setdefault(index, self.covered_card)
             self.add_item(GuessButton(card, label=index, custom_id=index, row=(int(index) -1) // self._data.get("elem_per_row")))
-    
+
     async def interaction_check(self, interaction: discord.Interaction) -> bool:
         if interaction.user != self.author:
             return False
-        
+
         if self._ended_time:
             return False
-        
+
         return True
-    
+
     async def on_error(self, interaction: discord.Interaction, error: Exception, item: discord.ui.Item) -> None:
         pass
 
@@ -138,12 +138,12 @@ class MatchGame(discord.ui.View):
         embed = discord.Embed(title="Game Ended (Rewards)", color=discord.Color.random())
         matched_raw = self.matched()
         final_rewards: dict[str, int] = {}
-        
+
         rewards = f"{'Pairs':>9}{'Rewards':>9}\n"
         for matched, reward in self._data.get("rewards").items():
             if isinstance(reward[0], list):
                 reward = choice(reward)
-            
+
             if is_matched := (int(matched) <= matched_raw):
                 if reward[0] not in final_rewards:
                     final_rewards[reward[0]] = 0
@@ -155,7 +155,7 @@ class MatchGame(discord.ui.View):
             rewards += ("✅" if is_matched else "⬛") + f"  {matched:<3}"
             if reward_name[0] == "candies":
                 rewards += f"    {'❄️ Snowflakes':<18} x{amount}\n"
-            
+
             elif reward_name[0] == "exp":
                 rewards += f"    {'⚔️ Exp':<19} x{amount}\n"
 
@@ -163,13 +163,19 @@ class MatchGame(discord.ui.View):
                 reward_name = reward_name[1].split("_")
                 potion_data = func.settings.POTIONS_BASE.get(reward_name[0])
                 rewards += f"    {potion_data.get('emoji') + ' ' + reward_name[0].title() + ' ' + reward_name[1].upper() + ' Potion':<18} x{amount}\n"
-            
+
         embed.description = f"```{'🕔 Time Used:':<15} {func.convert_seconds(self.used_time)}\n{'🃏 Matched:':<15} {matched_raw}```\n```{rewards}```"
 
         update_data = {"$inc": final_rewards}
         user = await func.get_user(self.author.id)
 
         best_state = user.get("game_state", {}).get("match_game", {}).get(self._level, {
+            "finished_time": 0,
+            "matched": 0,
+            "click_left": 0
+        })
+
+        best_state_for_christmas = user.get("christmas_game_state", {}).get("match_game", {}).get(self._level, {
             "finished_time": 0,
             "matched": 0,
             "click_left": 0
@@ -187,6 +193,21 @@ class MatchGame(discord.ui.View):
                 f"{prefix}.click_left": self.click_left
             }
 
+        prefix_christmas = f"christmas_game_state.match_game.{self._level}"
+        if matched_raw > best_state_for_christmas["matched"] or (
+                matched_raw == best_state_for_christmas["matched"] and (
+                    self.used_time < best_state_for_christmas["finished_time"] or self.click_left > best_state_for_christmas["click_left"]
+                )
+        ):
+            if "$set" not in update_data:
+                update_data["$set"] = {}
+            update_data["$set"].update({
+                f"{prefix_christmas}.matched": matched_raw,
+                f"{prefix_christmas}.finished_time": self.used_time,
+                f"{prefix_christmas}.click_left": self.click_left
+            })
+
+
         await func.update_user(self.author.id, update_data)
 
         func.logger.info(
@@ -199,14 +220,14 @@ class MatchGame(discord.ui.View):
 
         await self.response.channel.send(content=f"<@{self.author.id}>", embed=embed)
         self.stop()
-        
+
     async def build(self) -> tuple[discord.Embed, discord.File]:
         embed = discord.Embed(
             description=f"```{'⚔️ Level:':<17}  {self._level}\n" \
                         f"{'👆 Click left:':<17} {self.click_left}\n" \
                         f"{'🃏 Card Matched:':<17} {self.matched()}```",
             color=self.embed_color
-        )   
+        )
 
         bytes, image_format = await gen_cards_view([card for card in self.guessed.values()], cards_per_row=self._data.get("elem_per_row"))
         embed.set_image(url=f"attachment://image.{image_format}")
@@ -216,11 +237,11 @@ class MatchGame(discord.ui.View):
     def matched(self) -> int:
         counter = Counter([card for card in self.guessed.values() if card != self.covered_card])
         return len([count for count in counter.values() if count == 2])
-    
+
     @property
     def used_time(self) -> float:
         return round(self._ended_time - self._start_time, 2)
-    
+
     @property
     def click_left(self) -> int:
         return self._max_click - self.clicked
