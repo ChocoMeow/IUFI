@@ -294,9 +294,9 @@ class Info(commands.Cog):
 
     async def getMatchGameTopUser(self, level):
         return await func.USERS_DB.find().sort([
-            (f"game_state.match_game.{level}.matched", -1),
-            (f"game_state.match_game.{level}.click_left", -1),
-            (f"game_state.match_game.{level}.finished_time", 1)
+            (f"christmas_game_state.match_game.{level}.matched", -1),
+            (f"christmas_game_state.match_game.{level}.click_left", -1),
+            (f"christmas_game_state.match_game.{level}.finished_time", 1)
         ]).limit(1).to_list(1)
 
     @commands.command(aliases=["h"])
