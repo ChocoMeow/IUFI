@@ -5,7 +5,7 @@ SHOP_BASE: list[tuple[str, str, int, str]] = [
     (func.settings.TIERS_BASE.get("rare")[0], "roll.rare", 30, "RARE ROLL"),
     (func.settings.TIERS_BASE.get("epic")[0], "roll.epic", 100, "EPIC ROLL"),
     (func.settings.TIERS_BASE.get("legendary")[0], "roll.legendary", 250, "LEGENDARY ROLL"),
-    ("🎄", "roll.xmas", 1, "XMAS ROLL"),
+    ("🎄", "roll.xmas", 100, "XMAS ROLL"),
 ]
 
 class QuantityModal(discord.ui.Modal):
