@@ -191,6 +191,12 @@ class CardPool:
     def roll(cls, amount: int = 3, *, included: List[str] = None, avoid: List[str] = None, luck_rates: float = None) -> List[Card]:
         results = included if included else []
 
+        #replace xmas with a random common,rare,epic,legendary
+        if "xmas" in results:
+            random_tier = choice(["common", "rare", "epic", "legendary"])
+            results.remove("xmas")
+            results.append(random_tier)
+
         drop_rates = DROP_RATES.copy()
         if luck_rates:
             drop_rates = {k: v if k == 'common' else v * (1 + luck_rates) for k, v in DROP_RATES.items()}

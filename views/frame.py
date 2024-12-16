@@ -12,7 +12,7 @@ class FrameDropDown(discord.ui.Select):
                 discord.SelectOption(
                     emoji=emoji,
                     label=frame_name.title(),
-                    description=f"🍬 {price}"
+                    description=f"❄️ {price}"
                 )
                 for frame_name, (emoji, price, available) in func.settings.FRAMES_BASE.items() if available
             ],
@@ -51,7 +51,7 @@ class FrameView(discord.ui.View):
     
     async def build(self) -> tuple[discord.Embed, discord.File]:
         embed = discord.Embed(title="🖼️  Frame Preview", color=discord.Color.random())
-        embed.description = f"```🆔 {self.card.tier[0]} {self.card.id}\n🖼️ {self._selected_frame.title()}\n🍬 {self._price}```"
+        embed.description = f"```🆔 {self.card.tier[0]} {self.card.id}\n🖼️ {self._selected_frame.title()}\n❄️ {self._price}```"
         bytes = await asyncio.to_thread(self.card.preview_frame, self._selected_frame)
         embed.set_image(url="attachment://image.webp")
 
@@ -64,7 +64,7 @@ class FrameView(discord.ui.View):
 
         user = await func.get_user(self.author.id)
         if user["candies"] < self._price:
-            return await interaction.response.send_message(f"You don't have enough candies! You only have `{user['candies']}` candies", ephemeral=True)
+            return await interaction.response.send_message(f"You don't have enough Snowflakes! You only have `{user['candies']}` Snowflakes", ephemeral=True)
         
         try:
             self.card.change_frame(self._selected_frame)

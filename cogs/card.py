@@ -89,7 +89,7 @@ class Card(commands.Cog):
 
     @commands.command(aliases=["c"])
     async def convert(self, ctx: commands.Context, *, card_ids: str):
-        """Converts the photocards into starcandies. Card can be identified by its ID or given tag. The amount of starcandies received is dependent on the card's rarity.
+        """Converts the photocards into Snowflakes. Card can be identified by its ID or given tag. The amount of Snowflakes received is dependent on the card's rarity.
 
         **Examples:**
         @prefix@concert 01
@@ -116,11 +116,11 @@ class Card(commands.Cog):
         
         func.logger.info(
             f"User {ctx.author.name}({ctx.author.id}) converted {len(converted_cards)} card(s): ["
-            f"{', '.join([card.id for card in converted_cards])}]. Gained {candies} candies."
+            f"{', '.join([card.id for card in converted_cards])}]. Gained {candies} Snowflakes."
         )
         
         embed = discord.Embed(title="✨ Convert", color=discord.Color.random())
-        embed.description = f"```🆔 {', '.join([f'{card}' for card in converted_cards])} \n🍬 + {candies}```"
+        embed.description = f"```🆔 {', '.join([f'{card}' for card in converted_cards])} \n❄️ + {candies}```"
         await ctx.reply(embed=embed)
 
     @commands.command(aliases=["cl"])
@@ -140,7 +140,7 @@ class Card(commands.Cog):
             return
         
         embed = discord.Embed(color=discord.Color.random())
-        embed.description = f"```🆔 {card} \n🍬 + {card.cost}```"
+        embed.description = f"```🆔 {card} \n❄️ + {card.cost}```"
         message: discord.Message = None
 
         if card.tier[1] not in ["common", "rare"] or card.tag:
@@ -194,7 +194,7 @@ class Card(commands.Cog):
         candies = sum([card.cost for card in converted_cards])
                        
         embed = discord.Embed(title="✨ Confirm to convert?", color=discord.Color.random())
-        embed.description = f"```🆔 {', '.join([f'{card}' for card in converted_cards])} \n🍬 + {candies}```"
+        embed.description = f"```🆔 {', '.join([f'{card}' for card in converted_cards])} \n❄️ + {candies}```"
 
         view = ConfirmView(ctx.author)
         view.message = await ctx.reply(embed=embed, view=view)
@@ -216,7 +216,7 @@ class Card(commands.Cog):
 
             func.logger.info(
                 f"User {ctx.author.name}({ctx.author.id}) converted {len(converted_cards)} card(s): ["
-                f"{', '.join([card.id for card in converted_cards])}]. Gained {candies} candies."
+                f"{', '.join([card.id for card in converted_cards])}]. Gained {candies} Snowflakes."
             )
 
             embed.title = "✨ Converted"
@@ -256,7 +256,7 @@ class Card(commands.Cog):
         candies = sum([card.cost for card in converted_cards])
                        
         embed = discord.Embed(title="✨ Confirm to convert?", color=discord.Color.random())
-        embed.description = f"```🆔 {', '.join([f'{card}' for card in converted_cards])} \n🍬 + {candies}```"
+        embed.description = f"```🆔 {', '.join([f'{card}' for card in converted_cards])} \n❄️ + {candies}```"
 
         view = ConfirmView(ctx.author)
         view.message = await ctx.reply(embed=embed, view=view)
@@ -278,7 +278,7 @@ class Card(commands.Cog):
 
             func.logger.info(
                 f"User {ctx.author.name}({ctx.author.id}) converted {len(converted_cards)} card(s): ["
-                f"{', '.join([card.id for card in converted_cards])}]. Gained {candies} candies."
+                f"{', '.join([card.id for card in converted_cards])}]. Gained {candies} Snowflakes."
             )
 
             embed.title = "✨ Converted"
@@ -414,7 +414,7 @@ class Card(commands.Cog):
 
         func.logger.info(
             f"User {ctx.author.name} ({ctx.author.id}) initiated a trade with {member.name}({member.id}). "
-            f"Trading card [{card.id}] and offering {candies} candies."
+            f"Trading card [{card.id}] and offering {candies} Snowflakes."
         )
 
         view = TradeView(ctx.author, member, cards, candies)
@@ -461,7 +461,7 @@ class Card(commands.Cog):
 
         func.logger.info(
             f"User {ctx.author.name} ({ctx.author.id}) initiated a trade with everyone. "
-            f"Trading card [{card.id}] and offering {candies} candies."
+            f"Trading card [{card.id}] and offering {candies} Snowflakes."
         )
 
         view = TradeView(ctx.author, None, cards, candies)
@@ -503,7 +503,7 @@ class Card(commands.Cog):
         
         func.logger.info(
             f"User {ctx.author.name} ({ctx.author.id}) initiated a trade with {member.name}({member.id}). "
-            f"Trading card [{card.id}] and offering {candies} candies."
+            f"Trading card [{card.id}] and offering {candies} Snowflakes."
         )
 
         view = TradeView(ctx.author, member, [card], candies)
@@ -542,7 +542,7 @@ class Card(commands.Cog):
         
         func.logger.info(
             f"User {ctx.author.name} ({ctx.author.id}) initiated a trade with everyone. "
-            f"Trading card [{card.id}] and offering {candies} candies."
+            f"Trading card [{card.id}] and offering {candies} Snowflakes."
         )
 
         view = TradeView(ctx.author, None, [card], candies)

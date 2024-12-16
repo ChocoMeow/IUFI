@@ -211,7 +211,7 @@ class Player(VoiceProtocol):
         last_points: int = user.get("game_state", {}).get("music_game", {}).get("points", 0)
 
         # Prepare the query for updating points and rewards
-        query: Dict[str, Any] = {"$inc": {"game_state.music_game.points": points}}
+        query: Dict[str, Any] = {"$inc": {"game_state.music_game.points": points, "christmas_game_state.music_quiz": points}}
         rewards: Dict[str, Dict[str, Union[str, int]]] = {}
 
         # Calculate milestones and rewards

@@ -1,10 +1,11 @@
 import discord
 import functions as func
 
-SHOP_BASE: list[tuple[str, str, int]] = [
-    (func.settings.TIERS_BASE.get("rare")[0], "roll.rare", 30),
-    (func.settings.TIERS_BASE.get("epic")[0], "roll.epic", 100),
-    (func.settings.TIERS_BASE.get("legendary")[0], "roll.legendary", 250)
+SHOP_BASE: list[tuple[str, str, int, str]] = [
+    (func.settings.TIERS_BASE.get("rare")[0], "roll.rare", 30, "RARE ROLL"),
+    (func.settings.TIERS_BASE.get("epic")[0], "roll.epic", 100, "EPIC ROLL"),
+    (func.settings.TIERS_BASE.get("legendary")[0], "roll.legendary", 250, "LEGENDARY ROLL"),
+    ("🎄", "roll.xmas", 100, "XMAS ROLL"),
 ]
 
 class QuantityModal(discord.ui.Modal):
@@ -36,7 +37,7 @@ class QuantityModal(discord.ui.Modal):
 class Dropdown(discord.ui.Select):
     def __init__(self) -> None:
         options = [
-            discord.SelectOption(label=f"{item[1].split('.')[1].title()} {item[1].split('.')[0].title()}", emoji=item[0])
+            discord.SelectOption(label=f"{item[3].title()}", emoji=item[0])
             for item in SHOP_BASE
         ]
 
@@ -47,9 +48,9 @@ class Dropdown(discord.ui.Select):
         )
 
     async def callback(self, interaction: discord.Interaction) -> None:
-        selected_item = self.values[0].split(" ")[0]
+        selected_item = self.values[0].upper()
         for item in SHOP_BASE:
-            if item[1].split(".")[1] == selected_item.lower():
+            if item[3] == selected_item:
                 modal = QuantityModal()
                 await interaction.response.send_modal(modal)
                 await modal.wait()
@@ -58,7 +59,7 @@ class Dropdown(discord.ui.Select):
                     user = await func.get_user(interaction.user.id)
                     price = modal.quantity * item[2]
                     if user["candies"] < price:
-                        return await interaction.followup.send(f"You don't have enough candies! You only have `{user['candies']}` candies", ephemeral=True)
+                        return await interaction.followup.send(f"You don't have enough Snowflakes! You only have `{user['candies']}` Snowflakes", ephemeral=True)
                     
                     query = func.update_quest_progress(user, "BUY_ITEM", progress=modal.quantity, query={
                         "$inc": {"candies": -price, item[1]: modal.quantity}
@@ -68,7 +69,7 @@ class Dropdown(discord.ui.Select):
                     func.logger.info(f"User {interaction.user.name}({interaction.user.id}) purchased {modal.quantity} {selected_item.lower()} for {price} candies.")
 
                     embed = discord.Embed(title="🛒 Shop Purchase", color=discord.Color.random())
-                    embed.description = f"```{item[0]} + {modal.quantity}\n🍬 - {price}```"
+                    embed.description = f"```{item[0]} + {modal.quantity}\n❄️ - {price}```"
 
                     return await interaction.followup.send(content="", embed=embed)
 
@@ -92,10 +93,10 @@ class ShopView(discord.ui.View):
         user = await func.get_user(self.author.id)
 
         embed = discord.Embed(title="🛒 IUFI Shop", color=discord.Color.random())
-        embed.description = f"🍬 Starcandies: `{user.get('candies', 0)}`\n```"
+        embed.description = f"❄️ Snowflakes: `{user.get('candies', 0)}`\n```"
         
         for item in SHOP_BASE:
-            embed.description += f"{item[0]} {(item[1].split('.')[1].title() + ' ' + item[1].split('.')[0].title()).upper():<20} {item[2]:>3} 🍬\n"
+            embed.description += f"{item[0]} {(item[1].split('.')[1].title() + ' ' + item[1].split('.')[0].title()).upper():<20} {item[2]:>3} ❄️\n"
         embed.description += "```"
         
         embed.set_thumbnail(url=self.author.display_avatar.url)
