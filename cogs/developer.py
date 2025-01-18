@@ -1,4 +1,5 @@
 import discord, iufi, psutil, asyncio
+import functions as func
 
 from discord.ext import commands
 from views import DebugView
@@ -22,10 +23,12 @@ class Developer(commands.Cog):
         )
         self.bot.tree.add_command(self.ctx_menu)
         
-    @commands.command(hidden=True)
-    @commands.is_owner()
+    @commands.hybrid_command(hidden=True)
     async def debug(self, ctx: commands.Context):
         """For developer to debug"""
+        if ctx.author.id not in func.settings.ADMIN_IDS:
+            return await ctx.send("You are not allowed to use this command!", ephemeral=True)
+        
         memory = psutil.virtual_memory()
         disk = psutil.disk_usage('/')
 
