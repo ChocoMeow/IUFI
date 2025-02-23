@@ -29,7 +29,9 @@
         "cooldown": {
             "roll": 0,
             "claim": 0,
-            "daily": 0
+            "daily": 0,
+            "smol": 0,
+            "rob": 0
         },
         "profile": {
             "bio": "",
@@ -51,7 +53,9 @@
         "claim": ["🎮", 180],
         "daily": ["📅", 82800],
         "match_game": ["🃏", 0],
-        "quiz_game": ["💯", 600]
+        "quiz_game": ["💯", 600],
+        "smol": ["🎂", 1],
+        "rob": ["🔫", 1]
     },
     "DAILY_QUESTS": {
         "ROLL": {

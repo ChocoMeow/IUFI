@@ -339,14 +339,16 @@ class Profile(commands.Cog):
         view.message = await ctx.reply(embed=embed, view=view)
 
     @commands.command(aliases=["in"])
-    async def inventory(self, ctx: commands.Context):
+    async def inventory(self, ctx: commands.Context,  member: discord.Member = None):
         """Shows the items that you own.
         
         **Examples:**
         @prefix@inventory
         @prefix@in
         """
-        user = await func.get_user(ctx.author.id)
+        if not member:
+            member = ctx.author
+        user = await func.get_user(member.id)
         embed = discord.Embed(title=f"🎒 {ctx.author.display_name}'s Inventory", color=0x5cb045)
         embed.description = f"```{'🍬 Starcandies':<20} x{user['candies']}\n"
 

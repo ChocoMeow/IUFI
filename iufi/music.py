@@ -240,7 +240,8 @@ class Player(VoiceProtocol):
             r_emoji, r_amount = reward_data["emoji"], reward_data["amount"]
 
             if len(r_display_name) == 1:
-                reward_message += f"{r_emoji} {r_display_name[0].title():<18} x{reward_data["amount"]}\n"
+                pass
+                #reward_message += f"{r_emoji} {r_display_name[0].title():<18} x{reward_data["amount"]}\n"
             else:
                 reward_parts = r_display_name[1].split("_")
                 format_name = f"{reward_parts[0].title()}" if len(reward_parts) == 1 else f"{reward_parts[0].title()} {reward_parts[1].upper()}"

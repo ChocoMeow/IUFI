@@ -84,14 +84,20 @@ class TradeView(discord.ui.View):
                 card.last_trade_time = last_trade_time
 
             # Seller
+            smol_tax = round(self.candies * 0.1)
+            seller_quantity = self.candies - smol_tax
+
             _seller = await func.get_user(self.seller.id)
-            seller_query = func.update_quest_progress(_seller, "TRADE_ANY_CARD", progress=len(self.cards), query={"$pull": {"cards": {"$in": card_ids}}, "$inc": {"candies": self.candies}})
+            seller_query = func.update_quest_progress(_seller, "TRADE_ANY_CARD", progress=len(self.cards), query={"$pull": {"cards": {"$in": card_ids}}, "$inc": {"candies": seller_quantity}})
             await func.update_user(self.seller.id, seller_query)
             
             # Buyer
             buyer_query = func.update_quest_progress(_buyer, "TRADE_ANY_CARD", progress=len(self.cards), query={"$push": {"cards": {"$each": card_ids}}, "$inc": {"candies": -self.candies}})
             await func.update_user(buyer.id, buyer_query)
             await func.update_card(card_ids, {"$set": {"owner_id": buyer.id, "last_trade_time": last_trade_time}})
+
+            if smol_tax > 0:
+                await func.update_user(1223531350972174337, {"$inc": {"candies": smol_tax}})
             
             func.logger.info(
                 f"User {buyer.name}({buyer.id}) traded a card from "
@@ -104,7 +110,7 @@ class TradeView(discord.ui.View):
             embed.description = f"```{', '.join(card.display_id for card in self.cards)}\n🍬 - {self.candies}```"
 
             await self.on_timeout()
-            await interaction.followup.send(content=f"{self.seller.mention}, {buyer.mention} has made a trade with you for the card(s)!", embed=embed)
+            await interaction.followup.send(content=f"{self.seller.mention}, {buyer.mention} has made a trade with you for the card(s)! Smol tax: {smol_tax} 🍬", embed=embed)
 
     @discord.ui.button(label="Cancel", style=discord.ButtonStyle.red)
     async def cancel(self, interaction: discord.Interaction, button: discord.ui.Button):
