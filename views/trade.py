@@ -84,6 +84,12 @@ class TradeView(discord.ui.View):
                 card.last_trade_time = last_trade_time
 
             # Seller
+            tax = 0.1
+            if self.seller.id == 160849769848242176: #mashou 25% tax cause of kiss gif
+                tax = 0.25
+            elif self.seller.id == 1223531350972174337: #0% for birthday girl
+                tax = 0
+
             smol_tax = round(self.candies * 0.1)
             seller_quantity = self.candies - smol_tax
 
@@ -110,7 +116,10 @@ class TradeView(discord.ui.View):
             embed.description = f"```{', '.join(card.display_id for card in self.cards)}\n🍬 - {self.candies}```"
 
             await self.on_timeout()
-            await interaction.followup.send(content=f"{self.seller.mention}, {buyer.mention} has made a trade with you for the card(s)! Smol tax: {smol_tax} 🍬", embed=embed)
+            tax_message= ""
+            if smol_tax > 0:
+                tax_message = f"Smol tax: {smol_tax} 🍬"
+            await interaction.followup.send(content=f"{self.seller.mention}, {buyer.mention} has made a trade with you for the card(s)! {tax_message}", embed=embed)
 
     @discord.ui.button(label="Cancel", style=discord.ButtonStyle.red)
     async def cancel(self, interaction: discord.Interaction, button: discord.ui.Button):
