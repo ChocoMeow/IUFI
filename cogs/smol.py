@@ -80,24 +80,25 @@ class Smol(commands.Cog):
         query = {"$set": {"cooldown.rob": time.time() + func.settings.COOLDOWN_BASE["rob"][1]}}
         #check if user has the specified amount, then check if smol has enough amount, then do 50/50 chance, max amount 1000
         if amount > 1000:
-            return await ctx.reply(f"{ctx.author.mention} You can't rob more than 1000 candies at a time!", delete_after=10)
+            return await ctx.reply(f"{ctx.author.mention} You can't rob more than 1000 🍬 at a time!", delete_after=10)
         if user["candies"] < amount:
-            return await ctx.reply(f"{ctx.author.mention} You don't have enough candies to rob Smol!", delete_after=10)
+            return await ctx.reply(f"{ctx.author.mention} You don't have enough 🍬 to rob Smol!", delete_after=10)
         smol = await func.get_user(SMOL_ID)
         smol_query = {}
         if smol["candies"] < amount:
-            return await ctx.reply(f"{ctx.author.mention} Smol doesn't have enough candies to rob!", delete_after=10)
+            return await ctx.reply(f"{ctx.author.mention} Smol doesn't have enough 🍬 to rob!", delete_after=10)
+        smol_discord = self.bot.get_user(SMOL_ID)
         if random.choice([True, False]):
             query["$inc"] = {"candies": amount}
             smol_query["$inc"] = {"candies": -amount}
-            await ctx.reply(f"{ctx.author.mention} Smol got robbed! 🎉")
+            await ctx.reply(f"{smol_discord.mention} got robbed by {ctx.author.mention} for {amount} 🍬! 🎉")
         else:
             query["$inc"] = {"candies": -amount}
             smol_query["$inc"] = {"candies": amount}
-            await ctx.reply(f"{ctx.author.mention} You got caught trying to rob Smol! 🎉")
+            await ctx.reply(f"{ctx.author.mention} got caught trying to rob {smol_discord.mention} and lost {amount} 🍬! 🎉")
         await func.update_user(ctx.author.id, query)
         await func.update_user(SMOL_ID, smol_query)
-        func.logger.info(f"User {ctx.author.name}({ctx.author.id}) robbed Smol for {amount} candies.")
+        func.logger.info(f"User {ctx.author.name}({ctx.author.id}) robbed {smol_discord.id} for {amount} candies.")
 
     @commands.command(aliases=["sl"])
     async def smolleaderboard(self, ctx: commands.Context):
@@ -149,7 +150,7 @@ class Smol(commands.Cog):
         user = await func.get_user(ctx.author.id)
         if (retry := user.get("cooldown", {}).setdefault("smol", 0)) > time.time():
             return await ctx.reply(
-                f"{ctx.author.mention} Smol's birthday event will be available in <t:{round(retry)}:R>",
+                f"{ctx.author.mention}, your birthday wish will be available in <t:{round(retry)}:R>",
                 delete_after=10
             )
 
@@ -178,7 +179,8 @@ class Smol(commands.Cog):
     async def on_random_roll(self, ctx: commands.Context, query: Dict[str, Any], user: Dict[str, Any]) -> None:
         roll_type = random.choices(["rare", "epic", "legendary"], weights=[0.2, 0.05, 0.001], k=1)[0]
         query["$inc"] = {f"roll.{roll_type}": 1}
-        await ctx.reply(f"{ctx.author.mention} Smol summoned a `{roll_type}` roll! 🎉 Will it be a trick... or a treat?")
+        smol_discord = self.bot.get_user(SMOL_ID)
+        await ctx.reply(f"{ctx.author.mention} summoned a `{roll_type}` roll for {smol_discord.mention}! 🎉")
 
     async def on_potion_gain(self, ctx: commands.Context, query: Dict[str, Any], user: Dict[str, Any]) -> None:
         potion = random.choices(
@@ -188,8 +190,9 @@ class Smol(commands.Cog):
         )[0]
         query["$inc"] = {f"potions.{potion}": 1}
         potion = potion.replace("_", " ").capitalize()
+        smol_discord = self.bot.get_user(SMOL_ID)
         await ctx.reply(
-            f"{ctx.author.mention} Smol brewed up a `{potion}` potion! 🧪 Don't drink it all at once! 🎉")
+            f"{ctx.author.mention} brewed up a `{potion}` potion🧪 for {smol_discord.mention}! 🎉")
 
     async def on_random_card_gain(self, ctx: commands.Context, query: Dict[str, Any], user: Dict[str, Any]) -> None:
         if len(user["cards"]) >= func.settings.MAX_CARDS:
@@ -201,9 +204,10 @@ class Smol(commands.Cog):
         card.change_owner(SMOL_ID)
         CardPool.remove_available_card(card)
         await func.update_card(card.id, {"$set": {"owner_id": SMOL_ID}})
+        smol_discord = self.bot.get_user(SMOL_ID)
 
         emoji, name = card.tier
-        await ctx.reply(f"{ctx.author.mention} Smol got a {name} card! {emoji}")
+        await ctx.reply(f"{ctx.author.mention} found a {name} card {emoji} for {smol_discord.mention}! 🎉")
         embed = discord.Embed(title=f"ℹ️ Card Info", color=0x949fb8)
         embed.description = f"```{card.display_id}\n" \
                             f"{card.display_tag}\n" \
@@ -218,15 +222,17 @@ class Smol(commands.Cog):
     async def on_starcandies_gain(self, ctx: commands.Context, query: Dict[str, Any], user: Dict[str, Any]) -> None:
         gain = random.randint(MIN_PUMPKINS, MAX_PUMPKINS)
         query["$inc"] = {"candies": gain}
+        smol_discord = self.bot.get_user(SMOL_ID)
         await ctx.reply(
-            f"{ctx.author.mention} Smol received {gain} gifts! 🎁 Just watch out for the party crashers! 🎉")
+            f"{ctx.author.mention} found {gain} 🍬 for {smol_discord.mention}! 🎉")
 
     async def on_cooldown_reset(self, ctx: commands.Context, query: Dict[str, Any], user: Dict[str, Any]) -> None:
         cooldowns = ["roll", "quiz_game", "match_game"]
         cooldown = random.choice(cooldowns)
         query["$set"] = {"cooldown": user["cooldown"]}
         query["$set"][f"cooldown.{cooldown}"] = 0
-        await ctx.reply(f"{ctx.author.mention} Smol's `{cooldown.replace('_', ' ').upper()}` cooldown has been reset by the birthday magic! 🎉")
+        smol_discord = self.bot.get_user(SMOL_ID)
+        await ctx.reply(f"{ctx.author.mention} reset Smol's `{cooldown.replace('_', ' ').upper()}` cooldown! 🎉")
 
     async def on_phake_celestial(self, ctx: commands.Context, query: Dict[str, Any], user: Dict[str, Any]) -> None:
         await ctx.reply(f"{ctx.author.mention} Smol got a Mystic card! 🦄", delete_after=3)
@@ -234,8 +240,9 @@ class Smol(commands.Cog):
         await ctx.reply(f"Just kidding! Smol got nothing! 🎉")
 
     async def on_last_card_loss(self, ctx: commands.Context, query: Dict[str, Any], user: Dict[str, Any]) -> None:
+        smol_discord = self.bot.get_user(SMOL_ID)
         if not user["cards"]:
-            await ctx.reply(f"{ctx.author.mention} Smol got nothing! 🎉 Oof... even the party crashers ignored Smol! 👻")
+            await ctx.reply(f"{ctx.author.mention}, Smol got... nothing! 🎉 Sad!")
             return
 
         last_card = iufi.CardPool.get_card(user["cards"][-1])
@@ -244,20 +251,21 @@ class Smol(commands.Cog):
             iufi.CardPool.add_available_card(last_card)
             await func.update_card(last_card.id,
                                    {"$set": {"owner_id": None, "tag": None, "frame": None, "last_trade_time": 0}})
-            await ctx.reply(f"{ctx.author.mention} Smol's last card vanished into the party chaos! 🎉")
+            await ctx.reply(f"{ctx.author.mention} took {last_card.tier[1].capitalize()} card {last_card.tier[0]} from {smol_discord.mention} and lost it! 🎉")
             return
 
         await ctx.reply(f"{ctx.author.mention} Smol got... nothing! 🎉 The party crashers tricked Smol!")
 
     async def on_starcandies_loss(self, ctx: commands.Context, query: Dict[str, Any], user: Dict[str, Any]) -> None:
         if user.get("candies", 0) <= 0:
-            await ctx.reply(f"{ctx.author.mention} Smol got... nothing! 🎉 The trick is on Smol! 👻")
+            await ctx.reply(f"{ctx.author.mention}, Smol got... nothing! 🎉 Sad!")
             return
 
         loss = random.randint(MIN_PUMPKINS, MAX_PUMPKINS)
         loss = min(loss, user["candies"])
         query["$inc"] = {"candies": -loss}
-        await ctx.reply(f"{ctx.author.mention} Smol dropped {loss} gifts! 🎁 Looks like the party crashers stole them!")
+        smol_discord = self.bot.get_user(SMOL_ID)
+        await ctx.reply(f"{ctx.author.mention} made {smol_discord.mention} lose {loss} 🍬! 🎉")
 
     async def on_cooldown_increase(self, ctx: commands.Context, query: Dict[str, Any], user: Dict[str, Any]) -> None:
         increase = random.randint(1, 3)
@@ -267,12 +275,13 @@ class Smol(commands.Cog):
         prev_cooldown = user["cooldown"].get(cooldown, 0)
         query["$set"] = {"cooldown": user["cooldown"]}
         query["$set"][f"cooldown.{cooldown}"] = (increase * increase_multiplier) + max(prev_cooldown, time.time())
+        smol_discord = self.bot.get_user(SMOL_ID)
 
         if cooldown in ["match_game"]:
-            message = (f"{ctx.author.mention} Smol's `{cooldown.replace('_', ' ').upper()}` cooldown got extended! "
+            message = (f"{ctx.author.mention} cursed Smol. {smol_discord.mention}'s `{cooldown.replace('_', ' ').upper()}` cooldown got extended! "
                        f"Increased by {increase} hour{'s' if increase > 1 else ''}! 🎉")
         else:
-            message = (f"{ctx.author.mention} Smol's `{cooldown.replace('_', ' ').upper()}` cooldown got extended. It has "
+            message = (f"{ctx.author.mention} cursed Smol. {smol_discord.mention}'s `{cooldown.replace('_', ' ').upper()}` cooldown got extended. It has "
                        f"been increased by {increase * 10} minutes! 🎉")
         await ctx.reply(message)
 
