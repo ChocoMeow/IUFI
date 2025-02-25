@@ -18,7 +18,8 @@ from iufi import CardPool
 LEADERBOARD_EMOJIS: list[str] = ["🥇", "🥈", "🥉", "🏅"]
 MIN_PUMPKINS = 20
 MAX_PUMPKINS = 50
-SMOL_ID = 1223531350972174337  # Replace with the actual ID of Smol
+SMOL_ID = 1223531350972174337
+MASHOU_ID = 160849769848242176
 
 
 def highlight_text(text: str, need: bool = True) -> str:
@@ -74,6 +75,8 @@ class Smol(commands.Cog):
     @commands.command()
     @commands.cooldown(1, 5, commands.BucketType.user)
     async def rob(self, ctx: commands.Context, amount : int):
+        if ctx.author.id == SMOL_ID:
+            return await ctx.reply("You can't rob yourself Smol!", delete_after=10)
         user = await func.get_user(ctx.author.id)
         if (retry := user.get("cooldown", {}).setdefault("rob", 0)) > time.time():
             return await ctx.reply(f"{ctx.author.mention} You can rob Smol in <t:{round(retry)}:R>",delete_after=10)
@@ -88,7 +91,10 @@ class Smol(commands.Cog):
         if smol["candies"] < amount:
             return await ctx.reply(f"{ctx.author.mention} Smol doesn't have enough 🍬 to rob!", delete_after=10)
         smol_discord = self.bot.get_user(SMOL_ID)
-        if random.choice([True, False]):
+        is_success = random.choice([True, False])
+        if is_success and ctx.author.id == MASHOU_ID:
+            is_success = random.choice([True, False, False])
+        if is_success:
             query["$inc"] = {"candies": amount}
             smol_query["$inc"] = {"candies": -amount}
             await ctx.reply(f"{smol_discord.mention} got robbed by {ctx.author.mention} for {amount} 🍬! 🎉")
@@ -147,6 +153,10 @@ class Smol(commands.Cog):
         qbirthday
         qbd
         """
+
+        if ctx.author.id == SMOL_ID:
+            return await ctx.reply("Birthday girl, wait for others to wish you!", delete_after=10)
+
         user = await func.get_user(ctx.author.id)
         if (retry := user.get("cooldown", {}).setdefault("smol", 0)) > time.time():
             return await ctx.reply(
@@ -161,7 +171,10 @@ class Smol(commands.Cog):
     async def do_smol_wish(self, ctx):
         user = await func.get_user(SMOL_ID)
         query = {}
+        wishes_count = user.get('game_state', {}).get('birthday_event', {}).get('wishes', 0)
         actions = random.choices([self.curses, self.blessings], weights=[40, 60])[0]
+        if wishes_count <= 1: #first one will always be a blessing
+            actions = self.blessings
         action_type = random.choices(list(actions.keys()), weights=[info["weight"] for info in actions.values()], k=1)[
             0]
         await actions[action_type]["func"](ctx, query, user)
@@ -229,10 +242,9 @@ class Smol(commands.Cog):
     async def on_cooldown_reset(self, ctx: commands.Context, query: Dict[str, Any], user: Dict[str, Any]) -> None:
         cooldowns = ["roll", "quiz_game", "match_game"]
         cooldown = random.choice(cooldowns)
-        query["$set"] = {"cooldown": user["cooldown"]}
-        query["$set"][f"cooldown.{cooldown}"] = 0
+        query["$set"] = {f"cooldown.{cooldown}": 0}
         smol_discord = self.bot.get_user(SMOL_ID)
-        await ctx.reply(f"{ctx.author.mention} reset Smol's `{cooldown.replace('_', ' ').upper()}` cooldown! 🎉")
+        await ctx.reply(f"{ctx.author.mention} reset {smol_discord.mention}'s `{cooldown.replace('_', ' ').upper()}` cooldown! 🎉")
 
     async def on_phake_celestial(self, ctx: commands.Context, query: Dict[str, Any], user: Dict[str, Any]) -> None:
         await ctx.reply(f"{ctx.author.mention} Smol got a Mystic card! 🦄", delete_after=3)
