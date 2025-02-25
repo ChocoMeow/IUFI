@@ -84,6 +84,10 @@ class Smol(commands.Cog):
         #check if user has the specified amount, then check if smol has enough amount, then do 50/50 chance, max amount 1000
         if amount > 1000:
             return await ctx.reply(f"{ctx.author.mention} You can't rob more than 1000 🍬 at a time!", delete_after=10)
+
+        if amount <= 0:
+            return await ctx.reply(f"{ctx.author.mention} Should I rob you instead?", delete_after=10)
+
         if user["candies"] < amount:
             return await ctx.reply(f"{ctx.author.mention} You don't have enough 🍬 to rob Smol!", delete_after=10)
         smol = await func.get_user(SMOL_ID)
@@ -92,8 +96,6 @@ class Smol(commands.Cog):
             return await ctx.reply(f"{ctx.author.mention} Smol doesn't have enough 🍬 to rob!", delete_after=10)
         smol_discord = self.bot.get_user(SMOL_ID)
         is_success = random.choice([True, False])
-        if is_success and ctx.author.id == MASHOU_ID:
-            is_success = random.choice([True, False, False])
         if is_success:
             query["$inc"] = {"candies": amount}
             smol_query["$inc"] = {"candies": -amount}
@@ -101,7 +103,7 @@ class Smol(commands.Cog):
         else:
             query["$inc"] = {"candies": -amount}
             smol_query["$inc"] = {"candies": amount}
-            await ctx.reply(f"{ctx.author.mention} got caught trying to rob {smol_discord.mention} and lost {amount} 🍬! 🎉")
+            await ctx.reply(f"{ctx.author.mention} got caught trying to rob {smol_discord.mention} and lost {amount} 🍬 to smol!")
         await func.update_user(ctx.author.id, query)
         await func.update_user(SMOL_ID, smol_query)
         func.logger.info(f"User {ctx.author.name}({ctx.author.id}) robbed {smol_discord.id} for {amount} candies.")
