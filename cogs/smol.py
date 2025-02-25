@@ -173,10 +173,7 @@ class Smol(commands.Cog):
     async def do_smol_wish(self, ctx):
         user = await func.get_user(SMOL_ID)
         query = {}
-        wishes_count = user.get('game_state', {}).get('birthday_event', {}).get('wishes', 0)
         actions = random.choices([self.curses, self.blessings], weights=[40, 60])[0]
-        if wishes_count <= 1: #first one will always be a blessing
-            actions = self.blessings
         action_type = random.choices(list(actions.keys()), weights=[info["weight"] for info in actions.values()], k=1)[
             0]
         await actions[action_type]["func"](ctx, query, user)
