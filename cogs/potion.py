@@ -1,4 +1,4 @@
-import iufi, time
+import time
 import functions as func
 
 from discord.ext import commands
@@ -41,9 +41,9 @@ class Potion(commands.Cog):
         if potion_name == "speed":
             time_reduce = func.settings.POTIONS_BASE.get("speed").get("levels").get(level)
             for cooldown in user.get("cooldown", []):
-                if cooldown in ["daily", "match_game"]: continue
-                cooldown_data = func.settings.COOLDOWN_BASE.get(cooldown)
-                if cooldown_data is None: continue
+                if cooldown in ["daily", "match_game"] or not func.settings.COOLDOWN_BASE.get(cooldown):
+                    continue
+                
                 data["$set"][f"cooldown.{cooldown}"] = user.get("cooldown").get(cooldown, time.time()) - (func.settings.COOLDOWN_BASE.get(cooldown)[1] * time_reduce)
 
         data["$inc"][f"potions.{potion_name}_{level}"] = -1
