@@ -325,7 +325,8 @@ def create_help_embed(ctx: commands.Context, cmd: commands.Command = None) -> di
 
 async def update_user(user_id: int, data: dict) -> None:
     user = await get_user(user_id)
-    data['last_active_time'] = time.time()
+    data.setdefault('$set', {})['last_active_time'] = time.time()
+
     for mode, action in data.items():
         for key, value in action.items():
             cursors = key.split(".")
