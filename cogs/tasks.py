@@ -8,6 +8,7 @@ class Tasks(commands.Cog):
     def __init__(self, bot: commands.Bot):
         self.bot = bot
         self.invisible = False
+        self.warned_users = set()
 
         self.drop_card.start()
         self.cache_clear.start()
@@ -59,6 +60,87 @@ class Tasks(commands.Cog):
         
         func.logger.info("Updated user roles: %s", ", ".join(f"{role_name}: {count}" for role_name, count in updated_users.items()))
 
+    async def clean_user_cards(self, user: dict) -> int:
+        user_id = user.get("_id")
+        if user_id not in self.warned_users:
+            return
+        
+        converted_cards: list[iufi.Card] = []
+        for card_id in user["cards"]:
+            card = iufi.CardPool.get_card(card_id)
+            if card:
+                converted_cards.append(card)
+
+        card_ids = [card.id for card in converted_cards]
+        candies = sum([card.cost for card in converted_cards])
+            
+        for card in converted_cards:
+            iufi.CardPool.add_available_card(card)
+
+        await func.update_user(user_id, {
+            "$pull": {"cards": {"$in": card_ids}},
+            "$inc": {"candies": candies}
+        })
+        await func.update_card(card_ids, {"$set": {"owner_id": None, "tag": None, "frame": None, "last_trade_time": 0}})
+
+        func.logger.info(
+            f"User ({user_id}) has been inactive for over 100 days, resulting in the clearing of their inventory. "
+            f"Converted {len(converted_cards)} card(s): [{', '.join(card.id for card in converted_cards)}]. Successfully gained {candies} candies."
+        )
+        self.warned_users.remove(user_id)
+        return len(converted_cards)
+
+    async def reset_user_cards(self) -> None:
+        current_time = time.time()
+        last_warning_threshold = current_time - (func.settings.RESET_CARD_DAY - 1 * 24 * 60 * 60)
+        cutoff_threshold = current_time - (func.settings.RESET_CARD_DAY * 24 * 60 * 60)
+
+        user_cursor = func.USERS_DB.find({
+            "$or": [
+                {"last_active_time": {"$lt": last_warning_threshold}},
+                {"last_active_time": {"$exists": False}}
+            ]
+        })
+
+        users_to_warn = []
+        users_cleared = []
+        converted_cards = 0
+
+        async for user in user_cursor:
+            if not len(user.get("cards")):
+                continue
+
+            user_id = user.get("_id")
+            last_active_time = user.get("last_active_time")
+
+            # Warn users who are inactive and haven't been notified yet
+            if last_active_time is None or last_warning_threshold < last_active_time < cutoff_threshold:
+                if user_id not in self.warned_users:
+                    users_to_warn.append(user_id)
+                    self.warned_users.add(user_id)
+
+            # Clean user cards if they are still active after receiving a warning
+            if last_active_time is not None and last_active_time >= cutoff_threshold and user_id in self.warned_users:
+                users_cleared.append(user_id)
+                converted_cards += await self.clean_user_cards(user)
+
+        channel = self.bot.get_channel(func.settings.MAIN_CHAT_CHANNEL)
+        if users_to_warn:
+            await channel.send(
+                f"Hi {', '.join(f'<@{user_id}>' for user_id in users_to_warn)},\n\n"
+                "We've noticed you've been inactive for over 99 days. This is your final reminder: "
+                "your cards will be converted tomorrow if you remain inactive. Don't worry—once converted, "
+                "you can still recover your candies later. We hope to see you back in the game soon!"
+            )
+        
+        if users_cleared:
+            await channel.send(
+                f"Hi {', '.join(f'<@{user_id}>' for user_id in users_cleared)},\n\n"
+                "We hope you're doing well! Since we didn't see you back in the game after our last reminder, "
+                "your cards have now been converted. The good news is that you can still recover your candies!"
+                f"{converted_cards} cards have been returned to the pool."
+            )
+
     @tasks.loop(minutes=5.0)
     async def drop_card(self) -> None:
         await self.bot.wait_until_ready()
@@ -100,6 +182,7 @@ class Tasks(commands.Cog):
 
             # Verifying and Updating Quiz Reward Data in Database
             self.bot.loop.create_task(self.distribute_monthly_quiz_rewards())
+            self.bot.loop.create_task(self.reset_user_cards())
 
         except Exception as e:
             func.logger.error("An exception occurred in the cache clear task.", exc_info=e)
