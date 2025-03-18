@@ -50,6 +50,7 @@ class Settings:
         self.DEFAULT_EXP: int = 0
         self.LAST_TRADE_TIMER: int = 0
         self.MAIN_GUILD: int = 0
+        self.MAIN_CHAT_CHANNEL: int = 0
         self.MUSIC_TEXT_CHANNEL: int = 0
         self.MUSIC_VOICE_CHANNEL: int = 0
         self.GALLERY_CHANNEL: int = 0
@@ -79,6 +80,7 @@ class Settings:
         self.DEFAULT_EXP = settings.get("DEFAULT_EXP")
         self.LAST_TRADE_TIMER = settings.get("LAST_TRADE_TIMER")
         self.MAIN_GUILD = settings.get("MAIN_GUILD")
+        self.MAIN_CHAT_CHANNEL = settings.get("MAIN_CHAT_CHANNEL")
         self.MUSIC_TEXT_CHANNEL = settings.get("MUSIC_TEXT_CHANNEL")
         self.MUSIC_VOICE_CHANNEL = settings.get("MUSIC_VOICE_CHANNEL")
         self.GALLERY_CHANNEL = settings.get("GALLERY_CHANNEL")
@@ -321,6 +323,7 @@ def create_help_embed(ctx: commands.Context, cmd: commands.Command = None) -> di
 
 async def update_user(user_id: int, data: dict) -> None:
     user = await get_user(user_id)
+    data['last_active_time'] = time.time()
     for mode, action in data.items():
         for key, value in action.items():
             cursors = key.split(".")
