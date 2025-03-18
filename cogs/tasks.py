@@ -91,8 +91,8 @@ class Tasks(commands.Cog):
 
     async def reset_user_cards(self) -> None:
         current_time = time.time()
-        last_warning_threshold = current_time - (99 * 24 * 60 * 60)  # 99 days in seconds
-        cutoff_threshold = current_time - (100 * 24 * 60 * 60)  # 100 days in seconds
+        last_warning_threshold = current_time - (func.settings.RESET_CARD_DAY - 1 * 24 * 60 * 60)
+        cutoff_threshold = current_time - (func.settings.RESET_CARD_DAY * 24 * 60 * 60)
 
         user_cursor = func.USERS_DB.find({
             "$or": [
