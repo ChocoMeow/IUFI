@@ -60,7 +60,7 @@ class Tasks(commands.Cog):
         
         func.logger.info("Updated user roles: %s", ", ".join(f"{role_name}: {count}" for role_name, count in updated_users.items()))
 
-    async def clean_user_cards(self, user: dict) -> None:
+    async def clean_user_cards(self, user: dict) -> int:
         user_id = user.get("_id")
         if user_id not in self.warned_users:
             return
@@ -88,6 +88,7 @@ class Tasks(commands.Cog):
             f"Converted {len(converted_cards)} card(s): [{', '.join(card.id for card in converted_cards)}]. Successfully gained {candies} candies."
         )
         self.warned_users.remove(user_id)
+        return len(converted_cards)
 
     async def reset_user_cards(self) -> None:
         current_time = time.time()
@@ -103,6 +104,7 @@ class Tasks(commands.Cog):
 
         users_to_warn = []
         users_cleared = []
+        converted_cards = 0
 
         async for user in user_cursor:
             if not len(user.get("cards")):
@@ -120,7 +122,7 @@ class Tasks(commands.Cog):
             # Clean user cards if they are still active after receiving a warning
             if last_active_time is not None and last_active_time >= cutoff_threshold and user_id in self.warned_users:
                 users_cleared.append(user_id)
-                await self.clean_user_cards(user)
+                converted_cards += await self.clean_user_cards(user)
 
         channel = self.bot.get_channel(func.settings.MAIN_CHAT_CHANNEL)
         if users_to_warn:
@@ -136,6 +138,7 @@ class Tasks(commands.Cog):
                 f"Hi {', '.join(f'<@{user_id}>' for user_id in users_cleared)},\n\n"
                 "We hope you're doing well! Since we didn't see you back in the game after our last reminder, "
                 "your cards have now been converted. The good news is that you can still recover your candies!"
+                f"{converted_cards} cards have been returned to the pool."
             )
 
     @tasks.loop(minutes=5.0)
