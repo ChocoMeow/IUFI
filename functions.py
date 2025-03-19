@@ -372,3 +372,23 @@ async def update_card(card_id: List[str] | str, data: dict, insert: bool = False
         return await CARDS_DB.update_many({"_id": {"$in": card_id}}, data)
 
     await CARDS_DB.update_one({"_id": card_id}, data)
+
+async def send_message_in_chunks(channel: discord.TextChannel, message: str, max_length: int= 2000) -> None:
+    # Split the message into words and join them to form chunks
+    words = message.split(' ')
+    current_chunk = []
+
+    for word in words:
+        # Check if adding the next word exceeds the maximum length
+        if len(' '.join(current_chunk + [word])) > max_length:
+            # Send the current chunk
+            await channel.send(' '.join(current_chunk))
+            # Start a new chunk with the current word
+            current_chunk = [word]
+        else:
+            # Add the word to the current chunk
+            current_chunk.append(word)
+
+    # Send the remaining words as the last chunk
+    if current_chunk:
+        await channel.send(' '.join(current_chunk))
