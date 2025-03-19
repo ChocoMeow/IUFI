@@ -159,7 +159,10 @@ class Player(VoiceProtocol):
                 return await self.teardown()
 
             if not track.is_loaded:
-                await track.load_data()
+                try:
+                    await track.load_data()
+                except Exception as _:
+                    return await self.do_next();
 
             # Determine a random start time within the track's duration
             self.track_start_time = random.uniform(track.duration * 0.2, track.duration * 0.6)

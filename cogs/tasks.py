@@ -63,7 +63,7 @@ class Tasks(commands.Cog):
     async def clean_user_cards(self, user: dict) -> int:
         user_id = user.get("_id")
         if user_id not in self.warned_users:
-            return
+            return 0
         
         converted_cards: list[iufi.Card] = []
         for card_id in user["cards"]:
@@ -84,7 +84,7 @@ class Tasks(commands.Cog):
         await func.update_card(card_ids, {"$set": {"owner_id": None, "tag": None, "frame": None, "last_trade_time": 0}})
 
         func.logger.info(
-            f"User ({user_id}) has been inactive for over 100 days, resulting in the clearing of their inventory. "
+            f"User ({user_id}) has been inactive for over {func.settings.RESET_CARD_DAY} days, resulting in the clearing of their inventory. "
             f"Converted {len(converted_cards)} card(s): [{', '.join(card.id for card in converted_cards)}]. Successfully gained {candies} candies."
         )
         self.warned_users.remove(user_id)
@@ -107,7 +107,7 @@ class Tasks(commands.Cog):
         converted_cards = 0
 
         async for user in user_cursor:
-            if not len(user.get("cards")):
+            if not len(user.get("cards", [])):
                 continue
 
             user_id = user.get("_id")
