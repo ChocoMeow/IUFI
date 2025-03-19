@@ -120,7 +120,7 @@ class Tasks(commands.Cog):
                     self.warned_users.add(user_id)
 
             # Clean user cards if they are still active after receiving a warning
-            if last_active_time is not None and last_active_time >= cutoff_threshold and user_id in self.warned_users:
+            if (last_active_time is None or last_active_time < cutoff_threshold) and user_id in self.warned_users:
                 users_cleared.append(user_id)
                 converted_cards += await self.clean_user_cards(user)
 
@@ -140,7 +140,7 @@ class Tasks(commands.Cog):
                 message=f"Hi {', '.join(f'<@{user_id}>' for user_id in users_cleared)},\n\n"
                          "We hope you're doing well! Since we didn't see you back in the game after our last reminder, "
                          "your cards have now been converted. The good news is that you can still recover your candies!"
-                        f"{converted_cards} cards have been returned to the pool."
+                        f" `{converted_cards}` cards have been returned to the pool."
             )
 
     @tasks.loop(minutes=5.0)
