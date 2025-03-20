@@ -323,6 +323,29 @@ def create_help_embed(ctx: commands.Context, cmd: commands.Command = None) -> di
     embed.set_footer(icon_url=ctx.me.display_avatar.url, text="More Help: Ask the staff!")
     return embed
 
+def text_in_chunks(message: str, max_length: int = 2000) -> list:
+    # Split the message into words and prepare to form chunks
+    words = message.split(' ')
+    current_chunk = []
+    chunks = []
+
+    for word in words:
+        # Check if adding the next word exceeds the maximum length
+        if len(' '.join(current_chunk + [word])) > max_length:
+            # Save the current chunk to the list
+            chunks.append(' '.join(current_chunk))
+            # Start a new chunk with the current word
+            current_chunk = [word]
+        else:
+            # Add the word to the current chunk
+            current_chunk.append(word)
+
+    # Add the remaining words as the last chunk if any
+    if current_chunk:
+        chunks.append(' '.join(current_chunk))
+
+    return chunks
+
 async def update_user(user_id: int, data: dict) -> None:
     user = await get_user(user_id)
     data.setdefault('$set', {})['last_active_time'] = time.time()
@@ -372,23 +395,3 @@ async def update_card(card_id: List[str] | str, data: dict, insert: bool = False
         return await CARDS_DB.update_many({"_id": {"$in": card_id}}, data)
 
     await CARDS_DB.update_one({"_id": card_id}, data)
-
-async def send_message_in_chunks(channel: discord.TextChannel, message: str, max_length: int= 2000) -> None:
-    # Split the message into words and join them to form chunks
-    words = message.split(' ')
-    current_chunk = []
-
-    for word in words:
-        # Check if adding the next word exceeds the maximum length
-        if len(' '.join(current_chunk + [word])) > max_length:
-            # Send the current chunk
-            await channel.send(' '.join(current_chunk))
-            # Start a new chunk with the current word
-            current_chunk = [word]
-        else:
-            # Add the word to the current chunk
-            current_chunk.append(word)
-
-    # Send the remaining words as the last chunk
-    if current_chunk:
-        await channel.send(' '.join(current_chunk))

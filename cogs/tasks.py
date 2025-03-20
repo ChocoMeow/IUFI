@@ -126,22 +126,24 @@ class Tasks(commands.Cog):
 
         channel = self.bot.get_channel(func.settings.MAIN_CHAT_CHANNEL)
         if users_to_warn:
-            await func.send_message_in_chunks(
-                channel,
+            chunks = func.text_in_chunks(
                 message=f"Hi {', '.join(f'<@{user_id}>' for user_id in users_to_warn)},\n\n"
                          "We've noticed you've been inactive for over 99 days. This is your final reminder: "
                          "your cards will be converted tomorrow if you remain inactive. Don't worry—once converted, "
                          "you can still recover your candies later. We hope to see you back in the game soon!"
-            )
-        
-        if users_cleared:
-            await func.send_message_in_chunks(
-                channel,
+                )
+            for chunk in chunks:
+                await channel.send(chunk, allowed_mentions=discord.AllowedMentions().none())
+
+        if users_cleared:            
+            chunks = func.text_in_chunks(
                 message=f"Hi {', '.join(f'<@{user_id}>' for user_id in users_cleared)},\n\n"
-                         "We hope you're doing well! Since we didn't see you back in the game after our last reminder, "
-                         "your cards have now been converted. The good news is that you can still recover your candies!"
+                        "We hope you're doing well! Since we didn't see you back in the game after our last reminder, "
+                        "your cards have now been converted. The good news is that you can still recover your candies!"
                         f" `{converted_cards}` cards have been returned to the pool."
-            )
+                )
+            for chunk in chunks:
+                await channel.send(chunk, allowed_mentions=discord.AllowedMentions().none())
 
     @tasks.loop(minutes=5.0)
     async def drop_card(self) -> None:
@@ -167,7 +169,7 @@ class Tasks(commands.Cog):
         except Exception as e:
             func.logger.error("An exception occurred in the drop card task.", exc_info=e)
 
-    @tasks.loop(minutes=30.0)
+    @tasks.loop(minutes=60.0)
     async def cache_clear(self):
         await self.bot.wait_until_ready()
 
