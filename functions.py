@@ -148,7 +148,7 @@ def cal_retry_time(end_time: float, default: str = None) -> str | None:
     return (f"{hours}h " if hours > 0 else "") + f"{minutes}m {seconds}s"
 
 def cal_last_online_time(start_time: float, default: str = "") -> str | None:
-    if start_time > (current_time := time.time()):
+    if not start_time or start_time > (current_time := time.time()):
         return default
 
     duration_since_start: float = int(current_time - start_time)
