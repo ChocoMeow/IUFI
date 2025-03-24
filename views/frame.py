@@ -51,7 +51,7 @@ class FrameView(discord.ui.View):
     
     async def build(self) -> tuple[discord.Embed, discord.File]:
         embed = discord.Embed(title="🖼️  Frame Preview", color=discord.Color.random())
-        embed.description = f"```🆔 {self.card.tier[0]} {self.card.id}\n🖼️ {self._selected_frame.title()}\n🍬 {self._price}```"
+        embed.description = f"```🆔 {self.card.tier[0]} {self.card.id}\n🖼️ {self._selected_frame.title()}\n🍊 {self._price}```"
         bytes = await asyncio.to_thread(self.card.preview_frame, self._selected_frame)
         embed.set_image(url="attachment://image.webp")
 
@@ -64,7 +64,7 @@ class FrameView(discord.ui.View):
 
         user = await func.get_user(self.author.id)
         if user["candies"] < self._price:
-            return await interaction.response.send_message(f"You don't have enough candies! You only have `{user['candies']}` candies", ephemeral=True)
+            return await interaction.response.send_message(f"You don't have enough Tangerines! You only have `{user['candies']}` Tangerines", ephemeral=True)
         
         try:
             self.card.change_frame(self._selected_frame)

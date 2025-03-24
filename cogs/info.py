@@ -81,22 +81,22 @@ class Info(commands.Cog):
 
     @leaderboard.command(aliases=["c"])
     async def candies(self, ctx: commands.Context):
-        """Shows the IUFI Starcandies leaderboard."""
+        """Shows the IUFI Tangerines leaderboard."""
         users = await func.USERS_DB.find().sort("candies", -1).limit(10).to_list(10)
         user = await func.get_user(ctx.author.id)
         rank = await func.USERS_DB.count_documents({'candies': {'$gt': user.get('candies', 0)}}) + 1
 
-        embed = discord.Embed(title="🏆   Starcandies Leaderboard", color=discord.Color.random())
+        embed = discord.Embed(title="🏆   Tangerines Leaderboard", color=discord.Color.random())
         embed.description = f"**Your current position is `{rank}`**\n"
 
         description = ""
         for index, top_user in enumerate(users):
             member = self.bot.get_user(top_user['_id'])
             if member:
-                description += f"{LEADERBOARD_EMOJIS[index if index <= 2 else 3]} " + highlight_text(f"{func.truncate_string(member.display_name):<18} {top_user['candies']:>5} 🍬", member == ctx.author)
+                description += f"{LEADERBOARD_EMOJIS[index if index <= 2 else 3]} " + highlight_text(f"{func.truncate_string(member.display_name):<18} {top_user['candies']:>5} 🍊", member == ctx.author)
 
         if rank > len(users):
-            description += ("┇\n" if rank > len(users) + 1 else "") + f"{LEADERBOARD_EMOJIS[3]} " + highlight_text(f"{func.truncate_string(ctx.author.display_name):<18} {user.get('candies', 0):>5} 🍬", member == ctx.author)
+            description += ("┇\n" if rank > len(users) + 1 else "") + f"{LEADERBOARD_EMOJIS[3]} " + highlight_text(f"{func.truncate_string(ctx.author.display_name):<18} {user.get('candies', 0):>5} 🍊", member == ctx.author)
 
         if not description:
             description = "The leaderboard is currently empty."

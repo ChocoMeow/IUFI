@@ -114,7 +114,7 @@ class ResetAttemptView(discord.ui.View):
     @discord.ui.button(label="Buy", emoji="🛍️", style=discord.ButtonStyle.green)
     async def buy(self, interaction: discord.Interaction, button: discord.ui.Button) -> None:
         if self.data.get("candies") < self.price:
-            await interaction.response.send_message("You do not have enough candies to initiate the reset!", ephemeral=True)
+            await interaction.response.send_message("You do not have enough Tangerines to initiate the reset!", ephemeral=True)
             return await self.on_timeout()
         
         await func.update_user(self.ctx.author.id, {
@@ -228,7 +228,7 @@ class QuizView(discord.ui.View):
 
                     embed.description += f"{index}. "
                     if reward_name[0] == "candies":
-                        embed.description += f"{'🍬 Candies':<18} x{amount}\n"
+                        embed.description += f"{'🍊 Tangerines':<18} x{amount}\n"
                     
                     elif reward_name[0] == "roll":
                         roll_data = func.settings.TIERS_BASE.get(reward_name[1])

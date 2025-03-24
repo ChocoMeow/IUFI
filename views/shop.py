@@ -58,7 +58,7 @@ class Dropdown(discord.ui.Select):
                     user = await func.get_user(interaction.user.id)
                     price = modal.quantity * item[2]
                     if user["candies"] < price:
-                        return await interaction.followup.send(f"You don't have enough candies! You only have `{user['candies']}` candies", ephemeral=True)
+                        return await interaction.followup.send(f"You don't have enough Tangerines! You only have `{user['candies']}` Tangerines", ephemeral=True)
                     
                     query = func.update_quest_progress(user, "BUY_ITEM", progress=modal.quantity, query={
                         "$inc": {"candies": -price, item[1]: modal.quantity}
@@ -68,7 +68,7 @@ class Dropdown(discord.ui.Select):
                     func.logger.info(f"User {interaction.user.name}({interaction.user.id}) purchased {modal.quantity} {selected_item.lower()} for {price} candies.")
 
                     embed = discord.Embed(title="🛒 Shop Purchase", color=discord.Color.random())
-                    embed.description = f"```{item[0]} + {modal.quantity}\n🍬 - {price}```"
+                    embed.description = f"```{item[0]} + {modal.quantity}\n🍊 - {price}```"
 
                     return await interaction.followup.send(content="", embed=embed)
 
@@ -92,12 +92,13 @@ class ShopView(discord.ui.View):
         user = await func.get_user(self.author.id)
 
         embed = discord.Embed(title="🛒 IUFI Shop", color=discord.Color.random())
-        embed.description = f"🍬 Starcandies: `{user.get('candies', 0)}`\n```"
+        embed.description = f"🍊 Tangerines: `{user.get('candies', 0)}`\n```"
         
         for item in SHOP_BASE:
-            embed.description += f"{item[0]} {(item[1].split('.')[1].title() + ' ' + item[1].split('.')[0].title()).upper():<20} {item[2]:>3} 🍬\n"
+            embed.description += f"{item[0]} {(item[1].split('.')[1].title() + ' ' + item[1].split('.')[0].title()).upper():<20} {item[2]:>3} 🍊\n"
         embed.description += "```"
         
         embed.set_thumbnail(url=self.author.display_avatar.url)
 
         return embed
+
