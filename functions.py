@@ -1,4 +1,4 @@
-import os, time, copy, json, random, logging, discord
+import os, time, copy, json, random, logging, discord, iufi
 
 from motor.motor_asyncio import (
     AsyncIOMotorClient,
@@ -56,6 +56,7 @@ class Settings:
         self.MUSIC_VOICE_CHANNEL: int = 0
         self.GALLERY_CHANNEL: int = 0
         self.MARKET_CHANNEL: int = 0
+        self.ANNOUNCEMENT_CHANNEL : int = 0
         self.ALLOWED_CATEGORY_IDS: List[int] = []
         self.IGNORE_CHANNEL_IDS: List[int] = []
         self.GAME_CHANNEL_IDS: List[int] = []
@@ -87,6 +88,7 @@ class Settings:
         self.MUSIC_VOICE_CHANNEL = settings.get("MUSIC_VOICE_CHANNEL")
         self.GALLERY_CHANNEL = settings.get("GALLERY_CHANNEL")
         self.MARKET_CHANNEL = settings.get("MARKET_CHANNEL")
+        self.ANNOUNCEMENT_CHANNEL = settings.get("ANNOUNCEMENT_CHANNEL")
         self.ALLOWED_CATEGORY_IDS = settings.get("ALLOWED_CATEGORY_IDS")
         self.IGNORE_CHANNEL_IDS = settings.get("IGNORE_CHANNEL_IDS")
         self.GAME_CHANNEL_IDS = settings.get("GAME_CHANNEL_IDS")
@@ -115,6 +117,7 @@ USERS_DB: AsyncIOMotorCollection = None
 CARDS_DB: AsyncIOMotorCollection = None
 QUESTIONS_DB: AsyncIOMotorCollection = None
 MUSIC_DB: AsyncIOMotorCollection = None
+TANGERINES_DB: AsyncIOMotorCollection = None
 
 USERS_BUFFER: Dict[int, Dict[str, Any]] = {}
 
@@ -406,3 +409,151 @@ async def update_card(card_id: List[str] | str, data: dict, insert: bool = False
         return await CARDS_DB.update_many({"_id": {"$in": card_id}}, data)
 
     await CARDS_DB.update_one({"_id": card_id}, data)
+
+async def add_tangerines_quest_progress(progress: int, user_id: int, bot: commands.Bot) -> None:
+    """
+    Add progress to the tangerines global quest for a user
+    
+    Parameters:
+        progress (int): Amount of progress to add
+        user_id (int): User ID to add progress for
+        bot (commands.Bot): Bot instance for sending messages
+    """
+    tangerines_data = await get_tangerines()
+
+    # Check if we've already reached the final milestone
+    if (tangerines_data["quest_progress"] >= iufi.GLOBAL_MILESTONES[-1] or
+        tangerines_data["current_milestone"] >= len(iufi.GLOBAL_MILESTONES)):
+        return
+
+    # Add progress to global counter
+    tangerines_data["quest_progress"] += progress
+    
+    # Add progress to user's individual counter
+    user = next((u for u in tangerines_data["users"] if u["_id"] == user_id), None)
+    if user:
+        user["progress"] += progress
+    else:
+        tangerines_data["users"].append({"_id": user_id, "progress": progress})
+
+    # Check if a milestone has been reached
+    if (tangerines_data["quest_progress"] >= 
+        iufi.GLOBAL_MILESTONES[tangerines_data["current_milestone"]]):
+        # Give rewards for current milestone
+        await give_tangerines_rewards(tangerines_data["users"], tangerines_data["current_milestone"])
+        # Send announcement message
+        await send_tangerines_reward_message(bot, tangerines_data)
+        # Move to next milestone
+        tangerines_data["current_milestone"] += 1
+
+    # Update the database with new data
+    await update_tangerines(tangerines_data)
+
+async def get_tangerines() -> Dict[str, Any]:
+    """
+    Get the current tangerines quest data
+    
+    Returns:
+        Dict[str, Any]: Tangerines quest data
+    """
+    tangerines_data = await TANGERINES_DB.find_one({"_id": 0})
+    if not tangerines_data:
+        tangerines_data = {
+            "_id": 0,
+            "quest_progress": 0,
+            "current_milestone": 0,
+            "users": []
+        }
+
+    return tangerines_data
+
+async def update_tangerines(data: Dict[str, Any]) -> None:
+    """
+    Update the tangerines quest data in the database
+    
+    Parameters:
+        data (Dict[str, Any]): Updated tangerines data
+    """
+    await TANGERINES_DB.replace_one({"_id": 0}, data, upsert=True)
+
+async def give_tangerines_rewards(users: List[Dict[str, Any]], current_milestone: int) -> None:
+    """
+    Give rewards to users who participated in the tangerines quest
+    
+    Parameters:
+        users (List[Dict[str, Any]]): List of users who participated
+        current_milestone (int): Current milestone index
+    """
+    rewards = settings.TANGERINES_QUEST_REWARDS[current_milestone]
+
+    for user_data in users:
+        query = {}
+
+        for reward_emoji, reward_name, amount in rewards:
+            if "$inc" not in query:
+                query["$inc"] = {}
+            query["$inc"][reward_name] = query["$inc"].get(reward_name, 0) + amount
+        
+        await update_user(user_data["_id"], query)
+
+async def get_ordinal_suffix(number: int) -> str:
+    """
+    Get the ordinal suffix for a number (1st, 2nd, 3rd, etc.)
+    
+    Parameters:
+        number (int): Number to get suffix for
+        
+    Returns:
+        str: Ordinal suffix
+    """
+    if number == 1:
+        return "st"
+    elif number == 2:
+        return "nd"
+    elif number == 3:
+        return "rd"
+    else:
+        return "th"
+
+async def send_tangerines_reward_message(bot: commands.Bot, tangerines_data: Dict[str, Any]) -> None:
+    """
+    Send a message announcing that a milestone has been reached
+    
+    Parameters:
+        bot (commands.Bot): Bot instance
+        tangerines_data (Dict[str, Any]): Tangerines quest data
+    """
+    channel = bot.get_channel(settings.ANNOUNCEMENT_CHANNEL)
+    milestone_number = tangerines_data['current_milestone'] + 1
+    
+    embed = discord.Embed(
+        title=f"{milestone_number}{await get_ordinal_suffix(milestone_number)} Tangerines Milestone has been reached!", 
+        color=discord.Color.orange()
+    )
+    
+    details = "All users who participated in the quest have received the following rewards:\n"
+    rewards = iufi.GLOBAL_QUEST_REWARDS[tangerines_data['current_milestone']]
+    
+    details += "```ansi\n"
+    for reward_emoji, reward_name, amount in rewards:
+        reward_name_parts = reward_name.split(".")
+        if reward_name_parts[0] == "candies":
+            details += f"{'🍊 Tangerines':<18} x{amount}\n"
+
+        elif reward_name_parts[0] == "roll":
+            roll_data = settings.TIERS_BASE.get(reward_name_parts[1])
+            details += f"{roll_data[0]} {reward_name_parts[1].title() + ' Roll':<16} x{amount}\n"
+
+        elif reward_name_parts[0] == "exp":
+            details += f"{'⚔️ Exp':<19} x{amount}\n"
+
+        else:
+            potion_parts = reward_name_parts[1].split("_")
+            potion_data = settings.POTIONS_BASE.get(potion_parts[0])
+            details += f"{potion_data.get('emoji') + ' ' + potion_parts[0].title() + ' ' + potion_parts[1].upper() + ' Potion':<18} x{amount}\n"
+
+    details += "```"
+    embed.description = details
+    
+    if channel:
+        await channel.send(embed=embed)

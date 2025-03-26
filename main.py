@@ -67,6 +67,7 @@ class IUFI(commands.Bot):
         func.USERS_DB = func.MONGO_DB[db_name]["users"]
         func.QUESTIONS_DB = func.MONGO_DB[db_name]["questions"]
         func.MUSIC_DB = func.MONGO_DB[db_name]["musics"]
+        func.TANGERINES_DB = func.MONGO_DB[db_name]["tangerines"]
 
     async def setup_hook(self) -> None:
         # Connecting to MongoDB
