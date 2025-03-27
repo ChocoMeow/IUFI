@@ -281,9 +281,9 @@
         "heart": ["💗", 60, false],
         "bats": ["🦇", 60, false],
         "pumpkin": ["🎃", 60, false],
-        "ocean": ["🌊", 120, false],
-        "tangerine": ["🍊", 60, false],
-        "wlgyt": ["💐", 120, false]
+        "ocean": ["🌊", 120, true],
+        "tangerines": ["🍊", 60, true],
+        "wlgyt": ["💐", 120, true]
     },
     "POTIONS_BASE": {
         "speed": {

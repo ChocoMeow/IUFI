@@ -28,9 +28,7 @@ class Frames(commands.Cog):
         if card.tier[1] in ["mystic"]:
             return await ctx.reply("The card does not support the frame!")
         
-        if card.stars < 5:
-            return await ctx.reply("Only cards with 5 stars or above can apply for the frame")
-        
+
         view = FrameView(ctx.author, card)
         embed, file = await view.build()
         view.response = await ctx.reply(file=file, embed=embed, view=view)
@@ -57,10 +55,7 @@ class Frames(commands.Cog):
         
         if card.tier[1] in ["mystic"]:
             return await ctx.reply("The card does not support the frame!")
-        
-        if card.stars < 5:
-            return await ctx.reply("Only cards with 5 stars or above can apply for the frame")
-        
+
         view = FrameView(ctx.author, card)
         embed, file = await view.build()
         view.response = await ctx.reply(file=file, embed=embed, view=view)
