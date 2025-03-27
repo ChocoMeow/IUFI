@@ -51,6 +51,8 @@ class Gameplay(commands.Cog):
 
         query = func.update_quest_progress(user, "ROLL", query=query)
         await func.update_user(ctx.author.id, query)
+        if not tier:
+            await func.add_tangerines_quest_progress(1, ctx.author.id, self.bot)
         
         if user["exp"] == 0:
             view = discord.ui.View()
@@ -84,7 +86,7 @@ class Gameplay(commands.Cog):
         if (retry := user.get("cooldown", {}).setdefault("match_game", 0)) > time.time():
             return await ctx.reply(f"{ctx.author.mention} your game is <t:{round(retry)}:R>", delete_after=10)
 
-        view = MatchGame(ctx.author, level)
+        view = MatchGame(ctx.author, level, bot=self.bot)
         actived_potions = func.get_potions(user.get("actived_potions", {}), func.settings.POTIONS_BASE)
 
         query = func.update_quest_progress(user, f"PLAY_MATCH_GAME_LVL_{level}", query={"$set": {"cooldown.match_game": time.time() + (view._data.get("cooldown", 0) * (1 - actived_potions.get("speed", 0)))}})
@@ -130,7 +132,7 @@ class Gameplay(commands.Cog):
         await func.update_user(ctx.author.id, query)
 
         # Create the quiz view and send the initial message
-        view = QuizView(ctx.author, questions)
+        view = QuizView(ctx.author, questions, bot=self.bot)
         view.response = await ctx.reply(
             content=f"**This game ends** <t:{round(view._start_time + view.total_time)}:R>",
             embed=view.build_embed(),

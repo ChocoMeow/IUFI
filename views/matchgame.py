@@ -1,5 +1,6 @@
 import discord, asyncio, time
 import functions as func
+from discord.ext import commands
 
 from iufi import (
     Card,
@@ -83,7 +84,7 @@ class GuessButton(discord.ui.Button):
         self.disabled = False
 
 class MatchGame(discord.ui.View):
-    def __init__(self, author: discord.Member, level: str = "1", timeout: float = None):
+    def __init__(self, author: discord.Member, level: str = "1", timeout: float = None, bot: commands.Bot = None):
         super().__init__(timeout=timeout)
 
         self.author: discord.Member = author
@@ -108,22 +109,23 @@ class MatchGame(discord.ui.View):
         self.guessed: dict[str, Card] = {}
         self.embed_color = discord.Color.random()
         self.response: discord.Message = None
+        self.bot = bot
 
         for index, card in enumerate(self.cards, start=1):
             index = str(index)
 
             self.guessed.setdefault(index, self.covered_card)
             self.add_item(GuessButton(card, label=index, custom_id=index, row=(int(index) -1) // self._data.get("elem_per_row")))
-    
+
     async def interaction_check(self, interaction: discord.Interaction) -> bool:
         if interaction.user != self.author:
             return False
-        
+
         if self._ended_time:
             return False
-        
+
         return True
-    
+
     async def on_error(self, interaction: discord.Interaction, error: Exception, item: discord.ui.Item) -> None:
         pass
 
@@ -138,12 +140,12 @@ class MatchGame(discord.ui.View):
         embed = discord.Embed(title="Game Ended (Rewards)", color=discord.Color.random())
         matched_raw = self.matched()
         final_rewards: dict[str, int] = {}
-        
+
         rewards = f"{'Pairs':>9}{'Rewards':>9}\n"
         for matched, reward in self._data.get("rewards").items():
             if isinstance(reward[0], list):
                 reward = choice(reward)
-            
+
             if is_matched := (int(matched) <= matched_raw):
                 if reward[0] not in final_rewards:
                     final_rewards[reward[0]] = 0
@@ -155,7 +157,7 @@ class MatchGame(discord.ui.View):
             rewards += ("✅" if is_matched else "⬛") + f"  {matched:<3}"
             if reward_name[0] == "candies":
                 rewards += f"    {'🍊 Tangerines':<18} x{amount}\n"
-            
+
             elif reward_name[0] == "exp":
                 rewards += f"    {'⚔️ Exp':<19} x{amount}\n"
 
@@ -163,7 +165,7 @@ class MatchGame(discord.ui.View):
                 reward_name = reward_name[1].split("_")
                 potion_data = func.settings.POTIONS_BASE.get(reward_name[0])
                 rewards += f"    {potion_data.get('emoji') + ' ' + reward_name[0].title() + ' ' + reward_name[1].upper() + ' Potion':<18} x{amount}\n"
-            
+
         embed.description = f"```{'🕔 Time Used:':<15} {func.convert_seconds(self.used_time)}\n{'🃏 Matched:':<15} {matched_raw}```\n```{rewards}```"
 
         update_data = {"$inc": final_rewards}
@@ -188,6 +190,7 @@ class MatchGame(discord.ui.View):
             }
 
         await func.update_user(self.author.id, update_data)
+        await func.add_tangerines_quest_progress(self.matched(), self.author.id, self.bot)
 
         func.logger.info(
             f"User {self.author.name}({self.author.id}) completed a match game. "

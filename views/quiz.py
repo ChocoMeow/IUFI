@@ -1,5 +1,6 @@
 import discord, time, asyncio, copy
 import functions as func
+from discord.ext import commands
 
 from discord.ext import commands
 from random import choice
@@ -128,8 +129,9 @@ class ResetAttemptView(discord.ui.View):
         await self.ctx.invoke(self.ctx.bot.get_command("quiz"))
 
 class QuizView(discord.ui.View):
-    def __init__(self, author: discord.Member, questions: list[Question], timeout: float = None):
+    def __init__(self, author: discord.Member, questions: list[Question], timeout: float = None, bot: commands.Bot = None):
         super().__init__(timeout=timeout)
+        self.bot = bot
 
         self.author: discord.Member = author
         self.questions: list[Question] = questions
@@ -244,6 +246,9 @@ class QuizView(discord.ui.View):
 
                 embed.description += "```"
 
+        score_for_tangerines = max(0, int(total_points/10))
+        if score_for_tangerines > 0:
+            await func.add_tangerines_quest_progress(int(score_for_tangerines), self.author.id, self.bot)
         await func.update_user(self.author.id, query)
 
         func.logger.info(
@@ -363,3 +368,4 @@ class QuizView(discord.ui.View):
 
         await interaction.response.send_message(msg, ephemeral=True, delete_after=self._delay_between_questions)
         return await self.next_question()
+
