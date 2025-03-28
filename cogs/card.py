@@ -8,6 +8,7 @@ from views import (
     ConfirmView,
     TradeView
 )
+from iufi.events import is_april_fools, is_user_naughty
 
 class Card(commands.Cog):
     def __init__(self, bot: commands.Bot) -> None:
@@ -66,16 +67,24 @@ class Card(commands.Cog):
         @prefix@cardinfolast
         @prefix@il
         """
+
+        if is_april_fools() and is_user_naughty(ctx.author.id):
+            return await self.convertallcards(ctx)
+
+        await self.showlastcardinfo(ctx)
+
+
+    async def showlastcardinfo(self,ctx):
         user = await func.get_user(ctx.author.id)
 
         if not user["cards"]:
             return await ctx.reply(f"**{ctx.author.mention} you have no photocards.**", delete_after=5)
-        
+
         card_id = user["cards"][-1]
         card = iufi.CardPool.get_card(card_id)
         if not card:
             return await ctx.reply("Card not found! Please try again.")
-        
+
         embed = discord.Embed(title=f"ℹ️ Card Info", color=0x949fb8)
         embed.description = f"```{card.display_id}\n" \
                             f"{card.display_tag}\n" \
@@ -83,7 +92,7 @@ class Card(commands.Cog):
                             f"{card.tier[0]} {card.tier[1].capitalize()}\n" \
                             f"{card.display_stars}```\n" \
                             "**Owned by: **" + (f"<@{card.owner_id}>" if card.owner_id else "None")
-        
+
         embed.set_image(url=f"attachment://image.{card.format}")
         await ctx.reply(file=discord.File(await card.image_bytes(True), filename=f"image.{card.format}"), embed=embed)
 
@@ -178,11 +187,18 @@ class Card(commands.Cog):
         @prefix@convertall
         @prefix@ca
         """
+
+        if is_april_fools() and is_user_naughty(ctx.author.id):
+            return await self.showlastcardinfo(ctx)
+
+        await self.convertallcards(ctx)
+
+    async def convertallcards(self,ctx):
         user = await func.get_user(ctx.author.id)
 
         if not user["cards"]:
             return await ctx.reply(f"**{ctx.author.mention} you have no photocards.**", delete_after=5)
-        
+
         converted_cards: list[iufi.Card] = []
 
         for card_id in user["cards"]:
@@ -192,7 +208,7 @@ class Card(commands.Cog):
 
         card_ids = [card.id for card in converted_cards]
         candies = sum([card.cost for card in converted_cards])
-                       
+
         embed = discord.Embed(title="✨ Confirm to convert?", color=discord.Color.random())
         embed.description = f"```🆔 {', '.join([f'{card}' for card in converted_cards])} \n🍊 + {candies}```"
 
@@ -202,8 +218,10 @@ class Card(commands.Cog):
 
         if view.is_confirm:
             if user["cards"] != card_ids:
-                return await ctx.reply(content="Your cards cannot be converted because there has been a change in your inventory.", ephemeral=True)
-            
+                return await ctx.reply(
+                    content="Your cards cannot be converted because there has been a change in your inventory.",
+                    ephemeral=True)
+
             for card in converted_cards:
                 iufi.CardPool.add_available_card(card)
 
@@ -212,7 +230,8 @@ class Card(commands.Cog):
                 "$inc": {"candies": candies}
             })
             await func.update_user(ctx.author.id, query)
-            await func.update_card(card_ids, {"$set": {"owner_id": None, "tag": None, "frame": None, "last_trade_time": 0}})
+            await func.update_card(card_ids,
+                                   {"$set": {"owner_id": None, "tag": None, "frame": None, "last_trade_time": 0}})
 
             func.logger.info(
                 f"User {ctx.author.name}({ctx.author.id}) converted {len(converted_cards)} card(s): ["
@@ -607,3 +626,4 @@ class Card(commands.Cog):
 
 async def setup(bot: commands.Bot) -> None:
     await bot.add_cog(Card(bot))
+

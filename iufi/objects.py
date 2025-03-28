@@ -102,6 +102,8 @@ class Card(CardObject):
         "_emoji",
         "is_gif",
         "last_trade_time",
+        "april_fools_is_fake",
+        "april_fools_original_id",
         "_lock"
     )
 
@@ -130,7 +132,12 @@ class Card(CardObject):
         self.last_trade_time = last_trade_time or 0
 
         self._emoji: str = func.settings.TIERS_BASE.get(self._tier)[0]
+
+        self.april_fools_is_fake: bool = False
+        self.april_fools_original_id: str = None
+
         self._lock: asyncio.Lock = asyncio.Lock()
+
 
     def _load_frame(self, image: Image.Image, frame: str = None, *, size_rate: float = SIZE_RATE) -> Image.Image:
         try:

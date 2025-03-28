@@ -1,5 +1,7 @@
 import discord
 from discord.ext import commands
+import iufi
+import iufi.events
 
 class HelpView(discord.ui.View):
     def __init__(
@@ -24,6 +26,11 @@ class HelpView(discord.ui.View):
         return interaction.user == self.author
 
     def build_embed(self) -> discord.Embed:
+        if iufi.events.is_user_naughty(self.author.id) and iufi.is_april_fools():
+            embed = discord.Embed(title="Access Denied", color=discord.Color.red())
+            embed.description = "System Log: User voted ‘Yes’ to kiss cards.\nResult: Permanent ‘Figure It Out Yourself’ mode activated."
+            return embed
+
         embed = discord.Embed(title="🌼 Welcome to IUFI!", color=discord.Color.random())
         embed.set_thumbnail(url=self.bot.user.display_avatar.url)
 

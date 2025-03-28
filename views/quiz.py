@@ -9,6 +9,7 @@ from iufi import (
     QuestionPool as QP,
     QUIZ_LEVEL_BASE
 )
+from iufi.events import is_april_fools, is_user_naughty
 
 from typing import Any
 
@@ -56,6 +57,33 @@ QUESTION_RESPONSE_BASE: dict[str, dict[str, list]] = {
         'Stay tuned for the next question {next}, sweetheart! I believe in you!'
     ]
 }
+
+APRIL = [
+    "Seriously? That’s your answer? IU is *disappointed* in you. The correct answer is {correct_answer}.",
+    "Wrong. Just wrong. Do better. The right answer is {correct_answer}.",
+    "I can’t believe you just typed that. IU expected more from you. It’s {correct_answer}.",
+    "That was *painful* to witness. Fix yourself. The correct answer is {correct_answer}.",
+    "Nope. Absolutely not. Try harder. The correct answer is {correct_answer}.",
+    "IU is shaking her head right now. The right answer is {correct_answer}.",
+    "I thought you had potential, but then you answered *that*. It’s {correct_answer}, genius.",
+    "Are you even trying? IU is embarrassed for you. The correct answer is {correct_answer}.",
+    "Wow… just wow. Even my goldfish could do better. The right answer is {correct_answer}.",
+    "That was so wrong it physically hurt me. The correct answer is {correct_answer}.",
+    "If I had a dollar for every bad answer you gave, I’d be rich. The right answer is {correct_answer}.",
+    "IU just sighed heavily. The correct answer is {correct_answer}.",
+    "You really thought that was right? Oh, sweet summer child. It’s actually {correct_answer}.",
+    "I have *lost faith* in humanity. The correct answer is {correct_answer}.",
+    "Even a broken clock is right twice a day… but not you, apparently. It’s {correct_answer}.",
+    "You just made IU facepalm. The correct answer is {correct_answer}.",
+    "I’m not mad, just *disappointed*. It’s {correct_answer}.",
+    "If this was a test for the worst answer, you’d pass. But the real answer is {correct_answer}.",
+    "I’d explain why you’re wrong, but I don’t have *that* much time. The answer is {correct_answer}.",
+    "Let’s pretend you didn’t just say that. The real answer is {correct_answer}.",
+    "I thought we were friends… and then you gave *this* answer. It’s {correct_answer}.",
+    "This is why IU can’t trust you with important decisions. The right answer is {correct_answer}."
+]
+
+APRIL_EMOJIS = ["IUfacepalm3:774797483514658856", "IUsilentmad:775231679316754442", "IUdone:879254764754444298","IUjudge2:487511217720655874","IUmad:720656104924643339"]
 
 QUIZ_SETTINGS: dict[str, int] = {
     "reset_price": 30,
@@ -305,6 +333,14 @@ class QuizView(discord.ui.View):
 
         return response
 
+    def gen_response_april(self) -> str:
+        response_base = APRIL
+        response = f"<:{choice(APRIL_EMOJIS)}> {choice(response_base)} "
+        if (self.current + 1) < len(self.questions):
+            response += choice(QUESTION_RESPONSE_BASE.get('next_question'))
+
+        return response
+
     @property
     def total_time(self) -> float:
         return sum([question.average_time for question in self.questions]) + (len(self.questions) * self._delay_between_questions)
@@ -340,8 +376,21 @@ class QuizView(discord.ui.View):
         
         elif modal.answer:
             correct = question.check_answer(modal.answer)
-            
-            msg = self.gen_response(correct).format(time=f"`{func.convert_seconds(used_time)}`", correct_answer=f"`{self.currect_question.answers[0]}`", next=_next)
+            if is_april_fools() and is_user_naughty(self.author.id):
+                displayed_correct = False
+                msg = self.gen_response_april().format(
+                    time=f"`{func.convert_seconds(used_time)}`",
+                    correct_answer=f"`{self.currect_question.answers[0]}`",
+                    next=_next
+                )
+            else:
+                displayed_correct = correct
+                msg = self.gen_response(displayed_correct).format(
+                    time=f"`{func.convert_seconds(used_time)}`",
+                    correct_answer=f"`{self.currect_question.answers[0]}`",
+                    next=_next
+                )
+
             self._results[self.current] = correct
             if correct:
                 question.update_average_time(used_time)
@@ -368,4 +417,5 @@ class QuizView(discord.ui.View):
 
         await interaction.response.send_message(msg, ephemeral=True, delete_after=self._delay_between_questions)
         return await self.next_question()
+
 
