@@ -4,6 +4,7 @@ import time
 import random
 import functions as func
 import iufi
+import iufi.events
 
 # Define leaderboard emojis for ranks
 LEADERBOARD_EMOJIS = ["🥇", "🥈", "🥉", "🏅"]
@@ -27,11 +28,6 @@ class Tangerines(commands.Cog):
         self.bot = bot
         self.emoji = "🍊"
         self.invisible = False
-
-    @commands.command()
-    async def tangerine(self, ctx: commands.Context) -> None:
-        """Responds with a tangerine message."""
-        await ctx.send("Here's a tangerine! 🍊")
         
     @commands.command(aliases=["fi"])
     @commands.cooldown(1, 1, commands.BucketType.user)
@@ -45,6 +41,18 @@ class Tangerines(commands.Cog):
         fisher = ctx.author
         recipient = member or fisher
         fishing_for_self = fisher.id == recipient.id
+        
+        if fisher.id in iufi.events.NAUGHTY_LIST and fishing_for_self:
+            await ctx.reply("You are on the naughty list and cannot fish for yourself.")
+            return
+        
+        fisher_data = await func.get_user(fisher.id)
+        if (retry := fisher_data.get("cooldown", {}).setdefault("fish", 0)) > time.time():
+            await ctx.reply(f"{ctx.author.mention} your next fish is <t:{round(retry)}:R>", delete_after=10)
+            return 
+        actived_potions = func.get_potions(fisher_data.get("actived_potions", {}), func.settings.POTIONS_BASE)
+        fish_cd = func.settings.COOLDOWN_BASE["fish"][1] * (1 - actived_potions.get("speed", 0))
+        await func.update_user(fisher.id, {"$set": {"cooldown.fish": time.time() + fish_cd}})
         
         # Select probabilities based on if fishing for self or others
         prob_key = "self_prob" if fishing_for_self else "other_prob"
@@ -231,4 +239,6 @@ def highlight_text(text: str, need: bool = True) -> str:
 
 async def setup(bot: commands.Bot) -> None:
     await bot.add_cog(Tangerines(bot))
+
+
 

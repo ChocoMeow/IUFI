@@ -246,7 +246,7 @@ class QuizView(discord.ui.View):
 
                 embed.description += "```"
 
-        score_for_tangerines = max(0, int(total_points/10))
+        score_for_tangerines = max(0, int(total_points/5))
         if score_for_tangerines > 0:
             await func.add_tangerines_quest_progress(int(score_for_tangerines), self.author.id, self.bot)
         await func.update_user(self.author.id, query)

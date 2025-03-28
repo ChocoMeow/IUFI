@@ -190,7 +190,8 @@ class MatchGame(discord.ui.View):
             }
 
         await func.update_user(self.author.id, update_data)
-        await func.add_tangerines_quest_progress(self.matched(), self.author.id, self.bot)
+        matched_progress = self.matched() // 2
+        await func.add_tangerines_quest_progress(matched_progress, self.author.id, self.bot)
 
         func.logger.info(
             f"User {self.author.name}({self.author.id}) completed a match game. "
