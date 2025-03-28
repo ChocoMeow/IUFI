@@ -484,7 +484,7 @@ async def give_tangerines_rewards(users: List[Dict[str, Any]], current_milestone
         users (List[Dict[str, Any]]): List of users who participated
         current_milestone (int): Current milestone index
     """
-    rewards = settings.TANGERINES_QUEST_REWARDS[current_milestone]
+    rewards = iufi.GLOBAL_QUEST_REWARDS[current_milestone]
 
     for user_data in users:
         query = {}

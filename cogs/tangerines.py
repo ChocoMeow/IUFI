@@ -42,10 +42,6 @@ class Tangerines(commands.Cog):
         recipient = member or fisher
         fishing_for_self = fisher.id == recipient.id
         
-        if fisher.id in iufi.events.NAUGHTY_LIST and fishing_for_self:
-            await ctx.reply("You are on the naughty list and cannot fish for yourself.")
-            return
-        
         fisher_data = await func.get_user(fisher.id)
         if (retry := fisher_data.get("cooldown", {}).setdefault("fish", 0)) > time.time():
             await ctx.reply(f"{ctx.author.mention} your next fish is <t:{round(retry)}:R>", delete_after=10)
