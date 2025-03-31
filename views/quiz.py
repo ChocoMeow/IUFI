@@ -301,6 +301,7 @@ class QuizView(discord.ui.View):
         embed.description = f"**Answer Time: <t:{round(time.time() + question.average_time)}:R>**\n{record_msg}```{question.question}```"
         if question.attachment:
             embed.set_image(url=question.attachment)
+            embed.description += f"\n\n**Attachment:** {question.attachment}"
 
         embed.set_footer(text=f"Correct: {question.correct_rate:.1f}% | Wrong: {question.wrong_rate:.1f}%")
 
