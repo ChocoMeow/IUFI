@@ -1,6 +1,5 @@
 import discord, time, asyncio
 import functions as func
-import iufi
 
 from iufi import CardPool, Card
 
@@ -17,12 +16,6 @@ class RollButton(discord.ui.Button):
     
     async def callback(self, interaction: discord.Interaction) -> None:
         async with self.view._lock:
-            if getattr(self.card, "april_fools_is_fake", False):
-                original_card = iufi.CardPool.get_card(self.card.april_fools_original_id)
-                self.card = original_card
-                # update the button's emoji
-                self.emoji = self.card.tier[0]
-
             if (owner_id := self.card.owner_id):
                 if owner_id != interaction.user.id:
                     return await interaction.response.send_message(f"{interaction.user.mention} This card has been claimed by <@{owner_id}>")
@@ -58,11 +51,7 @@ class RollButton(discord.ui.Button):
 
             func.logger.info(f"User {interaction.user.name}({interaction.user.id}) has successfully claimed the card: [{self.card.id}].")
 
-            image_bytes, image_format = await iufi.gen_cards_view([child.card for child in self.view.children])
-            await self.view.message.edit(
-                attachments=[discord.File(image_bytes, filename=f'image.{image_format}')],
-                view=self.view
-            )
+            await self.view.message.edit(view=self.view)
             await interaction.followup.send(f"{interaction.user.mention} has claimed ` {self.custom_id} | {self.card.display_id} | {self.card.tier[0]} | {self.card.display_stars} `")
         
 class RollView(discord.ui.View):
@@ -107,5 +96,3 @@ class RollView(discord.ui.View):
             return False
 
         return True
-
-

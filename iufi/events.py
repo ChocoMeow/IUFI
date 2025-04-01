@@ -1,7 +1,7 @@
 import asyncio
 import datetime
 
-GLOBAL_MILESTONES = [500, 2000, 7000, 160593]
+GLOBAL_MILESTONES = [500, 2000, 5844, 10000]
 MILESTONE_ONE_REWARD = [["🍊", "candies", 50]]
 MILESTONE_TWO_REWARD = [["🌸", "roll.rare", 2]]
 MILESTONE_THREE_REWARD = [["🌸", "roll.rare", 1], ["💎", "roll.epic", 1]]
@@ -12,10 +12,3 @@ NAUGHTY_LIST = [120409761182253056,135827436544851969,160849769848242176,2138968
 
 def get_global_end_time():
     return datetime.datetime(datetime.datetime.now().year, 4, 6)
-
-def is_april_fools():
-    now_kst = datetime.datetime.now(datetime.timezone(datetime.timedelta(hours=9)))
-    return now_kst.month == 4 and now_kst.day == 1
-
-def is_user_naughty(user_id):
-    return user_id in NAUGHTY_LIST

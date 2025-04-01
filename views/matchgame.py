@@ -9,8 +9,6 @@ from iufi import (
     gen_cards_view
 )
 
-from iufi.events import is_april_fools, is_user_naughty
-
 from random import shuffle, choice
 from typing import Any
 from collections import Counter
@@ -105,13 +103,8 @@ class MatchGame(discord.ui.View):
 
         cards: list[Card] = CardPool.get_random_cards_for_match_game(self._cards)
         cards.extend(cards)
-        if is_april_fools() and is_user_naughty(self.author.id):
-            import random
-            replaced_idx = random.randrange(len(cards))
-            new_card = random.choice(CardPool._match_game_cards)
-            cards[replaced_idx] = new_card
-        shuffle(cards)
         self.cards: list[Card] = cards
+        shuffle(self.cards)
 
         self.guessed: dict[str, Card] = {}
         self.embed_color = discord.Color.random()
@@ -235,4 +228,3 @@ class MatchGame(discord.ui.View):
     @property
     def click_left(self) -> int:
         return self._max_click - self.clicked
-

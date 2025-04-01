@@ -51,14 +51,7 @@ class Profile(commands.Cog):
         """
         if not member:
             member = ctx.author
-
-        if iufi.is_april_fools() and iufi.is_user_naughty(ctx.author.id):
-            return await self.showInventory(ctx)
-
-        await self.showprofile(member, ctx)
         
-
-    async def showprofile(self,member : discord.Member, ctx: commands.Context = None):
         user = await func.get_user(member.id)
         level, exp = func.calculate_level(user['exp'])
         bio = user.get('profile', {}).get('bio', 'Empty Bio')
@@ -80,21 +73,14 @@ class Profile(commands.Cog):
         embed.description = f"```{bio}```" if bio else ""
         embed.description += f"```📙 Photocards: {len(user.get('cards', []))}/{func.settings.MAX_CARDS}\n⚔️ Level: {level} ({(exp / func.settings.DEFAULT_EXP) * 100:.1f}%)\n💤 Last Active: {func.cal_last_online_time(user.get("last_active_time"), "Not Active")}```\u200b"
 
-        embed.add_field(name="Ranked Stats:",
-                        value=f"> <:{rank_name}:{rank_emoji}> {rank_name.title()} (`{quiz_stats['points']}`)\n> 🎯 K/DA: `{round(quiz_stats['correct'] / total_questions, 1) if total_questions else 0}` (C: `{quiz_stats['correct']}` | W: `{quiz_stats['wrong'] + quiz_stats['timeout']}`)\n> 🕒 Average Time: `{func.convert_seconds(quiz_stats['average_time'])}`",
-                        inline=True)
-        embed.add_field(name="Card Match Stats:", value="\n".join(
-            f"> {DAILY_ROWS[int(level) - 4]} **Level {level}**: " + (
-                f"🃏 `{stats.get('matched', 0)}` 🕒 `{func.convert_seconds(stats.get('finished_time'))}`" if (
-                    stats := card_match_stats.get(level)) else "Not attempt yet") for level in
-            func.settings.MATCH_GAME_SETTINGS.keys()), inline=True)
+        embed.add_field(name="Ranked Stats:", value=f"> <:{rank_name}:{rank_emoji}> {rank_name.title()} (`{quiz_stats['points']}`)\n> 🎯 K/DA: `{round(quiz_stats['correct'] / total_questions, 1) if total_questions else 0}` (C: `{quiz_stats['correct']}` | W: `{quiz_stats['wrong'] + quiz_stats['timeout']}`)\n> 🕒 Average Time: `{func.convert_seconds(quiz_stats['average_time'])}`", inline=True)
+        embed.add_field(name="Card Match Stats:", value="\n".join(f"> {DAILY_ROWS[int(level) - 4]} **Level {level}**: " + (f"🃏 `{stats.get('matched', 0)}` 🕒 `{func.convert_seconds(stats.get('finished_time'))}`" if (stats := card_match_stats.get(level)) else "Not attempt yet") for level in func.settings.MATCH_GAME_SETTINGS.keys()), inline=True)
 
         card = iufi.CardPool.get_card(user["profile"]["main"])
         if card and card.owner_id == user["_id"]:
             embed.set_thumbnail(url=f"attachment://image.{card.format}")
-            return await ctx.reply(file=discord.File(await card.image_bytes(), filename=f"image.{card.format}"),
-                                   embed=embed)
-
+            return await ctx.reply(file=discord.File(await card.image_bytes(), filename=f"image.{card.format}"), embed=embed)
+        
         await ctx.reply(embed=embed)
 
     @commands.command(aliases=["sb"])
@@ -360,11 +346,6 @@ class Profile(commands.Cog):
         @prefix@inventory
         @prefix@in
         """
-        if iufi.is_april_fools() and iufi.is_user_naughty(ctx.author.id):
-            return await self.showprofile(ctx.author,ctx)
-        await self.showInventory(ctx)
-
-    async def showInventory(self,ctx: commands.Context):
         user = await func.get_user(ctx.author.id)
         embed = discord.Embed(title=f"🎒 {ctx.author.display_name}'s Inventory", color=0x5cb045)
         embed.description = f"```{'🍊 Tangerines':<20} x{user['candies']}\n"
@@ -379,7 +360,7 @@ class Profile(commands.Cog):
         potions_data: dict[str, int] = user.get("potions", {})
         potions = ("\n".join(
             [f"{potion.split('_')[0].title() + ' ' + potion.split('_')[1].upper() + ' Potion':21} x{amount}"
-             for potion, amount in potions_data.items() if amount]
+            for potion, amount in potions_data.items() if amount]
         ) if sum(potions_data.values()) else "Potion not found!")
 
         embed.description += f"🍶 Potions:\n{potions}```"

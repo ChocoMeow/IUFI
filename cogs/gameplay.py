@@ -11,8 +11,6 @@ from views import (
     ResetAttemptView,
     QUIZ_SETTINGS
 )
-from iufi.events import is_april_fools, is_user_naughty
-import random
 
 class Gameplay(commands.Cog):
     def __init__(self, bot: commands.Bot) -> None:
@@ -62,16 +60,6 @@ class Gameplay(commands.Cog):
             await ctx.reply(f"**Welcome to IUFI! Please have a look at the guide or use `qhelp` to begin.**", view=view)
 
         cards = iufi.CardPool.roll(included=[tier] if tier else None, luck_rates=None if tier else actived_potions.get("luck", None))
-
-        if is_april_fools() and is_user_naughty(ctx.author) and random.random() < 0.05:
-            idx = random.randint(0, len(cards) - 1)
-            random_tier = random.choices(["mystic", "celestial"], weights=[80, 20], k=1)[0]
-            original_card = cards[idx]
-            fake_card = random.choice(iufi.CardPool._available_cards[random_tier])
-            fake_card.april_fools_is_fake = True
-            fake_card.april_fools_original_id = original_card.id
-            cards[idx] = fake_card
-
         image_bytes, image_format = await iufi.gen_cards_view(cards)
 
         view = RollView(ctx.author, cards)
@@ -194,5 +182,3 @@ class Gameplay(commands.Cog):
 
 async def setup(bot: commands.Bot) -> None:
     await bot.add_cog(Gameplay(bot))
-
-

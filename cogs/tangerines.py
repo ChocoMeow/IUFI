@@ -210,19 +210,6 @@ class Tangerines(commands.Cog):
 
         await ctx.reply(embed=embed)
 
-    @commands.command(aliases=["nl"])
-    async def naughtylist(self, ctx: commands.Context) -> None:
-        """Displays all players in the naughty list."""
-        naughty_users = []
-        for user_id in iufi.events.NAUGHTY_LIST:
-            user = self.bot.get_user(user_id)
-            naughty_users.append(f"{user.display_name}" if user else f"Unknown (`{user_id}`)")
-        embed = discord.Embed(
-            title="Naughty List",
-            description="\n".join(naughty_users) or "No naughty users found."
-        )
-        await ctx.reply(embed=embed)
-
 
 def generate_progress_bar(total, progress_percentage, filled='⣿', in_progress='⣦', empty='⣀'):
     progress = int(total * progress_percentage / 100)
