@@ -280,7 +280,10 @@
         "bear": ["🧸", 60, false],
         "heart": ["💗", 60, false],
         "bats": ["🦇", 60, false],
-        "pumpkin": ["🎃", 60, false]
+        "pumpkin": ["🎃", 60, false],
+        "ocean": ["🌊", 70, true],
+        "tangerines": ["🍊", 40, true],
+        "wlgyt": ["💐", 70, true]
     },
     "POTIONS_BASE": {
         "speed": {
