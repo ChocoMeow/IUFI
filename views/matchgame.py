@@ -1,5 +1,6 @@
 import discord, asyncio, time
 import functions as func
+from iufi.events import is_birthday_buff_active
 
 from iufi import (
     Card,
@@ -90,7 +91,12 @@ class MatchGame(discord.ui.View):
         self._level: str = level
         self._data: dict[str, Any] = func.settings.MATCH_GAME_SETTINGS.get(level)
         self._cards: int = self._data.get("cards")
+        
+        # Apply birthday buff for extra moves
         self._max_click: int = self._data.get("max_clicks")
+        if is_birthday_buff_active():
+            self._max_click += 2
+            
         self._start_time: float = time.time()
         self._ended_time: float = None
 
@@ -204,7 +210,8 @@ class MatchGame(discord.ui.View):
         embed = discord.Embed(
             description=f"```{'⚔️ Level:':<17}  {self._level}\n" \
                         f"{'👆 Click left:':<17} {self.click_left}\n" \
-                        f"{'🃏 Card Matched:':<17} {self.matched()}```",
+                        f"{'🃏 Card Matched:':<17} {self.matched()}" + \
+                        (f"\n{'🎂 Birthday Buff:':<17} Active" if is_birthday_buff_active() else "") + "```",
             color=self.embed_color
         )   
 

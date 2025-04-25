@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import random, os, asyncio, Levenshtein, re, yt_dlp
 import functions as func
+from iufi.events import is_birthday_buff_active
 
 from PIL import Image, ImageDraw, ImageSequence
 from io import BytesIO
@@ -250,6 +251,9 @@ class Card(CardObject):
         price = func.settings.TIERS_BASE.get(self._tier)[1]
         if self.stars > 5:
             price *= 1 + ((self.stars - 5) * .25)
+
+        if is_birthday_buff_active():
+            price *= 2
 
         return round(price)
     

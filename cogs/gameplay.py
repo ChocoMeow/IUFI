@@ -1,5 +1,6 @@
 import discord, iufi, time, asyncio
 import functions as func
+from iufi.events import is_birthday_buff_active
 
 from discord.ext import commands
 from iufi.pool import QuestionPool as QP
@@ -61,8 +62,11 @@ class Gameplay(commands.Cog):
         image_bytes, image_format = await iufi.gen_cards_view(cards)
 
         view = RollView(ctx.author, cards)
+        
+        # Add birthday buff notification
+        birthday_msg = " 🎂 **Birthday buff active: 2x candies on conversions!**" if is_birthday_buff_active() else ""
         view.message = await ctx.send(
-            content=f"**{ctx.author.mention} This is your roll!** (Ends: <t:{round(time.time()) + 71}:R>)",
+            content=f"**{ctx.author.mention} This is your roll!** (Ends: <t:{round(time.time()) + 71}:R>){birthday_msg}",
             file=discord.File(image_bytes, filename=f'image.{image_format}'),
             view=view
         )
@@ -91,8 +95,11 @@ class Gameplay(commands.Cog):
         await func.update_user(ctx.author.id, query)
         
         embed, file = await view.build()
+        
+        # Add birthday buff notification
+        birthday_msg = "\n🎂 **Birthday buff active: +2 extra moves!**" if is_birthday_buff_active() else ""
         view.response = await ctx.reply(
-            content=f"**This game ends** <t:{round(view._start_time + view._data.get('timeout', 0))}:R>",
+            content=f"**This game ends** <t:{round(view._start_time + view._data.get('timeout', 0))}:R>{birthday_msg}",
             embed=embed, file=file, view=view
         )
         await asyncio.sleep(view._data.get("timeout", 280))
@@ -131,8 +138,11 @@ class Gameplay(commands.Cog):
 
         # Create the quiz view and send the initial message
         view = QuizView(ctx.author, questions)
+        
+        # Add birthday buff notification
+        birthday_msg = "\n🎂 **Birthday buff active: 2x points!**" if is_birthday_buff_active() else ""
         view.response = await ctx.reply(
-            content=f"**This game ends** <t:{round(view._start_time + view.total_time)}:R>",
+            content=f"**This game ends** <t:{round(view._start_time + view.total_time)}:R>{birthday_msg}",
             embed=view.build_embed(),
             view=view
         )
