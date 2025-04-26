@@ -1,6 +1,7 @@
 import discord, iufi, time, asyncio
 import functions as func
-from iufi.events import is_birthday_buff_active
+from iufi.events import is_birthday_buff_active, is_birthday_event_active
+from iufi.birthday import replace_with_birthday_card
 
 from discord.ext import commands
 from iufi.pool import QuestionPool as QP
@@ -46,7 +47,7 @@ class Gameplay(commands.Cog):
                 return await ctx.reply(f"Tier was not found. Please select a valid tier: `{', '.join(user.get('roll').keys())}`")
  
             if user.get("roll", {}).get(tier, 0) <= 0:
-                return await ctx.reply(f"You’ve used up all your `{tier}` rolls for now.")
+                return await ctx.reply(f"You've used up all your `{tier}` rolls for now.")
             
             query["$inc"] = {f"roll.{tier}": -1}
 
@@ -59,19 +60,86 @@ class Gameplay(commands.Cog):
             await ctx.reply(f"**Welcome to IUFI! Please have a look at the guide or use `qhelp` to begin.**", view=view)
 
         cards = iufi.CardPool.roll(included=[tier] if tier else None, luck_rates=None if tier else actived_potions.get("luck", None))
+        
+        # Process birthday card replacement if event is active
+        if is_birthday_event_active():
+            cards = replace_with_birthday_card(cards)
+            
         image_bytes, image_format = await iufi.gen_cards_view(cards)
 
         view = RollView(ctx.author, cards)
         
-        # Add birthday buff notification
-        birthday_msg = " 🎂 **Birthday buff active: 2x candies on conversions!**" if is_birthday_buff_active() else ""
+        # Create content message with appropriate event notifications
+        content = f"**{ctx.author.mention} This is your roll!** (Ends: <t:{round(time.time()) + 71}:R>)"
+        
+        # Add birthday event notification if active
+        if is_birthday_event_active():
+            content += "\n🎂 **Birthday Event: Collect numbered cards representing IU's age!**"
+            
+        # Add birthday buff notification if active
+        if is_birthday_buff_active():
+            content += "\n🎂 **Birthday buff active: 2x candies on conversions!**"
+            
         view.message = await ctx.send(
-            content=f"**{ctx.author.mention} This is your roll!** (Ends: <t:{round(time.time()) + 71}:R>){birthday_msg}",
+            content=content,
             file=discord.File(image_bytes, filename=f'image.{image_format}'),
             view=view
         )
         
         await view.timeout_count()
+    
+    @commands.command(aliases=["bc", "birthday"])
+    async def birthdaycards(self, ctx: commands.Context, member: discord.Member = None):
+        """Shows birthday card collection.
+
+        **Examples:**
+        @prefix@birthdaycards
+        @prefix@bc @user
+        """
+        target = member or ctx.author
+        user = await func.get_user(target.id)
+        
+        collection = user.get("birthday_collection", {})
+        total_cards = user.get("birthday_cards_count", 0)
+        
+        embed = discord.Embed(
+            title=f"🎂 {target.display_name}'s Birthday Collection", 
+            color=discord.Color.brand_red()
+        )
+        
+        # Create a visual representation of collected cards
+        collection_display = ""
+        for day in range(1, 32):  # Days 1-31
+            if day > 0:
+                day_str = str(day)
+                if day_str in collection:
+                    collection_display += f"✅ {day:02d} "
+                else:
+                    collection_display += f"❌ {day:02d} "
+                
+                # Add line breaks for readability
+                if day % 5 == 0:
+                    collection_display += "\n"
+                
+        embed.description = (
+            f"**Collected:** {total_cards}/31 cards\n\n"
+            f"```{collection_display}```\n"
+            f"*Collect all 31 cards during IU's birthday month!*"
+        )
+        
+        if is_birthday_event_active():
+            from iufi.events import get_current_birthday_card_day
+            today = get_current_birthday_card_day()
+            embed.add_field(
+                name="Today's Card", 
+                value=f"Card #{today} is available today!"
+            )
+            from iufi.events import get_birthday_event_end
+            embed.set_footer(text=f"Birthday event ends on {get_birthday_event_end().strftime('%B %d, %Y')}")
+        else:
+            embed.set_footer(text="The birthday event is not currently active.")
+            
+        await ctx.reply(embed=embed)
 
     @commands.command(aliases=["mg"])
     async def game(self, ctx: commands.Context, level: str):

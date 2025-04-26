@@ -165,12 +165,21 @@ class Card(CardObject):
     def _load_image(self, *, size_rate: float = SIZE_RATE) -> Union[list[Image.Image], Image.Image]:
         """Load and process the image"""
         try:
-            image_path = os.path.join(func.ROOT_DIR, "images", self._tier)
-
-            with Image.open(os.path.join(image_path, f"{self.id}.webp")) as img:
-                images = [self._load_frame(frame.convert('RGBA'), size_rate=size_rate) for frame in ImageSequence.Iterator(img)]
-                self.is_gif = len(images) > 1
-                return images if len(images) > 1 else images[0]
+            # Special handling for birthday cards
+            if hasattr(self, 'day_number'):
+                # For birthday cards, use their specific path format
+                image_path = os.path.join(func.ROOT_DIR, "birthday", f"{self.day_number}.png")
+                with Image.open(image_path) as img:
+                    images = [self._load_frame(frame.convert('RGBA'), size_rate=size_rate) for frame in ImageSequence.Iterator(img)]
+                    self.is_gif = len(images) > 1
+                    return images if len(images) > 1 else images[0]
+            else:
+                # Regular card loading logic
+                image_path = os.path.join(func.ROOT_DIR, "images", self._tier)
+                with Image.open(os.path.join(image_path, f"{self.id}.webp")) as img:
+                    images = [self._load_frame(frame.convert('RGBA'), size_rate=size_rate) for frame in ImageSequence.Iterator(img)]
+                    self.is_gif = len(images) > 1
+                    return images if len(images) > 1 else images[0]
                     
         except Exception as e:
             raise ImageLoadError(f"Unable to load the image. Reason: {e}")

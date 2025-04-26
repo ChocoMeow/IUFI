@@ -15,3 +15,13 @@ def get_birthday_event_end():
 def is_birthday_buff_active():
     now = datetime.datetime.now(KST)
     return now.date() == actual_birthday.date()
+
+def is_birthday_event_active():
+    now = datetime.datetime.now(KST)
+    return birthday_event_start <= now <= birthday_event_end
+
+def get_current_birthday_card_day():
+    now = datetime.datetime.now(KST)
+    if birthday_event_start.month == now.month and birthday_event_start.year == now.year:
+        return now.day if 1 <= now.day <= 31 else None
+    return None

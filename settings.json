@@ -23,6 +23,8 @@
         "collections": {},
         "potions": {},
         "actived_potions": {},
+        "birthday_collection": {},
+        "birthday_cards_count": 0,
         "roll": {
             "rare": 0,
             "epic": 0,
