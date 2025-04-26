@@ -212,7 +212,7 @@ class Player(VoiceProtocol):
         points = 2 + (0 if at * (1 - .3) < time_used < at * (1 + .3) else 1 if time_used < at else -1)
 
         # Double points if birthday buff is active
-        if is_birthday_buff_active():
+        if is_birthday_buff_active("2x_music_points"):
             points *= 2
 
         user = await func.get_user(message.author.id)
@@ -263,7 +263,7 @@ class Player(VoiceProtocol):
         embed = Embed(title="Music Quiz Reward", description=f"```{reward_message}```", color=Color.random()) if reward_message else None
         await message.reply(
             random.choice(MESSAGES).format(time=func.convert_seconds(time_used), points=points) + 
-            (" 🎂 **Birthday buff doubled your points!**" if is_birthday_buff_active() else ""),
+            (" 🎂 **Birthday buff doubled your points!**" if is_birthday_buff_active("2x_music_points") else ""),
             embed=embed
         )
 
@@ -310,7 +310,7 @@ class Player(VoiceProtocol):
         embed.set_thumbnail(url=thumbnail)
         
         # Add birthday buff indicator if active
-        if is_birthday_buff_active():
+        if is_birthday_buff_active("2x_music_points"):
             embed.set_footer(text="🎂 Birthday buff active: 2x points!")
             
         return embed

@@ -168,7 +168,7 @@ class QuizView(discord.ui.View):
         
         self._ended_time = time.time()
         summary, total_points = self.cal_results()
-        if is_birthday_buff_active() and total_points > 0:
+        if is_birthday_buff_active("2x_quiz_points") and total_points > 0:
             total_points *= 2
             summary += "\n🎂 Birthday buff active: 2x points!\n"
         total_answered_count = (len(self.questions) - self._results.count(None))

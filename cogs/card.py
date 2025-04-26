@@ -124,7 +124,7 @@ class Card(commands.Cog):
         embed.description = f"```🆔 {', '.join([f'{card}' for card in converted_cards])} \n🍬 + {candies}```"
         
         # Add birthday buff notification if active
-        if is_birthday_buff_active() and converted_cards:
+        if is_birthday_buff_active("2x_candy") and converted_cards:
             embed.set_footer(text="🎂 Birthday buff active: 2x candies!")
             
         await ctx.reply(embed=embed)
@@ -176,7 +176,7 @@ class Card(commands.Cog):
         embed.title="✨ Converted"
         
         # Add birthday buff notification if active
-        if is_birthday_buff_active():
+        if is_birthday_buff_active("2x_candy"):
             embed.set_footer(text="🎂 Birthday buff active: 2x candies!")
             
         await message.edit(embed=embed, view=None) if message else await ctx.reply(embed=embed)
@@ -208,7 +208,7 @@ class Card(commands.Cog):
         embed.description = f"```🆔 {', '.join([f'{card}' for card in converted_cards])} \n🍬 + {candies}```"
         
         # Add birthday buff notification if active
-        if is_birthday_buff_active():
+        if is_birthday_buff_active("2x_candy"):
             embed.set_footer(text="🎂 Birthday buff active: 2x candies!")
 
         view = ConfirmView(ctx.author)
@@ -274,7 +274,7 @@ class Card(commands.Cog):
         embed.description = f"```🆔 {', '.join([f'{card}' for card in converted_cards])} \n🍬 + {candies}```"
         
         # Add birthday buff notification if active
-        if is_birthday_buff_active():
+        if is_birthday_buff_active("2x_candy"):
             embed.set_footer(text="🎂 Birthday buff active: 2x candies!")
 
         view = ConfirmView(ctx.author)

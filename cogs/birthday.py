@@ -37,16 +37,38 @@ class Birthday(commands.Cog):
             time_remaining = event_end - current_time
             days_remaining = time_remaining.days
             
+            # Base description without buffs
             embed.description = (
                 f"**Birthday Event is ACTIVE!** 🎉\n\n"
                 f"• Event ends <t:{int(event_end.timestamp())}:R>\n"
-                f"• Today's card: #{get_current_birthday_card_day()}\n"
-                f"• Birthday buff: {'ACTIVE ✨' if is_birthday_buff_active() else 'Not active'}\n\n"
+                f"• Today's card: #{get_current_birthday_card_day()}\n\n"
                 f"**Event Benefits:**\n"
                 f"• Chance to get special birthday cards when rolling\n"
-                f"• 2x candies on conversions during buff\n"
                 f"• Complete your collection of 31 birthday cards!\n"
             )
+            
+            # Check for active buffs and add them to the description
+            active_buffs = []
+            
+            if is_birthday_buff_active("2x_candy"):
+                active_buffs.append("• 2x candies on card conversions")
+                
+            if is_birthday_buff_active("2x_quiz_points"):
+                active_buffs.append("• 2x points in quiz games")
+                
+            if is_birthday_buff_active("2x_music_points"):
+                active_buffs.append("• 2x points in music quiz")
+                
+            if is_birthday_buff_active("extra_moves_match_game"):
+                active_buffs.append("• +2 extra moves in match games")
+            
+            # Add active buffs section if any are active
+            if active_buffs:
+                embed.add_field(
+                    name="✨ Today's Active Buffs",
+                    value="\n".join(active_buffs),
+                    inline=False
+                )
             
             # Show actual birthday highlight if near or on the day
             birthday_date = actual_birthday.date()
@@ -144,6 +166,29 @@ class Birthday(commands.Cog):
                 f"• Event ends <t:{int(event_end.timestamp())}:F>\n\n"
                 f"Don't miss out on collecting all the birthday cards before the event ends!"
             )
+            
+            # Add active buffs for today
+            active_buffs = []
+            
+            if is_birthday_buff_active("2x_candy"):
+                active_buffs.append("• 2x candies on card conversions")
+                
+            if is_birthday_buff_active("2x_quiz_points"):
+                active_buffs.append("• 2x points in quiz games")
+                
+            if is_birthday_buff_active("2x_music_points"):
+                active_buffs.append("• 2x points in music quiz")
+                
+            if is_birthday_buff_active("extra_moves_match_game"):
+                active_buffs.append("• +2 extra moves in match games")
+            
+            # Add active buffs section if any are active
+            if active_buffs:
+                embed.add_field(
+                    name="✨ Today's Active Buffs",
+                    value="\n".join(active_buffs),
+                    inline=False
+                )
             
             # Add progress bar
             total_duration = (get_birthday_event_end() - datetime(2025, 4, 1, tzinfo=KST)).total_seconds()

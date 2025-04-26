@@ -94,7 +94,7 @@ class MatchGame(discord.ui.View):
         
         # Apply birthday buff for extra moves
         self._max_click: int = self._data.get("max_clicks")
-        if is_birthday_buff_active():
+        if is_birthday_buff_active("extra_moves_match_game"):
             self._max_click += 2
             
         self._start_time: float = time.time()
@@ -211,7 +211,7 @@ class MatchGame(discord.ui.View):
             description=f"```{'⚔️ Level:':<17}  {self._level}\n" \
                         f"{'👆 Click left:':<17} {self.click_left}\n" \
                         f"{'🃏 Card Matched:':<17} {self.matched()}" + \
-                        (f"\n{'🎂 Birthday Buff:':<17} Active" if is_birthday_buff_active() else "") + "```",
+                        (f"\n{'🎂 Birthday Buff:':<17} Active" if is_birthday_buff_active("extra_moves_match_game") else "") + "```",
             color=self.embed_color
         )   
 

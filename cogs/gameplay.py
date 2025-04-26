@@ -77,7 +77,7 @@ class Gameplay(commands.Cog):
             content += "\n🎂 **Birthday Event: Collect numbered cards representing IU's age!**"
             
         # Add birthday buff notification if active
-        if is_birthday_buff_active():
+        if is_birthday_buff_active("2x_candy"):
             content += "\n🎂 **Birthday buff active: 2x candies on conversions!**"
             
         view.message = await ctx.send(
@@ -165,7 +165,7 @@ class Gameplay(commands.Cog):
         embed, file = await view.build()
         
         # Add birthday buff notification
-        birthday_msg = "\n🎂 **Birthday buff active: +2 extra moves!**" if is_birthday_buff_active() else ""
+        birthday_msg = "\n🎂 **Birthday buff active: +2 extra moves!**" if is_birthday_buff_active("extra_moves_match_game") else ""
         view.response = await ctx.reply(
             content=f"**This game ends** <t:{round(view._start_time + view._data.get('timeout', 0))}:R>{birthday_msg}",
             embed=embed, file=file, view=view
@@ -208,7 +208,7 @@ class Gameplay(commands.Cog):
         view = QuizView(ctx.author, questions)
         
         # Add birthday buff notification
-        birthday_msg = "\n🎂 **Birthday buff active: 2x points!**" if is_birthday_buff_active() else ""
+        birthday_msg = "\n🎂 **Birthday buff active: 2x points!**" if is_birthday_buff_active("2x_quiz_points") else ""
         view.response = await ctx.reply(
             content=f"**This game ends** <t:{round(view._start_time + view.total_time)}:R>{birthday_msg}",
             embed=view.build_embed(),
