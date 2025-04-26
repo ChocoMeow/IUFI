@@ -23,8 +23,8 @@ class Birthday(commands.Cog):
         """Shows quick overview of birthday event with card, buffs, and time information.
         
         **Examples:**
-        @prefix@qbirthdayinfo
-        @prefix@qbday
+        @prefix@birthdayinfo
+        @prefix@bday
         """
         
         # Create embed
@@ -60,21 +60,17 @@ class Birthday(commands.Cog):
         hours, remainder = divmod(time_remaining.seconds, 3600)
         minutes, seconds = divmod(remainder, 60)
         
-        # Build the description
+        # Build the description - make it cleaner and more visually appealing
         embed.description = (
             f"**Birthday Event is ACTIVE!** 🎉\n\n"
             f"⏱️ **Event ends <t:{int(event_end.timestamp())}:R>**\n"
-            f"• {days}d {hours}h {minutes}m remaining\n\n"
+            f"• {days}d {hours}h {minutes}m remaining\n"
         )
         
-        # Add card information
-        attachment = None
+        # Add card information - improved formatting
         if day:
-            embed.add_field(
-                name=f"Today's Card: #{day}",
-                value=f"You have {'already collected ✅' if has_card else 'not yet collected ❌'} this card.",
-                inline=False
-            )
+            embed.description += f"\n**Today's Card: #{day}**\n"
+            embed.description += f"You have {'already collected ✅' if has_card else 'not yet collected ❌'} this card.\n"
             
             # Try to display the card image
             try:
@@ -85,13 +81,11 @@ class Birthday(commands.Cog):
                 func.logger.error(f"Error displaying birthday card image: {e}")
                 attachment = None
         else:
-            embed.add_field(
-                name="Today's Card",
-                value="No birthday card is available today.",
-                inline=False
-            )
+            embed.description += f"\n**Today's Card**\n"
+            embed.description += "No birthday card is available today.\n"
+            attachment = None
         
-        # Add active buffs section
+        # Add active buffs section - improved formatting
         active_buffs = []
         
         if is_birthday_buff_active("2x_candy"):
@@ -106,19 +100,12 @@ class Birthday(commands.Cog):
         if is_birthday_buff_active("extra_moves_match_game"):
             active_buffs.append("• +2 extra moves in match games")
         
-        # Add active buffs section if any are active
+        # Add active buffs directly to description instead of field
+        embed.description += f"\n✨ **Today's Active Buffs**\n"
         if active_buffs:
-            embed.add_field(
-                name="✨ Today's Active Buffs",
-                value="\n".join(active_buffs),
-                inline=False
-            )
+            embed.description += "\n".join(active_buffs)
         else:
-            embed.add_field(
-                name="✨ Today's Active Buffs",
-                value="No special buffs are active today.",
-                inline=False
-            )
+            embed.description += "No special buffs are active today."
         
         # Send the response
         if attachment:
