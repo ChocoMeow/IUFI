@@ -53,9 +53,7 @@ class RollButton(discord.ui.Button):
                 
                 self.disabled = True
                 self.style = discord.ButtonStyle.gray
-                
-                self.card.change_owner(interaction.user.id)
-                CardPool.remove_available_card(self.card)
+
                 
                 await interaction.response.defer()
                 actived_potions = func.get_potions(user.get("actived_potions", {}), func.settings.POTIONS_BASE)

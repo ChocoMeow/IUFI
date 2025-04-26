@@ -1,3 +1,4 @@
+import asyncio
 import os
 import random
 from .objects import Card
@@ -7,11 +8,16 @@ class BirthdayCard(Card):
     def __init__(self, day_number):
         self.day_number = day_number
         self.id = f"birthday_{day_number}"
-        self.display_id = f"B{day_number:02d}"
         self._tier = "birthday"
-        self.tier = ["🎂"]
-        self.display_stars = "★"
         self.owner_id = None
+        self.is_gif: bool = False
+        self._frame: str = None
+        self.tag: str = None
+        self.owner_id: int = None
+
+        self._emoji: str = "🎂"
+        self._lock: (
+            asyncio.Lock) = asyncio.Lock()
         
     def change_owner(self, user_id):
         self.owner_id = user_id
@@ -21,6 +27,7 @@ class BirthdayCard(Card):
         return os.path.join("birthday", f"{self.day_number}.png")
 
 def should_add_birthday_card():
+    return True # test
     """Returns True if a birthday card should be added (5% chance during event)"""
     return is_birthday_event_active() and random.random() < 0.05
 

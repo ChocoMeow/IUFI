@@ -6,7 +6,8 @@ from random import choice
 from iufi import (
     Question,
     QuestionPool as QP,
-    QUIZ_LEVEL_BASE
+    QUIZ_LEVEL_BASE,
+    is_birthday_buff_active
 )
 
 from typing import Any
@@ -167,6 +168,9 @@ class QuizView(discord.ui.View):
         
         self._ended_time = time.time()
         summary, total_points = self.cal_results()
+        if is_birthday_buff_active() and total_points > 0:
+            total_points *= 2
+            summary += "\n🎂 Birthday buff active: 2x points!\n"
         total_answered_count = (len(self.questions) - self._results.count(None))
         if total_answered_count == 0:
             average_time = 0
