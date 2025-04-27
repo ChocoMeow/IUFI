@@ -1,11 +1,15 @@
 import discord, asyncio
 import functions as func
+from iufi.events import is_birthday_event_active
 
 from iufi import Card
 
 class FrameDropDown(discord.ui.Select):
     def __init__(self):
         self.view: FrameView
+        
+        # Check if birthday event is active
+        birthday_event = is_birthday_event_active()
         
         super().__init__(
             options=[
@@ -14,7 +18,9 @@ class FrameDropDown(discord.ui.Select):
                     label=frame_name.title(),
                     description=f"🍬 {price}"
                 )
-                for frame_name, (emoji, price, available) in func.settings.FRAMES_BASE.items() if available
+                # If birthday event is active, show all frames, otherwise only show available frames
+                for frame_name, (emoji, price, available) in func.settings.FRAMES_BASE.items() 
+                if (birthday_event or available)
             ],
             placeholder="Select a frame to view...",
             min_values=1, max_values=1, row=0
