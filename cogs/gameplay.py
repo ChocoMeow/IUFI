@@ -88,58 +88,6 @@ class Gameplay(commands.Cog):
         
         await view.timeout_count()
     
-    @commands.command(aliases=["bc", "birthday"])
-    async def birthdaycards(self, ctx: commands.Context, member: discord.Member = None):
-        """Shows birthday card collection.
-
-        **Examples:**
-        @prefix@birthdaycards
-        @prefix@bc @user
-        """
-        target = member or ctx.author
-        user = await func.get_user(target.id)
-        
-        collection = user.get("birthday_collection", {})
-        total_cards = user.get("birthday_cards_count", 0)
-        
-        embed = discord.Embed(
-            title=f"🎂 {target.display_name}'s Birthday Collection", 
-            color=discord.Color.brand_red()
-        )
-        
-        # Create a visual representation of collected cards
-        collection_display = ""
-        for day in range(1, 32):  # Days 1-31
-            if day > 0:
-                day_str = str(day)
-                if day_str in collection:
-                    collection_display += f"✅ {day:02d} "
-                else:
-                    collection_display += f"❌ {day:02d} "
-                
-                # Add line breaks for readability
-                if day % 5 == 0:
-                    collection_display += "\n"
-                
-        embed.description = (
-            f"**Collected:** {total_cards}/31 cards\n\n"
-            f"```{collection_display}```\n"
-            f"*Collect all 31 cards during IU's birthday month!*"
-        )
-        
-        if is_birthday_event_active():
-            from iufi.events import get_current_birthday_card_day
-            today = get_current_birthday_card_day()
-            embed.add_field(
-                name="Today's Card", 
-                value=f"Card #{today} is available today!"
-            )
-            from iufi.events import get_birthday_event_end
-            embed.set_footer(text=f"Birthday event ends on {get_birthday_event_end().strftime('%B %d, %Y')}")
-        else:
-            embed.set_footer(text="The birthday event is not currently active.")
-            
-        await ctx.reply(embed=embed)
 
     @commands.command(aliases=["mg"])
     async def game(self, ctx: commands.Context, level: str):

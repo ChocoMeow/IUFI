@@ -6,7 +6,7 @@ from datetime import timezone, timedelta
 KST = timezone(timedelta(hours=9))
 
 # Birthday event dates in KST
-birthday_event_start = datetime.datetime(2025, 4, 1, 0, 0, tzinfo=KST)
+birthday_event_start = datetime.datetime(2025, 4, 25, 0, 0, tzinfo=KST)
 birthday_event_end = datetime.datetime(2025, 5, 31, 23, 59, tzinfo=KST)
 actual_birthday = datetime.datetime(2025, 5, 16, 0, 0, tzinfo=KST)
 
@@ -55,8 +55,10 @@ def is_birthday_event_active():
 
 def get_current_birthday_card_day():
     now = datetime.datetime.now(KST)
-    if birthday_event_start.month == now.month and birthday_event_start.year == now.year:
-        return now.day if 1 <= now.day <= 31 else None
+    if birthday_event_start <= now <= birthday_event_end:
+        # Calculate days since event started (add 1 to make the first day be day 1)
+        day_number = (now.date() - birthday_event_start.date()).days + 1
+        return day_number
     return None
 
 def is_birthday():

@@ -73,7 +73,7 @@ class RollButton(discord.ui.Button):
                 func.logger.info(f"User {interaction.user.name}({interaction.user.id}) has successfully claimed birthday card #{day}.")
 
                 await self.view.message.edit(view=self.view)
-                await interaction.followup.send(f"🎂 {interaction.user.mention} has claimed Birthday Card #{day}! {self.card.display_stars}")
+                await interaction.followup.send(f"🎂 {interaction.user.mention} has claimed Birthday Card #{day}")
                 return
                 
             # Regular card claiming logic
