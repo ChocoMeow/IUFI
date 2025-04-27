@@ -74,8 +74,8 @@ class TradeView(discord.ui.View):
             if _buyer["candies"] < self.candies:
                 return await interaction.followup.send(f"You don't have enough candies! You only have `{_buyer['candies']}` candies", ephemeral=True)
 
-            if (len(_buyer["cards"]) + len(self.cards)) > func.settings.MAX_CARDS:
-                return await interaction.followup.send(f"**Your inventory is full.**", ephemeral=True)
+            if (len(_buyer["cards"]) + len(self.cards)) > func.settings.get_max_cards():
+                return await interaction.followup.send(f"**{interaction.user.mention} your inventory is full.**", ephemeral=True)
             
             last_trade_time = time.time()
             card_ids = [card.id for card in self.cards]

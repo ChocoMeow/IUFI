@@ -82,6 +82,12 @@ class Birthday(commands.Cog):
         if is_birthday_buff_active("extra_moves_match_game"):
             active_buffs.append("• +2 extra moves in match games")
         
+        if is_birthday_buff_active("frame_discount"):
+            active_buffs.append("• 20% discount on all frames")
+            
+        if is_birthday_buff_active("shop_discount"):
+            active_buffs.append("• 15% discount on shop items")
+        
         # Add active buffs directly to description instead of field
         embed.description += f"\n✨ **Today's Active Buffs**\n"
         if active_buffs:

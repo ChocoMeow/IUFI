@@ -35,7 +35,8 @@ def is_birthday_buff_active(buff_name=None):
         random.seed(seed)
         
         # Define existing birthday buffs
-        available_buffs = ["2x_quiz_points", "2x_candy", "2x_music_points","extra_moves_match_game"]
+        available_buffs = ["2x_quiz_points", "2x_candy", "2x_music_points", "extra_moves_match_game", 
+                           "frame_discount", "shop_discount", "inventory_increase"]
         
         # Determine today's active buff
         daily_buff = random.choice(available_buffs)
@@ -49,7 +50,6 @@ def is_birthday_buff_active(buff_name=None):
     return False
 
 def is_birthday_event_active():
-    return True
     now = datetime.datetime.now(KST)
     return birthday_event_start <= now <= birthday_event_end
 

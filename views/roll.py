@@ -77,7 +77,7 @@ class RollButton(discord.ui.Button):
                 return
                 
             # Regular card claiming logic
-            if len(user["cards"]) >= func.settings.MAX_CARDS:
+            if len(user["cards"]) >= func.settings.get_max_cards():
                 return await interaction.response.send_message(f"**{interaction.user.mention} your inventory is full.**", ephemeral=True)
             
             self.view.claimed_users.add(interaction.user)

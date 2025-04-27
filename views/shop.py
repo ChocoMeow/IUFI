@@ -1,5 +1,6 @@
 import discord
 import functions as func
+from iufi.events import is_birthday_buff_active
 
 SHOP_BASE: list[tuple[str, str, int]] = [
     (func.settings.TIERS_BASE.get("rare")[0], "roll.rare", 30),
@@ -56,7 +57,16 @@ class Dropdown(discord.ui.Select):
 
                 if modal.quantity:
                     user = await func.get_user(interaction.user.id)
-                    price = modal.quantity * item[2]
+                    original_price = modal.quantity * item[2]
+                    
+                    # Apply discount if shop_discount buff is active
+                    price = original_price
+                    discount_text = ""
+                    
+                    if is_birthday_buff_active("shop_discount"):
+                        price = original_price // 2  # 50% discount
+                        discount_text = f" (50% OFF! Original: {original_price}🍬)"
+                    
                     if user["candies"] < price:
                         return await interaction.followup.send(f"You don't have enough candies! You only have `{user['candies']}` candies", ephemeral=True)
                     
@@ -68,7 +78,7 @@ class Dropdown(discord.ui.Select):
                     func.logger.info(f"User {interaction.user.name}({interaction.user.id}) purchased {modal.quantity} {selected_item.lower()} for {price} candies.")
 
                     embed = discord.Embed(title="🛒 Shop Purchase", color=discord.Color.random())
-                    embed.description = f"```{item[0]} + {modal.quantity}\n🍬 - {price}```"
+                    embed.description = f"```{item[0]} + {modal.quantity}\n🍬 - {price}{discount_text}```"
 
                     return await interaction.followup.send(content="", embed=embed)
 
@@ -94,10 +104,22 @@ class ShopView(discord.ui.View):
         embed = discord.Embed(title="🛒 IUFI Shop", color=discord.Color.random())
         embed.description = f"🍬 Starcandies: `{user.get('candies', 0)}`\n```"
         
+        # Check if shop discount is active
+        shop_discount_active = is_birthday_buff_active("shop_discount")
+        discount_note = " (50% OFF!)" if shop_discount_active else ""
+        
         for item in SHOP_BASE:
-            embed.description += f"{item[0]} {(item[1].split('.')[1].title() + ' ' + item[1].split('.')[0].title()).upper():<20} {item[2]:>3} 🍬\n"
+            price = item[2]
+            if shop_discount_active:
+                price = price // 2  # Apply 50% discount
+                
+            embed.description += f"{item[0]} {(item[1].split('.')[1].title() + ' ' + item[1].split('.')[0].title()).upper():<20} {price:>3} 🍬{discount_note}\n"
+        
         embed.description += "```"
         
+        if shop_discount_active:
+            embed.description += "\n**🎉 Birthday Event: 50% OFF all shop items!**"
+            
         embed.set_thumbnail(url=self.author.display_avatar.url)
 
         return embed

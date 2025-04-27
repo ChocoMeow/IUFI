@@ -21,6 +21,9 @@ from discord.ext import commands
 
 from dotenv import load_dotenv
 
+# Import the birthday event function
+from iufi.events import is_birthday_buff_active
+
 ROOT_DIR = os.path.dirname(os.path.abspath(__file__))
 
 CARDS_FOLDER = os.path.join(ROOT_DIR, 'images')
@@ -104,6 +107,14 @@ class Settings:
         self.ADMIN_IDS = settings.get("ADMIN_IDS")
         self.OPUS_PATH = settings.get("OPUS_PATH")
         self.LOGGING = settings.get("LOGGING", {})
+
+    def get_max_cards(self) -> int:
+        """Returns the current maximum card limit, accounting for active buffs."""
+        base_limit = self.MAX_CARDS
+        # If inventory_increase birthday buff is active, add 10 slots
+        if is_birthday_buff_active("inventory_increase"):
+            return base_limit + 10
+        return base_limit
 
 tokens: TOKEN = TOKEN()
 settings: Settings = Settings()
