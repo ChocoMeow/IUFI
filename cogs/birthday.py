@@ -19,7 +19,7 @@ class Birthday(commands.Cog):
         self.invisible = False
     
     @commands.command(aliases=["bday", "bd"])
-    async def birthdayinfo(self, ctx: commands.Context):
+    async def birthday(self, ctx: commands.Context):
         """Shows quick overview of birthday event with card, buffs, and time information.
         
         **Examples:**
@@ -83,10 +83,13 @@ class Birthday(commands.Cog):
             active_buffs.append("• +2 extra moves in match games")
         
         if is_birthday_buff_active("frame_discount"):
-            active_buffs.append("• 20% discount on all frames")
+            active_buffs.append("• 50% discount on all frames")
             
         if is_birthday_buff_active("shop_discount"):
-            active_buffs.append("• 15% discount on shop items")
+            active_buffs.append("• 25% discount on shop items")
+        
+        if is_birthday_buff_active("inventory_increase"):
+            active_buffs.append("• +10 inventory slots")
         
         # Add active buffs directly to description instead of field
         embed.description += f"\n✨ **Today's Active Buffs**\n"

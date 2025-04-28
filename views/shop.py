@@ -64,8 +64,8 @@ class Dropdown(discord.ui.Select):
                     discount_text = ""
                     
                     if is_birthday_buff_active("shop_discount"):
-                        price = original_price // 2  # 50% discount
-                        discount_text = f" (50% OFF! Original: {original_price}🍬)"
+                        price = original_price // 4 * 3  # 25% discount
+                        discount_text = f" (25% OFF! Original: {original_price}🍬)"
                     
                     if user["candies"] < price:
                         return await interaction.followup.send(f"You don't have enough candies! You only have `{user['candies']}` candies", ephemeral=True)
@@ -106,19 +106,19 @@ class ShopView(discord.ui.View):
         
         # Check if shop discount is active
         shop_discount_active = is_birthday_buff_active("shop_discount")
-        discount_note = " (50% OFF!)" if shop_discount_active else ""
+        discount_note = " (25% OFF!)" if shop_discount_active else ""
         
         for item in SHOP_BASE:
             price = item[2]
-            if shop_discount_active:
-                price = price // 2  # Apply 50% discount
+            if shop_discount_active: #  Apply 25% discount
+                price = price // 4 * 3
                 
             embed.description += f"{item[0]} {(item[1].split('.')[1].title() + ' ' + item[1].split('.')[0].title()).upper():<20} {price:>3} 🍬{discount_note}\n"
         
         embed.description += "```"
         
         if shop_discount_active:
-            embed.description += "\n**🎉 Birthday Event: 50% OFF all shop items!**"
+            embed.description += "\n**🎉 Birthday Event: 25% OFF all shop items!**"
             
         embed.set_thumbnail(url=self.author.display_avatar.url)
 
