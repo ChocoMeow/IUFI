@@ -140,16 +140,23 @@ class Birthday(commands.Cog):
             title=f"🎂 {target.display_name}'s Birthday Collection", 
             color=discord.Color.brand_red()
         )
+
+        from iufi.events import get_current_birthday_card_day
         
         # Create a visual representation of collected cards
         collection_display = ""
+        current_day_number = get_current_birthday_card_day()
         for day in range(1, 32):  # Days 1-31
             if day > 0:
                 day_str = str(day)
                 if day_str in collection:
                     collection_display += f"✅ {day:02d} "
                 else:
-                    collection_display += f"❌ {day:02d} "
+                    if day < current_day_number:
+                        collection_display += f"❌ {day:02d} "
+                    else:
+                        collection_display += f"❔ {day:02d} "
+                
                 
                 # Add line breaks for readability
                 if day % 5 == 0:

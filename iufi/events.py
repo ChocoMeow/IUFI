@@ -6,7 +6,7 @@ from datetime import timezone, timedelta
 KST = timezone(timedelta(hours=9))
 
 # Birthday event dates in KST
-birthday_event_start = datetime.datetime(2025, 4, 25, 0, 0, tzinfo=KST)
+birthday_event_start = datetime.datetime(2025, 5, 1, 0, 0, tzinfo=KST)
 birthday_event_end = datetime.datetime(2025, 5, 31, 23, 59, tzinfo=KST)
 actual_birthday = datetime.datetime(2025, 5, 16, 0, 0, tzinfo=KST)
 

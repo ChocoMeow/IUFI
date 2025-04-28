@@ -71,14 +71,6 @@ class Gameplay(commands.Cog):
         
         # Create content message with appropriate event notifications
         content = f"**{ctx.author.mention} This is your roll!** (Ends: <t:{round(time.time()) + 71}:R>)"
-        
-        # Add birthday event notification if active
-        if is_birthday_event_active():
-            content += "\n🎂 **Birthday Event: Collect numbered cards representing IU's age!**"
-            
-        # Add birthday buff notification if active
-        if is_birthday_buff_active("2x_candy"):
-            content += "\n🎂 **Birthday buff active: 2x candies on conversions!**"
             
         view.message = await ctx.send(
             content=content,
