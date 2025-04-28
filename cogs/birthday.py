@@ -16,7 +16,7 @@ class Birthday(commands.Cog):
     def __init__(self, bot: commands.Bot) -> None:
         self.bot = bot
         self.emoji = "🎂"
-        self.invisible = False
+        self.invisible = not is_birthday_event_active()
     
     @commands.command(aliases=["bday", "bd"])
     async def birthday(self, ctx: commands.Context):

@@ -229,7 +229,8 @@ class QuestionPool:
         
     @classmethod
     def add_question(cls, question: Question) -> None:
-        cls._questions.append(question)
+        if not question.attachment:
+            cls._questions.append(question)
 
     @classmethod
     def remove_question(cls, question: Question) -> None:
