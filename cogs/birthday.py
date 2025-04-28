@@ -141,7 +141,15 @@ class Birthday(commands.Cog):
             color=discord.Color.brand_red()
         )
 
-        from iufi.events import get_current_birthday_card_day
+        from iufi.events import get_current_birthday_card_day,is_birthday_event_active
+
+        if not is_birthday_event_active():
+            embed.description = (
+                f"**Birthday Event is currently INACTIVE**\n\n"
+                f"The birthday event runs during IU's birthday month.\n"
+                f"Check back during May for special birthday cards and bonuses!"
+            )
+            return await ctx.reply(embed=embed)
         
         # Create a visual representation of collected cards
         collection_display = ""
