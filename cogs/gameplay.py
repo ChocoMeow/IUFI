@@ -62,7 +62,7 @@ class Gameplay(commands.Cog):
         cards = iufi.CardPool.roll(included=[tier] if tier else None, luck_rates=None if tier else actived_potions.get("luck", None))
         
         # Process birthday card replacement if event is active
-        if is_birthday_event_active():
+        if is_birthday_event_active() and not tier:
             cards = replace_with_birthday_card(cards)
             
         image_bytes, image_format = await iufi.gen_cards_view(cards)
