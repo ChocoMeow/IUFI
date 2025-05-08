@@ -427,7 +427,13 @@ def get_max_cards(user: Dict[str, Any]) -> int:
     Returns:
         The maximum number of cards the user can have
     """
-    return user.get("max_cards", settings.MAX_CARDS)
+    base_limit = user.get("max_cards", settings.MAX_CARDS)
+    
+    # If inventory_increase birthday buff is active, add 10 slots
+    if is_birthday_buff_active("inventory_increase"):
+        return base_limit + 10
+        
+    return base_limit
 
 async def increase_max_cards(user_id: int, amount: int) -> int:
     """Increases a user's maximum card inventory size by the specified amount.
