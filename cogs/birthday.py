@@ -7,6 +7,7 @@ from iufi.events import (
     is_birthday_buff_active,
     get_birthday_event_end,
     get_current_birthday_card_day,
+    is_event_shop_active,
     KST,
     actual_birthday
 )
@@ -14,9 +15,9 @@ from iufi.birthday import BirthdayCard
 
 # Define shop items once, to be used by multiple classes
 BIRTHDAY_SHOP_ITEMS = [
-    {"name": "Inventory +5", "emoji": "🎒", "id": "inventory", "cost": -1, "description": "Permanent +5 card slots"},
-    {"name": "Mystic Roll", "emoji": "🦄", "id": "mystic", "cost": -1, "description": "1 Mystic roll token"},
-    {"name": "Celestial Roll", "emoji": "💫", "id": "celestial", "cost": -1, "description": "1 Celestial roll token"}
+    {"name": "Inventory +1", "emoji": "🎒", "id": "inventory", "cost": 8, "description": "Permanent +1 card inventory"},
+    {"name": "Mystic Roll", "emoji": "🦄", "id": "mystic", "cost": 30, "description": "1 Mystic roll 🦄"},
+    {"name": "Celestial Roll", "emoji": "💫", "id": "celestial", "cost": 32, "description": "1 Celestial roll 💫"}
 ]
 
 class BirthdayShopConfirm(discord.ui.View):
@@ -309,7 +310,7 @@ class Birthday(commands.Cog):
         # Create a visual representation of collected cards
         collection_display = ""
         current_day_number = get_current_birthday_card_day()
-        for day in range(1, 32):  # Days 1-31
+        for day in range(1, 33):  # Days 1-31
             if day > 0:
                 day_str = str(day)
                 if day_str in collection:
@@ -326,18 +327,13 @@ class Birthday(commands.Cog):
                     collection_display += "\n"
                 
         embed.description = (
-            f"**Collected:** {total_cards}/31 cards\n\n"
+            f"\n**Collected:** {len(collection)}/32 cards\n"
+            f"**Cards in your inventory:** {total_cards}\n\n"
             f"```{collection_display}```\n"
-            f"*Collect all 31 cards during IU's birthday month!*"
+            f"*Collect all 32 cards during IU's birthday month!*"
         )
         
         if is_birthday_event_active():
-            from iufi.events import get_current_birthday_card_day
-            today = get_current_birthday_card_day()
-            embed.add_field(
-                name="Today's Card", 
-                value=f"Card #{today} is available today!"
-            )
             from iufi.events import get_birthday_event_end
             embed.set_footer(text=f"Birthday event ends on {get_birthday_event_end().strftime('%B %d, %Y')}")
         else:
@@ -345,13 +341,14 @@ class Birthday(commands.Cog):
             
         await ctx.reply(embed=embed)
 
-    @commands.command(aliases=["es"])
+    @commands.command(aliases=["es", "bs"])
     async def eventshop(self, ctx: commands.Context):
         """IU Birthday Event shop where you can spend birthday cards.
         
         **Examples:**
         @prefix@eventshop
         @prefix@es
+        @prefix@bs
         """
         # Check if the birthday event is active
         if not is_birthday_event_active():
@@ -362,6 +359,15 @@ class Birthday(commands.Cog):
             )
             return await ctx.reply(embed=embed)
         
+        # check if event shop is active
+        if not is_event_shop_active():
+            embed = discord.Embed(
+                title="🎂 Birthday Event Shop",
+                description="The birthday event shop will be unlocked from IU's birthday.\nPlease come back on May 16th!",
+                color=discord.Color.brand_red()
+            )
+            return await ctx.reply(embed=embed)
+
         # Create shop view with the new style
         view = BirthdayShopView(ctx.author)
         embed = await view.build_embed()

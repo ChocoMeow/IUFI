@@ -2,7 +2,7 @@ import asyncio
 import os
 import random
 from .objects import Card
-from .events import is_birthday_event_active, get_current_birthday_card_day
+from .events import is_birthday_event_active, get_current_birthday_card_day, is_event_shop_active
 
 class BirthdayCard(Card):
     def __init__(self, day_number):
@@ -28,13 +28,18 @@ class BirthdayCard(Card):
 
 def should_add_birthday_card():
     """Returns True if a birthday card should be added (5% chance during event)"""
-    return is_birthday_event_active() and random.random() < 0.1
+    return is_birthday_event_active() and random.random() < 0.08
+
+def can_give_card_32():
+    return is_event_shop_active() and random.random() < 0.05
 
 def get_birthday_card():
     """Returns a birthday card for the current day if event is active"""
     if is_birthday_event_active():
         day = get_current_birthday_card_day()
         if day:
+            if can_give_card_32(): # 5% chance to give card 32 (5% out of 10% chance = 0.5% overall)
+                return BirthdayCard(32)
             return BirthdayCard(day)
     return None
 
