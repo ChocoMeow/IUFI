@@ -132,7 +132,12 @@ class PhotoCardView(discord.ui.View):
     async def build_embed(self) -> Tuple[discord.Embed, discord.File]:
         offset = self.current_page * 8
         card_ids, cards = list(self.cards.keys())[(offset-8):offset], []
-        desc = f"\n**📙 Collection size: `{len(self.cards)}/{func.settings.MAX_CARDS}`**\n```"
+        
+        # Get the user's max_cards value
+        user = await func.get_user(self.author.id)
+        max_cards = func.get_max_cards(user)
+        
+        desc = f"\n**📙 Collection size: `{len(self.cards)}/{max_cards}`**\n```"
 
         for card_id in card_ids:
             card = self.cards.get(card_id)
