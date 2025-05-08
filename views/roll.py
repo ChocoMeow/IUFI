@@ -26,7 +26,8 @@ class RollButton(discord.ui.Button):
             if (retry := user["cooldown"]["claim"]) > time.time() and self.view.author != interaction.user:
                 return await interaction.response.send_message(f"{interaction.user.mention} your next claim is <t:{round(retry)}:R>", ephemeral=True)
             
-            if len(user["cards"]) >= func.settings.MAX_CARDS:
+            user_max_cards = func.get_max_cards(user)
+            if len(user["cards"]) >= user_max_cards:
                 return await interaction.response.send_message(f"**{interaction.user.mention} your inventory is full.**", ephemeral=True)
             
             self.view.claimed_users.add(interaction.user)

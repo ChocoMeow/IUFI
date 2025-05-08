@@ -23,6 +23,7 @@
         "collections": {},
         "potions": {},
         "actived_potions": {},
+        "max_cards": 100,
         "roll": {
             "rare": 0,
             "epic": 0,

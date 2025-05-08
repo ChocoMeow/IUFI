@@ -31,7 +31,8 @@ class Gameplay(commands.Cog):
         if not tier and (retry := user["cooldown"]["roll"]) > time.time():
             return await ctx.reply(f"{ctx.author.mention} your next roll is <t:{round(retry)}:R>", delete_after=10)
 
-        if len(user["cards"]) >= func.settings.MAX_CARDS:
+        user_max_cards = func.get_max_cards(user)
+        if len(user["cards"]) >= user_max_cards:
             return await ctx.reply(f"**{ctx.author.mention} your inventory is full.**", delete_after=5)
         
         actived_potions = {} if tier else func.get_potions(user.get("actived_potions", {}), func.settings.POTIONS_BASE)
