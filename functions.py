@@ -417,3 +417,33 @@ async def update_card(card_id: List[str] | str, data: dict, insert: bool = False
         return await CARDS_DB.update_many({"_id": {"$in": card_id}}, data)
 
     await CARDS_DB.update_one({"_id": card_id}, data)
+
+def get_max_cards(user: Dict[str, Any]) -> int:
+    """Returns the maximum number of cards a user can have.
+    
+    Args:
+        user: The user data dictionary
+        
+    Returns:
+        The maximum number of cards the user can have
+    """
+    return user.get("max_cards", settings.MAX_CARDS)
+
+async def increase_max_cards(user_id: int, amount: int) -> int:
+    """Increases a user's maximum card inventory size by the specified amount.
+    
+    Args:
+        user_id: The ID of the user
+        amount: The amount to increase the max_cards by
+        
+    Returns:
+        The new maximum card inventory size
+    """
+    user = await get_user(user_id)
+    current_max = get_max_cards(user)
+    new_max = current_max + amount
+    
+    await update_user(user_id, {"$set": {"max_cards": new_max}})
+    
+    logger.info(f"User {user_id}'s max card inventory increased from {current_max} to {new_max} (+{amount})")
+    return new_max

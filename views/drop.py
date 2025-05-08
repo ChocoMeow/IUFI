@@ -52,7 +52,8 @@ class DropView(discord.ui.View):
                 return await interaction.followup.send("<:IUsad3:1071179718969266318> Oops! This card has already been claimed by someone else!", ephemeral=True)
             
             user_data = await func.get_user(interaction.user.id)
-            if len(user_data["cards"]) >= func.settings.get_max_cards():
+            user_max_cards = func.get_max_cards(user_data)
+            if len(user_data["cards"]) >= user_max_cards:
                 return await interaction.followup.send(f"**Your inventory is full.**", ephemeral=True)
             
             self.card.change_owner(interaction.user.id)
