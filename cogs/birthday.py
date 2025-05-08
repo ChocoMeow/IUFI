@@ -12,6 +12,128 @@ from iufi.events import (
 )
 from iufi.birthday import BirthdayCard
 
+class BirthdayShopConfirm(discord.ui.View):
+    def __init__(self, author: discord.Member):
+        super().__init__(timeout=60)
+        self.author = author
+        self.value = None
+        
+    async def interaction_check(self, interaction: discord.Interaction) -> bool:
+        return interaction.user.id == self.author.id
+        
+    @discord.ui.button(label="Confirm", style=discord.ButtonStyle.green)
+    async def confirm(self, interaction: discord.Interaction, button: discord.ui.Button):
+        await interaction.response.defer()
+        self.value = True
+        self.stop()
+        
+    @discord.ui.button(label="Cancel", style=discord.ButtonStyle.red)
+    async def cancel(self, interaction: discord.Interaction, button: discord.ui.Button):
+        await interaction.response.defer()
+        self.value = False
+        self.stop()
+
+class BirthdayShopDropdown(discord.ui.Select):
+    def __init__(self) -> None:
+        # Define the shop items with their costs
+        self.shop_items = [
+            {"name": "Inventory +5", "emoji": "🎒", "id": "inventory", "cost": 5, "description": "Permanent +5 card slots"},
+            {"name": "Mystic Roll", "emoji": "🦄", "id": "mystic", "cost": 3, "description": "1 Mystic roll token"},
+            {"name": "Celestial Roll", "emoji": "💫", "id": "celestial", "cost": 5, "description": "1 Celestial roll token"}
+        ]
+        
+        # Create options from shop items
+        options = [
+            discord.SelectOption(
+                label=f"{item['name']} ({item['cost']} cards)",
+                emoji=item['emoji'],
+                description=item['description'],
+                value=item['id']
+            ) for item in self.shop_items
+        ]
+        
+        super().__init__(
+            placeholder="Select an item to purchase...",
+            min_values=1,
+            max_values=1,
+            options=options
+        )
+    
+    async def callback(self, interaction: discord.Interaction) -> None:
+        # Fetch selected item details
+        selected_id = self.values[0]
+        selected_item = next((item for item in self.shop_items if item["id"] == selected_id), None)
+        
+        if not selected_item:
+            return await interaction.response.send_message("Item not found.", ephemeral=True)
+        
+        # Get user data
+        user = await func.get_user(interaction.user.id)
+        birthday_cards = user.get("birthday_cards_count", 0)
+        
+        # Check if user has enough cards
+        if birthday_cards < selected_item["cost"]:
+            return await interaction.response.send_message(
+                f"You don't have enough birthday cards! You need {selected_item['cost']} but only have {birthday_cards}.",
+                ephemeral=True
+            )
+        
+        # Show confirmation dialog
+        embed = discord.Embed(
+            title="Confirm Purchase",
+            description=f"Are you sure you want to buy **{selected_item['name']}** for **{selected_item['cost']} birthday cards**?",
+            color=discord.Color.brand_red()
+        )
+        
+        view = BirthdayShopConfirm(interaction.user)
+        await interaction.response.send_message(embed=embed, view=view, ephemeral=True)
+        
+        # Wait for confirmation
+        await view.wait()
+        if view.value:
+            # Process purchase based on item
+            query = {"$inc": {"birthday_cards_count": -selected_item["cost"]}}
+            
+            if selected_id == "inventory":
+                # Increase inventory by 5 slots
+                new_max = await func.increase_max_cards(interaction.user.id, 5)
+                success_msg = f"🎒 Successfully increased your inventory capacity to {new_max} slots (+5)!"
+                
+            elif selected_id == "mystic":
+                # Add mystic roll token
+                query["$inc"]["roll.mystic"] = 1
+                await func.update_user(interaction.user.id, query)
+                success_msg = "🦄 Successfully purchased **1 Mystic Roll** token!"
+                
+            elif selected_id == "celestial":
+                # Add celestial roll token
+                query["$inc"]["roll.celestial"] = 1
+                await func.update_user(interaction.user.id, query)
+                success_msg = "💫 Successfully purchased **1 Celestial Roll** token!"
+            
+            # Log the transaction
+            func.logger.info(f"User {interaction.user.name}({interaction.user.id}) purchased {selected_id} for {selected_item['cost']} birthday cards")
+            
+            # Send success message
+            success_embed = discord.Embed(
+                title="🎂 Purchase Successful!",
+                description=success_msg,
+                color=discord.Color.green()
+            )
+            await interaction.followup.send(embed=success_embed, ephemeral=True)
+        else:
+            # Purchase canceled
+            await interaction.followup.send("Purchase canceled.", ephemeral=True)
+
+class BirthdayShopView(discord.ui.View):
+    def __init__(self, author: discord.Member):
+        super().__init__(timeout=60)
+        self.author = author
+        self.add_item(BirthdayShopDropdown())
+        
+    async def interaction_check(self, interaction: discord.Interaction) -> bool:
+        return interaction.user.id == self.author.id
+
 class Birthday(commands.Cog):
     def __init__(self, bot: commands.Bot) -> None:
         self.bot = bot
@@ -189,6 +311,59 @@ class Birthday(commands.Cog):
             embed.set_footer(text="The birthday event is not currently active.")
             
         await ctx.reply(embed=embed)
+
+    @commands.command(aliases=["es"])
+    async def eventshop(self, ctx: commands.Context):
+        """IU Birthday Event shop where you can spend birthday cards.
+        
+        **Examples:**
+        @prefix@eventshop
+        @prefix@es
+        """
+        # Check if the birthday event is active
+        if not is_birthday_event_active():
+            embed = discord.Embed(
+                title="🎂 Birthday Event Shop",
+                description="The birthday event shop is currently closed.\nPlease come back during IU's birthday month!",
+                color=discord.Color.brand_red()
+            )
+            return await ctx.reply(embed=embed)
+        
+        # Get user data
+        user = await func.get_user(ctx.author.id)
+        birthday_cards = user.get("birthday_cards_count", 0)
+        
+        # Create shop embed
+        embed = discord.Embed(
+            title="🎂 Birthday Event Shop",
+            description=f"Spend your birthday cards on special items!\nYou have: **{birthday_cards} birthday cards**",
+            color=discord.Color.brand_red()
+        )
+        
+        # Add shop items info
+        embed.add_field(
+            name="🎒 Inventory +5",
+            value="Cost: 5 birthday cards\nPermanently increases your card inventory by 5 slots",
+            inline=False
+        )
+        
+        embed.add_field(
+            name="🦄 Mystic Roll",
+            value="Cost: 3 birthday cards\nGet 1 Mystic roll token",
+            inline=False
+        )
+        
+        embed.add_field(
+            name="💫 Celestial Roll",
+            value="Cost: 5 birthday cards\nGet 1 Celestial roll token",
+            inline=False
+        )
+        
+        embed.set_footer(text="Select an item to purchase")
+        
+        # Send shop view
+        view = BirthdayShopView(ctx.author)
+        await ctx.reply(embed=embed, view=view)
 
 async def setup(bot: commands.Bot) -> None:
     await bot.add_cog(Birthday(bot))
