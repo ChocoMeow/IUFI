@@ -46,6 +46,13 @@
                 "progresses": {},
                 "next_update": 0
             }
+        },
+        "pity_count":{
+            "rare": 0,
+            "epic": 0,
+            "legendary": 0,
+            "mystic": 0,
+            "celestial": 0
         }
     },
     "COOLDOWN_BASE": {
@@ -478,5 +485,12 @@
             "iufi": "INFO"
         },
         "max-history": 30
+    },
+    "PITY_SETTINGS": {
+        "rare": 10,
+        "epic": 50,
+        "legendary": 100,
+        "mystic": 1000,
+        "celestial": 2000
     }
 }

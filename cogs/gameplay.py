@@ -1,3 +1,4 @@
+import copy
 import discord, iufi, time, asyncio
 import functions as func
 
@@ -28,6 +29,10 @@ class Gameplay(commands.Cog):
         @prefix@r rare
         """
         user = await func.get_user(ctx.author.id)
+        bought_roll = False # Added for bought roll tracking for pity exemption
+        if tier:
+            bought_roll = True
+
         if not tier and (retry := user["cooldown"]["roll"]) > time.time():
             return await ctx.reply(f"{ctx.author.mention} your next roll is <t:{round(retry)}:R>", delete_after=10)
 
@@ -38,6 +43,30 @@ class Gameplay(commands.Cog):
         query = {}
         if not tier:
             query["$set"] = {"cooldown.roll": time.time() + (func.settings.COOLDOWN_BASE["roll"][1] * (1 - actived_potions.get("speed", 0)))}
+
+            # Retrieve current pity counts and pittysettings
+            pity_count = user.get("pity_count", copy.deepcopy(func.settings.USER_BASE["pity_count"])) # Default pity base for user
+            pity_settings = func.settings.PITY_SETTINGS
+            pity_hit = []
+
+            # Increment each tier's pity count by 1
+            for tier_name, pity_limit in pity_settings.items():
+                pity_count[tier_name] += 1
+                
+                # Check if this roll hits any pity threshold
+                if pity_count[tier_name] >= pity_limit:
+                    # Collect in a list
+                    pity_hit.append(func.match_string(tier_name.lower(), func.settings.TIERS_BASE.keys()))
+
+                    # Log 
+                    func.logger.info(f"{ctx.author.name} ({ctx.author.id}) hit pity for tier: {tier}")
+
+            if pity_hit:
+                tier = pity_hit[-1] #get last item, which should be the highest card tier
+                
+
+            # Optional: Update the pity count in the user profile
+            query.setdefault("$set", {})["pity_count"] = pity_count
 
         else:
             tier = func.match_string(tier.lower(), func.settings.TIERS_BASE.keys())
@@ -56,9 +85,14 @@ class Gameplay(commands.Cog):
             view = discord.ui.View()
             view.add_item(discord.ui.Button(label='Beginner Guide', emoji='📗', url='https://docs.google.com/document/d/1VAD20wZQ56S_wDeMJlwIKn_jImIPuxh2lgy1fn17z0c/edit'))
             await ctx.reply(f"**Welcome to IUFI! Please have a look at the guide or use `qhelp` to begin.**", view=view)
-
         cards = iufi.CardPool.roll(included=[tier] if tier else None, luck_rates=None if tier else actived_potions.get("luck", None))
         image_bytes, image_format = await iufi.gen_cards_view(cards)
+
+        if not bought_roll:
+            for card in cards:
+                rolled_tier = card.tier[1]
+                if rolled_tier in func.settings.PITY_SETTINGS:
+                    await func.reset_pity(user, rolled_tier)
 
         view = RollView(ctx.author, cards)
         view.message = await ctx.send(
