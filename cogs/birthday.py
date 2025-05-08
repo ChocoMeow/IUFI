@@ -12,6 +12,13 @@ from iufi.events import (
 )
 from iufi.birthday import BirthdayCard
 
+# Define shop items once, to be used by multiple classes
+BIRTHDAY_SHOP_ITEMS = [
+    {"name": "Inventory +5", "emoji": "🎒", "id": "inventory", "cost": -1, "description": "Permanent +5 card slots"},
+    {"name": "Mystic Roll", "emoji": "🦄", "id": "mystic", "cost": -1, "description": "1 Mystic roll token"},
+    {"name": "Celestial Roll", "emoji": "💫", "id": "celestial", "cost": -1, "description": "1 Celestial roll token"}
+]
+
 class BirthdayShopConfirm(discord.ui.View):
     def __init__(self, author: discord.Member):
         super().__init__(timeout=60)
@@ -35,19 +42,14 @@ class BirthdayShopConfirm(discord.ui.View):
 
 class BirthdayShopDropdown(discord.ui.Select):
     def __init__(self) -> None:
-        # Define the shop items with their costs
-        self.shop_items = [
-            {"name": "Inventory +5", "emoji": "🎒", "id": "inventory", "cost": 5, "description": "Permanent +5 card slots"},
-            {"name": "Mystic Roll", "emoji": "🦄", "id": "mystic", "cost": 3, "description": "1 Mystic roll token"},
-            {"name": "Celestial Roll", "emoji": "💫", "id": "celestial", "cost": 5, "description": "1 Celestial roll token"}
-        ]
+        # Use the global shop items definition
+        self.shop_items = BIRTHDAY_SHOP_ITEMS
         
-        # Create options from shop items
+        # Create options from shop items (simpler format like normal shop)
         options = [
             discord.SelectOption(
-                label=f"{item['name']} ({item['cost']} cards)",
+                label=f"{item['name']}",
                 emoji=item['emoji'],
-                description=item['description'],
                 value=item['id']
             ) for item in self.shop_items
         ]
@@ -97,20 +99,23 @@ class BirthdayShopDropdown(discord.ui.Select):
             if selected_id == "inventory":
                 # Increase inventory by 5 slots
                 new_max = await func.increase_max_cards(interaction.user.id, 5)
-                success_msg = f"🎒 Successfully increased your inventory capacity to {new_max} slots (+5)!"
+                success_msg = f"🎒 {interaction.user.mention} successfully increased their inventory capacity to {new_max} slots (+5)!"
                 
             elif selected_id == "mystic":
                 # Add mystic roll token
                 query["$inc"]["roll.mystic"] = 1
-                await func.update_user(interaction.user.id, query)
-                success_msg = "🦄 Successfully purchased **1 Mystic Roll** token!"
-                
+                success_msg = f"🦄 {interaction.user.mention} successfully purchased **1 Mystic Roll**!"
+
             elif selected_id == "celestial":
                 # Add celestial roll token
                 query["$inc"]["roll.celestial"] = 1
-                await func.update_user(interaction.user.id, query)
-                success_msg = "💫 Successfully purchased **1 Celestial Roll** token!"
+                success_msg = f"💫 {interaction.user.mention} successfully purchased **1 Celestial Roll**!"
             
+            await func.update_user(interaction.user.id, query)
+
+            #delete confirmation message
+            await interaction.delete_original_response()
+
             # Log the transaction
             func.logger.info(f"User {interaction.user.name}({interaction.user.id}) purchased {selected_id} for {selected_item['cost']} birthday cards")
             
@@ -120,9 +125,10 @@ class BirthdayShopDropdown(discord.ui.Select):
                 description=success_msg,
                 color=discord.Color.green()
             )
-            await interaction.followup.send(embed=success_embed, ephemeral=True)
+            await interaction.message.reply(embed=success_embed)
         else:
             # Purchase canceled
+            await interaction.delete_original_response()
             await interaction.followup.send("Purchase canceled.", ephemeral=True)
 
 class BirthdayShopView(discord.ui.View):
@@ -130,9 +136,36 @@ class BirthdayShopView(discord.ui.View):
         super().__init__(timeout=60)
         self.author = author
         self.add_item(BirthdayShopDropdown())
+        self.message = None
         
     async def interaction_check(self, interaction: discord.Interaction) -> bool:
         return interaction.user.id == self.author.id
+    
+    async def on_timeout(self) -> None:
+        for child in self.children:
+            child.disabled = True
+        if self.message:
+            await self.message.edit(view=self)
+    
+    async def build_embed(self) -> discord.Embed:
+        user = await func.get_user(self.author.id)
+        birthday_cards = user.get("birthday_cards_count", 0)
+        
+        # Use the global shop items definition
+        shop_items = BIRTHDAY_SHOP_ITEMS
+
+        embed = discord.Embed(title="🎂 Birthday Event Shop", color=discord.Color.brand_red())
+        embed.description = f"🎂 Birthday Cards: `{birthday_cards}`\n```"
+        
+        # Format items in the same style as normal shop
+        for item in shop_items:
+            # Display item name in uppercase for the shop display
+            embed.description += f"{item['emoji']} {item['name'].upper():<20} {item['cost']:>3} 🎂\n"
+            
+        embed.description += "```"
+        embed.set_thumbnail(url=self.author.display_avatar.url)
+        
+        return embed
 
 class Birthday(commands.Cog):
     def __init__(self, bot: commands.Bot) -> None:
@@ -329,41 +362,13 @@ class Birthday(commands.Cog):
             )
             return await ctx.reply(embed=embed)
         
-        # Get user data
-        user = await func.get_user(ctx.author.id)
-        birthday_cards = user.get("birthday_cards_count", 0)
-        
-        # Create shop embed
-        embed = discord.Embed(
-            title="🎂 Birthday Event Shop",
-            description=f"Spend your birthday cards on special items!\nYou have: **{birthday_cards} birthday cards**",
-            color=discord.Color.brand_red()
-        )
-        
-        # Add shop items info
-        embed.add_field(
-            name="🎒 Inventory +5",
-            value="Cost: 5 birthday cards\nPermanently increases your card inventory by 5 slots",
-            inline=False
-        )
-        
-        embed.add_field(
-            name="🦄 Mystic Roll",
-            value="Cost: 3 birthday cards\nGet 1 Mystic roll token",
-            inline=False
-        )
-        
-        embed.add_field(
-            name="💫 Celestial Roll",
-            value="Cost: 5 birthday cards\nGet 1 Celestial roll token",
-            inline=False
-        )
-        
-        embed.set_footer(text="Select an item to purchase")
+        # Create shop view with the new style
+        view = BirthdayShopView(ctx.author)
+        embed = await view.build_embed()
         
         # Send shop view
-        view = BirthdayShopView(ctx.author)
-        await ctx.reply(embed=embed, view=view)
+        message = await ctx.reply(embed=embed, view=view)
+        view.message = message
 
 async def setup(bot: commands.Bot) -> None:
     await bot.add_cog(Birthday(bot))
