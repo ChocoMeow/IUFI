@@ -139,6 +139,36 @@ class Admin(commands.Cog):
         await func.update_user(user.id, {"$inc": {f"roll.{roll_type}": amount}})
         await ctx.reply(f"{amount} {roll_type} rolls have been given to {user.display_name}.")
 
+    @commands.command(hidden=True)
+    async def giveBirthdayCard(self, ctx: commands.Context, user: discord.Member, day_number: int):
+        """Give a birthday card to a user."""
+        if not is_admin_account(ctx.author.id):
+            return
+
+        if day_number < 1 or day_number > 31:
+            return await ctx.reply("Invalid day number. Must be between 1 and 31.")
+
+        user_data = await func.get_user(user.id)
+        if not user_data:
+            return await ctx.reply("User not found.")
+
+        # Convert day number to string for storage in the collection
+        day_str = str(day_number)
+        
+        # Check if user already has this card
+        birthday_collection = user_data.get("birthday_collection", {})
+        if day_str in birthday_collection:
+            return await ctx.reply(f"{user.display_name} already has birthday card #{day_number}.")
+        
+        # Add card to user's collection
+        update_query = {
+            "$set": {f"birthday_collection.{day_str}": True},
+            "$inc": {"birthday_cards_count": 1, "exp": 20}
+        }
+        
+        await func.update_user(user.id, update_query)
+        await ctx.reply(f"Birthday card #{day_number} has been given to {user.display_name}.")
+
 
 async def setup(bot: commands.Bot):
     await bot.add_cog(Admin(bot))
