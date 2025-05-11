@@ -73,6 +73,7 @@ class Settings:
         self.ADMIN_IDS: List[int] = []
         self.OPUS_PATH: str = ""
         self.LOGGING: Dict[Union[str, Dict[str, Union[str, bool]]]] = {}
+        self.PITY_SETTINGS: Dict[str, int] = {}
 
     def load(self):
         settings = open_json("settings.json")
@@ -104,6 +105,7 @@ class Settings:
         self.ADMIN_IDS = settings.get("ADMIN_IDS")
         self.OPUS_PATH = settings.get("OPUS_PATH")
         self.LOGGING = settings.get("LOGGING", {})
+        self.PITY_SETTINGS = settings.get("PITY_SETTINGS", {})
 
 tokens: TOKEN = TOKEN()
 settings: Settings = Settings()

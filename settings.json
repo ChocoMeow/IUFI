@@ -478,5 +478,12 @@
             "iufi": "INFO"
         },
         "max-history": 30
+    },
+    "PITY_SETTINGS": {
+        "rare": 10,
+        "epic": 50,
+        "legendary": 100,
+        "mystic": 1000,
+        "celestial": 2000
     }
 }
