@@ -46,13 +46,6 @@
                 "progresses": {},
                 "next_update": 0
             }
-        },
-        "pity_count":{
-            "rare": 0,
-            "epic": 0,
-            "legendary": 0,
-            "mystic": 0,
-            "celestial": 0
         }
     },
     "COOLDOWN_BASE": {

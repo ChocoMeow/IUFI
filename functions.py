@@ -408,19 +408,3 @@ async def update_card(card_id: List[str] | str, data: dict, insert: bool = False
         return await CARDS_DB.update_many({"_id": {"$in": card_id}}, data)
 
     await CARDS_DB.update_one({"_id": card_id}, data)
-
-async def reset_pity(user, rolled_tier):
-    """Reset pity for the rolled tier and all lower tiers."""
-    # Get the hierarchy based on PITY_SETTINGS
-    pity_tiers = list(settings.PITY_SETTINGS.keys())
-    tier_index = pity_tiers.index(rolled_tier)
-
-    # Reset the current tier and all lower tiers
-    tiers_to_reset = pity_tiers[:tier_index + 1]
-    query = {"$set": {}}
-    for tier in tiers_to_reset:
-        query["$set"][f"pity_count.{tier}"] = 0
-
-    # Update the user
-    await update_user(user["_id"], query)
-    logger.info(f"Reset pity for {user['_id']} on tiers: {tiers_to_reset}")
