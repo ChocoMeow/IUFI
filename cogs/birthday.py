@@ -1,4 +1,4 @@
-import discord, time
+import discord, time, random
 import functions as func
 from discord.ext import commands
 from datetime import datetime, timedelta
@@ -17,8 +17,56 @@ from iufi.birthday import BirthdayCard
 BIRTHDAY_SHOP_ITEMS = [
     {"name": "Inventory +1", "emoji": "🎒", "id": "inventory", "cost": 8, "description": "Permanent +1 card inventory"},
     {"name": "Mystic Roll", "emoji": "🦄", "id": "mystic", "cost": 30, "description": "1 Mystic roll 🦄"},
-    {"name": "Celestial Roll", "emoji": "💫", "id": "celestial", "cost": 32, "description": "1 Celestial roll 💫"}
+    {"name": "Celestial Roll", "emoji": "💫", "id": "celestial", "cost": 32, "description": "1 Celestial roll 💫"},
+    {"name": "Small Gift Box", "emoji": "🎁", "id": "small_gift", "cost": 10, "description": "Contains random small rewards"},
+    {"name": "Normal Gift Box", "emoji": "🎁", "id": "normal_gift", "cost": 20, "description": "Contains random medium rewards"},
+    {"name": "Large Gift Box", "emoji": "🎁", "id": "large_gift", "cost": 35, "description": "Contains random large rewards"}
 ]
+
+# Define gift box rewards with their probabilities
+GIFT_BOX_REWARDS = {
+    "small_gift": [
+        {"reward": ["candies", 50], "probability": 0.40, "emoji": "🍬", "name": "50 Candies"},
+        {"reward": ["candies", 100], "probability": 0.25, "emoji": "🍬", "name": "100 Candies"},
+        {"reward": ["exp", 100], "probability": 0.20, "emoji": "⚔️", "name": "100 EXP"},
+        {"reward": ["roll.rare", 1], "probability": 0.10, "emoji": "🌸", "name": "1 Rare Roll"},
+        {"reward": ["roll.epic", 1], "probability": 0.05, "emoji": "💎", "name": "1 Epic Roll"}
+    ],
+    "normal_gift": [
+        {"reward": ["candies", 150], "probability": 0.35, "emoji": "🍬", "name": "150 Candies"},
+        {"reward": ["exp", 200], "probability": 0.25, "emoji": "⚔️", "name": "200 EXP"},
+        {"reward": ["roll.rare", 2], "probability": 0.20, "emoji": "🌸", "name": "2 Rare Rolls"},
+        {"reward": ["roll.epic", 1], "probability": 0.15, "emoji": "💎", "name": "1 Epic Roll"},
+        {"reward": ["roll.legendary", 1], "probability": 0.05, "emoji": "👑", "name": "1 Legendary Roll"}
+    ],
+    "large_gift": [
+        {"reward": ["candies", 300], "probability": 0.30, "emoji": "🍬", "name": "300 Candies"},
+        {"reward": ["exp", 400], "probability": 0.25, "emoji": "⚔️", "name": "400 EXP"},
+        {"reward": ["roll.epic", 2], "probability": 0.20, "emoji": "💎", "name": "2 Epic Rolls"},
+        {"reward": ["roll.legendary", 1], "probability": 0.15, "emoji": "👑", "name": "1 Legendary Roll"},
+        {"reward": ["roll.mystic", 1], "probability": 0.08, "emoji": "🦄", "name": "1 Mystic Roll"},
+        {"reward": ["roll.celestial", 1], "probability": 0.02, "emoji": "💫", "name": "1 Celestial Roll"}
+    ]
+}
+
+def open_gift_box(gift_box_id):
+    """Opens a gift box and returns a random reward based on probability."""
+    rewards = GIFT_BOX_REWARDS.get(gift_box_id, [])
+    if not rewards:
+        return None
+    
+    # Get random number between 0 and 1
+    rand = random.random()
+    cumulative_prob = 0
+    
+    # Find the reward based on the random number and probabilities
+    for reward_info in rewards:
+        cumulative_prob += reward_info["probability"]
+        if rand <= cumulative_prob:
+            return reward_info
+
+    # Fallback to the first reward if something goes wrong with probabilities
+    return rewards[0]
 
 class BirthdayShopConfirm(discord.ui.View):
     def __init__(self, author: discord.Member):
@@ -111,6 +159,16 @@ class BirthdayShopDropdown(discord.ui.Select):
                 # Add celestial roll token
                 query["$inc"]["roll.celestial"] = 1
                 success_msg = f"💫 {interaction.user.mention} successfully purchased **1 Celestial Roll**!"
+                
+            elif selected_id in ["small_gift", "normal_gift", "large_gift"]:
+                # Handle gift box opening
+                reward_info = open_gift_box(selected_id)
+                reward_path, reward_value = reward_info["reward"]
+                
+                # Add the reward to the user
+                query["$inc"][reward_path] = reward_value
+                
+                success_msg = f"🎁 {interaction.user.mention} opened a **{selected_item['name']}** and received **{reward_info['emoji']} {reward_info['name']}**!"
             
             await func.update_user(interaction.user.id, query)
 
