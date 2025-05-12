@@ -16,11 +16,11 @@ from iufi.birthday import BirthdayCard
 # Define shop items once, to be used by multiple classes
 BIRTHDAY_SHOP_ITEMS = [
     {"name": "Inventory +1", "emoji": "🎒", "id": "inventory", "cost": 8, "description": "Permanent +1 card inventory"},
-    {"name": "Mystic Roll", "emoji": "🦄", "id": "mystic", "cost": 30, "description": "1 Mystic roll 🦄"},
+    {"name": "Mystic Roll", "emoji": "🦄", "id": "mystic", "cost": 28, "description": "1 Mystic roll 🦄"},
     {"name": "Celestial Roll", "emoji": "💫", "id": "celestial", "cost": 32, "description": "1 Celestial roll 💫"},
-    {"name": "Small Gift Box", "emoji": "🎁", "id": "small_gift", "cost": 10, "description": "Contains random small rewards"},
-    {"name": "Normal Gift Box", "emoji": "🎁", "id": "normal_gift", "cost": 20, "description": "Contains random medium rewards"},
-    {"name": "Large Gift Box", "emoji": "🎁", "id": "large_gift", "cost": 35, "description": "Contains random large rewards"}
+    {"name": "Small Gift Box", "emoji": "🎁", "id": "small_gift", "cost": 5, "description": "Contains random small rewards"},
+    {"name": "Normal Gift Box", "emoji": "🎁", "id": "normal_gift", "cost": 10, "description": "Contains random medium rewards"},
+    {"name": "Large Gift Box", "emoji": "🎁", "id": "large_gift", "cost": 15, "description": "Contains random large rewards"}
 ]
 
 # Define gift box rewards with their probabilities
@@ -28,22 +28,22 @@ GIFT_BOX_REWARDS = {
     "small_gift": [
         {"reward": ["candies", 50], "probability": 0.40, "emoji": "🍬", "name": "50 Candies"},
         {"reward": ["candies", 100], "probability": 0.25, "emoji": "🍬", "name": "100 Candies"},
-        {"reward": ["exp", 100], "probability": 0.20, "emoji": "⚔️", "name": "100 EXP"},
-        {"reward": ["roll.rare", 1], "probability": 0.10, "emoji": "🌸", "name": "1 Rare Roll"},
+        {"reward": ["inventory", 1], "probability": 0.20, "emoji": "🎒", "name": "+1 Inventory Slot"},
+        {"reward": ["roll.rare", 2], "probability": 0.10, "emoji": "🌸", "name": "2 Rare Rolls"},
         {"reward": ["roll.epic", 1], "probability": 0.05, "emoji": "💎", "name": "1 Epic Roll"}
     ],
     "normal_gift": [
-        {"reward": ["candies", 150], "probability": 0.35, "emoji": "🍬", "name": "150 Candies"},
-        {"reward": ["exp", 200], "probability": 0.25, "emoji": "⚔️", "name": "200 EXP"},
-        {"reward": ["roll.rare", 2], "probability": 0.20, "emoji": "🌸", "name": "2 Rare Rolls"},
-        {"reward": ["roll.epic", 1], "probability": 0.15, "emoji": "💎", "name": "1 Epic Roll"},
+        {"reward": ["candies", 200], "probability": 0.35, "emoji": "🍬", "name": "200 Candies"},
+        {"reward": ["inventory", 3], "probability": 0.25, "emoji": "🎒", "name": "+3 Inventory Slots"},
+        {"reward": ["roll.rare", 4], "probability": 0.20, "emoji": "🌸", "name": "4 Rare Rolls"},
+        {"reward": ["roll.epic", 2], "probability": 0.15, "emoji": "💎", "name": "2 Epic Rolls"},
         {"reward": ["roll.legendary", 1], "probability": 0.05, "emoji": "👑", "name": "1 Legendary Roll"}
     ],
     "large_gift": [
-        {"reward": ["candies", 300], "probability": 0.30, "emoji": "🍬", "name": "300 Candies"},
-        {"reward": ["exp", 400], "probability": 0.25, "emoji": "⚔️", "name": "400 EXP"},
-        {"reward": ["roll.epic", 2], "probability": 0.20, "emoji": "💎", "name": "2 Epic Rolls"},
-        {"reward": ["roll.legendary", 1], "probability": 0.15, "emoji": "👑", "name": "1 Legendary Roll"},
+        {"reward": ["candies", 500], "probability": 0.30, "emoji": "🍬", "name": "500 Candies"},
+        {"reward": ["inventory", 5], "probability": 0.25, "emoji": "🎒", "name": "+5 Inventory Slots"},
+        {"reward": ["roll.epic", 8], "probability": 0.20, "emoji": "💎", "name": "8 Epic Rolls"},
+        {"reward": ["roll.legendary", 3], "probability": 0.15, "emoji": "👑", "name": "3 Legendary Rolls"},
         {"reward": ["roll.mystic", 1], "probability": 0.08, "emoji": "🦄", "name": "1 Mystic Roll"},
         {"reward": ["roll.celestial", 1], "probability": 0.02, "emoji": "💫", "name": "1 Celestial Roll"}
     ]
@@ -165,12 +165,19 @@ class BirthdayShopDropdown(discord.ui.Select):
                 reward_info = open_gift_box(selected_id)
                 reward_path, reward_value = reward_info["reward"]
                 
-                # Add the reward to the user
-                query["$inc"][reward_path] = reward_value
-                
-                success_msg = f"🎁 {interaction.user.mention} opened a **{selected_item['name']}** and received **{reward_info['emoji']} {reward_info['name']}**!"
+                # Process reward based on type
+                if reward_path == "inventory":
+                    # Handle inventory increase separately
+                    new_max = await func.increase_max_cards(interaction.user.id, reward_value)
+                    success_msg = f"🎁 {interaction.user.mention} opened a **{selected_item['name']}** and received **{reward_info['emoji']} {reward_info['name']}**! New inventory capacity: {new_max} slots."
+                else:
+                    # Add other rewards to the user via $inc
+                    query["$inc"][reward_path] = reward_value
+                    success_msg = f"🎁 {interaction.user.mention} opened a **{selected_item['name']}** and received **{reward_info['emoji']} {reward_info['name']}**!"
             
-            await func.update_user(interaction.user.id, query)
+            # Only update user if we have increments to make
+            if any(value != 0 for value in query.get("$inc", {}).values()):
+                await func.update_user(interaction.user.id, query)
 
             #delete confirmation message
             await interaction.delete_original_response()
