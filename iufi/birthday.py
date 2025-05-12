@@ -27,8 +27,8 @@ class BirthdayCard(Card):
         return os.path.join("birthday", f"{self.day_number}.png")
 
 def should_add_birthday_card():
-    """Returns True if a birthday card should be added (5% chance during event)"""
-    return is_birthday_event_active() and random.random() < 0.08
+    """Returns True if a birthday card should be added (10% chance during event)"""
+    return is_birthday_event_active() and random.random() < 0.1
 
 def can_give_card_32():
     return is_event_shop_active() and random.random() < 0.05
