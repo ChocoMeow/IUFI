@@ -292,7 +292,7 @@ class Birthday(commands.Cog):
         active_buffs = []
         
         if is_birthday_buff_active("2x_candy"):
-            active_buffs.append("• 2x candies on card conversions")
+            active_buffs.append("• 1.5x candies on card conversions")
                 
         if is_birthday_buff_active("2x_quiz_points"):
             active_buffs.append("• 2x points in quiz games")
@@ -307,7 +307,7 @@ class Birthday(commands.Cog):
             active_buffs.append("• 50% discount on all frames")
             
         if is_birthday_buff_active("shop_discount"):
-            active_buffs.append("• 25% discount on shop items")
+            active_buffs.append("• 15% discount on shop items")
         
         if is_birthday_buff_active("inventory_increase"):
             active_buffs.append("• +10 inventory slots")

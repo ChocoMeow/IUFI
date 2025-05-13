@@ -262,7 +262,7 @@ class Card(CardObject):
             price *= 1 + ((self.stars - 5) * .25)
 
         if is_birthday_buff_active("2x_candy"):
-            price *= 2
+            price *= 1.5
 
         return round(price)
     
