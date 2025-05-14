@@ -15,12 +15,13 @@ from iufi.birthday import BirthdayCard
 
 # Define shop items once, to be used by multiple classes
 BIRTHDAY_SHOP_ITEMS = [
+    {"name": "Small Gift Box", "emoji": "🎁", "id": "small_gift", "cost": 5, "description": "Contains random small rewards"},
+    {"name": "Normal Gift Box", "emoji": "🎁", "id": "normal_gift", "cost": 10, "description": "Contains random medium rewards"},
+    {"name": "Large Gift Box", "emoji": "🎁", "id": "large_gift", "cost": 15, "description": "Contains random large rewards"},
     {"name": "Inventory +1", "emoji": "🎒", "id": "inventory", "cost": 8, "description": "Permanent +1 card inventory"},
     {"name": "Mystic Roll", "emoji": "🦄", "id": "mystic", "cost": 28, "description": "1 Mystic roll 🦄"},
     {"name": "Celestial Roll", "emoji": "💫", "id": "celestial", "cost": 32, "description": "1 Celestial roll 💫"},
-    {"name": "Small Gift Box", "emoji": "🎁", "id": "small_gift", "cost": 5, "description": "Contains random small rewards"},
-    {"name": "Normal Gift Box", "emoji": "🎁", "id": "normal_gift", "cost": 10, "description": "Contains random medium rewards"},
-    {"name": "Large Gift Box", "emoji": "🎁", "id": "large_gift", "cost": 15, "description": "Contains random large rewards"}
+    {"name": "10 Candies", "emoji": "🍬", "id": "candies", "cost": 1, "description": "10 candies 🍬"}
 ]
 
 # Define gift box rewards with their probabilities
@@ -145,7 +146,12 @@ class BirthdayShopDropdown(discord.ui.Select):
             # Process purchase based on item
             query = {"$inc": {"birthday_cards_count": -selected_item["cost"]}}
             
-            if selected_id == "inventory":
+            if selected_id == "candies":
+                # Add 10 candies to user's account
+                query["$inc"]["candies"] = 10
+                success_msg = f"🍬 {interaction.user.mention} successfully purchased **10 Candies**!"
+                
+            elif selected_id == "inventory":
                 # Increase inventory by 5 slots
                 new_max = await func.increase_max_cards(interaction.user.id, 5)
                 success_msg = f"🎒 {interaction.user.mention} successfully increased their inventory capacity to {new_max} slots (+5)!"
