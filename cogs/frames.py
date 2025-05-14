@@ -3,6 +3,7 @@ import functions as func
 
 from discord.ext import commands
 from views import FrameView
+from iufi.events import is_birthday_event_active
 
 class Frames(commands.Cog):
     def __init__(self, bot: commands.Bot) -> None:
@@ -27,8 +28,7 @@ class Frames(commands.Cog):
         
         if card.tier[1] in ["mystic"]:
             return await ctx.reply("The card does not support the frame!")
-        
-        if card.stars < 5:
+        if card.stars < 5 and not is_birthday_event_active():
             return await ctx.reply("Only cards with 5 stars or above can apply for the frame")
         
         view = FrameView(ctx.author, card)
@@ -57,8 +57,8 @@ class Frames(commands.Cog):
         
         if card.tier[1] in ["mystic"]:
             return await ctx.reply("The card does not support the frame!")
-        
-        if card.stars < 5:
+
+        if card.stars < 5 and not is_birthday_event_active():
             return await ctx.reply("Only cards with 5 stars or above can apply for the frame")
         
         view = FrameView(ctx.author, card)

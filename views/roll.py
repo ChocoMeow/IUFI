@@ -1,16 +1,27 @@
 import discord, time, asyncio
 import functions as func
+from iufi.events import is_birthday_event_active, get_current_birthday_card_day
 
 from iufi import CardPool, Card
+from iufi.birthday import BirthdayCard
 
 class RollButton(discord.ui.Button):
     def __init__(self, card: Card, **kwargs):
         self.card: Card = card
         self.view: RollView
 
+        # Set button style based on card type
+        style = discord.ButtonStyle.green
+        emoji = card.tier[0]
+        
+        # Check if it's a birthday card and adjust appearance
+        if hasattr(card, 'day_number'):
+            style = discord.ButtonStyle.red
+            emoji = "🎂"
+        
         super().__init__(
-            emoji=card.tier[0],
-            style=discord.ButtonStyle.green,
+            emoji=emoji,
+            style=style,
             **kwargs
         )
     
@@ -26,7 +37,48 @@ class RollButton(discord.ui.Button):
             if (retry := user["cooldown"]["claim"]) > time.time() and self.view.author != interaction.user:
                 return await interaction.response.send_message(f"{interaction.user.mention} your next claim is <t:{round(retry)}:R>", ephemeral=True)
             
-            if len(user["cards"]) >= func.settings.MAX_CARDS:
+            # Special handling for birthday cards
+            if isinstance(self.card, BirthdayCard):
+                day = self.card.day_number
+                if str(day) in user.get("birthday_collection", {}):
+                    return await interaction.response.send_message(
+                        f"{interaction.user.mention} You already have birthday card #{day} in your collection!",
+                        ephemeral=True
+                    )
+                
+                # Process birthday card claim
+                self.view.claimed_users.add(interaction.user)
+                if self.view.author == interaction.user:
+                    self.view.author_claimed()
+                
+                self.disabled = True
+                self.style = discord.ButtonStyle.gray
+
+                
+                await interaction.response.defer()
+                actived_potions = func.get_potions(user.get("actived_potions", {}), func.settings.POTIONS_BASE)
+                
+                # Update user data with birthday card
+                query = {
+                    "$set": {
+                        f"birthday_collection.{day}": True,
+                        "cooldown.claim": time.time() + (func.settings.COOLDOWN_BASE["claim"][1] * (1 - actived_potions.get("speed", 0)))
+                    },
+                    "$inc": {"birthday_cards_count": 1, "exp": 20}
+                }
+                
+                await func.update_user(interaction.user.id, query)
+                await func.update_card(self.card.id, {"$set": {"owner_id": interaction.user.id}})
+
+                func.logger.info(f"User {interaction.user.name}({interaction.user.id}) has successfully claimed birthday card #{day}.")
+
+                await self.view.message.edit(view=self.view)
+                await interaction.followup.send(f"🎂 {interaction.user.mention} has claimed Birthday Card #{day}")
+                return
+                
+            # Regular card claiming logic
+            user_max_cards = func.get_max_cards(user)
+            if len(user["cards"]) >= user_max_cards:
                 return await interaction.response.send_message(f"**{interaction.user.mention} your inventory is full.**", ephemeral=True)
             
             self.view.claimed_users.add(interaction.user)

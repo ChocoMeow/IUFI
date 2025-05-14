@@ -1,11 +1,15 @@
 import discord, asyncio
 import functions as func
+from iufi.events import is_birthday_event_active, is_birthday_buff_active
 
 from iufi import Card
 
 class FrameDropDown(discord.ui.Select):
     def __init__(self):
         self.view: FrameView
+        
+        # Check if birthday event is active
+        birthday_event = is_birthday_event_active()
         
         super().__init__(
             options=[
@@ -14,7 +18,9 @@ class FrameDropDown(discord.ui.Select):
                     label=frame_name.title(),
                     description=f"🍬 {price}"
                 )
-                for frame_name, (emoji, price, available) in func.settings.FRAMES_BASE.items() if available
+                # If birthday event is active, show all frames, otherwise only show available frames
+                for frame_name, (emoji, price, available) in func.settings.FRAMES_BASE.items() 
+                if (birthday_event or available)
             ],
             placeholder="Select a frame to view...",
             min_values=1, max_values=1, row=0
@@ -51,7 +57,17 @@ class FrameView(discord.ui.View):
     
     async def build(self) -> tuple[discord.Embed, discord.File]:
         embed = discord.Embed(title="🖼️  Frame Preview", color=discord.Color.random())
-        embed.description = f"```🆔 {self.card.tier[0]} {self.card.id}\n🖼️ {self._selected_frame.title()}\n🍬 {self._price}```"
+        
+        # Check if frame discount is active and apply 50% discount if so
+        original_price = self._price
+        final_price = self._price
+        discount_text = ""
+        
+        if is_birthday_buff_active("frame_discount"):
+            final_price = self._price // 2  # 50% discount
+            discount_text = f" (50% OFF! Original: {original_price}🍬)"
+        
+        embed.description = f"```🆔 {self.card.tier[0]} {self.card.id}\n🖼️ {self._selected_frame.title()}\n🍬 {final_price}{discount_text}```"
         bytes = await asyncio.to_thread(self.card.preview_frame, self._selected_frame)
         embed.set_image(url="attachment://image.webp")
 
@@ -63,7 +79,13 @@ class FrameView(discord.ui.View):
             return await interaction.response.send_message("You must select a frame to apply!", ephemeral=True)
 
         user = await func.get_user(self.author.id)
-        if user["candies"] < self._price:
+        
+        # Apply discount if frame_discount buff is active
+        final_price = self._price
+        if is_birthday_buff_active("frame_discount"):
+            final_price = self._price // 2  # 50% discount
+        
+        if user["candies"] < final_price:
             return await interaction.response.send_message(f"You don't have enough candies! You only have `{user['candies']}` candies", ephemeral=True)
         
         try:
@@ -71,7 +93,7 @@ class FrameView(discord.ui.View):
         except Exception as e:
             return await interaction.response.send_message(e, ephemeral=True)
         
-        query = func.update_quest_progress(user, "FRAME_CONFIG", query={"$inc": {"candies": -self._price}})
+        query = func.update_quest_progress(user, "FRAME_CONFIG", query={"$inc": {"candies": -final_price}})
         await func.update_user(self.author.id, query)
         await func.update_card(self.card.id, {"$set": {"frame": self._selected_frame}})
         await self.response.edit(view=None)

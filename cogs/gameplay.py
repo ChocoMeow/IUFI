@@ -1,5 +1,7 @@
 import discord, iufi, time, asyncio
 import functions as func
+from iufi.events import is_birthday_buff_active, is_birthday_event_active
+from iufi.birthday import replace_with_birthday_card
 
 from discord.ext import commands
 from iufi.pool import QuestionPool as QP
@@ -31,7 +33,8 @@ class Gameplay(commands.Cog):
         if not tier and (retry := user["cooldown"]["roll"]) > time.time():
             return await ctx.reply(f"{ctx.author.mention} your next roll is <t:{round(retry)}:R>", delete_after=10)
 
-        if len(user["cards"]) >= func.settings.MAX_CARDS:
+        user_max_cards = func.get_max_cards(user)
+        if len(user["cards"]) >= user_max_cards:
             return await ctx.reply(f"**{ctx.author.mention} your inventory is full.**", delete_after=5)
         
         actived_potions = {} if tier else func.get_potions(user.get("actived_potions", {}), func.settings.POTIONS_BASE)
@@ -45,7 +48,7 @@ class Gameplay(commands.Cog):
                 return await ctx.reply(f"Tier was not found. Please select a valid tier: `{', '.join(user.get('roll').keys())}`")
  
             if user.get("roll", {}).get(tier, 0) <= 0:
-                return await ctx.reply(f"You’ve used up all your `{tier}` rolls for now.")
+                return await ctx.reply(f"You've used up all your `{tier}` rolls for now.")
             
             query["$inc"] = {f"roll.{tier}": -1}
 
@@ -58,16 +61,26 @@ class Gameplay(commands.Cog):
             await ctx.reply(f"**Welcome to IUFI! Please have a look at the guide or use `qhelp` to begin.**", view=view)
 
         cards = iufi.CardPool.roll(included=[tier] if tier else None, luck_rates=None if tier else actived_potions.get("luck", None))
+        
+        # Process birthday card replacement if event is active
+        if is_birthday_event_active() and not tier:
+            cards = replace_with_birthday_card(cards)
+            
         image_bytes, image_format = await iufi.gen_cards_view(cards)
 
         view = RollView(ctx.author, cards)
+        
+        # Create content message with appropriate event notifications
+        content = f"**{ctx.author.mention} This is your roll!** (Ends: <t:{round(time.time()) + 71}:R>)"
+            
         view.message = await ctx.send(
-            content=f"**{ctx.author.mention} This is your roll!** (Ends: <t:{round(time.time()) + 71}:R>)",
+            content=content,
             file=discord.File(image_bytes, filename=f'image.{image_format}'),
             view=view
         )
         
         await view.timeout_count()
+    
 
     @commands.command(aliases=["mg"])
     async def game(self, ctx: commands.Context, level: str):
@@ -91,8 +104,11 @@ class Gameplay(commands.Cog):
         await func.update_user(ctx.author.id, query)
         
         embed, file = await view.build()
+        
+        # Add birthday buff notification
+        birthday_msg = "\n🎂 **Birthday buff active: +2 extra moves!**" if is_birthday_buff_active("extra_moves_match_game") else ""
         view.response = await ctx.reply(
-            content=f"**This game ends** <t:{round(view._start_time + view._data.get('timeout', 0))}:R>",
+            content=f"**This game ends** <t:{round(view._start_time + view._data.get('timeout', 0))}:R>{birthday_msg}",
             embed=embed, file=file, view=view
         )
         await asyncio.sleep(view._data.get("timeout", 280))
@@ -131,8 +147,11 @@ class Gameplay(commands.Cog):
 
         # Create the quiz view and send the initial message
         view = QuizView(ctx.author, questions)
+        
+        # Add birthday buff notification
+        birthday_msg = "\n🎂 **Birthday buff active: 2x points!**" if is_birthday_buff_active("2x_quiz_points") else ""
         view.response = await ctx.reply(
-            content=f"**This game ends** <t:{round(view._start_time + view.total_time)}:R>",
+            content=f"**This game ends** <t:{round(view._start_time + view.total_time)}:R>{birthday_msg}",
             embed=view.build_embed(),
             view=view
         )
