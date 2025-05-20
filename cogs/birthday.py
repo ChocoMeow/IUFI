@@ -18,11 +18,11 @@ BIRTHDAY_SHOP_ITEMS = [
     {"name": "Small Gift Box", "emoji": "🎁", "id": "small_gift", "cost": 5, "description": "Contains random small rewards"},
     {"name": "Normal Gift Box", "emoji": "🎁", "id": "normal_gift", "cost": 10, "description": "Contains random medium rewards"},
     {"name": "Large Gift Box", "emoji": "🎁", "id": "large_gift", "cost": 15, "description": "Contains random large rewards"},
-    {"name": "Inventory +1", "emoji": "🎒", "id": "inventory", "cost": 8, "description": "Permanent +1 card inventory"},
-    {"name": "Inventory +15", "emoji": "🎒", "id": "inventory_15", "cost": 32, "description": "Permanent +15 card inventory"},
+    {"name": "Inventory +5", "emoji": "🎒", "id": "inventory", "cost": 8, "description": "Permanent +5 card inventory"},
+    {"name": "Inventory +25", "emoji": "🎒", "id": "inventory_25", "cost": 32, "description": "Permanent +25 card inventory"},
     {"name": "Mystic Roll", "emoji": "🦄", "id": "mystic", "cost": 28, "description": "1 Mystic roll 🦄"},
     {"name": "Celestial Roll", "emoji": "💫", "id": "celestial", "cost": 32, "description": "1 Celestial roll 💫"},
-    {"name": "3 Speed III + 3 Luck III", "emoji": "🧪", "id": "potion_pack", "cost": 32, "description": "3x Speed III and 3x Luck III potions"},
+    {"name": "Speed & Luck III x3", "emoji": "🧪", "id": "potion_pack", "cost": 32, "description": "3x Speed III and 3x Luck III potions"},
     {"name": "10 Candies", "emoji": "🍬", "id": "candies", "cost": 1, "description": "10 candies 🍬"}
 ]
 
@@ -152,17 +152,16 @@ class BirthdayShopDropdown(discord.ui.Select):
                 # Add 10 candies to user's account
                 query["$inc"]["candies"] = 10
                 success_msg = f"🍬 {interaction.user.mention} successfully purchased **10 Candies**!"
-                
             elif selected_id == "inventory":
                 # Increase inventory by 5 slots
                 new_max = await func.increase_max_cards(interaction.user.id, 5)
                 success_msg = f"🎒 {interaction.user.mention} successfully increased their inventory capacity to {new_max} slots (+5)!"
-            
-            elif selected_id == "inventory_15":
-                # Increase inventory by 15 slots
-                new_max = await func.increase_max_cards(interaction.user.id, 15)
-                success_msg = f"🎒 {interaction.user.mention} successfully increased their inventory capacity to {new_max} slots (+15)!"
-                
+
+            elif selected_id == "inventory_25":
+                # Increase inventory by 25 slots
+                new_max = await func.increase_max_cards(interaction.user.id, 25)
+                success_msg = f"🎒 {interaction.user.mention} successfully increased their inventory capacity to {new_max} slots (+25)!"
+
             elif selected_id == "mystic":
                 # Add mystic roll token
                 query["$inc"]["roll.mystic"] = 1

@@ -169,6 +169,19 @@ class Admin(commands.Cog):
         await func.update_user(user.id, update_query)
         await ctx.reply(f"Birthday card #{day_number} has been given to {user.display_name}.")
 
+    @commands.command(hidden=True)
+    async def setBirthdayCardsCount(self, ctx: commands.Context, user: discord.Member, count: int):
+        """Set the birthday cards count for a user."""
+        if not is_admin_account(ctx.author.id):
+            return
+
+        user_data = await func.get_user(user.id)
+        if not user_data:
+            return await ctx.reply("User not found.")
+
+        # Set the birthday cards count
+        await func.update_user(user.id, {"$set": {"birthday_cards_count": count}})
+        await ctx.reply(f"Birthday cards count for {user.display_name} has been set to {count}.")
 
 async def setup(bot: commands.Bot):
     await bot.add_cog(Admin(bot))

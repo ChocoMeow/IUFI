@@ -446,7 +446,7 @@ async def increase_max_cards(user_id: int, amount: int) -> int:
         The new maximum card inventory size
     """
     user = await get_user(user_id)
-    current_max = get_max_cards(user)
+    current_max =  user.get("max_cards", settings.MAX_CARDS)
     new_max = current_max + amount
     
     await update_user(user_id, {"$set": {"max_cards": new_max}})
