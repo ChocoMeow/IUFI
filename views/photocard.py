@@ -1,4 +1,4 @@
-import discord, asyncio
+import discord
 import functions as func
 
 from iufi import (
@@ -7,7 +7,7 @@ from iufi import (
     gen_cards_view
 )
 
-from typing import Tuple, List
+from typing import Tuple, List, Dict, Any
 from discord.ext import commands
 from . import ButtonOnCooldown
 from math import ceil
@@ -110,12 +110,15 @@ class SortDropdown(discord.ui.Select):
         await self.view.update_embed(interaction)
 
 class PhotoCardView(discord.ui.View):
-    def __init__(self, author: discord.Member, cards: list[int], *, timeout: float | None = 100):
+    def __init__(self, author: discord.Member, user: Dict[str, Any], *, timeout: float | None = 100):
         super().__init__(timeout=timeout)
 
         self.author: discord.Member = author
-        self.cards: dict[str, Card | None] = {}
-        for card_id in cards:
+        self.user_max_cards: int = func.get_user_card_limit(user)
+        self.cards: dict[str, Card | None] = {
+            card_id: CardPool.get_card(card_id)
+        }
+        for card_id in user.get("cards", []):
             if card := CardPool.get_card(card_id):
                 self.cards[card_id] = card
 
@@ -133,11 +136,7 @@ class PhotoCardView(discord.ui.View):
         offset = self.current_page * 8
         card_ids, cards = list(self.cards.keys())[(offset-8):offset], []
         
-        # Get the user's max_cards value
-        user = await func.get_user(self.author.id)
-        max_cards = func.get_max_cards(user)
-        
-        desc = f"\n**📙 Collection size: `{len(self.cards)}/{max_cards}`**\n```"
+        desc = f"\n**📙 Collection size: `{len(self.cards)}/{self.user_max_cards}`**\n```"
 
         for card_id in card_ids:
             card = self.cards.get(card_id)

@@ -1,17 +1,18 @@
-import discord, time, random
+import discord, random
 import functions as func
+
 from discord.ext import commands
-from datetime import datetime, timedelta
+from datetime import datetime
 from iufi.events import (
     is_birthday_event_active,
     is_birthday_buff_active,
     get_birthday_event_end,
     get_current_birthday_card_day,
     is_event_shop_active,
-    KST,
-    actual_birthday
+    KST
 )
 from iufi.birthday import BirthdayCard
+from typing import Dict, Any
 
 # Define shop items once, to be used by multiple classes
 BIRTHDAY_SHOP_ITEMS = [
@@ -70,6 +71,23 @@ def open_gift_box(gift_box_id):
 
     # Fallback to the first reward if something goes wrong with probabilities
     return rewards[0]
+
+def increase_max_cards(user: Dict[str, Any], query: Dict[str, Any], amount: int) -> int:
+    """Increases a user's maximum card inventory size by the specified amount.
+    
+    Args:
+        user_id: The ID of the user
+        amount: The amount to increase the max_cards by
+        
+    Returns:
+        The new maximum card inventory size
+    """
+    current_max_cards = func.get_user_card_limit(user)
+    new_max_cards = current_max_cards + amount
+    query["$inc"]["extra_props.extra_card_slots"] = amount
+
+    func.logger.info(f"User {user["_id"]}'s max card inventory increased from {current_max_cards} to {new_max_cards} (+{amount})")
+    return new_max_cards
 
 class BirthdayShopConfirm(discord.ui.View):
     def __init__(self, author: discord.Member):
@@ -154,12 +172,12 @@ class BirthdayShopDropdown(discord.ui.Select):
                 success_msg = f"🍬 {interaction.user.mention} successfully purchased **10 Candies**!"
             elif selected_id == "inventory":
                 # Increase inventory by 5 slots
-                new_max = await func.increase_max_cards(interaction.user.id, 5)
+                new_max = increase_max_cards(user, query, 5)
                 success_msg = f"🎒 {interaction.user.mention} successfully increased their inventory capacity to {new_max} slots (+5)!"
 
             elif selected_id == "inventory_25":
                 # Increase inventory by 25 slots
-                new_max = await func.increase_max_cards(interaction.user.id, 25)
+                new_max = increase_max_cards(user, query, 25)
                 success_msg = f"🎒 {interaction.user.mention} successfully increased their inventory capacity to {new_max} slots (+25)!"
 
             elif selected_id == "mystic":
@@ -186,7 +204,7 @@ class BirthdayShopDropdown(discord.ui.Select):
                 # Process reward based on type
                 if reward_path == "inventory":
                     # Handle inventory increase separately
-                    new_max = await func.increase_max_cards(interaction.user.id, reward_value)
+                    new_max = increase_max_cards(user, query, reward_value)
                     success_msg = f"🎁 {interaction.user.mention} opened a **{selected_item['name']}** and received **{reward_info['emoji']} {reward_info['name']}**! New inventory capacity: {new_max} slots."
                 else:
                     # Add other rewards to the user via $inc

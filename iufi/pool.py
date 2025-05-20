@@ -181,6 +181,7 @@ class CardPool:
     def get_card(cls, card_id: str) -> Card | None:
         if not card_id:
             return
+        print(card_id)
         card_id = card_id.lstrip("0")
         card = cls._cards.get(card_id)
         if not card:
