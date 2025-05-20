@@ -108,14 +108,6 @@ class Settings:
         self.OPUS_PATH = settings.get("OPUS_PATH")
         self.LOGGING = settings.get("LOGGING", {})
 
-    def get_max_cards(self) -> int:
-        """Returns the current maximum card limit, accounting for active buffs."""
-        base_limit = self.MAX_CARDS
-        # If inventory_increase birthday buff is active, add 10 slots
-        if is_birthday_buff_active("inventory_increase"):
-            return base_limit + 10
-        return base_limit
-
 tokens: TOKEN = TOKEN()
 settings: Settings = Settings()
 logger: logging.Logger = logging.getLogger("iufi")
@@ -418,7 +410,7 @@ async def update_card(card_id: List[str] | str, data: dict, insert: bool = False
 
     await CARDS_DB.update_one({"_id": card_id}, data)
 
-def get_max_cards(user: Dict[str, Any]) -> int:
+def get_user_card_limit(user: Dict[str, Any]) -> int:
     """Returns the maximum number of cards a user can have.
     
     Args:
@@ -427,29 +419,11 @@ def get_max_cards(user: Dict[str, Any]) -> int:
     Returns:
         The maximum number of cards the user can have
     """
-    base_limit = user.get("max_cards", settings.MAX_CARDS)
-    
-    # If inventory_increase birthday buff is active, add 10 slots
-    if is_birthday_buff_active("inventory_increase"):
-        return base_limit + 10
-        
-    return base_limit
+    extra_card_slots = user.get("extra_props", {}).get("extra_card_slots", settings.MAX_CARDS)
+    base_limit = extra_card_slots or settings.MAX_CARDS
 
-async def increase_max_cards(user_id: int, amount: int) -> int:
-    """Increases a user's maximum card inventory size by the specified amount.
+    # Check for active birthday buff and increase limit if applicable
+    if is_birthday_buff_active("inventory_increase"):
+        base_limit += 10
     
-    Args:
-        user_id: The ID of the user
-        amount: The amount to increase the max_cards by
-        
-    Returns:
-        The new maximum card inventory size
-    """
-    user = await get_user(user_id)
-    current_max =  user.get("max_cards", settings.MAX_CARDS)
-    new_max = current_max + amount
-    
-    await update_user(user_id, {"$set": {"max_cards": new_max}})
-    
-    logger.info(f"User {user_id}'s max card inventory increased from {current_max} to {new_max} (+{amount})")
-    return new_max
+    return base_limit
