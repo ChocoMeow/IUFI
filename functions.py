@@ -21,6 +21,9 @@ from discord.ext import commands
 
 from dotenv import load_dotenv
 
+# Import the birthday event function
+from iufi.events import is_birthday_buff_active
+
 ROOT_DIR = os.path.dirname(os.path.abspath(__file__))
 
 CARDS_FOLDER = os.path.join(ROOT_DIR, 'images')
@@ -104,6 +107,14 @@ class Settings:
         self.ADMIN_IDS = settings.get("ADMIN_IDS")
         self.OPUS_PATH = settings.get("OPUS_PATH")
         self.LOGGING = settings.get("LOGGING", {})
+
+    def get_max_cards(self) -> int:
+        """Returns the current maximum card limit, accounting for active buffs."""
+        base_limit = self.MAX_CARDS
+        # If inventory_increase birthday buff is active, add 10 slots
+        if is_birthday_buff_active("inventory_increase"):
+            return base_limit + 10
+        return base_limit
 
 tokens: TOKEN = TOKEN()
 settings: Settings = Settings()
@@ -406,3 +417,39 @@ async def update_card(card_id: List[str] | str, data: dict, insert: bool = False
         return await CARDS_DB.update_many({"_id": {"$in": card_id}}, data)
 
     await CARDS_DB.update_one({"_id": card_id}, data)
+
+def get_max_cards(user: Dict[str, Any]) -> int:
+    """Returns the maximum number of cards a user can have.
+    
+    Args:
+        user: The user data dictionary
+        
+    Returns:
+        The maximum number of cards the user can have
+    """
+    base_limit = user.get("max_cards", settings.MAX_CARDS)
+    
+    # If inventory_increase birthday buff is active, add 10 slots
+    if is_birthday_buff_active("inventory_increase"):
+        return base_limit + 10
+        
+    return base_limit
+
+async def increase_max_cards(user_id: int, amount: int) -> int:
+    """Increases a user's maximum card inventory size by the specified amount.
+    
+    Args:
+        user_id: The ID of the user
+        amount: The amount to increase the max_cards by
+        
+    Returns:
+        The new maximum card inventory size
+    """
+    user = await get_user(user_id)
+    current_max =  user.get("max_cards", settings.MAX_CARDS)
+    new_max = current_max + amount
+    
+    await update_user(user_id, {"$set": {"max_cards": new_max}})
+    
+    logger.info(f"User {user_id}'s max card inventory increased from {current_max} to {new_max} (+{amount})")
+    return new_max

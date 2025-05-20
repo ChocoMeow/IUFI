@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import random, os, asyncio, Levenshtein, re, yt_dlp
 import functions as func
+from iufi.events import is_birthday_buff_active
 
 from PIL import Image, ImageDraw, ImageSequence
 from io import BytesIO
@@ -164,12 +165,21 @@ class Card(CardObject):
     def _load_image(self, *, size_rate: float = SIZE_RATE) -> Union[list[Image.Image], Image.Image]:
         """Load and process the image"""
         try:
-            image_path = os.path.join(func.ROOT_DIR, "images", self._tier)
-
-            with Image.open(os.path.join(image_path, f"{self.id}.webp")) as img:
-                images = [self._load_frame(frame.convert('RGBA'), size_rate=size_rate) for frame in ImageSequence.Iterator(img)]
-                self.is_gif = len(images) > 1
-                return images if len(images) > 1 else images[0]
+            # Special handling for birthday cards
+            if hasattr(self, 'day_number'):
+                # For birthday cards, use their specific path format
+                image_path = os.path.join(func.ROOT_DIR, "birthday", f"{self.day_number}.png")
+                with Image.open(image_path) as img:
+                    images = [self._load_frame(frame.convert('RGBA'), size_rate=size_rate) for frame in ImageSequence.Iterator(img)]
+                    self.is_gif = len(images) > 1
+                    return images if len(images) > 1 else images[0]
+            else:
+                # Regular card loading logic
+                image_path = os.path.join(func.ROOT_DIR, "images", self._tier)
+                with Image.open(os.path.join(image_path, f"{self.id}.webp")) as img:
+                    images = [self._load_frame(frame.convert('RGBA'), size_rate=size_rate) for frame in ImageSequence.Iterator(img)]
+                    self.is_gif = len(images) > 1
+                    return images if len(images) > 1 else images[0]
                     
         except Exception as e:
             raise ImageLoadError(f"Unable to load the image. Reason: {e}")
@@ -250,6 +260,9 @@ class Card(CardObject):
         price = func.settings.TIERS_BASE.get(self._tier)[1]
         if self.stars > 5:
             price *= 1 + ((self.stars - 5) * .25)
+
+        if is_birthday_buff_active("2x_candy"):
+            price *= 1.5
 
         return round(price)
     
