@@ -3,6 +3,7 @@ from discord.ext import commands
 import functions as func
 import iufi
 from iufi import CardPool
+from views import ConfirmView
 
 
 def is_admin_account(user_id) -> bool:
@@ -182,6 +183,74 @@ class Admin(commands.Cog):
         # Set the birthday cards count
         await func.update_user(user.id, {"$set": {"birthday_cards_count": count}})
         await ctx.reply(f"Birthday cards count for {user.display_name} has been set to {count}.")
+
+    @commands.command(hidden=True)
+    async def quit(self, ctx: commands.Context, member: discord.Member = None):
+        """[ADMIN ONLY] Deletes a user's profile after confirmation. All cards will be converted.
+        
+        If no member is specified, it will delete the profile of the user who called the command.
+        
+        **Examples:**
+        @prefix@quit @username
+        @prefix@quit
+        """
+        if not is_admin_account(ctx.author.id):
+            return await ctx.reply("You don't have permission to use this command.")
+        
+        target_user = member or ctx.author
+        user = await func.get_user(target_user.id)
+        
+        # Create confirmation embed
+        embed = discord.Embed(title="⚠️ Delete Account", color=discord.Color.red())
+        embed.description = f"**WARNING: This action cannot be undone!**\n\nThis will:\n- Conver all {target_user.display_name}'s cards \n- Delete their entire profile and progress\n- Remove all inventory items and collections\n\nAre you sure you want to continue?"
+        
+        # Create confirmation view
+        view = ConfirmView(ctx.author)
+        view.message = await ctx.reply(embed=embed, view=view)
+        await view.wait()
+        
+        if not view.is_confirm:
+            embed.title = "❌ Account Deletion Cancelled"
+            embed.description = f"{target_user.display_name}'s account has not been deleted."
+            embed.color = discord.Color.green()
+            await view.message.edit(embed=embed, view=None)
+            return
+        
+        # Convert all cards to candies (for logging purposes only)
+        converted_cards = []
+        for card_id in user["cards"]:
+            card = iufi.CardPool.get_card(card_id)
+            if card:
+                converted_cards.append(card)
+        
+        card_ids = [card.id for card in converted_cards]
+        candies = sum([card.cost for card in converted_cards])
+        
+        for card in converted_cards:
+            iufi.CardPool.add_available_card(card)
+        
+        # Log the action
+        func.logger.info(
+            f"Admin {ctx.author.name}({ctx.author.id}) deleted the profile of {target_user.name}({target_user.id}). "
+            f"Returned {len(converted_cards)} card(s) to the available pool."
+        )
+        
+        # Update the cards in the database to remove owner, tag, etc.
+        if card_ids:
+            await func.update_card(card_ids, {"$set": {"owner_id": None, "tag": None, "frame": None, "last_trade_time": 0}})
+        
+        # Delete the user from the database
+        await func.USERS_DB.delete_one({"_id": target_user.id})
+        
+        # Remove user from buffer cache if they exist there
+        if target_user.id in func.USERS_BUFFER:
+            del func.USERS_BUFFER[target_user.id]
+        
+        # Update the confirmation message
+        embed.title = "✅ Account Deleted"
+        embed.description = f"{target_user.display_name}'s Account has been deleted. All their cards ({len(converted_cards)}) have been returned to the available pool."
+        embed.color = discord.Color.green()
+        await view.message.edit(embed=embed, view=None)
 
 async def setup(bot: commands.Bot):
     await bot.add_cog(Admin(bot))

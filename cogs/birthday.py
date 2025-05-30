@@ -433,15 +433,7 @@ class Birthday(commands.Cog):
         @prefix@es
         @prefix@bs
         """
-        # Check if the birthday event is active
-        if not is_birthday_event_active():
-            embed = discord.Embed(
-                title="🎂 Birthday Event Shop",
-                description="The birthday event shop is currently closed.\nPlease come back during IU's birthday month!",
-                color=discord.Color.brand_red()
-            )
-            return await ctx.reply(embed=embed)
-        
+
         # check if event shop is active
         if not is_event_shop_active():
             embed = discord.Embed(

@@ -28,10 +28,10 @@ class BirthdayCard(Card):
 
 def should_add_birthday_card():
     """Returns True if a birthday card should be added (9% chance during event)"""
-    return is_birthday_event_active() and random.random() < 0.09
+    return is_birthday_event_active() and random.random() < 0.1
 
 def can_give_card_32():
-    return is_event_shop_active() and random.random() < 0.05
+    return is_event_shop_active() and random.random() < 0.15
 
 def get_birthday_card():
     """Returns a birthday card for the current day if event is active"""

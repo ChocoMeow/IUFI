@@ -4,7 +4,8 @@ import functions as func
 from discord.ext import commands
 from views import (
     CollectionView,
-    PhotoCardView
+    PhotoCardView,
+    ConfirmView
 )
 from typing import (
     Dict,

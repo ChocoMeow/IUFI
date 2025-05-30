@@ -9,6 +9,7 @@ KST = timezone(timedelta(hours=9))
 birthday_event_start = datetime.datetime(2025, 5, 1, 0, 0, tzinfo=KST)
 birthday_event_end = datetime.datetime(2025, 5, 31, 23, 59, tzinfo=KST)
 actual_birthday = datetime.datetime(2025, 5, 16, 0, 0, tzinfo=KST)
+birthday_shop_end = datetime.datetime(2025, 6, 1, 23, 59, tzinfo=KST)
 
 # Predefined daily buffs for each day of the month (0-indexed for easier access)
 daily_buffs = [
@@ -96,4 +97,4 @@ def is_birthday():
 
 def is_event_shop_active():
     now = datetime.datetime.now(KST)
-    return now.date() >= actual_birthday.date()
+    return now.date() >= actual_birthday.date() and now.date() <= birthday_shop_end.date()
