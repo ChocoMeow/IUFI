@@ -229,11 +229,11 @@ class Card(CardObject):
         image_bytes = BytesIO()
 
         if self.is_gif:
-            image[0].save(image_bytes, format="GIF", save_all=True, append_images=image, loop=0, duration=100, optimize=False)
+            image[0].save(image_bytes, format="WEBP", save_all=True, append_images=image[1:], loop=0, duration=100, optimize=False)
         else:
             image.save(image_bytes, format='WEBP')
+        
         image_bytes.seek(0)
-
         return image_bytes
     
     async def image(self, *, size_rate: float = SIZE_RATE, hide_image_if_no_owner: bool = False) -> Image.Image | list[Image.Image]:
@@ -268,7 +268,7 @@ class Card(CardObject):
 
     @property
     def format(self) -> str:
-        return "gif" if self.is_gif else "webp"
+        return "webp"
     
     @property
     def display_id(self) -> str:
@@ -303,7 +303,7 @@ class TempCard(CardObject):
         image_bytes = BytesIO()
 
         if self.is_gif:
-            images[0].save(image_bytes, format="GIF", save_all=True, append_images=images, loop=0, duration=100, optimize=False)
+            images[0].save(image_bytes, format="WEBP", save_all=True, append_images=images, loop=0, duration=100, optimize=False)
         else:
             images.save(image_bytes, format='WEBP')
 
@@ -323,7 +323,7 @@ class TempCard(CardObject):
     
     @property
     def format(self) -> str:
-        return "gif" if self.is_gif else "webp"
+        return "webp"
         
 class Question:
     def __init__(

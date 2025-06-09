@@ -80,8 +80,7 @@ async def gen_cards_view(cards: list[Card | TempCard | None], cards_per_row: int
                         await paste_image(output_image, frame, x, y)
 
                 modified_frames.append(output_image.copy())  # only copy when necessary
-            
-            await save_image_to_bytes(modified_frames[0], "GIF", resized_image_bytes, append_images=modified_frames[1:])
+            await save_image_to_bytes(modified_frames[0], "WEBP", resized_image_bytes, append_images=modified_frames[1:])
 
             # Clear large images from memory
             for frame in modified_frames:
@@ -98,4 +97,4 @@ async def gen_cards_view(cards: list[Card | TempCard | None], cards_per_row: int
             await save_image_to_bytes(output_image, 'WEBP', resized_image_bytes)
 
         resized_image_bytes.seek(0)
-        return resized_image_bytes, "gif" if any(card.is_gif for card in cards if card) else "webp"
+        return resized_image_bytes, "webp"
