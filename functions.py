@@ -359,7 +359,7 @@ def text_in_chunks(message: str, max_length: int = 2000) -> list:
 
 def get_user_card_limit(user: Dict[str, Any]) -> int:
     """Returns the maximum number of cards a user can have."""
-    extra_card_slots = user.get("extra_props", {}).get("extra_card_slots", settings.MAX_CARDS)
+    extra_card_slots = user.get("extra_props", {}).get("extra_card_slots", 0)
     return settings.MAX_CARDS + extra_card_slots or settings.MAX_CARDS
 
 async def update_user(user_id: int, data: dict) -> None:
