@@ -188,6 +188,16 @@ class CardPool:
         return card
     
     @classmethod
+    def search_valid_cards(cls, card_ids: List[str]) -> List[Card]:
+        cards = []
+        for card_id in card_ids:
+            card = cls.get_card(card_id)
+            if card:
+                cards.append(card)
+                
+        return cards
+    
+    @classmethod
     def roll(cls, amount: int = 3, *, included: List[str] = None, avoid: List[str] = None, luck_rates: float = None) -> List[Card]:
         results = included if included else []
 

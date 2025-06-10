@@ -38,7 +38,7 @@ class Card(commands.Cog):
             desc = "```"
             for card in cards:
                 member = ctx.guild.get_member(card.owner_id)
-                desc += f"{card.display_id} {card.display_tag} {card.display_frame} {card.display_stars} {card.tier[0]} 👤{member.display_name if member else 'None':5}\n"
+                desc += f"{card.display_id} {card.display_tag} {card.display_frame} {card.display_stars} {card.tier[0]} 👤 {member.display_name if member else 'None':5}\n"
             desc += "```"
 
             image_bytes, image_format = await iufi.gen_cards_view(cards, 4, hide_image_if_no_owner=True)
