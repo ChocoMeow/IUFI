@@ -119,12 +119,18 @@ class WishListView(discord.ui.View):
             desc += "```"
 
         embed = discord.Embed(title="Your Wishlist", description=desc, color=discord.Color.random())
+
+        if self.page > 0:
+            embed.set_footer(text="Pages: {}/{}".format(self.current_page, self.page))
+            
         return embed
 
     async def update_data(self) -> None:
         user = await func.get_user(self.ctx.author.id)
         self.wishlist = user.get("wishlist", [])
         self.cards = iufi.CardPool.search_valid_cards(self.wishlist)
+        self.page: int = ceil(len(self.cards) / 13)
+        self.current_page: int = 1
         if not self.cards:
             return await self.message.edit(embed=self.build_embed(), view=None)
         
@@ -137,6 +143,15 @@ class WishListView(discord.ui.View):
         
         await self.message.edit(embed=self.build_embed(), view=self)
 
+    async def on_timeout(self) -> None:
+        for child in self.children:
+            child.disabled = True
+        
+        await self.message.edit(view=self)
+    
+    async def interaction_check(self, interaction: discord.Interaction) -> bool:
+        return self.ctx.author == interaction.user
+    
     @discord.ui.button(label='Back', style=discord.ButtonStyle.blurple)
     async def back_button(self, interaction: discord.Interaction, button: discord.ui.Button):
         await interaction.response.defer()

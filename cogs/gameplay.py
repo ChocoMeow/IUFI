@@ -68,6 +68,7 @@ class Gameplay(commands.Cog):
         )
         
         await view.timeout_count()
+        await func.check_wishlist(view.message, [card.id for card in cards])
 
     @commands.command(aliases=["mg"])
     async def game(self, ctx: commands.Context, level: str):

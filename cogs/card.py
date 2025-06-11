@@ -423,6 +423,7 @@ class Card(commands.Cog):
             file=discord.File(image_bytes, filename=f"image.{image_format}"),
             embed=view.build_embed(image_format), view=view
         )
+        await func.check_wishlist(view.message, [card.id for card in cards])
 
     @commands.command(aliases=["te"])
     async def tradeeveryone(self, ctx: commands.Context, candies: int, *, card_ids: str):
@@ -470,6 +471,7 @@ class Card(commands.Cog):
             file=discord.File(image_bytes, filename=f"image.{image_format}"),
             embed=view.build_embed(image_format), view=view
         )
+        await func.check_wishlist(view.message, [card.id for card in cards])
 
     @commands.command(aliases=["tl"])
     async def tradelast(self, ctx: commands.Context, member: discord.Member, candies: int):
@@ -513,6 +515,7 @@ class Card(commands.Cog):
             embed=view.build_embed(card.format),
             view=view
         )
+        await func.check_wishlist(view.message, [card_id])
 
     @commands.command(aliases=["tel"])
     async def tradeeveryonelast(self, ctx: commands.Context, candies: int):
@@ -552,6 +555,7 @@ class Card(commands.Cog):
             embed=view.build_embed(card.format),
             view=view
         )
+        await func.check_wishlist(view.message, [card_id])
 
     @commands.command(aliases=["u"])
     async def upgrade(self, ctx: commands.Context, upgrade_card_id: str, *, card_ids: str) -> None:
