@@ -31,6 +31,9 @@ class AddModal(discord.ui.Modal):
             if any(card in self.view.cards for card in validated_cards):
                 return await interaction.followup.send("You can't add these cards as they are already in your wishlist.", ephemeral=True)
             
+            if any(card.owner_id == interaction.user.id for card in validated_cards):
+                return await interaction.followup.send("Oops! You can’t add cards that you already own.", ephemeral=True)
+            
             await func.update_user(interaction.user.id, {
                 "$push": {"wishlist": {"$each": [card.id for card in validated_cards]}}
             })
@@ -131,8 +134,6 @@ class WishListView(discord.ui.View):
         self.cards = iufi.CardPool.search_valid_cards(self.wishlist)
         self.page: int = ceil(len(self.cards) / 13)
         self.current_page: int = 1
-        if not self.cards:
-            return await self.message.edit(embed=self.build_embed(), view=None)
         
         if self.select_dropdown:
             self.select_dropdown.options = self.select_dropdown._generate_options(self.cards)
@@ -141,6 +142,9 @@ class WishListView(discord.ui.View):
             self.select_dropdown = RemoveDropDown(self.cards)
             self.add_item(self.select_dropdown)
         
+        if not self.cards:
+            self.remove_item(self.select_dropdown)
+
         await self.message.edit(embed=self.build_embed(), view=self)
 
     async def on_timeout(self) -> None:
