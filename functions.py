@@ -411,3 +411,18 @@ async def update_card(card_id: List[str] | str, data: dict, insert: bool = False
         return await CARDS_DB.update_many({"_id": {"$in": card_id}}, data)
 
     await CARDS_DB.update_one({"_id": card_id}, data)
+
+async def check_wishlist(message: discord.Message, card_ids: List[str]) -> None:
+    user_docs = await USERS_DB.find({"wishlist": {"$in": card_ids}}).to_list()
+    if user_docs:
+        await USERS_DB.update_many(
+            {"wishlist": {"$in": card_ids}},
+            {"$pull": {"wishlist": {"$in": card_ids}}}
+        )
+        for user_doc in user_docs:
+            try:
+                user = message.guild.get_member(user_doc["_id"])
+                if user:
+                    await user.send(f"Your wish card has been rolled or traded by another player. {message.jump_url}")
+            except Exception as _:
+                continue
