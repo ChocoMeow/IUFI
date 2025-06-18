@@ -71,6 +71,7 @@ class Settings:
         self.MATCH_GAME_SETTINGS: Dict[str, Dict[str, Any]] = {}
         self.MUSIC_GAME_SETTINGS: Dict[str, Any] = {}
         self.ADMIN_IDS: List[int] = []
+        self.BUG_REPORT_CHANNEL_ID: int = 0
         self.OPUS_PATH: str = ""
         self.LOGGING: Dict[Union[str, Dict[str, Union[str, bool]]]] = {}
 
@@ -102,6 +103,7 @@ class Settings:
         self.MATCH_GAME_SETTINGS = settings.get("MATCH_GAME_SETTINGS")
         self.MUSIC_GAME_SETTINGS = settings.get("MUSIC_GAME_SETTINGS")
         self.ADMIN_IDS = settings.get("ADMIN_IDS")
+        self.BUG_REPORT_CHANNEL_ID = settings.get("BUG_REPORT_CHANNEL_ID")
         self.OPUS_PATH = settings.get("OPUS_PATH")
         self.LOGGING = settings.get("LOGGING", {})
 
