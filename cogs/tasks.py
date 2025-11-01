@@ -196,14 +196,19 @@ class Tasks(commands.Cog):
         try:
             # Querying the Game’s Ready Time for the Next 10 Minutes Range
             time_range = {"$gt": (current_time := time.time()), "$lt": current_time + 600}
+            # include users who either have global reminder True or have a per-key reminder set to True
+            cooldown_keys = [k for k in func.settings.COOLDOWN_BASE.keys() if k != "claim"]
+            reminder_or_clauses = [{"reminder": True}] + [{f"reminder.{k}": True} for k in cooldown_keys]
+
             query = {
-                "$and":[
-                    {"reminder": True},
+                "$and": [
+                    {"$or": reminder_or_clauses},
                     {"$or": [
                         {f"cooldown.{name}": time_range}
-                        for name in func.settings.COOLDOWN_BASE.keys() if name != "claim"
-                ]}
-            ]}
+                        for name in cooldown_keys
+                    ]}
+                ]
+            }
 
             # Verifying and Dispatching Game Readiness Notification to Player
             notification_count = 0
@@ -215,8 +220,19 @@ class Tasks(commands.Cog):
                 cd: dict[str, float] = doc["cooldown"]
                 for name, (emoji, _) in func.settings.COOLDOWN_BASE.items():
                     if name != "claim":
-                        await self.check_and_schedule(user, current_time, cd.get(name, 0), f"{emoji} Your {name.split('_')[0]} is ready! Join <#{random.choice(func.settings.GAME_CHANNEL_IDS)}> and roll now.")        
-                        notification_count += 1
+                        # Check whether the user wants reminders for this specific cooldown.
+                        reminder_pref = doc.get("reminder", False)
+
+                        # Interpret legacy boolean or new dict format
+                        enabled = False
+                        if isinstance(reminder_pref, bool):
+                            enabled = reminder_pref
+                        elif isinstance(reminder_pref, dict):
+                            enabled = bool(reminder_pref.get(name, False))
+
+                        if enabled:
+                            await self.check_and_schedule(user, current_time, cd.get(name, 0), f"{emoji} Your {name.split('_')[0]} is ready! Join <#{random.choice(func.settings.GAME_CHANNEL_IDS)}> and roll now.")
+                            notification_count += 1
 
             func.logger.info(f"Notifications sent to {notification_count} users regarding game readiness.")
 
