@@ -88,6 +88,7 @@ class CardPool:
 
     @classmethod
     async def process_new_cards(cls) -> None:
+        return
         # Process new images in the new cards folder
         new_images_dir = os.listdir(func.NEW_CARDS_FOLDER)
         if not new_images_dir:

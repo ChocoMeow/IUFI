@@ -2,7 +2,7 @@ import discord, iufi
 import functions as func
 
 from discord.ext import commands
-from views import HelpView, MusicLeaderboardView
+from views import HelpView, MusicLeaderboardView, EmojiLeaderboardView
 
 LEADERBOARD_EMOJIS: list[str] = ["🥇", "🥈", "🥉", "🏅"]
 
@@ -37,7 +37,7 @@ class Info(commands.Cog):
         
         if rank > len(users):
             level, _ = func.calculate_level(user['exp'])
-            description += ("┇\n" if rank > len(users) + 1 else "") + f"{LEADERBOARD_EMOJIS[3]} " + highlight_text(f"{func.truncate_string(ctx.author.display_name):<18} {level:>5} ⚔️")
+            description += ("┇\n" if rank > len(users) + 1 else "") + f"{LEADERBOARD_EMOJIS[3]} " + highlight_text(f"{func.truncate_string(ctx.author.display_name):<18} {level:>5} ⚔️", True)
 
         if not description:
             description = "The leaderboard is currently empty."
@@ -69,7 +69,7 @@ class Info(commands.Cog):
 
         if rank > int(limit):
             level, _ = func.calculate_level(user['exp'])
-            description += ("┇\n" if rank > int(limit) + 1 else "") + f"{LEADERBOARD_EMOJIS[3]} " + highlight_text(f"{func.truncate_string(ctx.author.display_name):<18} {level:>5} ⚔️", member == ctx.author)
+            description += ("┇\n" if rank > int(limit) + 1 else "") + f"{LEADERBOARD_EMOJIS[3]} " + highlight_text(f"{func.truncate_string(ctx.author.display_name):<18} {level:>5} ⚔️", True)
 
         if not description:
             description = "The leaderboard is currently empty."
@@ -96,7 +96,7 @@ class Info(commands.Cog):
                 description += f"{LEADERBOARD_EMOJIS[index if index <= 2 else 3]} " + highlight_text(f"{func.truncate_string(member.display_name):<18} {top_user['candies']:>5} 🍬", member == ctx.author)
 
         if rank > len(users):
-            description += ("┇\n" if rank > len(users) + 1 else "") + f"{LEADERBOARD_EMOJIS[3]} " + highlight_text(f"{func.truncate_string(ctx.author.display_name):<18} {user.get('candies', 0):>5} 🍬", member == ctx.author)
+            description += ("┇\n" if rank > len(users) + 1 else "") + f"{LEADERBOARD_EMOJIS[3]} " + highlight_text(f"{func.truncate_string(ctx.author.display_name):<18} {user.get('candies', 0):>5} 🍬", True)
 
         if not description:
             description = "The leaderboard is currently empty."
@@ -149,7 +149,7 @@ class Info(commands.Cog):
                 description += f"{LEADERBOARD_EMOJIS[index if index <= 2 else 3]} " + highlight_text(f"{func.truncate_string(member.display_name):<18} 🃏{game_state['matched']:<2} 🕒{func.convert_seconds(game_state['finished_time']):<10}", member == ctx.author)
         
         if user and rank > len(users):
-            description += ("┇\n" if rank > len(users) + 1 else "") + f"{LEADERBOARD_EMOJIS[3]} " + highlight_text(f"{func.truncate_string(ctx.author.display_name):<18} 🃏{user['matched']:<2} 🕒{func.convert_seconds(user['finished_time']):<10}")
+            description += ("┇\n" if rank > len(users) + 1 else "") + f"{LEADERBOARD_EMOJIS[3]} " + highlight_text(f"{func.truncate_string(ctx.author.display_name):<18} 🃏{user['matched']:<2} 🕒{func.convert_seconds(user['finished_time']):<10}", True)
 
         if not description:
             description = "The leaderboard is currently empty."
@@ -219,7 +219,7 @@ class Info(commands.Cog):
                 description += f"{LEADERBOARD_EMOJIS[index if index <= 2 else 3]} " + highlight_text(f"{func.truncate_string(member.display_name):<18} {user_data['game_state']['music_game']['points']:>6} 𝄞", member == ctx.author)
 
         if user and rank > len(users):
-            description += ("┇\n" if rank > len(users) + 1 else "") + f"{LEADERBOARD_EMOJIS[3]} " + highlight_text(f"{func.truncate_string(ctx.author.display_name):<18} {user['points']:>6} 𝄞", member == ctx.author)
+            description += ("┇\n" if rank > len(users) + 1 else "") + f"{LEADERBOARD_EMOJIS[3]} " + highlight_text(f"{func.truncate_string(ctx.author.display_name):<18} {user['points']:>6} 𝄞", True)
 
         if not description:
             description = "The leaderboard is currently empty."
@@ -228,6 +228,45 @@ class Info(commands.Cog):
         embed.set_thumbnail(url=icon.url if (icon := ctx.guild.icon) else None)
 
         view = MusicLeaderboardView(ctx.author)
+        view.message = await ctx.reply(embed=embed, view=view)
+
+    @leaderboard.command(aliases=["eq","elb","e"])
+    async def emoji(self, ctx: commands.Context):
+        """Shows the Emoji Quiz leaderboard."""
+        start_time, end_time = func.get_month_unix_timestamps()
+        user = await func.get_user(ctx.author.id)
+        user = user.get("game_state", {}).get("emoji_quiz", {})
+        users = await func.USERS_DB.find({f"game_state.emoji_quiz.last_update": {"$gt":start_time, "$lte":end_time}}).sort("game_state.emoji_quiz.points", -1).limit(10).to_list(10)
+        rank = await func.USERS_DB.count_documents({
+            "$and": [
+                {"game_state.emoji_quiz.last_update": {"$gt":start_time, "$lte":end_time}},
+                {"game_state.emoji_quiz.points": {'$gt': user.get('points', 0)}}
+            ]}) + 1
+
+        embed = discord.Embed(title=f"🏆   Emoji Quiz Leaderboard", color=discord.Color.random())
+
+        description = ""
+        for top_user in users:
+            game_state: dict[str, float | int] = top_user.get("game_state", {}).get("emoji_quiz")
+            if not game_state:
+                continue
+
+            member = self.bot.get_user(top_user['_id'])
+            if not member:
+                member = self.bot.get_user(236400388847173632)
+            if member:
+                description += f"`{func.truncate_string(member.display_name):<18} {game_state['points']:>6} 🔥`\n"
+
+        if description and rank > len(users):
+            description += ("┇\n" if rank > len(users) + 1 else "") + f"`{func.truncate_string(ctx.author.display_name):<18} {user.get('points', 0):>6} 🔥`"
+
+        if not description:
+            description = "The leaderboard is currently empty."
+
+        embed.description = f"**The next reset is <t:{int(end_time)}:R>**\n**" + (f"Your current position is `{rank}`" if user else "You haven't played any emoji quiz!") + f"**\n{description}"
+        embed.set_thumbnail(url=icon.url if (icon := ctx.guild.icon) else None)
+
+        view = EmojiLeaderboardView(ctx.author)
         view.message = await ctx.reply(embed=embed, view=view)
 
     @commands.command(aliases=["h"])

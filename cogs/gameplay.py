@@ -1,5 +1,6 @@
 import discord, iufi, time, asyncio
 import functions as func
+import random
 
 from discord.ext import commands
 from iufi.pool import QuestionPool as QP
@@ -9,8 +10,9 @@ from views import (
     MatchGame,
     QuizView,
     ResetAttemptView,
-    QUIZ_SETTINGS
+    QUIZ_SETTINGS,
 )
+from views.emoji_quiz import EmojiQuizView, EmojiResetAttemptView, EMOJI_QUIZ_SETTINGS
 
 class Gameplay(commands.Cog):
     def __init__(self, bot: commands.Bot) -> None:
@@ -178,6 +180,66 @@ class Gameplay(commands.Cog):
         """
         view = ShopView(ctx.author)
         view.message = await ctx.reply(embed=await view.build_embed(), view=view)
+
+    @commands.command(aliases=["eq"])
+    async def emojiquiz(self, ctx: commands.Context, category: str = None):
+        """Guess IU song or drama by emoji(s).
+
+        Optional `category` can be `song` or `drama` to restrict questions.
+
+        **Examples:**
+        @prefix@emojiquiz
+        @prefix@eq song
+        @prefix@eq drama
+        """
+        user = await func.get_user(ctx.author.id)
+        # reuse the quiz cooldown logic
+        if (retry := user.get("cooldown", {}).setdefault("quiz_game", 0)) > time.time():
+            price = max(5, int(EMOJI_QUIZ_SETTINGS['reset_price'] * ((retry - time.time()) / func.settings.COOLDOWN_BASE["quiz_game"][1])))
+            view = EmojiResetAttemptView(ctx, user, price)
+            view.response = await ctx.reply(f"{ctx.author.mention} your emoji quiz is <t:{round(retry)}:R>. If you’d like to bypass this cooldown, you can do so by paying `🍬 {price}` candies.", delete_after=20, view=view)
+            return
+
+        # load emoji entries from JSON file
+        try:
+            import json
+            with open(func.ROOT_DIR + "/song_emojis.json", encoding="utf8") as f:
+                entries = json.load(f)
+        except Exception:
+            entries = []
+
+        if not entries:
+            return await ctx.reply("There are no emoji entries available right now.")
+
+        # Normalize category param and filter entries if provided
+        category = category.lower() if category else None
+        if category and category not in ("song", "drama"):
+            return await ctx.reply("Invalid category. Please use `song` or `drama`.")
+
+        filtered = [e for e in entries if (not category) or (e.get("type", "song").lower() == category)]
+        if not filtered:
+            return await ctx.reply(f"No entries found for category: {category}")
+
+        num_q = min(5, len(filtered))
+        sampled = random.sample(filtered, k=num_q)
+        # sampled is list of question dicts
+
+        # set cooldown
+        query = func.update_quest_progress(user, "PLAY_QUIZ_GAME", query={"$set": {"cooldown.quiz_game": time.time() + func.settings.COOLDOWN_BASE["roll"][1]}})
+        await func.update_user(ctx.author.id, query)
+
+        view = EmojiQuizView(ctx.author, sampled, timeout_per_question=20)
+        view.response = await ctx.reply(
+            content=f"**This game ends** <t:{round(time.time() + view.total_time)}:R>",
+            embed=view.build_embed(),
+            view=view
+        )
+
+        # start the view runner to manage per-question timeouts
+        asyncio.create_task(view.run())
+
+        await asyncio.sleep(view.total_time)
+        await view.end_game()
 
 async def setup(bot: commands.Bot) -> None:
     await bot.add_cog(Gameplay(bot))
