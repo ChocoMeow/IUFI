@@ -165,8 +165,12 @@ class EmojiQuizView(discord.ui.View):
         correct = func.clean_text(self.questions[self.current].get("name", ""), convert_to_lower=True)
         is_correct = False
         if user_answer:
-            # simple fuzzy check: equality or substring
-            if user_answer == correct or correct in user_answer or user_answer in correct:
+            # Use similarity functions for better fuzzy matching
+            jac_sim = func.jac_similarity(user_answer, correct)
+            lev_sim = func.lev_similarity(user_answer, correct)
+
+            # Consider correct if either similarity is high (>= 0.8) or exact/substring match
+            if jac_sim >= 0.8 or lev_sim >= 0.8 or user_answer == correct:
                 is_correct = True
         self._results[self.current] = is_correct
 

@@ -1,4 +1,4 @@
-import os, time, copy, json, random, logging, discord
+import os, time, copy, json, random, logging, discord, Levenshtein
 
 from motor.motor_asyncio import (
     AsyncIOMotorClient,
@@ -200,6 +200,35 @@ def clean_text(input_text: str, allow_spaces: bool = True, convert_to_lower: boo
         cleaned_text = cleaned_text.lower()
     
     return cleaned_text
+
+def jac_similarity(str1: str, str2: str) -> float:
+    """
+    Calculate Jaccard similarity between two strings based on character sets.
+    Returns a float between 0 and 1, where 1 means identical character sets.
+    """
+    if not str1 or not str2:
+        return 0.0
+
+    set1 = set(str1.lower())
+    set2 = set(str2.lower())
+
+    intersection = len(set1.intersection(set2))
+    union = len(set1.union(set2))
+
+    return intersection / union if union > 0 else 0.0
+
+def lev_similarity(str1: str, str2: str) -> float:
+    """
+    Calculate normalized Levenshtein similarity between two strings.
+    Returns a float between 0 and 1, where 1 means identical strings.
+    """
+    if not str1 or not str2:
+        return 0.0
+
+    distance = Levenshtein.distance(str1.lower(), str2.lower())
+    max_len = max(len(str1), len(str2))
+
+    return 1 - (distance / max_len) if max_len > 0 else 0.0
 
 def get_week_unix_timestamps() -> tuple[float, float]:
     today = date.today()
