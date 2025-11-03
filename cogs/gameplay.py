@@ -1,6 +1,8 @@
 import discord, iufi, time, asyncio
 import functions as func
 import random
+import io, os
+from PIL import Image, ImageFilter
 
 from discord.ext import commands
 from iufi.pool import QuestionPool as QP

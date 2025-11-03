@@ -269,6 +269,46 @@ class Info(commands.Cog):
         view = EmojiLeaderboardView(ctx.author)
         view.message = await ctx.reply(embed=embed, view=view)
 
+    @leaderboard.command(aliases=["mv"])
+    async def guessmv(self, ctx: commands.Context):
+        """Shows the MV Guess leaderboard (monthly)."""
+        start_time, end_time = func.get_month_unix_timestamps()
+        user = await func.get_user(ctx.author.id)
+        user_game = user.get("game_state", {}).get("mv_guess", {})
+
+        users = await func.USERS_DB.find({f"game_state.mv_guess.last_update": {"$gt":start_time, "$lte":end_time}}).sort("game_state.mv_guess.points", -1).limit(10).to_list(10)
+        rank = await func.USERS_DB.count_documents({
+            "$and": [
+                {f"game_state.mv_guess.last_update": {"$gt":start_time, "$lte":end_time}},
+                {"game_state.mv_guess.points": {'$gt': user_game.get('points', 0)}}
+            ]
+        }) + 1
+
+        embed = discord.Embed(title=f"🏆   MV Guess Leaderboard", color=discord.Color.random())
+
+        description = ""
+        for top_user in users:
+            game_state: dict[str, float | int] = top_user.get("game_state", {}).get("mv_guess")
+            if not game_state:
+                continue
+
+            member = self.bot.get_user(top_user['_id'])
+            if not member:
+                member = self.bot.get_user(236400388847173632)
+            if member:
+                description += f"`{func.truncate_string(member.display_name):<18} {game_state['points']:>6} 🎬`\n"
+
+        if description and rank > len(users):
+            description += ("┇\n" if rank > len(users) + 1 else "") + f"`{func.truncate_string(ctx.author.display_name):<18} {user_game.get('points', 0):>6} 🎬`"
+
+        if not description:
+            description = "The leaderboard is currently empty."
+
+        embed.description = f"**The next reset is <t:{int(end_time)}:R>**\n**" + (f"Your current position is `{rank}`" if user_game else "You haven't played any MV guess game!") + f"**\n{description}"
+        embed.set_thumbnail(url=icon.url if (icon := ctx.guild.icon) else None)
+
+        await ctx.reply(embed=embed)
+
     @commands.command(aliases=["h"])
     async def help(self, ctx: commands.Context, *, command: str = None):
         """Lists all the commands in IUFI.
