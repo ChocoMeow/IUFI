@@ -35,7 +35,23 @@ class DropView(discord.ui.View):
         for child in self.children:
             child.disabled = True
         
-        await self.message.edit(content="This drop has expired", view=self)
+        # Build base content
+        content = "This drop has expired"
+
+        # If the card wasn't claimed and is mystic or celestial, add a special missed message
+        try:
+            tier_name = self.card.tier[1] if hasattr(self.card, "tier") else None
+        except Exception:
+            tier_name = None
+
+        if getattr(self.card, "owner_id", None) is None and tier_name in ("mystic", "celestial"):
+            content += f"\nSadly, no one claimed this {tier_name} card — they missed a chance to get a {tier_name} card!"
+
+        # If message wasn't set for some reason, just return
+        if not self.message:
+            return
+
+        await self.message.edit(content=content, view=self)
 
     def build_embed(self) -> discord.Embed:
         embed = discord.Embed(title="🎁 Random Card Drop", color=discord.Color.random())
