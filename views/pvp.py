@@ -27,6 +27,7 @@ def get_pvp_settings():
         },
         "challenge_timeout": 300,
         "round_delay": 4,
+        "post_round_delay": 3,
         "max_reroll_attempts": 20
     }
     return getattr(func.settings, "PVP_SETTINGS", {}) or defaults
@@ -63,35 +64,46 @@ async def compose_vs_image(a_card: Card, b_card: Card, *, highlight: Optional[st
 
     draw = ImageDraw.Draw(out)
 
-    # draw highlight border if needed
+    # draw highlight border & a bottom ribbon over only the winning card if needed
     if highlight in ('left', 'right'):
-        # determine box for winner
+        # determine box for winner (card coordinates)
         if highlight == 'left':
             bx, by, bw, bh = left_x, left_y, a_img.width, a_img.height
-            color = (255, 215, 0, 255)  # gold
         else:
             bx, by, bw, bh = right_x, right_y, b_img.width, b_img.height
-            color = (255, 215, 0, 255)
 
-        # draw multiple rectangles for a glowing border
+        # soft glowing border around the winner card
+        glow_color = (34, 197, 94, 255)  # green-ish
         for i in range(6, 0, -2):
             rect = [bx - i, by - i, bx + bw + i, by + bh + i]
-            draw.rounded_rectangle(rect, radius=12 + i, outline=(color[0], color[1], color[2], int(40 + (i * 30 / 6))))
+            draw.rounded_rectangle(rect, radius=12 + i, outline=(glow_color[0], glow_color[1], glow_color[2], int(30 + (i * 30 / 6))))
 
-        # draw a ribbon in corner
-        ribbon_w, ribbon_h = int(bw * 0.4), int(bh * 0.14)
-        rx = bx + bw - ribbon_w - 6
-        ry = by + 6
-        draw.rectangle([rx, ry, rx + ribbon_w, ry + ribbon_h], fill=color)
+        # draw a ribbon only across the bottom of the winner card (with slight horizontal padding)
+        ribbon_h = max(int(bh * 0.14), 20)
+        # position ribbon so it sits at the bottom of the card; allow small horizontal extension
+        hor_pad = max(int(bw * 0.06), 8)
+        rx = max(0, bx - hor_pad)
+        rw = min(out_w - rx, bw + hor_pad * 2)
+        ry = by + bh - ribbon_h
+        ribbon_color = (16, 185, 129, 255)  # green
+
+        # rounded ribbon rectangle
+        radius = max(6, int(ribbon_h * 0.25))
+        draw.rounded_rectangle([rx, ry, rx + rw, ry + ribbon_h], radius=radius, fill=ribbon_color)
+
+        # draw WINNER text centered in that ribbon
         try:
-            f = ImageFont.truetype('DejaVuSans.ttf', max(12, ribbon_h - 6))
+            f = ImageFont.truetype('DejaVuSans.ttf', max(14, int(ribbon_h * 0.6)))
         except Exception:
             f = ImageFont.load_default()
         text = "WINNER"
         tb = draw.textbbox((0, 0), text, font=f)
-        tx = rx + (ribbon_w - (tb[2] - tb[0])) // 2
+        tx = rx + (rw - (tb[2] - tb[0])) // 2
         ty = ry + (ribbon_h - (tb[3] - tb[1])) // 2
-        draw.text((tx, ty), text, font=f, fill=(10, 10, 10, 255))
+        # subtle shadow for readability
+        draw.text((tx - 1, ty - 1), text, font=f, fill=(0, 0, 0, 160))
+        draw.text((tx + 1, ty + 1), text, font=f, fill=(0, 0, 0, 160))
+        draw.text((tx, ty), text, font=f, fill=(255, 255, 255, 255))
 
     # Draw VS in middle lightly for the preview too
     try:
@@ -238,6 +250,9 @@ class PvPMatch:
                 await range_msg.delete()
             except Exception:
                 pass
+
+            # pause briefly after reveal
+            await asyncio.sleep(self.settings.get("post_round_delay", 3))
 
         # determine match winner
         if self.wins[self.challenger.id] > self.wins[self.opponent.id]:
