@@ -24,6 +24,28 @@ class MVGuess(commands.Cog):
         # channel ids where a game is currently running (prevents concurrent games in same channel)
         self._running_channels: set[int] = set()
 
+    def _create_blurred_image(self, original_bytes: bytes, blur_radius: int) -> io.BytesIO:
+        """Create a blurred version of an image from bytes.
+
+        Args:
+            original_bytes: PNG image bytes
+            blur_radius: Gaussian blur radius to apply
+
+        Returns:
+            BytesIO object containing the blurred PNG image
+        """
+        img = Image.open(io.BytesIO(original_bytes)).convert("RGBA")
+
+        if blur_radius and blur_radius > 0:
+            blurred_img = img.filter(ImageFilter.GaussianBlur(radius=blur_radius))
+        else:
+            blurred_img = img
+
+        blur_bio = io.BytesIO()
+        blurred_img.save(blur_bio, format="PNG")
+        blur_bio.seek(0)
+        return blur_bio
+
     async def _screenshot_from_youtube(self, url: str, blur_radius: int = 12) -> tuple[io.BytesIO, io.BytesIO]:
         """Download a short segment of the YouTube video and extract a random frame.
 
@@ -34,10 +56,14 @@ class MVGuess(commands.Cog):
             # create temp files
             tmp_dir = tempfile.mkdtemp(prefix="mv_guess_")
             try:
-                temp_video = os.path.join(tmp_dir, "temp_video.%(ext)s")
-
-                # Step 1: get info to determine duration
-                ydl_opts_info = {"quiet": True, "skip_download": True, "noplaylist": True}
+                # Step 1: get info to determine duration (lightweight, no download)
+                ydl_opts_info = {
+                    "quiet": True,
+                    "no_warnings": True,
+                    "skip_download": True,
+                    "noplaylist": True,
+                    "extract_flat": False
+                }
                 with yt_dlp.YoutubeDL(ydl_opts_info) as ydl:
                     info = ydl.extract_info(u, download=False)
                     duration = info.get("duration")
@@ -62,6 +88,7 @@ class MVGuess(commands.Cog):
                 # Use ffmpeg as external downloader to seek and limit duration (much faster)
                 ydl_opts_download = {
                     "quiet": True,
+                    "no_warnings": True,
                     "noplaylist": True,
                     "outtmpl": out_video_template,
                     "format": "bestvideo[ext=mp4]/bestvideo",  # video only, no audio
@@ -80,24 +107,6 @@ class MVGuess(commands.Cog):
 
                 out_video = os.path.join(tmp_dir, downloaded_files[0])
 
-                # --- NEW: copy the downloaded video to a persistent folder for inspection ---
-                try:
-                    save_dir = os.path.join(func.ROOT_DIR, "mv_guess_downloads")
-                    os.makedirs(save_dir, exist_ok=True)
-                    video_id = info.get("id") if isinstance(info, dict) else None
-                    base_name = downloaded_files[0]
-                    _, ext = os.path.splitext(base_name)
-                    timestamp = int(time.time())
-                    safe_vid = (video_id or "video").replace("/", "_")
-                    saved_video_name = f"{safe_vid}_{timestamp}{ext}"
-                    saved_video_path = os.path.join(save_dir, saved_video_name)
-                    shutil.copy(out_video, saved_video_path)
-                    # optional: small log for debugging
-                    # print(f"Saved downloaded video to {saved_video_path}")
-                except Exception:
-                    # Do not fail the whole operation if saving for testing fails
-                    pass
-                # --- end new code ---
 
                 # Step 3: use ffmpeg CLI to extract a single frame at start_time
                 out_image = os.path.join(tmp_dir, "screenshot.jpg")
@@ -123,16 +132,6 @@ class MVGuess(commands.Cog):
                 if not os.path.exists(out_image):
                     raise RuntimeError("Failed to create screenshot image")
 
-                # --- NEW: copy screenshot to same save folder for inspection ---
-                try:
-                    # reuse save_dir and saved_video_name base
-                    screenshot_name = f"{os.path.splitext(saved_video_name)[0]}.jpg"
-                    saved_screenshot_path = os.path.join(save_dir, screenshot_name)
-                    shutil.copy(out_image, saved_screenshot_path)
-                    # print(f"Saved screenshot to {saved_screenshot_path}")
-                except Exception:
-                    pass
-                # --- end new code ---
 
                 # Step 4: open and create both original and blurred bytes
                 img = Image.open(out_image).convert("RGBA")
@@ -216,19 +215,31 @@ class MVGuess(commands.Cog):
 
             # Capture a screenshot from the YouTube video and blur it
             try:
-                screenshot_buf, original_buf = await self._screenshot_from_youtube(youtube, blur_radius=12)
+                screenshot_buf, original_buf = await self._screenshot_from_youtube(youtube, blur_radius=30)
             except Exception as e:
                 return await ctx.reply(f"Error: Failed to capture screenshot from YouTube: {e}", delete_after=30)
 
+            # Store original bytes for re-blurring
+            original_bytes = original_buf.getvalue()
+            original_buf.seek(0)
+
+            # Calculate end timestamp for Discord relative time
+            end_timestamp = int(time.time() + timeout)
+
             # send the blurred screenshot
             file = discord.File(screenshot_buf, filename="blur.png")
-            embed = discord.Embed(title="🎬 Guess the IU MV!", description=f"⏳ You have {timeout} seconds! Type your guess in chat.", color=discord.Color.random())
+            embed = discord.Embed(
+                title="🎬 Guess the IU MV!",
+                description=f"⏳ Time ends <t:{end_timestamp}:R> • Type your guess in chat!",
+                color=discord.Color.random()
+            )
             embed.set_image(url="attachment://blur.png")
-            await ctx.reply(embed=embed, file=file)
+            game_msg = await ctx.reply(embed=embed, file=file)
 
             start_time = time.time()
             winner = None
             winner_msg = None
+            last_blur_update = 0  # Track when we last updated the blur
 
             # Listen for messages until timeout
             while True:
@@ -236,14 +247,39 @@ class MVGuess(commands.Cog):
                 if remaining <= 0:
                     break
 
+                # Check if we need to reduce blur (every 10 seconds)
+                elapsed = int(time.time() - start_time)
+                blur_level = elapsed // 10  # 0 at 0-9s, 1 at 10-19s, 2 at 20-29s, etc.
+
+                if blur_level > last_blur_update and blur_level <= 3:
+                    last_blur_update = blur_level
+                    # Reduce blur: 30 -> 20 -> 10 -> 5
+                    new_blur_radius = max(5, 30 - (blur_level * 10))
+
+                    try:
+                        new_blurred = self._create_blurred_image(original_bytes, new_blur_radius)
+                        new_file = discord.File(new_blurred, filename="blur.png")
+                        new_embed = discord.Embed(
+                            title="🎬 Guess the IU MV!",
+                            description=f"⏳ Time ends <t:{end_timestamp}:R> • Type your guess in chat!\n💡 *Blur reduced!*",
+                            color=discord.Color.random()
+                        )
+                        new_embed.set_image(url="attachment://blur.png")
+                        await game_msg.edit(embed=new_embed, attachments=[new_file])
+                    except Exception:
+                        pass  # Don't fail the game if blur update fails
+
+                # Wait for message with shorter timeout to check blur updates
+                wait_time = min(remaining, 10 - (elapsed % 10) + 0.5)
+
                 try:
                     msg = await self.bot.wait_for(
                         "message",
-                        timeout=remaining,
+                        timeout=wait_time,
                         check=lambda m: m.channel == ctx.channel and not m.author.bot
                     )
                 except asyncio.TimeoutError:
-                    break
+                    continue  # Loop back to check blur update
 
                 guess_text = func.clean_text(msg.content, allow_spaces=True, convert_to_lower=True)
                 answer_text = func.clean_text(title, allow_spaces=True, convert_to_lower=True)
