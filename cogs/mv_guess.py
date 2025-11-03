@@ -42,32 +42,33 @@ class MVGuess(commands.Cog):
                     info = ydl.extract_info(u, download=False)
                     duration = info.get("duration")
 
-                # Determine a random short segment (start .. start + 5s) to download
-                if not duration or duration <= 6:
+                # Determine a random short segment (start .. start + 2s) to download
+                if not duration or duration <= 4:
                     # Very short video: download the whole video
                     seg_start = 0.0
-                    seg_end = float(duration) if duration else 5.0
+                    seg_end = float(duration) if duration else 2.0
                 else:
-                    # pick a random start at least 2s in and at least 5s before end
+                    # pick a random start at least 2s in and at least 2s before end
                     low = 2.0
-                    high = max(low, duration - 5.0)
+                    high = max(low, duration - 2.0)
                     seg_start = float(random.uniform(low, high))
-                    seg_end = seg_start + 5.0
+                    seg_end = seg_start + 2.0
 
                 # midpoint inside the downloaded segment (used for screenshot)
                 seg_mid = (seg_start + seg_end) / 2.0
 
-                # Step 2: download only the short section (faster) using yt-dlp's download_sections
+                # Step 2: download only the short section using ffmpeg external downloader
                 out_video_template = os.path.join(tmp_dir, "temp_video.%(ext)s")
-                # Instruct yt-dlp to download only the requested section and merge to mp4 when possible
+                # Use ffmpeg as external downloader to seek and limit duration (much faster)
                 ydl_opts_download = {
                     "quiet": True,
                     "noplaylist": True,
                     "outtmpl": out_video_template,
-                    "format": "bestvideo+bestaudio/best",
-                    "merge_output_format": "mp4",
-                    # download only the section [seg_start-seg_end]
-                    "download_sections": [f"*{seg_start:.1f}-{seg_end:.1f}"],
+                    "format": "bestvideo[ext=mp4]/bestvideo",  # video only, no audio
+                    "external_downloader": "ffmpeg",
+                    "external_downloader_args": {
+                        "ffmpeg_i": ["-ss", str(seg_start), "-t", "2"]  # seek to start, download 2 seconds
+                    },
                 }
                 with yt_dlp.YoutubeDL(ydl_opts_download) as ydl:
                     ydl.download([u])
@@ -78,6 +79,25 @@ class MVGuess(commands.Cog):
                     raise RuntimeError("Failed to download video segment from YouTube")
 
                 out_video = os.path.join(tmp_dir, downloaded_files[0])
+
+                # --- NEW: copy the downloaded video to a persistent folder for inspection ---
+                try:
+                    save_dir = os.path.join(func.ROOT_DIR, "mv_guess_downloads")
+                    os.makedirs(save_dir, exist_ok=True)
+                    video_id = info.get("id") if isinstance(info, dict) else None
+                    base_name = downloaded_files[0]
+                    _, ext = os.path.splitext(base_name)
+                    timestamp = int(time.time())
+                    safe_vid = (video_id or "video").replace("/", "_")
+                    saved_video_name = f"{safe_vid}_{timestamp}{ext}"
+                    saved_video_path = os.path.join(save_dir, saved_video_name)
+                    shutil.copy(out_video, saved_video_path)
+                    # optional: small log for debugging
+                    # print(f"Saved downloaded video to {saved_video_path}")
+                except Exception:
+                    # Do not fail the whole operation if saving for testing fails
+                    pass
+                # --- end new code ---
 
                 # Step 3: use ffmpeg CLI to extract a single frame at start_time
                 out_image = os.path.join(tmp_dir, "screenshot.jpg")
@@ -102,6 +122,17 @@ class MVGuess(commands.Cog):
 
                 if not os.path.exists(out_image):
                     raise RuntimeError("Failed to create screenshot image")
+
+                # --- NEW: copy screenshot to same save folder for inspection ---
+                try:
+                    # reuse save_dir and saved_video_name base
+                    screenshot_name = f"{os.path.splitext(saved_video_name)[0]}.jpg"
+                    saved_screenshot_path = os.path.join(save_dir, screenshot_name)
+                    shutil.copy(out_image, saved_screenshot_path)
+                    # print(f"Saved screenshot to {saved_screenshot_path}")
+                except Exception:
+                    pass
+                # --- end new code ---
 
                 # Step 4: open and create both original and blurred bytes
                 img = Image.open(out_image).convert("RGBA")
