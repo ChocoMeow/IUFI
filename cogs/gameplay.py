@@ -13,6 +13,7 @@ from views import (
     QUIZ_SETTINGS,
 )
 from views.emoji_quiz import EmojiQuizView, EmojiResetAttemptView, EMOJI_QUIZ_SETTINGS
+from views.pvp import ChallengeView, get_pvp_settings
 
 class Gameplay(commands.Cog):
     def __init__(self, bot: commands.Bot) -> None:
@@ -240,6 +241,18 @@ class Gameplay(commands.Cog):
 
         await asyncio.sleep(view.total_time)
         await view.end_game()
+
+    @commands.command()
+    async def pvp(self, ctx: commands.Context, opponent: discord.Member = None):
+        """Issue a PvP challenge. If opponent is omitted, the challenge is open for anyone to accept.
+
+        Example:
+        @prefix@pvp @user
+        @prefix@pvp
+        """
+        # create challenge view and message
+        view = ChallengeView(ctx, ctx.author, opponent, timeout=get_pvp_settings().get("challenge_timeout", 300))
+        view.message = await ctx.reply(f"{ctx.author.mention} issued a PvP challenge{' to ' + opponent.mention if opponent else ''}. Expires in <t:{round(time.time() + get_pvp_settings().get('challenge_timeout', 300))}:R>", view=view)
 
 async def setup(bot: commands.Bot) -> None:
     await bot.add_cog(Gameplay(bot))

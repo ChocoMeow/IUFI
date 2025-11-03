@@ -469,6 +469,19 @@
             }
         ]
     },
+    "PVP_SETTINGS": {
+        "power_ranges": {
+            "common": [1, 20],
+            "rare": [10, 35],
+            "epic": [25, 60],
+            "legendary": [45, 100],
+            "mystic": [70, 150],
+            "celestial": [100, 250]
+        },
+        "challenge_timeout": 300,
+        "round_delay": 4,
+        "max_reroll_attempts": 20
+    },
     "LOGGING": {
         "file": {
             "path": "./logs",
