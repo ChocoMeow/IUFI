@@ -13,7 +13,7 @@ from views import (
     QUIZ_SETTINGS,
 )
 from views.emoji_quiz import EmojiQuizView, EmojiResetAttemptView, EMOJI_QUIZ_SETTINGS
-from views.pvp import ChallengeView, get_pvp_settings
+from views.pvp import ChallengeView, get_pvp_settings, PvPMatch
 
 class Gameplay(commands.Cog):
     def __init__(self, bot: commands.Bot) -> None:
@@ -253,6 +253,33 @@ class Gameplay(commands.Cog):
         # create challenge view and message
         view = ChallengeView(ctx, ctx.author, opponent, timeout=get_pvp_settings().get("challenge_timeout", 300))
         view.message = await ctx.reply(f"{ctx.author.mention} issued a PvP challenge{' to ' + opponent.mention if opponent else ''}. Expires in <t:{round(time.time() + get_pvp_settings().get('challenge_timeout', 300))}:R>", view=view)
+
+    @commands.command(name="pvp_test", aliases=["pvptest", "pvp_auto"])
+    async def pvp_test(self, ctx: commands.Context):
+        """Test command: auto-start a PvP match using random cards for you and the bot, and play it through."""
+        # Ensure the card pool is loaded
+        try:
+            # pick random cards for each side
+            cards_a = iufi.CardPool.get_random_cards_for_match_game(3)
+            cards_b = iufi.CardPool.get_random_cards_for_match_game(3)
+        except Exception as e:
+            return await ctx.reply(f"Failed to pick random cards for test: {e}")
+
+        opponent = ctx.guild.me
+        settings = get_pvp_settings()
+        match = PvPMatch(ctx, ctx.author, opponent, settings)
+
+        # send a starter message to attach match outputs to
+        starter = await ctx.send(f"Starting automated PvP test: {ctx.author.mention} vs {opponent.mention}")
+        match.message = starter
+
+        # assign teams directly (bypass modal/ownership checks for testing)
+        match.teams[ctx.author.id] = cards_a
+        match.teams[opponent.id] = cards_b
+
+        # run the match and wait for it to complete
+        await match.run()
+        await ctx.send("Automated PvP test finished.")
 
 async def setup(bot: commands.Bot) -> None:
     await bot.add_cog(Gameplay(bot))

@@ -32,6 +32,88 @@ def get_pvp_settings():
     return getattr(func.settings, "PVP_SETTINGS", {}) or defaults
 
 
+async def compose_vs_image(a_card: Card, b_card: Card, *, highlight: Optional[str] = None, size_rate: float = 0.28) -> BytesIO:
+    """Create a stitched image: left card vs right card. If highlight is 'left' or 'right', draw a border around the winner."""
+    # Load images (may be lists for GIFs)
+    a_img = await a_card.image(size_rate=size_rate)
+    b_img = await b_card.image(size_rate=size_rate)
+    if isinstance(a_img, list):
+        a_img = a_img[0]
+    if isinstance(b_img, list):
+        b_img = b_img[0]
+
+    if a_img.mode != 'RGBA':
+        a_img = a_img.convert('RGBA')
+    if b_img.mode != 'RGBA':
+        b_img = b_img.convert('RGBA')
+
+    padding = 12
+    middle_w = max(int(a_img.width * 0.35), 80)
+    out_w = a_img.width + b_img.width + middle_w + padding * 4
+    out_h = max(a_img.height, b_img.height) + padding * 2
+
+    out = Image.new('RGBA', (out_w, out_h), (0, 0, 0, 0))
+    left_x = padding
+    left_y = (out_h - a_img.height) // 2
+    right_x = left_x + a_img.width + middle_w + padding * 2
+    right_y = (out_h - b_img.height) // 2
+
+    out.paste(a_img, (left_x, left_y), a_img)
+    out.paste(b_img, (right_x, right_y), b_img)
+
+    draw = ImageDraw.Draw(out)
+
+    # draw highlight border if needed
+    if highlight in ('left', 'right'):
+        # determine box for winner
+        if highlight == 'left':
+            bx, by, bw, bh = left_x, left_y, a_img.width, a_img.height
+            color = (255, 215, 0, 255)  # gold
+        else:
+            bx, by, bw, bh = right_x, right_y, b_img.width, b_img.height
+            color = (255, 215, 0, 255)
+
+        # draw multiple rectangles for a glowing border
+        for i in range(6, 0, -2):
+            rect = [bx - i, by - i, bx + bw + i, by + bh + i]
+            draw.rounded_rectangle(rect, radius=12 + i, outline=(color[0], color[1], color[2], int(40 + (i * 30 / 6))))
+
+        # draw a ribbon in corner
+        ribbon_w, ribbon_h = int(bw * 0.4), int(bh * 0.14)
+        rx = bx + bw - ribbon_w - 6
+        ry = by + 6
+        draw.rectangle([rx, ry, rx + ribbon_w, ry + ribbon_h], fill=color)
+        try:
+            f = ImageFont.truetype('DejaVuSans.ttf', max(12, ribbon_h - 6))
+        except Exception:
+            f = ImageFont.load_default()
+        text = "WINNER"
+        tb = draw.textbbox((0, 0), text, font=f)
+        tx = rx + (ribbon_w - (tb[2] - tb[0])) // 2
+        ty = ry + (ribbon_h - (tb[3] - tb[1])) // 2
+        draw.text((tx, ty), text, font=f, fill=(10, 10, 10, 255))
+
+    # Draw VS in middle lightly for the preview too
+    try:
+        font = ImageFont.truetype('DejaVuSans.ttf', max(28, int(out_h * 0.12)))
+    except Exception:
+        font = ImageFont.load_default()
+    vs_text = "VS"
+    vb = draw.textbbox((0, 0), vs_text, font=font)
+    v_w = vb[2] - vb[0]
+    v_h = vb[3] - vb[1]
+    vx = left_x + a_img.width + (middle_w // 2) + padding - (v_w // 2)
+    vy = (out_h - v_h) // 2
+    draw.text((vx - 1, vy - 1), vs_text, font=font, fill=(0, 0, 0, 255))
+    draw.text((vx + 1, vy + 1), vs_text, font=font, fill=(0, 0, 0, 255))
+    draw.text((vx, vy), vs_text, font=font, fill=(255, 255, 255, 255))
+
+    bytes_io = BytesIO()
+    out.save(bytes_io, format='WEBP')
+    bytes_io.seek(0)
+    return bytes_io
+
+
 class PvPMatch:
     def __init__(self, ctx: Optional[commands.Context], challenger: discord.Member, opponent: discord.Member, settings: dict):
         self.ctx = ctx
@@ -56,98 +138,82 @@ class PvPMatch:
         embed.description = f"{self.challenger.mention} vs {self.opponent.mention}\nStarting match..."
         await self.message.edit(embed=embed, view=None)
 
-        # Round by round
+        # Round by round: show power ranges first, then reveal rolls and winner
         for i in range(3):
             a_card = self.teams[self.challenger.id][i]
             b_card = self.teams[self.opponent.id][i]
 
-            # compute power roll
-            a_roll, b_roll = self._power_roll(a_card), self._power_roll(b_card)
+            # determine configured ranges for each card's tier
+            ranges = self.settings.get("power_ranges", {})
+            a_tier = a_card._tier if hasattr(a_card, "_tier") else a_card.tier[1]
+            b_tier = b_card._tier if hasattr(b_card, "_tier") else b_card.tier[1]
+            a_rng = ranges.get(a_tier, [1, 100])
+            b_rng = ranges.get(b_tier, [1, 100])
 
-            # ensure no perfect tie by rerolling limited times
+            # Send range embed (secret: we show range but not rolled values)
+            range_embed = discord.Embed(title=f"Round {i+1} — Power Ranges", color=discord.Color.random())
+            range_embed.add_field(name=f"{self.challenger.display_name}", value=f"🎲 {a_card._tier.capitalize()}: {int(a_rng[0])} - {int(a_rng[1])}", inline=True)
+            range_embed.add_field(name=f"{self.opponent.display_name}", value=f"🎲 {b_card._tier.capitalize()}: {int(b_rng[0])} - {int(b_rng[1])}", inline=True)
+            range_embed.set_footer(text="A secret roll will be revealed shortly...")
+
+            # Try to show a stitched preview image without highlight
+            try:
+                range_img = await compose_vs_image(a_card, b_card, highlight=None, size_rate=0.28)
+                fname_range = f"round_{i+1}_range.webp"
+                file_range = discord.File(range_img, filename=fname_range)
+                range_msg = await self.message.channel.send(embed=range_embed, file=file_range)
+            except Exception as e:
+                try:
+                    func.logger.exception(f"Failed to compose/send range image for match {self.challenger.id} vs {self.opponent.id} (round {i+1}): {e}")
+                except Exception:
+                    pass
+                range_msg = await self.message.channel.send(embed=range_embed)
+
+            # wait to reveal the roll
+            await asyncio.sleep(self.settings.get("round_delay", 4))
+
+            # perform the secret rolls now
+            a_roll = random.randint(int(a_rng[0]), int(a_rng[1])) + getattr(a_card, "stars", 0)
+            b_roll = random.randint(int(b_rng[0]), int(b_rng[1])) + getattr(b_card, "stars", 0)
+
+            # resolve ties with rerolls
             attempts = 0
             while a_roll == b_roll and attempts < self.settings.get("max_reroll_attempts", 20):
-                a_roll, b_roll = self._power_roll(a_card), self._power_roll(b_card)
+                a_roll = random.randint(int(a_rng[0]), int(a_rng[1])) + getattr(a_card, "stars", 0)
+                b_roll = random.randint(int(b_rng[0]), int(b_rng[1])) + getattr(b_card, "stars", 0)
                 attempts += 1
 
-            # determine round winner
+            # determine round winner and highlight side
             if a_roll > b_roll:
                 winner = self.challenger
                 self.wins[self.challenger.id] += 1
                 result_str = f"{self.challenger.mention} wins Round {i+1}! ({a_roll} vs {b_roll})"
+                highlight = "left"
             elif b_roll > a_roll:
                 winner = self.opponent
                 self.wins[self.opponent.id] += 1
                 result_str = f"{self.opponent.mention} wins Round {i+1}! ({b_roll} vs {a_roll})"
+                highlight = "right"
             else:
                 winner = None
                 result_str = f"Round {i+1} is a tie after {attempts} rerolls. ({a_roll} vs {b_roll})"
+                highlight = None
 
-            round_embed = discord.Embed(title=f"Round {i+1}", color=discord.Color.random())
-            round_embed.add_field(name=f"{self.challenger.display_name}", value=f"{a_card.display_id} ({a_card._tier.capitalize()})\nPower: {a_roll}", inline=True)
-            round_embed.add_field(name=f"{self.opponent.display_name}", value=f"{b_card.display_id} ({b_card._tier.capitalize()})\nPower: {b_roll}", inline=True)
-            round_embed.set_footer(text=result_str)
+            # Build the reveal embed showing rolled powers and winner
+            reveal_embed = discord.Embed(title=f"Round {i+1} — Result", color=discord.Color.random())
+            reveal_embed.add_field(name=f"{self.challenger.display_name}", value=f"🎲 {a_card._tier.capitalize()}: {int(a_rng[0])}-{int(a_rng[1])}\n🎲 Roll: {a_roll}", inline=True)
+            reveal_embed.add_field(name=f"{self.opponent.display_name}", value=f"🎲 {b_card._tier.capitalize()}: {int(b_rng[0])}-{int(b_rng[1])}\n🎲 Roll: {b_roll}", inline=True)
+            reveal_embed.set_footer(text=result_str)
 
-            # Attempt to compose a single stitched image (left card vs right card with 'VS' text)
+            # Compose reveal image with highlight and send; then remove the range message
             try:
-                a_img = await a_card.image(size_rate=0.28)
-                b_img = await b_card.image(size_rate=0.28)
-                if isinstance(a_img, list):
-                    a_img = a_img[0]
-                if isinstance(b_img, list):
-                    b_img = b_img[0]
-
-                if a_img.mode != 'RGBA':
-                    a_img = a_img.convert('RGBA')
-                if b_img.mode != 'RGBA':
-                    b_img = b_img.convert('RGBA')
-
-                padding = 12
-                middle_w = max(int(a_img.width * 0.35), 80)
-                out_w = a_img.width + b_img.width + middle_w + padding * 4
-                out_h = max(a_img.height, b_img.height) + padding * 2
-
-                out = Image.new('RGBA', (out_w, out_h), (0, 0, 0, 0))
-                left_x = padding
-                left_y = (out_h - a_img.height) // 2
-                right_x = left_x + a_img.width + middle_w + padding * 2
-                right_y = (out_h - b_img.height) // 2
-
-                out.paste(a_img, (left_x, left_y), a_img)
-                out.paste(b_img, (right_x, right_y), b_img)
-
-                draw = ImageDraw.Draw(out)
-                font_size = max(36, int(out_h * 0.20))
-                try:
-                    font = ImageFont.truetype("DejaVuSans.ttf", font_size)
-                except Exception:
-                    font = ImageFont.load_default()
-
-                vs_text = "VS"
-                bbox = draw.textbbox((0, 0), vs_text, font=font)
-                text_w = bbox[2] - bbox[0]
-                text_h = bbox[3] - bbox[1]
-                text_x = left_x + a_img.width + (middle_w // 2) + padding - (text_w // 2)
-                text_y = (out_h - text_h) // 2
-
-                # stroke/shadow then fill
-                draw.text((text_x - 2, text_y - 2), vs_text, font=font, fill=(0, 0, 0, 255))
-                draw.text((text_x + 2, text_y + 2), vs_text, font=font, fill=(0, 0, 0, 255))
-                draw.text((text_x, text_y), vs_text, font=font, fill=(255, 255, 255, 255))
-
-                bytes_io = BytesIO()
-                out.save(bytes_io, format='WEBP')
-                bytes_io.seek(0)
-
-                fname = f"round_{i+1}.webp"
-                file = discord.File(bytes_io, filename=fname)
-                round_embed.set_image(url=f"attachment://{fname}")
-                await self.message.channel.send(embed=round_embed, file=file)
-
+                reveal_img = await compose_vs_image(a_card, b_card, highlight=highlight, size_rate=0.28)
+                fname_reveal = f"round_{i+1}_reveal.webp"
+                file_reveal = discord.File(reveal_img, filename=fname_reveal)
+                await self.message.channel.send(embed=reveal_embed, file=file_reveal)
             except Exception as e:
-                # If composition failed, fall back to attaching both files individually (previous behavior)
                 try:
-                    func.logger.exception(f"Compose failed for round images, falling back to separate attachments: {e}")
+                    func.logger.exception(f"Compose failed for reveal images, falling back to separate attachments: {e}")
                 except Exception:
                     pass
                 try:
@@ -157,19 +223,21 @@ class PvPMatch:
                     fname_b = f"card_b_{i+1}.webp"
                     file_a = discord.File(a_bytes, filename=fname_a)
                     file_b = discord.File(b_bytes, filename=fname_b)
-                    round_embed.set_image(url=f"attachment://{fname_a}")
-                    round_embed.set_thumbnail(url=f"attachment://{fname_b}")
-                    await self.message.channel.send(embed=round_embed, files=[file_a, file_b])
+                    reveal_embed.set_image(url=f"attachment://{fname_a}")
+                    reveal_embed.set_thumbnail(url=f"attachment://{fname_b}")
+                    await self.message.channel.send(embed=reveal_embed, files=[file_a, file_b])
                 except Exception:
-                    # last-resort: send text-only embed
                     try:
-                        func.logger.exception(f"Failed to send fallback round images for match {self.challenger.id} vs {self.opponent.id} (round {i+1}): {e}")
+                        func.logger.exception(f"Failed to send fallback reveal images for match {self.challenger.id} vs {self.opponent.id} (round {i+1}): {e}")
                     except Exception:
                         pass
-                    await self.message.channel.send(embed=round_embed)
+                    await self.message.channel.send(embed=reveal_embed)
 
-            # small delay between rounds for dramatic reveal
-            await asyncio.sleep(self.settings.get("round_delay", 4))
+            # try to delete the earlier range message to visually replace it with the reveal
+            try:
+                await range_msg.delete()
+            except Exception:
+                pass
 
         # determine match winner
         if self.wins[self.challenger.id] > self.wins[self.opponent.id]:
