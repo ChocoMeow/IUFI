@@ -213,11 +213,24 @@ class MVGuess(commands.Cog):
             if not youtube:
                 return await ctx.reply("Error: Selected MV entry has no YouTube URL.", delete_after=20)
 
+            # Send loading message first
+            loading_embed = discord.Embed(
+                title="🎬 Guess the IU MV!",
+                description="🔄 Loading screenshot from music video...",
+                color=discord.Color.blue()
+            )
+            game_msg = await ctx.reply(embed=loading_embed)
+
             # Capture a screenshot from the YouTube video and blur it
             try:
-                screenshot_buf, original_buf = await self._screenshot_from_youtube(youtube, blur_radius=30)
+                screenshot_buf, original_buf = await self._screenshot_from_youtube(youtube, blur_radius=69)
             except Exception as e:
-                return await ctx.reply(f"Error: Failed to capture screenshot from YouTube: {e}", delete_after=30)
+                await game_msg.edit(embed=discord.Embed(
+                    title="❌ Error",
+                    description=f"Failed to capture screenshot from YouTube: {e}",
+                    color=discord.Color.red()
+                ))
+                return
 
             # Store original bytes for re-blurring
             original_bytes = original_buf.getvalue()
@@ -226,7 +239,7 @@ class MVGuess(commands.Cog):
             # Calculate end timestamp for Discord relative time
             end_timestamp = int(time.time() + timeout)
 
-            # send the blurred screenshot
+            # Update the loading message with the actual blurred screenshot
             file = discord.File(screenshot_buf, filename="blur.png")
             embed = discord.Embed(
                 title="🎬 Guess the IU MV!",
@@ -234,7 +247,7 @@ class MVGuess(commands.Cog):
                 color=discord.Color.random()
             )
             embed.set_image(url="attachment://blur.png")
-            game_msg = await ctx.reply(embed=embed, file=file)
+            await game_msg.edit(embed=embed, attachments=[file])
 
             start_time = time.time()
             winner = None
@@ -251,10 +264,10 @@ class MVGuess(commands.Cog):
                 elapsed = int(time.time() - start_time)
                 blur_level = elapsed // 10  # 0 at 0-9s, 1 at 10-19s, 2 at 20-29s, etc.
 
-                if blur_level > last_blur_update and blur_level <= 3:
+                if blur_level > last_blur_update and blur_level <= 2:
                     last_blur_update = blur_level
-                    # Reduce blur: 30 -> 20 -> 10 -> 5
-                    new_blur_radius = max(5, 30 - (blur_level * 10))
+                    # Reduce blur: 69 -> 39 -> 9
+                    new_blur_radius = max(5, 69 - (blur_level * 30))
 
                     try:
                         new_blurred = self._create_blurred_image(original_bytes, new_blur_radius)
