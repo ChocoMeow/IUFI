@@ -28,10 +28,6 @@ def load_truetype(size: int) -> ImageFont.FreeTypeFont | ImageFont.ImageFont:
         try:
             f = ImageFont.truetype(candidate, size)
             # Log which font path was used for easier debugging
-            try:
-                func.logger.info(f"Loaded font: {candidate} (size={size})")
-            except Exception:
-                pass
             return f
         except Exception:
             continue
@@ -63,6 +59,51 @@ def get_pvp_settings():
         "max_reroll_attempts": 20
     }
     return getattr(func.settings, "PVP_SETTINGS", {}) or defaults
+
+
+# RPS faction helpers
+# Group rarities into three factions for a rock-paper-scissors style bonus:
+#  A (Low): Common, Rare
+#  B (Mid): Epic, Legendary
+#  C (High): Mystic, Celestial
+# A beats B, B beats C, C beats A -> winner gets +25% power bonus
+RPS_FACTIONS = {
+    'A': ('common', 'rare'),
+    'B': ('epic', 'legendary'),
+    'C': ('mystic', 'celestial')
+}
+
+
+def faction_for_tier(tier: str) -> Optional[str]:
+    if not tier:
+        return None
+    t = tier.lower()
+    for f, tiers in RPS_FACTIONS.items():
+        if t in tiers:
+            return f
+    return None
+
+
+def rps_bonus_pct(attacker_tier: str, defender_tier: str) -> float:
+    """Return the RPS bonus percentage (0.25 for +25% when attacker beats defender, else 0.0)."""
+    a = faction_for_tier(attacker_tier)
+    b = faction_for_tier(defender_tier)
+    if a is None or b is None:
+        return 0.0
+    # A beats B, B beats C, C beats A
+    if (a == 'A' and b == 'B') or (a == 'B' and b == 'C') or (a == 'C' and b == 'A'):
+        return 0.25
+    return 0.0
+
+
+# Small helper to produce a human-friendly label for a member when mentions aren't desired
+def player_label(member: discord.Member | str) -> str:
+    try:
+        if isinstance(member, discord.Member):
+            return getattr(member, 'display_name', str(member))
+    except Exception:
+        pass
+    return str(member)
 
 
 async def compose_vs_image(a_card: Card, b_card: Card, *, highlight: Optional[str] = None, size_rate: float = 0.28) -> BytesIO:
@@ -212,7 +253,7 @@ class PvPMatch:
             return
 
         embed = discord.Embed(title="PvP Match", color=discord.Color.blurple())
-        embed.description = f"{self.challenger.mention} vs {self.opponent.mention}\nStarting match..."
+        embed.description = f"{player_label(self.challenger)} vs {player_label(self.opponent)}\nStarting match..."
         await self.message.edit(embed=embed, view=None)
 
         # Round by round: show power ranges first, then reveal rolls and winner
@@ -227,10 +268,21 @@ class PvPMatch:
             a_rng = ranges.get(a_tier, [1, 100])
             b_rng = ranges.get(b_tier, [1, 100])
 
+            # Determine RPS bonus percentages for preview (attacker perspective)
+            a_bonus_pct = rps_bonus_pct(a_tier, b_tier)
+            b_bonus_pct = rps_bonus_pct(b_tier, a_tier)
+
             # Send range embed (secret: we show range but not rolled values)
             range_embed = discord.Embed(title=f"Round {i+1} — Power Ranges", color=discord.Color.random())
-            range_embed.add_field(name=f"{self.challenger.display_name}", value=f"🎲 {a_card._tier.capitalize()}: {int(a_rng[0])} - {int(a_rng[1])}", inline=True)
-            range_embed.add_field(name=f"{self.opponent.display_name}", value=f"🎲 {b_card._tier.capitalize()}: {int(b_rng[0])} - {int(b_rng[1])}", inline=True)
+            a_field = f"🎲 {a_card._tier.capitalize()}: {int(a_rng[0])} - {int(a_rng[1])}"
+            if a_bonus_pct > 0:
+                a_field += f"\n🔺 +{int(a_bonus_pct*100)}% (RPS bonus)"
+            b_field = f"🎲 {b_card._tier.capitalize()}: {int(b_rng[0])} - {int(b_rng[1])}"
+            if b_bonus_pct > 0:
+                b_field += f"\n🔺 +{int(b_bonus_pct*100)}% (RPS bonus)"
+
+            range_embed.add_field(name=f"{self.challenger.display_name}", value=a_field, inline=True)
+            range_embed.add_field(name=f"{self.opponent.display_name}", value=b_field, inline=True)
             range_embed.set_footer(text="A secret roll will be revealed shortly...")
 
             # Try to show a stitched preview image without highlight
@@ -250,36 +302,96 @@ class PvPMatch:
             await asyncio.sleep(self.settings.get("round_delay", 4))
 
             # perform the secret rolls now
-            a_roll = random.randint(int(a_rng[0]), int(a_rng[1])) + getattr(a_card, "stars", 0)
-            b_roll = random.randint(int(b_rng[0]), int(b_rng[1])) + getattr(b_card, "stars", 0)
+            # We'll compute raw roll, include stars, then apply RPS bonus to that subtotal.
+            a_raw = random.randint(int(a_rng[0]), int(a_rng[1]))
+            b_raw = random.randint(int(b_rng[0]), int(b_rng[1]))
+            a_stars = getattr(a_card, "stars", 0)
+            b_stars = getattr(b_card, "stars", 0)
 
-            # resolve ties with rerolls
+            a_base = a_raw + a_stars
+            b_base = b_raw + b_stars
+
+            a_bonus_amt = int(a_base * a_bonus_pct)
+            b_bonus_amt = int(b_base * b_bonus_pct)
+
+            a_total = a_base + a_bonus_amt
+            b_total = b_base + b_bonus_amt
+
+            # resolve ties with rerolls (reroll raw values and recompute totals)
             attempts = 0
-            while a_roll == b_roll and attempts < self.settings.get("max_reroll_attempts", 20):
-                a_roll = random.randint(int(a_rng[0]), int(a_rng[1])) + getattr(a_card, "stars", 0)
-                b_roll = random.randint(int(b_rng[0]), int(b_rng[1])) + getattr(b_card, "stars", 0)
+            while a_total == b_total and attempts < self.settings.get("max_reroll_attempts", 20):
+                a_raw = random.randint(int(a_rng[0]), int(a_rng[1]))
+                b_raw = random.randint(int(b_rng[0]), int(b_rng[1]))
+                a_base = a_raw + a_stars
+                b_base = b_raw + b_stars
+                a_bonus_amt = int(a_base * a_bonus_pct)
+                b_bonus_amt = int(b_base * b_bonus_pct)
+                a_total = a_base + a_bonus_amt
+                b_total = b_base + b_bonus_amt
                 attempts += 1
 
             # determine round winner and highlight side
-            if a_roll > b_roll:
+            if a_total > b_total:
                 winner = self.challenger
                 self.wins[self.challenger.id] += 1
-                result_str = f"{self.challenger.mention} wins Round {i+1}! ({a_roll} vs {b_roll})"
+                result_str = f"{player_label(self.challenger)} wins Round {i+1}! ({a_total} vs {b_total})"
                 highlight = "left"
-            elif b_roll > a_roll:
+            elif b_total > a_total:
                 winner = self.opponent
                 self.wins[self.opponent.id] += 1
-                result_str = f"{self.opponent.mention} wins Round {i+1}! ({b_roll} vs {a_roll})"
+                result_str = f"{player_label(self.opponent)} wins Round {i+1}! ({b_total} vs {a_total})"
                 highlight = "right"
             else:
                 winner = None
-                result_str = f"Round {i+1} is a tie after {attempts} rerolls. ({a_roll} vs {b_roll})"
+                result_str = f"Round {i+1} is a tie after {attempts} rerolls. ({a_total} vs {b_total})"
                 highlight = None
 
             # Build the reveal embed showing rolled powers and winner
             reveal_embed = discord.Embed(title=f"Round {i+1} — Result", color=discord.Color.random())
-            reveal_embed.add_field(name=f"{self.challenger.display_name}", value=f"🎲 {a_card._tier.capitalize()}: {int(a_rng[0])}-{int(a_rng[1])}\n🎲 Roll: {a_roll}", inline=True)
-            reveal_embed.add_field(name=f"{self.opponent.display_name}", value=f"🎲 {b_card._tier.capitalize()}: {int(b_rng[0])}-{int(b_rng[1])}\n🎲 Roll: {b_roll}", inline=True)
+
+            # Helper to build the value string with breakdown (returns list of lines)
+            def build_breakdown(tier_name, rng, raw, stars, bonus_amt, bonus_pct):
+                lines = []
+                lines.append(f"🎲 {tier_name.capitalize()}: {int(rng[0])}-{int(rng[1])}")
+                lines.append(f"🎲 Roll: {raw}")
+                if stars:
+                    lines.append(f"⭐ Stars: {stars}")
+                rolled = (raw + (stars or 0))
+                # Show Bonus line only when > 0; Total is basic when no bonus
+                if bonus_amt > 0:
+                    lines.append(f"➕ Bonus: {bonus_amt} (+{int(bonus_pct*100)}%)")
+                    lines.append(f"🧮 Total: { (rolled + bonus_amt) } ({rolled} + {bonus_amt} power)")
+                else:
+                    lines.append(f"🧮 Total: { rolled }")
+                return lines
+
+            # Build breakdowns for both players
+            a_lines = build_breakdown(a_card._tier, a_rng, a_raw, a_stars, a_bonus_amt, a_bonus_pct)
+            b_lines = build_breakdown(b_card._tier, b_rng, b_raw, b_stars, b_bonus_amt, b_bonus_pct)
+
+            # If one side has a Bonus line and the other doesn't, insert an explicit zero-bonus line into the other
+            a_has_bonus = any(l.startswith('➕ Bonus') for l in a_lines)
+            b_has_bonus = any(l.startswith('➕ Bonus') for l in b_lines)
+            if a_has_bonus and not b_has_bonus:
+                # insert zero bonus before the total and replace the Total line with breakdown form
+                b_lines.insert(-1, f"➕ Bonus: 0 (+0%)")
+                b_rolled = b_raw + b_stars
+                b_lines[-1] = f"🧮 Total: {b_rolled} ({b_rolled} + 0 power)"
+            elif b_has_bonus and not a_has_bonus:
+                a_lines.insert(-1, f"➕ Bonus: 0 (+0%)")
+                a_rolled = a_raw + a_stars
+                a_lines[-1] = f"🧮 Total: {a_rolled} ({a_rolled} + 0 power)"
+
+            # Ensure both sides have the same number of lines by padding with invisible lines if needed
+            max_len = max(len(a_lines), len(b_lines))
+            pad_token = '\u200b'  # zero-width space — invisible but keeps vertical spacing
+            if len(a_lines) < max_len:
+                a_lines += [pad_token] * (max_len - len(a_lines))
+            if len(b_lines) < max_len:
+                b_lines += [pad_token] * (max_len - len(b_lines))
+
+            reveal_embed.add_field(name=f"{self.challenger.display_name}", value="\n".join(a_lines), inline=True)
+            reveal_embed.add_field(name=f"{self.opponent.display_name}", value="\n".join(b_lines), inline=True)
             reveal_embed.set_footer(text=result_str)
 
             # Compose reveal image with highlight and send; then remove the range message
@@ -329,7 +441,7 @@ class PvPMatch:
 
         final_embed = discord.Embed(title="PvP Match Result", color=discord.Color.gold())
         if match_winner:
-            final_embed.description = f"Winner: {match_winner.mention}\nScore: {self.wins[self.challenger.id]} - {self.wins[self.opponent.id]}"
+            final_embed.description = f"Winner: {player_label(match_winner)}\nScore: {self.wins[self.challenger.id]} - {self.wins[self.opponent.id]}"
         else:
             final_embed.description = f"Match ended in a draw.\nScore: {self.wins[self.challenger.id]} - {self.wins[self.opponent.id]}"
 
@@ -347,8 +459,13 @@ class PvPMatch:
 
         # If card has stars, it could slightly bias the roll. We'll add small star bonus.
         star_bonus = getattr(card, "stars", 0)
-        # compute roll
-        return random.randint(lo, hi) + star_bonus
+        # compute base roll
+        raw = random.randint(lo, hi)
+        base = raw + star_bonus
+
+        # try to compute RPS bonus against a placeholder opponent: since _power_roll doesn't know the opponent,
+        # it will only return the base roll here. Use rps_bonus_pct in places where both cards are known.
+        return base
 
 
 class TeamModal(discord.ui.Modal):
@@ -397,7 +514,7 @@ class TeamModal(discord.ui.Modal):
                 embed = discord.Embed(title="Team Submission", color=discord.Color.blue())
                 challenger_status = "✅ Submitted" if self.match.challenger.id in self.match.teams else "⏳ Waiting"
                 opponent_status = "✅ Submitted" if self.match.opponent.id in self.match.teams else "⏳ Waiting"
-                embed.description = f"{self.match.challenger.mention}: {challenger_status}\n{self.match.opponent.mention}: {opponent_status}"
+                embed.description = f"{player_label(self.match.challenger)}: {challenger_status}\n{player_label(self.match.opponent)}: {opponent_status}"
                 await self.match.message.edit(embed=embed, view=self.match_message_view())
         except Exception:
             pass
@@ -474,7 +591,7 @@ class ChallengeView(discord.ui.View):
 
         # send submission message with view containing targeted submit buttons
         embed = discord.Embed(title="PvP Match - Team Submission", color=discord.Color.blurple())
-        embed.description = f"{challenger.mention} vs {opponent.mention}\nBoth players, please submit your teams (3 unique cards) by clicking your Submit button below. You must own the cards you submit."
+        embed.description = f"{player_label(challenger)} vs {player_label(opponent)}\nBoth players, please submit your teams (3 unique cards) by clicking your Submit button below. You must own the cards you submit."
 
         # replace buttons with submission view
         view = SubmissionView(self.match, timeout=self.settings.get("challenge_timeout", 300))
