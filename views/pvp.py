@@ -232,6 +232,94 @@ async def compose_vs_image(a_card: Card, b_card: Card, *, highlight: Optional[st
     return bytes_io
 
 
+async def compose_three_image(cards: list[Card], *, size_rate: float = 0.28, use_cover: bool = False) -> BytesIO:
+    """Stitch three images horizontally and return a BytesIO WEBP file.
+
+    If use_cover is True, use images from the cover folder (level1.webp..level3.webp)
+    rather than the actual card images. This is used to hide the real cards during reward selection.
+    """
+    import os
+
+    imgs = []
+    if use_cover:
+        # preferred cover filenames in order
+        cover_dir = os.path.join(func.ROOT_DIR, 'cover')
+        preferred = ['level1.webp', 'level2.webp', 'level3.webp']
+        available_pref = [os.path.join(cover_dir, n) for n in preferred if os.path.exists(os.path.join(cover_dir, n))]
+
+        if available_pref:
+            # Use the preferred set (or subset) and shuffle to randomize positions
+            covers = available_pref[:]
+            random.shuffle(covers)
+            # If fewer covers than cards, repeat the list
+            while len(covers) < len(cards):
+                covers.extend(available_pref)
+            covers = covers[:len(cards)]
+        else:
+            # fallback: any webp in the cover folder
+            cover_paths = [os.path.join(func.ROOT_DIR, 'cover', f) for f in os.listdir(os.path.join(func.ROOT_DIR, 'cover')) if f.lower().endswith('.webp')]
+            if not cover_paths:
+                raise RuntimeError('No cover images found in cover/ folder')
+            covers = random.sample(cover_paths, k=min(len(cover_paths), len(cards)))
+            while len(covers) < len(cards):
+                covers.append(random.choice(cover_paths))
+
+        # Load the cover images in the order of covers list
+        for path in covers:
+            try:
+                with Image.open(path) as im:
+                    img = im.convert('RGBA')
+                    target_size = (int(img.width * size_rate), int(img.height * size_rate))
+                    img = img.resize(target_size, Image.LANCZOS)
+                    imgs.append(img)
+            except Exception:
+                continue
+    else:
+        for c in cards:
+            try:
+                img = await c.image(size_rate=size_rate)
+                if isinstance(img, list):
+                    img = img[0]
+                if img.mode != 'RGBA':
+                    img = img.convert('RGBA')
+                imgs.append(img)
+            except Exception:
+                # fallback to the first card's image if individual fails
+                try:
+                    tmp = await CardPool.get_card(cards[0].id).image(size_rate=size_rate) if cards else None
+                    if tmp:
+                        if isinstance(tmp, list):
+                            tmp = tmp[0]
+                        imgs.append(tmp)
+                except Exception:
+                    continue
+
+    if not imgs:
+        raise RuntimeError("No images available to compose three-image")
+
+    # If fewer than requested (shouldn't normally happen), duplicate last to fill the row
+    while len(imgs) < len(cards):
+        imgs.append(imgs[-1])
+
+    padding = 10
+    widths = [im.width for im in imgs]
+    heights = [im.height for im in imgs]
+    total_w = sum(widths) + padding * (len(imgs) - 1)
+    max_h = max(heights)
+
+    out = Image.new('RGBA', (total_w, max_h), (0, 0, 0, 0))
+    x = 0
+    for im in imgs:
+        y = (max_h - im.height) // 2
+        out.paste(im, (x, y), im)
+        x += im.width + padding
+
+    bio = BytesIO()
+    out.save(bio, format='WEBP')
+    bio.seek(0)
+    return bio
+
+
 class PvPMatch:
     def __init__(self, ctx: Optional[commands.Context], challenger: discord.Member, opponent: discord.Member, settings: dict):
         self.ctx = ctx
@@ -441,31 +529,135 @@ class PvPMatch:
 
         final_embed = discord.Embed(title="PvP Match Result", color=discord.Color.gold())
         if match_winner:
-            final_embed.description = f"Winner: {player_label(match_winner)}\nScore: {self.wins[self.challenger.id]} - {self.wins[self.opponent.id]}"
+            final_embed.description = f"Winner: {match_winner.mention}\nScore: {self.wins[self.challenger.id]} - {self.wins[self.opponent.id]}"
         else:
             final_embed.description = f"Match ended in a draw.\nScore: {self.wins[self.challenger.id]} - {self.wins[self.opponent.id]}"
 
         await self.message.channel.send(embed=final_embed)
 
-    def _power_roll(self, card: Card) -> int:
-        # determine tier range from settings
-        ranges = self.settings.get("power_ranges", {})
-        tier = card._tier if hasattr(card, "_tier") else card.tier[1]
-        rng = ranges.get(tier) or ranges.get(card.tier[1])
-        if not rng:
-            # fallback to a conservative default
-            rng = [1, 100]
-        lo, hi = int(rng[0]), int(rng[1])
+        # === REWARD FLOW: offer three hidden cards from the loser for the winner to pick one ===
+        try:
+            if match_winner is None:
+                return
 
-        # If card has stars, it could slightly bias the roll. We'll add small star bonus.
-        star_bonus = getattr(card, "stars", 0)
-        # compute base roll
-        raw = random.randint(lo, hi)
-        base = raw + star_bonus
+            loser = self.challenger if match_winner.id == self.opponent.id else self.opponent
 
-        # try to compute RPS bonus against a placeholder opponent: since _power_roll doesn't know the opponent,
-        # it will only return the base roll here. Use rps_bonus_pct in places where both cards are known.
-        return base
+            # fetch latest user docs
+            loser_doc = await func.get_user(loser.id)
+            winner_doc = await func.get_user(match_winner.id)
+
+            # get candidate cards (ensure ownership still matches)
+            candidate_ids = [c for c in loser_doc.get("cards", []) if (card_obj := CardPool.get_card(str(c))) and card_obj.owner_id == loser.id]
+
+            if not candidate_ids:
+                await self.message.channel.send(f"No available cards to be rewarded from {player_label(loser)}.")
+                return
+
+            # pick up to three random distinct candidate ids
+            sample_size = min(3, len(candidate_ids))
+            reward_ids = random.sample(candidate_ids, k=sample_size)
+            reward_cards = [CardPool.get_card(str(cid)) for cid in reward_ids]
+
+            # shuffle the offered cards so positions are random
+            random.shuffle(reward_cards)
+
+            # Define Reward UI classes
+            class RewardButton(discord.ui.Button):
+                def __init__(self, card: Card, *, idx: int):
+                    # Do NOT show rarity emoji here; keep images hidden from fields and only show stitched cover
+                    super().__init__(label=f"Pick {idx}", style=discord.ButtonStyle.green)
+                    self.card = card
+                    self.idx = idx
+
+                async def callback(self, interaction: discord.Interaction):
+                    # Only winner may pick
+                    if interaction.user.id != match_winner.id:
+                        return await interaction.response.send_message("Only the match winner can pick a reward.", ephemeral=True)
+
+                    async with self.view._lock:
+                        # re-check availability
+                        if self.card.owner_id != loser.id:
+                            return await interaction.response.send_message("This card is no longer available.", ephemeral=True)
+
+                        # check winner inventory limit
+                        _winner = await func.get_user(match_winner.id)
+                        if (len(_winner.get("cards", [])) + 1) > func.get_user_card_limit(_winner):
+                            return await interaction.response.send_message("Your inventory is full. Please free some space before claiming the reward.", ephemeral=True)
+
+                        # perform transfer: in-memory
+                        self.card.change_owner(match_winner.id)
+                        last_trade_time = time.time()
+                        self.card.last_trade_time = last_trade_time
+
+                        # DB updates: remove from loser, add to winner, update card owner
+                        await func.update_user(loser.id, {"$pull": {"cards": self.card.id}})
+
+                        winner_query = func.update_quest_progress(_winner, ["COLLECT_ANY_CARD", f"COLLECT_{self.card._tier.upper()}_CARD"], query={
+                            "$push": {"cards": self.card.id},
+                            "$inc": {"exp": 10}
+                        })
+                        await func.update_user(match_winner.id, winner_query)
+
+                        await func.update_card(self.card.id, {"$set": {"owner_id": match_winner.id, "last_trade_time": last_trade_time}})
+
+                        func.logger.info(f"PvP reward: User {match_winner.name}({match_winner.id}) took card {self.card.id} from {loser.name}({loser.id})")
+
+                        # disable view and update UI to show selection
+                        for ch in self.view.children:
+                            ch.disabled = True
+                        self.view.stop()
+
+                        # send confirmation and reveal the card image
+                        try:
+                            image_bytes = await self.card.image_bytes()
+                            file = discord.File(image_bytes, filename=f"reward_{self.card.id}.webp")
+                            embed = discord.Embed(title="🏆 PvP Reward", color=discord.Color.gold())
+                            embed.description = f"{player_label(match_winner)} picked {self.card.display_id} from {player_label(loser)}"
+                            await interaction.response.send_message(embed=embed, file=file)
+                        except Exception:
+                            await interaction.response.send_message(f"{player_label(match_winner)} picked {self.card.display_id} from {player_label(loser)}")
+
+            class RewardView(discord.ui.View):
+                def __init__(self, cards: list[Card], timeout: float | None = 60):
+                    super().__init__(timeout=timeout)
+                    self._lock = asyncio.Lock()
+                    for idx, c in enumerate(cards, start=1):
+                        self.add_item(RewardButton(c, idx=idx))
+
+                async def on_timeout(self) -> None:
+                    for child in self.children:
+                        child.disabled = True
+                    try:
+                        await reward_message.edit(content="*🕟 Reward selection expired.*", view=self)
+                    except Exception:
+                        pass
+                    self.stop()
+
+            # Build and send reward embed with a stitched image of the three cover images
+            reward_embed = discord.Embed(title="PvP Reward — Choose one card", color=discord.Color.green())
+            reward_embed.description = f"{player_label(match_winner)}, pick one card taken from {player_label(loser)}. Click the button under the image to pick."
+
+            try:
+                # Use cover images to hide the real cards (level1.webp / level2.webp / level3.webp)
+                stitched = await compose_three_image(reward_cards, size_rate=0.28, use_cover=True)
+                file = discord.File(stitched, filename="pvp_reward_three.webp")
+                reward_embed.set_image(url=f"attachment://pvp_reward_three.webp")
+                view = RewardView(reward_cards, timeout=60)
+                reward_message = await self.message.channel.send(embed=reward_embed, file=file, view=view)
+            except Exception as e:
+                # fallback to non-image embed listing (shouldn't normally happen)
+                try:
+                    func.logger.exception(f"Failed to compose three-card reward image: {e}")
+                except Exception:
+                    pass
+                view = RewardView(reward_cards, timeout=60)
+                reward_message = await self.message.channel.send(embed=reward_embed, view=view)
+
+        except Exception as e:
+            try:
+                func.logger.exception(f"Error in PvP reward flow: {e}")
+            except Exception:
+                pass
 
 
 class TeamModal(discord.ui.Modal):
