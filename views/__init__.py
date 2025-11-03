@@ -19,3 +19,4 @@ from .drop import DropView
 from .musiclearderboard import MusicLeaderboardView
 from .wishlist import WishListView
 from .emoji_leaderboard import EmojiLeaderboardView
+from .reward_card import RewardCardView

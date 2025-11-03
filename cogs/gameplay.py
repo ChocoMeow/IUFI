@@ -220,7 +220,7 @@ class Gameplay(commands.Cog):
         if not filtered:
             return await ctx.reply(f"No entries found for category: {category}")
 
-        num_q = min(5, len(filtered))
+        num_q = min(3, len(filtered))
         sampled = random.sample(filtered, k=num_q)
         # sampled is list of question dicts
 

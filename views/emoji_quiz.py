@@ -1,7 +1,7 @@
 import discord, time, json, asyncio
 import functions as func
 from random import choice
-from typing import List, Tuple
+from typing import List, Optional
 from discord.ext import commands
 
 # Emoji quiz settings
@@ -24,6 +24,15 @@ try:
         SONG_EMOJIS: dict = json.load(f)
 except Exception:
     SONG_EMOJIS = {}
+
+# Reward probabilities mapping per points (1..5). Keys should match tier names from CardPool (e.g., 'common','rare','epic','legendary','mystic','celestial')
+REWARD_PROBABILITIES_BY_POINTS = {
+    1: {"common": 0.9, "rare": 0.09, "epic": 0.01},
+    2: {"common": 0.8, "rare": 0.17, "epic": 0.03},
+    3: {"common": 0.65, "rare": 0.25, "epic": 0.08, "legendary": 0.02},
+    4: {"common": 0.5, "rare": 0.3, "epic": 0.15, "legendary": 0.04, "mystic": 0.01},
+    5: {"common": 0.3, "rare": 0.35, "epic": 0.2, "legendary": 0.1, "mystic": 0.04, "celestial": 0.01},
+}
 
 class EmojiAnswerModal(discord.ui.Modal):
     def __init__(self, prompt: str, *args, **kwargs) -> None:
@@ -59,7 +68,7 @@ class EmojiQuizView(discord.ui.View):
         self._answering_time: float = time.time()
         self._timeout_per_question = timeout_per_question
         self._delay_between_questions = 5
-        self.response: discord.Message = None
+        self.response: Optional[discord.Message] = None
         self._current_emoji: str = self._pick_emoji_for_current()
 
     def _pick_emoji_for_current(self) -> str:
@@ -74,8 +83,9 @@ class EmojiQuizView(discord.ui.View):
         qtype = entry.get("type", "song").lower()
         label = "drama" if qtype == "drama" else "song"
         embed = discord.Embed(title=f"Emoji Quiz — Question {self.current + 1}/{len(self.questions)}", color=discord.Color.random())
-        remaining = max(0, round(self._answering_time + self._timeout_per_question - time.time()))
-        embed.description = f"**Guess the IU {label}:**\n```{self._current_emoji}```\n**Time left:** {remaining}s"
+        # show a discord-friendly expiry timestamp so the client updates the relative time automatically
+        expire_ts = round(self._answering_time + self._timeout_per_question)
+        embed.description = f"**Guess the IU {label}:**\n```{self._current_emoji}```\n**Ends:** <t:{expire_ts}:R>"
         embed.set_footer(text=f"Answer the question or Skip — You'll see the next one in {self._delay_between_questions}s after each reply")
         return embed
 
@@ -101,15 +111,11 @@ class EmojiQuizView(discord.ui.View):
         summary_icons = {True: "✅", False: "❌", None: "⬛"}
         summary = ""
         total_points = 0
-        for idx, (q, _) in enumerate(self.questions):
+        for idx, q in enumerate(self.questions):
             res = self._results[idx]
             summary += summary_icons[res]
             if res is True:
-                total_points += 5
-            elif res is False:
-                total_points -= 2
-            else:
-                total_points -= 1  # small penalty for timeout
+                total_points += 1
 
         # update user's game_state.emoji_quiz
         user = await func.get_user(self.author.id)
@@ -147,6 +153,50 @@ class EmojiQuizView(discord.ui.View):
             await self.response.edit(content=None, embed=embed, view=None)
         except:
             pass
+
+        # If the player scored >0 points, present a card reward view based on their points.
+        # Points are already between 0 and 5 (max questions = 5). If 0, no rewards.
+        if total_points and total_points > 0:
+            try:
+                # Import the RewardCardView from the local views package
+                from .reward_card import RewardCardView
+
+                points = min(5, int(total_points))
+                probs = REWARD_PROBABILITIES_BY_POINTS.get(points, REWARD_PROBABILITIES_BY_POINTS[5])
+
+                # Create the reward view (we won't call its send method; we'll roll a card and post on the same channel)
+                reward_view = RewardCardView(None, self.author, probs, initial_cost=10, cost_currency_field="candies", timeout=120)
+
+                # Roll initial card for the view so build_embed has a card to show
+                await reward_view._roll_card()
+
+                # Build the embed & attempt to attach the card image
+                reward_embed = reward_view.build_embed()
+                file = None
+                if reward_view.current_card:
+                    try:
+                        img_bytes = await reward_view.current_card.image_bytes()
+                        filename = f"{reward_view.current_card.id}.webp"
+                        file = discord.File(img_bytes, filename=filename)
+                        reward_embed.set_image(url=f"attachment://{filename}")
+                    except Exception:
+                        file = None
+
+                # Post the reward message in the same channel as the quiz response and attach the view
+                reward_content = f"**{self.author.mention} This reward ends <t:{reward_view.expires_at}:R>**\n🎁 Card reward for scoring {total_points} point{'s' if total_points != 1 else ''}!"
+                reward_msg = await self.response.channel.send(
+                    content=reward_content,
+                    embed=reward_embed,
+                    file=file,
+                    view=reward_view
+                )
+                reward_view.message = reward_msg
+            except Exception:
+                # Fail silently (don't block quiz end) but log if logger available
+                try:
+                    func.logger.exception("Failed to present emoji quiz reward view")
+                except:
+                    pass
         self.stop()
 
     @discord.ui.button(label="Answer", style=discord.ButtonStyle.green)
@@ -199,7 +249,7 @@ class EmojiQuizView(discord.ui.View):
                 self._results[idx] = None
         try:
             if self.response:
-                await self.response.edit(content="Emoji quiz expired.", view=None)
+                await self.response.edit(content=f"Emoji quiz expired <t:{round(time.time())}:R>.", view=None)
         except:
             pass
         self.stop()
