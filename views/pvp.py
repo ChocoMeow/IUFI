@@ -10,6 +10,38 @@ import functions as func
 from iufi import CardPool, Card
 from discord.ext import commands
 
+# Prefer a bundled font inside the repo (fonts/DejaVuSans.ttf). If it's missing, try common system fonts.
+FONT_CANDIDATES = [
+    'fonts/DejaVuSans.ttf',
+    '/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf',
+    '/Library/Fonts/Arial.ttf',
+    '/System/Library/Fonts/Supplemental/Arial.ttf',
+]
+
+def load_truetype(size: int) -> ImageFont.FreeTypeFont | ImageFont.ImageFont:
+    """Load a TrueType font from the bundled fonts/ folder first, then fall back to common system fonts.
+
+    This prefers a local, committed TTF so rendering is consistent across hosts. If no TTF is found,
+    it falls back to PIL's default bitmap font (less ideal).
+    """
+    for candidate in FONT_CANDIDATES:
+        try:
+            f = ImageFont.truetype(candidate, size)
+            # Log which font path was used for easier debugging
+            try:
+                func.logger.info(f"Loaded font: {candidate} (size={size})")
+            except Exception:
+                pass
+            return f
+        except Exception:
+            continue
+
+    try:
+        func.logger.warning("No TrueType font found in repo or system paths; falling back to bitmap font.")
+    except Exception:
+        pass
+    return ImageFont.load_default()
+
 
 # PvP implementation: Challenge -> both players submit 3-card teams (via modal) -> best-of-3 rounds
 # Configurable via func.settings.PVP_SETTINGS if present, otherwise fallback defaults.
@@ -91,23 +123,56 @@ async def compose_vs_image(a_card: Card, b_card: Card, *, highlight: Optional[st
         radius = max(6, int(ribbon_h * 0.25))
         draw.rounded_rectangle([rx, ry, rx + rw, ry + ribbon_h], radius=radius, fill=ribbon_color)
 
-        # draw WINNER text centered in that ribbon
-        try:
-            f = ImageFont.truetype('DejaVuSans.ttf', max(14, int(ribbon_h * 0.6)))
-        except Exception:
-            f = ImageFont.load_default()
+        # draw WINNER text centered in that ribbon using high-res rendering to avoid pixelation
         text = "WINNER"
-        tb = draw.textbbox((0, 0), text, font=f)
-        tx = rx + (rw - (tb[2] - tb[0])) // 2
-        ty = ry + (ribbon_h - (tb[3] - tb[1])) // 2
-        # subtle shadow for readability
-        draw.text((tx - 1, ty - 1), text, font=f, fill=(0, 0, 0, 160))
-        draw.text((tx + 1, ty + 1), text, font=f, fill=(0, 0, 0, 160))
-        draw.text((tx, ty), text, font=f, fill=(255, 255, 255, 255))
+        # target font size (relative to ribbon height)
+        base_font_size = max(14, int(ribbon_h * 0.6))
+        scale = 4  # render at 4x and downscale for smooth edges
+        try:
+            font_hi = load_truetype(base_font_size * scale)
+        except Exception:
+            font_hi = ImageFont.load_default()
+
+        # create temporary high-res canvas for text
+        tmp_w = max(1, int(rw * scale))
+        tmp_h = max(1, int(ribbon_h * scale))
+        tmp = Image.new('RGBA', (tmp_w, tmp_h), (0, 0, 0, 0))
+        td = ImageDraw.Draw(tmp)
+
+        # measure text in high-res
+        tb = td.textbbox((0, 0), text, font=font_hi)
+        text_w_hi = tb[2] - tb[0]
+        text_h_hi = tb[3] - tb[1]
+        tx_hi = (tmp_w - text_w_hi) // 2
+        ty_hi = (tmp_h - text_h_hi) // 2
+
+        # draw shadow slightly offset (high-res) then white text
+        shadow_color = (0, 0, 0, 200)
+        td.text((tx_hi - int(2 * scale), ty_hi - int(2 * scale)), text, font=font_hi, fill=shadow_color)
+        td.text((tx_hi + int(2 * scale), ty_hi + int(2 * scale)), text, font=font_hi, fill=shadow_color)
+        td.text((tx_hi, ty_hi), text, font=font_hi, fill=(255, 255, 255, 255))
+
+        # downscale to ribbon size using the best available resampling filter and paste with alpha
+        resample_filter = getattr(Image, 'LANCZOS', None)
+        if resample_filter is None:
+            resampling = getattr(Image, 'Resampling', None)
+            if resampling and hasattr(resampling, 'LANCZOS'):
+                resample_filter = resampling.LANCZOS
+            else:
+                # try BICUBIC then fallback to NEAREST
+                resample_filter = getattr(Image, 'BICUBIC', None)
+                if resample_filter is None and resampling and hasattr(resampling, 'BICUBIC'):
+                    resample_filter = resampling.BICUBIC
+                if resample_filter is None:
+                    resample_filter = getattr(Image, 'NEAREST', 0)
+
+        small = tmp.resize((int(tmp_w / scale), int(tmp_h / scale)), resample=resample_filter)
+        out.paste(small, (int(rx), int(ry)), small)
 
     # Draw VS in middle lightly for the preview too
+    # Prefer bundled TrueType via load_truetype; fallback to bitmap font if unavailable
     try:
-        font = ImageFont.truetype('DejaVuSans.ttf', max(28, int(out_h * 0.12)))
+        font = load_truetype(max(28, int(out_h * 0.12)))
     except Exception:
         font = ImageFont.load_default()
     vs_text = "VS"
