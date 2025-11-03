@@ -69,6 +69,8 @@ class EmojiQuizView(discord.ui.View):
         self._timeout_per_question = timeout_per_question
         self._delay_between_questions = 5
         self.response: Optional[discord.Message] = None
+        # event used to wake the run loop when next_question advances the quiz
+        self._advance_event: asyncio.Event = asyncio.Event()
         self._current_emoji: str = self._pick_emoji_for_current()
 
     def _pick_emoji_for_current(self) -> str:
@@ -102,10 +104,20 @@ class EmojiQuizView(discord.ui.View):
         self._current_emoji = self._pick_emoji_for_current()
         self._answering_time = time.time()
         await self.response.edit(embed=self.build_embed(), view=self)
+        # notify the run loop that a new question has started
+        try:
+            self._advance_event.set()
+        except Exception:
+            pass
 
     async def end_game(self) -> None:
         if self._ended_time:
             return
+        # wake the run loop if it's waiting on the advance event
+        try:
+            self._advance_event.set()
+        except Exception:
+            pass
         self._ended_time = time.time()
 
         summary_icons = {True: "✅", False: "❌", None: "⬛"}
@@ -152,6 +164,12 @@ class EmojiQuizView(discord.ui.View):
         try:
             await self.response.edit(content=None, embed=embed, view=None)
         except:
+            pass
+
+        # Log quiz end
+        try:
+            func.logger.info(f"Emoji quiz ended for user {self.author.name}({self.author.id}) - points={total_points}, correct={self._results.count(True)}, wrong={self._results.count(False)}, timeout={self._results.count(None)}, avg_time={avg_time}s")
+        except Exception:
             pass
 
         # If the player scored >0 points, present a card reward view based on their points.
@@ -263,14 +281,18 @@ class EmojiQuizView(discord.ui.View):
         # ensure answering_time is set
         self._answering_time = self._answering_time or time.time()
         while not self._ended_time:
-            # wait until current question timeout
+            # compute remaining time for the current question
             remaining = (self._answering_time + self._timeout_per_question) - time.time()
             if remaining > 0:
-                await asyncio.sleep(remaining)
-
-            # If already ended while sleeping, break
-            if self._ended_time:
-                break
+                try:
+                    # wait until either the question advances (event set) or timeout expires
+                    await asyncio.wait_for(self._advance_event.wait(), timeout=remaining)
+                    # if event set, clear and continue to monitor the new question
+                    self._advance_event.clear()
+                    continue
+                except asyncio.TimeoutError:
+                    # timeout expired for this question
+                    pass
 
             # If current question still unanswered, treat as timeout
             if self._results[self.current] is None:
@@ -284,7 +306,6 @@ class EmojiQuizView(discord.ui.View):
 
                 # move to next question (this function will call end_game when done)
                 await self.next_question()
-                # continue loop for next question
             else:
                 # already answered; wait briefly and loop
                 await asyncio.sleep(0.1)

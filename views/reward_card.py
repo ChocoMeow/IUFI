@@ -211,6 +211,12 @@ class RewardCardView(discord.ui.View):
             await func.update_user(interaction.user.id, query)
             await func.update_card(card.id, {"$set": {"owner_id": interaction.user.id}})
 
+            # Log successful claim
+            try:
+                func.logger.info(f"User {interaction.user.name}({interaction.user.id}) claimed reward card {card.id} ({card._tier}) via RewardCardView; rerolls={self.rerolls}")
+            except Exception:
+                pass
+
             # update message
             try:
                 embed = discord.Embed(title="Reward Claimed!", color=discord.Color.green())
@@ -232,6 +238,11 @@ class RewardCardView(discord.ui.View):
                 return await interaction.response.send_message(f"You do not have enough {self.cost_currency_field} to reroll! (Need {self.current_cost})", ephemeral=True)
 
             old_cost = self.current_cost
+            # Log reroll attempt and deduct cost
+            try:
+                func.logger.info(f"User {interaction.user.name}({interaction.user.id}) attempts reroll on reward card (cost={old_cost}).")
+            except Exception:
+                pass
             # deduct cost
             await func.update_user(interaction.user.id, {"$inc": {self.cost_currency_field: -old_cost}})
 
@@ -244,11 +255,21 @@ class RewardCardView(discord.ui.View):
             if not new_card:
                 # give money back
                 await func.update_user(interaction.user.id, {"$inc": {self.cost_currency_field: old_cost}})
+                try:
+                    func.logger.info(f"Reroll failed for user {interaction.user.name}({interaction.user.id}); refunded {old_cost} {self.cost_currency_field}.")
+                except Exception:
+                    pass
                 return await interaction.followup.send("Failed to reroll. No cards available.", ephemeral=True)
 
             # success: increment rerolls and update next cost
             self.rerolls += 1
             self.current_cost = max(0, int(old_cost * self.cost_multiplier))
+
+            # Log successful reroll
+            try:
+                func.logger.info(f"User {interaction.user.name}({interaction.user.id}) rerolled reward card: old_card={old_card.id if old_card else None} -> new_card={new_card.id if new_card else None}; spent={old_cost} {self.cost_currency_field}; next_cost={self.current_cost}; rerolls={self.rerolls}")
+            except Exception:
+                pass
 
             # update embed and image
             embed = self.build_embed()
