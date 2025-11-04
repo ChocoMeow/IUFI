@@ -220,18 +220,40 @@ class EmojiQuizView(discord.ui.View):
 
     @discord.ui.button(label="Answer", style=discord.ButtonStyle.green)
     async def answer(self, interaction: discord.Interaction, button: discord.ui.Button):
-        if self._results[self.current] is not None:
+        # Capture the question index and answering time at the moment the button is pressed.
+        question_idx = self.current
+        answering_time_at_press = self._answering_time
+
+        # If this question is already answered (fast check at press time), reject immediately.
+        if self._results[question_idx] is not None:
             return await interaction.response.send_message("You already answered this question.", ephemeral=True)
+
+        # Show the modal using the emoji snapshot for this question
         modal = EmojiAnswerModal(self._current_emoji)
         await interaction.response.send_modal(modal)
         await modal.wait()
+
+        # If the quiz ended while waiting, ignore submission
         if self._ended_time:
             return
-        used_time = time.time() - self._answering_time
+
+        # If the question index has changed or the time for that question has expired,
+        # do not accept the answer (it arrived too late).
+        time_since_press = time.time() - answering_time_at_press
+        if question_idx != self.current or time_since_press > self._timeout_per_question:
+            # Inform the user their answer arrived too late and do not mark as answered.
+            try:
+                await interaction.followup.send("Too late — the question has already moved on or timed out, your answer wasn't counted.", ephemeral=True)
+            except Exception:
+                pass
+            return
+
+        # Record time and evaluate answer for the captured question index
+        used_time = time.time() - answering_time_at_press
         self._answer_times.append(used_time)
 
         user_answer = func.clean_text(modal.answer, convert_to_lower=True)
-        correct = func.clean_text(self.questions[self.current].get("name", ""), convert_to_lower=True)
+        correct = func.clean_text(self.questions[question_idx].get("name", ""), convert_to_lower=True)
         is_correct = False
         if user_answer:
             # Use similarity functions for better fuzzy matching
@@ -241,13 +263,15 @@ class EmojiQuizView(discord.ui.View):
             # Consider correct if either similarity is high (>= 0.8) or exact/substring match
             if jac_sim >= 0.8 or lev_sim >= 0.8 or user_answer == correct:
                 is_correct = True
-        self._results[self.current] = is_correct
+
+        # Mark the result for the original question index
+        self._results[question_idx] = is_correct
 
         msg = f"<:IUgiggles:1144937008037384204> {'Correct' if is_correct else 'Incorrect'}. "
         if is_correct:
             msg += f"You answered in `{func.convert_seconds(used_time)}`"
         else:
-            msg += f"The correct answer: `{self.questions[self.current].get('name')}`"
+            msg += f"The correct answer: `{self.questions[question_idx].get('name')}`"
 
         await interaction.followup.send(msg, ephemeral=True)
         await self.next_question()
