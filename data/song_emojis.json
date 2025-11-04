@@ -2,8 +2,8 @@
   {
     "name": "Good Day",
     "emojis": [
-      "☀️🎶🎤",
-      "🌞🎼🎵"
+      "🌞🎼🎵",
+      "🌞🎸🎺"
     ],
     "type": "song",
     "popularity": 10
@@ -11,8 +11,9 @@
   {
     "name": "You & I",
     "emojis": [
-      "🤝🎶💫",
-      "👫🎵🌟"
+      "🤝🕰️💫",
+      "👫🕰️🌟",
+      "⏰🪿😴"
     ],
     "type": "song",
     "popularity": 7
@@ -39,7 +40,8 @@
     "name": "Palette",
     "emojis": [
       "🎨🖌️🎶",
-      "🖼️🎵🎨"
+      "🖼️🎵🎨",
+      "💜💄📼"
     ],
     "type": "song",
     "popularity": 9
@@ -69,12 +71,12 @@
       "🎤✨⭐"
     ],
     "type": "song",
-    "popularity": 6
+    "popularity": 7
   },
   {
     "name": "BBIBBI",
     "emojis": [
-      "🧡📵🚫",
+      "💛📵🚫",
       "💅🎯🚫"
     ],
     "type": "song",
@@ -84,7 +86,8 @@
     "name": "Eight",
     "emojis": [
       "8️⃣🎧🧑\u200d🎤",
-      "🎹🎶8️⃣"
+      "🎹🎶8️⃣",
+      "♾️🧡👶🏻"
     ],
     "type": "song",
     "popularity": 9
@@ -92,8 +95,8 @@
   {
     "name": "Friday",
     "emojis": [
-      "🎉🍷🎶",
-      "🕺💿🎵"
+      "🎉📅🎶",
+      "🕺🎸🎵"
     ],
     "type": "song",
     "popularity": 7
@@ -102,10 +105,28 @@
     "name": "Twenty Three",
     "emojis": [
       "2️⃣3️⃣🎂🎶",
-      "🎈🕊️23"
+      "🎈🕊️🎂",
+      "🐻🦊💜"
     ],
     "type": "song",
-    "popularity": 5
+    "popularity": 8
+  },
+  {
+    "name": "Strawberry Moon",
+    "emojis": [
+      "🍓🌕🍨",
+      "🍭🎮💓"
+    ],
+    "type": "song",
+    "popularity": 7
+  },
+  {
+    "name": "Lullaby",
+    "emojis": [
+      "😴🎶🌃"
+    ],
+    "type": "song",
+    "popularity": 6
   },
   {
     "name": "Ending Scene",
@@ -124,6 +145,15 @@
     ],
     "type": "song",
     "popularity": 6
+  },
+  {
+    "name": "Not Spring, Love, or Cherry Blossoms",
+    "emojis": [
+      "🌸❤️🍦",
+      "🌸🚗🤍"
+    ],
+    "type": "song",
+    "popularity": 4
   },
   {
     "name": "Autumn Morning",
@@ -153,13 +183,101 @@
     "popularity": 5
   },
   {
+    "name": "Coin",
+    "emojis": [
+      "🪙🎲♣️",
+      "🎰🃏🪙",
+      "💃🏻🎙🪙"
+    ],
+    "type": "song",
+    "popularity": 4
+  },
+  {
+    "name": "Flu",
+    "emojis": [
+      "🤧🧟‍♀️💔"
+    ],
+    "type": "song",
+    "popularity": 5
+  },
+  {
     "name": "The Shower",
     "emojis": [
       "🚿🎶💧",
       "🛁🎵😌"
     ],
     "type": "song",
+    "popularity": 5
+  },
+  {
+    "name": "Havana",
+    "emojis": [
+      "🏝️🏄‍♀️🪼",
+      "🍍🥂🍊"
+    ],
+    "type": "song",
+    "popularity": 6
+  },
+  {
+    "name": "The Red Shoes",
+    "emojis": [
+      "👠🖤🤍",
+      "❤🥿🪇"
+    ],
+    "type": "song",
+    "popularity": 4
+  },
+  {
+    "name": "Shopper",
+    "emojis": [
+      "🍭🔭🎆",
+      "🪽🧚🏻‍♀️🥷"
+    ],
+    "type": "song",
+    "popularity": 7
+  },
+  {
+    "name": "Shh..",
+    "emojis": [
+      "🫡❤🤫",
+      "👩‍👧🌨❤"
+    ],
+    "type": "song",
+    "popularity": 4
+  },
+  {
+    "name": "Crayon",
+    "emojis": [
+      "🖍🖤💛"
+    ],
+    "type": "song",
     "popularity": 3
+  },
+  {
+    "name": "Above The Time",
+    "emojis": [
+      "⛵📰💜",
+      "🪿🫗🚂"
+    ],
+    "type": "song",
+    "popularity": 5
+  },
+  {
+    "name": "JamJam",
+    "emojis": [
+      "🍓🫦💋"
+    ],
+    "type": "song",
+    "popularity": 6
+  },
+  {
+    "name": "Red Queen",
+    "emojis": [
+      "❤👸🏻💋",
+      "🍷👑💃🏻"
+    ],
+    "type": "song",
+    "popularity": 5
   },
   {
     "name": "You Are the Best",
@@ -186,7 +304,7 @@
       "☕🖤🎶"
     ],
     "type": "drama",
-    "popularity": 6
+    "popularity": 7
   },
   {
     "name": "Dream High",
@@ -210,9 +328,27 @@
     "name": "Scarlet Heart",
     "emojis": [
       "❤️👑🕰️",
-      "👸🏯🌹"
+      "👸🏯🌹",
+      "🐺👘👑"
     ],
     "type": "drama",
     "popularity": 4
+  },
+  {
+    "name": "When Life Gives You Tangerines",
+    "emojis": [
+      "🍊👨‍👩‍👧‍👧🛖",
+      "🍊⛈️⛵"
+    ],
+    "type": "drama",
+    "popularity": 9
+  },
+  {
+    "name": "Broker",
+    "emojis": [
+      "🍼🚙🎡"
+    ],
+    "type": "drama",
+    "popularity": 6
   }
 ]

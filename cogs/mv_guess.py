@@ -175,7 +175,7 @@ class MVGuess(commands.Cog):
         return blur_io, orig_io
 
     @commands.command()
-    async def guess(self, ctx: commands.Context, timeout: int = 30):
+    async def guess(self, ctx: commands.Context, timeout: int = 60):
         """Start a "Guess the IU MV" game in this channel.
 
         Usage: `q guess [timeout_seconds]`

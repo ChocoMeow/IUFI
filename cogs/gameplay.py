@@ -223,7 +223,7 @@ class Gameplay(commands.Cog):
         if not filtered:
             return await ctx.reply(f"No entries found for category: {category}")
 
-        num_q = min(3, len(filtered))
+        num_q = min(5, len(filtered))
         # Weighted sampling without replacement based on 'popularity' (1..10). Default popularity=5.
         try:
             items = filtered.copy()
@@ -243,7 +243,7 @@ class Gameplay(commands.Cog):
         query = func.update_quest_progress(user, "PLAY_QUIZ_GAME", query={"$set": {"cooldown.quiz_game": time.time() + func.settings.COOLDOWN_BASE["roll"][1]}})
         await func.update_user(ctx.author.id, query)
 
-        view = EmojiQuizView(ctx.author, sampled, timeout_per_question=20)
+        view = EmojiQuizView(ctx.author, sampled, timeout_per_question=40)
         view.response = await ctx.reply(
             content=f"**This game ends** <t:{round(time.time() + view.total_time)}:R>",
             embed=view.build_embed(),

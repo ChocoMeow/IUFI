@@ -28,11 +28,11 @@ except Exception:
 
 # Reward probabilities mapping per points (1..5). Keys should match tier names from CardPool (e.g., 'common','rare','epic','legendary','mystic','celestial')
 REWARD_PROBABILITIES_BY_POINTS = {
-    1: {"common": 0.9, "rare": 0.09, "epic": 0.01},
-    2: {"common": 0.8, "rare": 0.17, "epic": 0.03},
-    3: {"common": 0.65, "rare": 0.25, "epic": 0.08, "legendary": 0.02},
-    4: {"common": 0.5, "rare": 0.3, "epic": 0.15, "legendary": 0.04, "mystic": 0.01},
-    5: {"common": 0.3, "rare": 0.35, "epic": 0.2, "legendary": 0.1, "mystic": 0.04, "celestial": 0.01},
+    1: {"common": 0.98, "rare": 0.02},
+    2: {"common": 0.9,  "rare": 0.09, "epic": 0.01},
+    3: {"common": 0.75, "rare": 0.18, "epic": 0.07},
+    4: {"common": 0.6,  "rare": 0.25, "epic": 0.12, "legendary": 0.03},
+    5: {"common": 0.45, "rare": 0.3,  "epic": 0.18, "legendary": 0.07},
 }
 
 class EmojiAnswerModal(discord.ui.Modal):
