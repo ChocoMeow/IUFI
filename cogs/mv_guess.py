@@ -23,6 +23,8 @@ class MVGuess(commands.Cog):
         self.bot = bot
         # channel ids where a game is currently running (prevents concurrent games in same channel)
         self._running_channels: set[int] = set()
+        self.invisible = False
+        self.emoji = "🎬"
 
     def _create_blurred_image(self, original_bytes: bytes, blur_radius: int) -> io.BytesIO:
         """Create a blurred version of an image from bytes.
@@ -187,7 +189,7 @@ class MVGuess(commands.Cog):
             entries = []
             try:
                 import json
-                mv_path = os.path.join(func.ROOT_DIR, "mv_videos.json")
+                mv_path = os.path.join(func.ROOT_DIR, "data", "mv_videos.json")
                 if os.path.exists(mv_path):
                     try:
                         with open(mv_path, encoding="utf8") as f:
@@ -195,7 +197,7 @@ class MVGuess(commands.Cog):
                     except json.JSONDecodeError as e:
                         return await ctx.reply(f"Error: Failed to parse mv_videos.json: {e}", delete_after=20)
                 else:
-                    return await ctx.reply("Error: mv_videos.json not found. Please add the file to the bot root.", delete_after=20)
+                    return await ctx.reply("Error: mv_videos.json not found. Please add the file to the bot 'data' folder.", delete_after=20)
             except Exception as e:
                 return await ctx.reply(f"Error: Could not load MV entries: {e}", delete_after=20)
 
@@ -206,7 +208,14 @@ class MVGuess(commands.Cog):
             def _get_title(e):
                 return e.get("title") or e.get("name") or e.get("name", "")
 
-            entry = random.choice(entries)
+            # Prefer entries with higher "popularity" more often. Default popularity = 5.
+            try:
+                weights = [max(1, min(10, int(e.get("popularity", 5)))) for e in entries]
+            except Exception:
+                weights = [1 for _ in entries]
+
+            # Use random.choices to pick according to weights
+            entry = random.choices(entries, weights=weights, k=1)[0]
             title = _get_title(entry) or ""
             youtube = entry.get("youtube_url") or entry.get("url")
 

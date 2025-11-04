@@ -206,7 +206,7 @@ class Gameplay(commands.Cog):
         # load emoji entries from JSON file
         try:
             import json
-            with open(func.ROOT_DIR + "/song_emojis.json", encoding="utf8") as f:
+            with open(os.path.join(func.ROOT_DIR, "data", "song_emojis.json"), encoding="utf8") as f:
                 entries = json.load(f)
         except Exception:
             entries = []
@@ -224,7 +224,19 @@ class Gameplay(commands.Cog):
             return await ctx.reply(f"No entries found for category: {category}")
 
         num_q = min(3, len(filtered))
-        sampled = random.sample(filtered, k=num_q)
+        # Weighted sampling without replacement based on 'popularity' (1..10). Default popularity=5.
+        try:
+            items = filtered.copy()
+            sampled = []
+            for _ in range(num_q):
+                weights = [max(1, min(10, int(e.get("popularity", 5)))) for e in items]
+                chosen = random.choices(items, weights=weights, k=1)[0]
+                sampled.append(chosen)
+                # remove the chosen item for subsequent picks
+                items.remove(chosen)
+        except Exception:
+            # fallback to uniform sampling
+            sampled = random.sample(filtered, k=num_q)
         # sampled is list of question dicts
 
         # set cooldown

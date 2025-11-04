@@ -5,7 +5,8 @@
       "☀️🎶🎤",
       "🌞🎼🎵"
     ],
-    "type": "song"
+    "type": "song",
+    "popularity": 10
   },
   {
     "name": "You & I",
@@ -13,7 +14,8 @@
       "🤝🎶💫",
       "👫🎵🌟"
     ],
-    "type": "song"
+    "type": "song",
+    "popularity": 7
   },
   {
     "name": "Through the Night",
@@ -21,7 +23,8 @@
       "🌙🕯️🎶",
       "🌌😌🎵"
     ],
-    "type": "song"
+    "type": "song",
+    "popularity": 8
   },
   {
     "name": "Love Poem",
@@ -29,7 +32,8 @@
       "💌🎵🕊️",
       "💗✍️🎶"
     ],
-    "type": "song"
+    "type": "song",
+    "popularity": 8
   },
   {
     "name": "Palette",
@@ -37,7 +41,8 @@
       "🎨🖌️🎶",
       "🖼️🎵🎨"
     ],
-    "type": "song"
+    "type": "song",
+    "popularity": 9
   },
   {
     "name": "Blueming",
@@ -45,7 +50,8 @@
       "🌸💙🎶",
       "💙💐🎵"
     ],
-    "type": "song"
+    "type": "song",
+    "popularity": 8
   },
   {
     "name": "Lilac",
@@ -53,7 +59,8 @@
       "💜🌸🚋",
       "🌸💜🚃"
     ],
-    "type": "song"
+    "type": "song",
+    "popularity": 7
   },
   {
     "name": "Celebrity",
@@ -61,7 +68,8 @@
       "⭐👩\u200d🎤🌟",
       "🎤✨⭐"
     ],
-    "type": "song"
+    "type": "song",
+    "popularity": 6
   },
   {
     "name": "BBIBBI",
@@ -69,7 +77,8 @@
       "🧡📵🚫",
       "💅🎯🚫"
     ],
-    "type": "song"
+    "type": "song",
+    "popularity": 9
   },
   {
     "name": "Eight",
@@ -77,7 +86,8 @@
       "8️⃣🎧🧑\u200d🎤",
       "🎹🎶8️⃣"
     ],
-    "type": "song"
+    "type": "song",
+    "popularity": 9
   },
   {
     "name": "Friday",
@@ -85,7 +95,8 @@
       "🎉🍷🎶",
       "🕺💿🎵"
     ],
-    "type": "song"
+    "type": "song",
+    "popularity": 7
   },
   {
     "name": "Twenty Three",
@@ -93,7 +104,8 @@
       "2️⃣3️⃣🎂🎶",
       "🎈🕊️23"
     ],
-    "type": "song"
+    "type": "song",
+    "popularity": 5
   },
   {
     "name": "Ending Scene",
@@ -101,7 +113,8 @@
       "🎬😢🎶",
       "📽️💔🎵"
     ],
-    "type": "song"
+    "type": "song",
+    "popularity": 6
   },
   {
     "name": "Hold My Hand",
@@ -109,7 +122,8 @@
       "🤝🎬🎶",
       "🤲🎵🎥"
     ],
-    "type": "song"
+    "type": "song",
+    "popularity": 6
   },
   {
     "name": "Autumn Morning",
@@ -117,7 +131,8 @@
       "🍂☕🎶",
       "🍁🌥️🎵"
     ],
-    "type": "song"
+    "type": "song",
+    "popularity": 4
   },
   {
     "name": "My Old Story",
@@ -125,7 +140,8 @@
       "📖🎶😭",
       "📝🎵💭"
     ],
-    "type": "song"
+    "type": "song",
+    "popularity": 4
   },
   {
     "name": "Someday",
@@ -133,7 +149,8 @@
       "🌈✨🎶",
       "🤞🎵🌟"
     ],
-    "type": "song"
+    "type": "song",
+    "popularity": 5
   },
   {
     "name": "The Shower",
@@ -141,7 +158,8 @@
       "🚿🎶💧",
       "🛁🎵😌"
     ],
-    "type": "song"
+    "type": "song",
+    "popularity": 3
   },
   {
     "name": "You Are the Best",
@@ -149,7 +167,8 @@
       "🏆🎶💖",
       "👏🎵🌟"
     ],
-    "type": "song"
+    "type": "song",
+    "popularity": 6
   },
   {
     "name": "Hotel del Luna",
@@ -157,7 +176,8 @@
       "🏨🌙👑",
       "🕯️👻💫"
     ],
-    "type": "drama"
+    "type": "drama",
+    "popularity": 8
   },
   {
     "name": "My Mister",
@@ -165,7 +185,8 @@
       "🏠🤝🎭",
       "☕🖤🎶"
     ],
-    "type": "drama"
+    "type": "drama",
+    "popularity": 6
   },
   {
     "name": "Dream High",
@@ -173,7 +194,8 @@
       "🎓🎤🌟",
       "🏫🎵✨"
     ],
-    "type": "drama"
+    "type": "drama",
+    "popularity": 5
   },
   {
     "name": "The Producers",
@@ -181,7 +203,8 @@
       "🎬📺🎶",
       "🎥🎙️✨"
     ],
-    "type": "drama"
+    "type": "drama",
+    "popularity": 5
   },
   {
     "name": "Scarlet Heart",
@@ -189,7 +212,7 @@
       "❤️👑🕰️",
       "👸🏯🌹"
     ],
-    "type": "drama"
+    "type": "drama",
+    "popularity": 4
   }
 ]
-

@@ -2,26 +2,31 @@
   {
     "title": "Blueming",
     "youtube_url": "https://www.youtube.com/watch?v=D1PvIWdJ8xo",
-    "thumbnail": ""
+    "thumbnail": "",
+    "popularity": 8
   },
   {
     "title": "BBIBBI",
     "youtube_url": "https://www.youtube.com/watch?v=nM0xDI5R50E",
-    "thumbnail": ""
+    "thumbnail": "",
+    "popularity": 9
   },
   {
     "title": "Palette",
     "youtube_url": "https://www.youtube.com/watch?v=d9IxdwEFk1c",
-    "thumbnail": ""
+    "thumbnail": "",
+    "popularity": 8
   },
   {
     "title": "Lilac",
     "youtube_url": "https://www.youtube.com/watch?v=v7bnOxV4jAc",
-    "thumbnail": ""
+    "thumbnail": "",
+    "popularity": 7
   },
   {
     "title": "Good Day",
     "youtube_url": "https://www.youtube.com/watch?v=jeqdYqsrsA0",
-    "thumbnail": ""
+    "thumbnail": "",
+    "popularity": 10
   }
 ]

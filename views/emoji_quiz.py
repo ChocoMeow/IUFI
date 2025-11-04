@@ -20,7 +20,8 @@ EMOJI_QUIZ_SETTINGS = {
 
 # Load song emojis from file
 try:
-    with open(func.ROOT_DIR + "/song_emojis.json", encoding="utf8") as f:
+    import os
+    with open(os.path.join(func.ROOT_DIR, "data", "song_emojis.json"), encoding="utf8") as f:
         SONG_EMOJIS: dict = json.load(f)
 except Exception:
     SONG_EMOJIS = {}
