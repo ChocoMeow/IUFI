@@ -218,8 +218,8 @@ class Player(VoiceProtocol):
         query: Dict[str, Any] = {"$inc": {"game_state.music_game.points": points}}
         
         # Feature flag: Use reward card system or traditional rewards
-        use_reward_card = func.settings.get("GIVE_REWARD_CARD", False)
-        
+        use_reward_card = func.settings.GIVE_REWARD_CARD
+
         if not use_reward_card:
             # Traditional reward system (milestone rewards)
             rewards: Dict[str, Dict[str, Union[str, int]]] = {}
@@ -280,7 +280,8 @@ class Player(VoiceProtocol):
             )
             
             # Check if we should give a reward card based on point thresholds
-            probs_config = func.settings.get("REWARD_CARD_PROBABILITIES", {}).get("MUSIC_QUIZ", {})
+            probs_config = getattr(func.settings, "REWARD_CARD_PROBABILITIES", {}) or {}
+            probs_config = probs_config.get("MUSIC_QUIZ", {})
             selected_probs = None
             
             # Find if user has crossed a threshold (every 10, 100, etc.)

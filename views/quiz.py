@@ -224,8 +224,8 @@ class QuizView(discord.ui.View):
                             f"{'🔥 Points:':<12} {state['points']} ({'+' if total_points >= 0 else '-'}{abs(total_points)})```"
 
         # Feature flag: Use reward card system or traditional rewards
-        use_reward_card = func.settings.get("GIVE_REWARD_CARD", False)
-        
+        use_reward_card = func.settings.GIVE_REWARD_CARD
+
         if not use_reward_card:
             # Traditional reward system (promotion rewards)
             if new_record:
@@ -284,7 +284,8 @@ class QuizView(discord.ui.View):
                 from .reward_card import RewardCardView
                 
                 # Determine probabilities based on points
-                probs_config = func.settings.get("REWARD_CARD_PROBABILITIES", {}).get("NORMAL_QUIZ", {})
+                probs_config = getattr(func.settings, "REWARD_CARD_PROBABILITIES", {}) or {}
+                probs_config = probs_config.get("NORMAL_QUIZ", {})
                 # Find the appropriate tier based on current points
                 current_points = state['points']
                 selected_probs = None

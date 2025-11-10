@@ -32,7 +32,7 @@ class Tasks(commands.Cog):
 
     async def distribute_monthly_quiz_rewards(self) -> None:
         # Feature flag: Skip monthly rewards if reward card system is enabled
-        if func.settings.get("GIVE_REWARD_CARD", False):
+        if func.settings.GIVE_REWARD_CARD:
             func.logger.info("Skipping monthly quiz rewards distribution - GIVE_REWARD_CARD is enabled")
             return
         

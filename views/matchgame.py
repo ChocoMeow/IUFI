@@ -138,8 +138,8 @@ class MatchGame(discord.ui.View):
         matched_raw = self.matched()
         
         # Feature flag: Use reward card system or traditional rewards
-        use_reward_card = func.settings.get("GIVE_REWARD_CARD", False)
-        
+        use_reward_card = func.settings.GIVE_REWARD_CARD
+
         if not use_reward_card:
             # Traditional reward system
             embed = discord.Embed(title="Game Ended (Rewards)", color=discord.Color.random())
@@ -219,8 +219,8 @@ class MatchGame(discord.ui.View):
                 from .reward_card import RewardCardView
                 
                 # Get probabilities for this level and match count
-                probs_config = func.settings.get("REWARD_CARD_PROBABILITIES", {}).get("MATCH_GAME", {})
-                level_probs = probs_config.get(self._level, {})
+                probs_config = getattr(func.settings, "REWARD_CARD_PROBABILITIES", {}) or {}
+                level_probs = probs_config.get("MATCH_GAME", {}).get(self._level, {})
                 selected_probs = level_probs.get(str(matched_raw))
                 
                 if selected_probs:
