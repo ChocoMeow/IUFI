@@ -47,6 +47,11 @@
                 "progresses": {},
                 "next_update": 0
             }
+        },
+        "pvp": {
+            "wins": 0,
+            "losses": 0,
+            "total_matches": 0
         }
     },
     "COOLDOWN_BASE": {
@@ -493,5 +498,5 @@
         },
         "max-history": 30
     },
-    "PVP_REWARDS_ENABLED": true
+    "PVP_REWARDS_ENABLED": false
 }

@@ -527,6 +527,37 @@ class PvPMatch:
         else:
             match_winner = None
 
+        # Update PVP stats for both players
+        try:
+            # Update challenger stats
+            if match_winner == self.challenger:
+                await func.update_user(self.challenger.id, {
+                    "$inc": {"pvp.wins": 1, "pvp.total_matches": 1}
+                })
+                await func.update_user(self.opponent.id, {
+                    "$inc": {"pvp.losses": 1, "pvp.total_matches": 1}
+                })
+            elif match_winner == self.opponent:
+                await func.update_user(self.challenger.id, {
+                    "$inc": {"pvp.losses": 1, "pvp.total_matches": 1}
+                })
+                await func.update_user(self.opponent.id, {
+                    "$inc": {"pvp.wins": 1, "pvp.total_matches": 1}
+                })
+            else:
+                # Draw - just increment total matches for both
+                await func.update_user(self.challenger.id, {
+                    "$inc": {"pvp.total_matches": 1}
+                })
+                await func.update_user(self.opponent.id, {
+                    "$inc": {"pvp.total_matches": 1}
+                })
+        except Exception as e:
+            try:
+                func.logger.exception(f"Failed to update PVP stats: {e}")
+            except Exception:
+                pass
+
         final_embed = discord.Embed(title="PvP Match Result", color=discord.Color.gold())
         if match_winner:
             final_embed.description = f"Winner: {match_winner.mention}\nScore: {self.wins[self.challenger.id]} - {self.wins[self.opponent.id]}"
@@ -537,7 +568,7 @@ class PvPMatch:
 
         # === REWARD FLOW: offer three hidden cards from the loser for the winner to pick one ===
         if not func.settings.PVP_REWARDS_ENABLED :
-            return 
+            return
 
         try:
             if match_winner is None:

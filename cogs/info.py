@@ -309,6 +309,39 @@ class Info(commands.Cog):
 
         await ctx.reply(embed=embed)
 
+    @leaderboard.command(aliases=["p"])
+    async def pvp(self, ctx: commands.Context):
+        """Shows the IUFI PVP Wins leaderboard."""
+        users = await func.USERS_DB.find().sort("pvp.wins", -1).limit(10).to_list(10)
+        user = await func.get_user(ctx.author.id)
+        rank = await func.USERS_DB.count_documents({'pvp.wins': {'$gt': user.get('pvp', {}).get('wins', 0)}}) + 1
+
+        embed = discord.Embed(title="🏆   PVP Wins Leaderboard", color=discord.Color.random())
+        embed.description = f"**Your current position is `{rank}`**\n"
+
+        description = ""
+        for index, top_user in enumerate(users):
+            member = self.bot.get_user(top_user['_id'])
+            wins = top_user.get('pvp', {}).get('wins', 0)
+            matches = top_user.get('pvp', {}).get('total_matches', 0)
+            losses = top_user.get('pvp', {}).get('losses', 0)
+            if member:
+                description += f"{LEADERBOARD_EMOJIS[index if index <= 2 else 3]} " + highlight_text(f"{func.truncate_string(member.display_name):<18} 🏆{wins:<3} 💀{losses:<3} ⚔️{matches:<3}", member == ctx.author)
+
+        # Show current user if not in top 10
+        user_wins = user.get('pvp', {}).get('wins', 0)
+        user_matches = user.get('pvp', {}).get('total_matches', 0)
+        user_losses = user.get('pvp', {}).get('losses', 0)
+        if rank > len(users):
+            description += ("┇\n" if rank > len(users) + 1 else "") + f"{LEADERBOARD_EMOJIS[3]} " + highlight_text(f"{func.truncate_string(ctx.author.display_name):<18} 🏆{user_wins:<3} 💀{user_losses:<3} ⚔️{user_matches:<3}", True)
+
+        if not description:
+            description = "The leaderboard is currently empty."
+
+        embed.description += f"```ansi\n{description}```"
+        embed.set_thumbnail(url=icon.url if (icon := ctx.guild.icon) else None)
+        await ctx.reply(embed=embed)
+
     @commands.command(aliases=["h"])
     async def help(self, ctx: commands.Context, *, command: str = None):
         """Lists all the commands in IUFI.
