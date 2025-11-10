@@ -97,7 +97,7 @@ class Tasks(commands.Cog):
 
     async def reset_user_cards(self) -> None:
         current_time = time.time()
-        last_warning_threshold = current_time - (func.settings.RESET_CARD_DAY - 1 * 24 * 60 * 60)
+        last_warning_threshold = current_time - ((func.settings.RESET_CARD_DAY - 1) * 24 * 60 * 60)
         cutoff_threshold = current_time - (func.settings.RESET_CARD_DAY * 24 * 60 * 60)
 
         user_cursor = func.USERS_DB.find({
@@ -174,7 +174,7 @@ class Tasks(commands.Cog):
         except Exception as e:
             func.logger.error("An exception occurred in the drop card task.", exc_info=e)
 
-    @tasks.loop(minutes=1.0)
+    @tasks.loop(minutes=60.0)
     async def cache_clear(self):
         await self.bot.wait_until_ready()
 
