@@ -536,6 +536,9 @@ class PvPMatch:
         await self.message.channel.send(embed=final_embed)
 
         # === REWARD FLOW: offer three hidden cards from the loser for the winner to pick one ===
+        if not func.settings.PVP_REWARDS_ENABLED :
+            return 
+
         try:
             if match_winner is None:
                 return
@@ -837,3 +840,5 @@ class ChallengeView(discord.ui.View):
         except Exception:
             pass
         self.stop()
+
+
