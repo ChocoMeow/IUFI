@@ -55,7 +55,7 @@ class Gameplay(commands.Cog):
             view.add_item(discord.ui.Button(label='Beginner Guide', emoji='📗', url='https://docs.google.com/document/d/1VAD20wZQ56S_wDeMJlwIKn_jImIPuxh2lgy1fn17z0c/edit'))
             await ctx.reply(f"**Welcome to IUFI! Please have a look at the guide or use `qhelp` to begin.**", view=view)
         
-        pity_hits = [tier_name for tier_name, pity_limit in user.get("pity_count").items() if pity_limit >= func.settings.PITY_SETTINGS.get(tier_name)]
+        pity_hits = [tier_name for tier_name, pity_limit in user.get("pity_count", {}).items() if pity_limit >= func.settings.PITY_SETTINGS.get(tier_name)]
         included_cards = tier + pity_hits if tier else pity_hits
         cards = iufi.CardPool.roll(included=included_cards, luck_rates=None if tier else actived_potions.get("luck", None))
         image_bytes, image_format = await iufi.gen_cards_view(cards)
