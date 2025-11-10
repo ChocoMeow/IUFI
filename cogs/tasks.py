@@ -174,7 +174,7 @@ class Tasks(commands.Cog):
         except Exception as e:
             func.logger.error("An exception occurred in the drop card task.", exc_info=e)
 
-    @tasks.loop(minutes=60.0)
+    @tasks.loop(minutes=1.0)
     async def cache_clear(self):
         await self.bot.wait_until_ready()
 

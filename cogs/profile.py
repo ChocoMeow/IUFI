@@ -77,15 +77,23 @@ class Profile(commands.Cog):
         })
 
         embed = discord.Embed(title=f"👤 {member.display_name}'s Profile", color=discord.Color.random())
-        embed.description = f"```{bio}```" if bio else ""
-        embed.description += f"```📙 Photocards: {len(user.get('cards', []))}/{func.get_user_card_limit(user)}\n⚔️ Level: {level} ({(exp / func.settings.DEFAULT_EXP) * 100:.1f}%)\n💤 Last Active: {func.cal_last_online_time(user.get("last_active_time"), "Not Active")}```\u200b"
+        embed.description = f"```{bio}```\u200b" if bio else ""
+        embed.description += (
+            f"""```📙 Photocards: {len(user.get('cards', []))}/{func.get_user_card_limit(user)}
+⚔️ Level: {level} ({(exp / func.settings.DEFAULT_EXP) * 100:.1f}%)
+💤 Last Active: {func.cal_last_online_time(user.get('last_active_time'), 'Not Active')}```\u200b"""
+        )
 
         embed.add_field(name="Ranked Stats:", value=f"> <:{rank_name}:{rank_emoji}> {rank_name.title()} (`{quiz_stats['points']}`)\n> 🎯 K/DA: `{round(quiz_stats['correct'] / total_questions, 1) if total_questions else 0}` (C: `{quiz_stats['correct']}` | W: `{quiz_stats['wrong'] + quiz_stats['timeout']}`)\n> 🕒 Average Time: `{func.convert_seconds(quiz_stats['average_time'])}`", inline=True)
         embed.add_field(name="Card Match Stats:", value="\n".join(f"> {DAILY_ROWS[int(level) - 4]} **Level {level}**: " + (f"🃏 `{stats.get('matched', 0)}` 🕒 `{func.convert_seconds(stats.get('finished_time'))}`" if (stats := card_match_stats.get(level)) else "Not attempt yet") for level in func.settings.MATCH_GAME_SETTINGS.keys()), inline=True)
 
-        # Calculate PVP win rate
-        win_rate = round((pvp_stats['wins'] / pvp_stats['total_matches']) * 100, 1) if pvp_stats['total_matches'] > 0 else 0
-        embed.add_field(name="PVP Stats:", value=f"> ⚔️ Matches: `{pvp_stats['total_matches']}`\n> 🏆 Wins: `{pvp_stats['wins']}`\n> 💀 Losses: `{pvp_stats['losses']}`\n> 📊 Win Rate: `{win_rate}%`", inline=True)
+        # Calculate PVP win rate safely using .get() to avoid KeyError if fields are missing
+        wins = pvp_stats.get('wins', 0)
+        losses = pvp_stats.get('losses', 0)
+        total_matches = pvp_stats.get('total_matches', wins + losses)
+
+        win_rate = round((wins / total_matches) * 100, 1) if total_matches > 0 else 0
+        embed.add_field(name="PVP Stats:", value=f"> ⚔️ Matches: `{total_matches}`\n> 🏆 Wins: `{wins}`\n> 💀 Losses: `{losses}`\n> 📊 Win Rate: `{win_rate}%`", inline=True)
 
         card = iufi.CardPool.get_card(user["profile"]["main"])
         if card and card.owner_id == user["_id"]:

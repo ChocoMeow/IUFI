@@ -52,6 +52,10 @@
             "wins": 0,
             "losses": 0,
             "total_matches": 0
+        },
+        "extra_props": {
+            "extra_card_slots": 0,
+            "slot_purchases": 0
         }
     },
     "COOLDOWN_BASE": {

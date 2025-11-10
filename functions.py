@@ -154,15 +154,31 @@ def cal_retry_time(end_time: float, default: str = None) -> str | None:
     return (f"{hours}h " if hours > 0 else "") + f"{minutes}m {seconds}s"
 
 def cal_last_online_time(start_time: float, default: str = "") -> str | None:
+    """
+    Return a compact two-unit representation of how long ago `start_time` was.
+
+    Formats:
+      - If >= 1 day: "Xd Yh" (days and hours)
+      - Else: "Xh Ym" (hours and minutes)
+
+    If `start_time` is falsy or in the future, returns `default`.
+    """
     if not start_time or start_time > (current_time := time.time()):
         return default
 
-    duration_since_start: float = int(current_time - start_time)
+    # total seconds elapsed
+    total_seconds = int(current_time - start_time)
 
-    minutes, seconds = divmod(duration_since_start, 60)
-    hours, minutes = divmod(minutes, 60)
+    # If duration is at least 1 day, show days and hours
+    days = total_seconds // 86_400
+    if days >= 1:
+        hours = (total_seconds % 86_400) // 3600
+        return f"{days}d {hours}h"
 
-    return (f"{hours}h " if hours > 0 else "") + f"{minutes}m {seconds}s"
+    # Otherwise show hours and minutes
+    hours = total_seconds // 3600
+    minutes = (total_seconds % 3600) // 60
+    return f"{hours}h {minutes}m"
 
 def calculate_level(exp: int) -> tuple[int, int]:
     level = 0
