@@ -498,5 +498,65 @@
         },
         "max-history": 30
     },
-    "PVP_REWARDS_ENABLED": false
+    "PVP_REWARDS_ENABLED": false,
+    "GIVE_REWARD_CARD": false,
+    "REWARD_CARD_PROBABILITIES": {
+        "MUSIC_QUIZ": {
+            "10": {"common": 0.98, "rare": 0.02},
+            "20": {"common": 0.95, "rare": 0.045, "epic": 0.005},
+            "30": {"common": 0.90, "rare": 0.08, "epic": 0.02},
+            "40": {"common": 0.85, "rare": 0.11, "epic": 0.04},
+            "50": {"common": 0.80, "rare": 0.14, "epic": 0.06},
+            "100": {"common": 0.70, "rare": 0.20, "epic": 0.09, "legendary": 0.01},
+            "200": {"common": 0.60, "rare": 0.25, "epic": 0.13, "legendary": 0.02},
+            "300": {"common": 0.50, "rare": 0.30, "epic": 0.17, "legendary": 0.03},
+            "500": {"common": 0.40, "rare": 0.35, "epic": 0.20, "legendary": 0.05},
+            "1000": {"common": 0.30, "rare": 0.35, "epic": 0.25, "legendary": 0.10},
+            "5000": {"common": 0.20, "rare": 0.30, "epic": 0.30, "legendary": 0.15, "mystic": 0.05}
+        },
+        "NORMAL_QUIZ": {
+            "5": {"common": 0.95, "rare": 0.05},
+            "10": {"common": 0.90, "rare": 0.08, "epic": 0.02},
+            "15": {"common": 0.85, "rare": 0.11, "epic": 0.04},
+            "20": {"common": 0.75, "rare": 0.18, "epic": 0.06, "legendary": 0.01},
+            "25": {"common": 0.65, "rare": 0.23, "epic": 0.10, "legendary": 0.02},
+            "30": {"common": 0.55, "rare": 0.28, "epic": 0.14, "legendary": 0.03},
+            "40": {"common": 0.45, "rare": 0.32, "epic": 0.18, "legendary": 0.05},
+            "50": {"common": 0.35, "rare": 0.35, "epic": 0.22, "legendary": 0.08}
+        },
+        "MATCH_GAME": {
+            "1": {
+                "1": {"common": 0.98, "rare": 0.02},
+                "2": {"common": 0.95, "rare": 0.045, "epic": 0.005},
+                "3": {"common": 0.90, "rare": 0.09, "epic": 0.01}
+            },
+            "2": {
+                "1": {"common": 0.95, "rare": 0.05},
+                "2": {"common": 0.92, "rare": 0.07, "epic": 0.01},
+                "3": {"common": 0.88, "rare": 0.10, "epic": 0.02},
+                "4": {"common": 0.82, "rare": 0.14, "epic": 0.04},
+                "5": {"common": 0.75, "rare": 0.19, "epic": 0.06},
+                "6": {"common": 0.65, "rare": 0.26, "epic": 0.08, "legendary": 0.01}
+            },
+            "3": {
+                "1": {"common": 0.93, "rare": 0.07},
+                "2": {"common": 0.88, "rare": 0.10, "epic": 0.02},
+                "3": {"common": 0.82, "rare": 0.14, "epic": 0.04},
+                "4": {"common": 0.76, "rare": 0.18, "epic": 0.06},
+                "5": {"common": 0.70, "rare": 0.22, "epic": 0.07, "legendary": 0.01},
+                "6": {"common": 0.64, "rare": 0.25, "epic": 0.09, "legendary": 0.02},
+                "7": {"common": 0.58, "rare": 0.28, "epic": 0.11, "legendary": 0.03},
+                "8": {"common": 0.50, "rare": 0.32, "epic": 0.14, "legendary": 0.04},
+                "9": {"common": 0.42, "rare": 0.35, "epic": 0.18, "legendary": 0.05},
+                "10": {"common": 0.30, "rare": 0.35, "epic": 0.25, "legendary": 0.10}
+            }
+        },
+        "EMOJI_QUIZ": {
+            "1": {"common": 0.98, "rare": 0.02},
+            "2": {"common": 0.9, "rare": 0.09, "epic": 0.01},
+            "3": {"common": 0.75, "rare": 0.18, "epic": 0.07},
+            "4": {"common": 0.6, "rare": 0.25, "epic": 0.12, "legendary": 0.03},
+            "5": {"common": 0.45, "rare": 0.3, "epic": 0.18, "legendary": 0.07}
+        }
+    }
 }

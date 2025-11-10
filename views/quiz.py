@@ -223,41 +223,46 @@ class QuizView(discord.ui.View):
                             f"{'🕘 Avg Time:':<12} {func.convert_seconds(average_time)} {'🔺' if average_time < state['average_time'] else '🔻'}\n" \
                             f"{'🔥 Points:':<12} {state['points']} ({'+' if total_points >= 0 else '-'}{abs(total_points)})```"
 
-        if new_record:
-            rank: tuple[str, int] = QP.get_rank(state["points"])
-            highest_rank: tuple[str, int] = QP.get_rank(old_highest_points)
-            rank_list = list(func.settings.RANK_BASE.keys())
+        # Feature flag: Use reward card system or traditional rewards
+        use_reward_card = func.settings.get("GIVE_REWARD_CARD", False)
+        
+        if not use_reward_card:
+            # Traditional reward system (promotion rewards)
+            if new_record:
+                rank: tuple[str, int] = QP.get_rank(state["points"])
+                highest_rank: tuple[str, int] = QP.get_rank(old_highest_points)
+                rank_list = list(func.settings.RANK_BASE.keys())
 
-            if rank[0] in rank_list[rank_list.index(highest_rank[0]) + 1:]:
-                embed.description += f"\n<:{rank[0]}:{rank[1]}> **{rank[0].title()} Promotion Rewards**```"
-                for index, reward in func.settings.RANK_BASE[rank[0]]["rewards"].items():
-                    if isinstance(reward[0], list):
-                        reward = choice(reward)
-                    
-                    reward_name, amount = reward
-                    if "$inc" not in query:
-                        query["$inc"] = {}
+                if rank[0] in rank_list[rank_list.index(highest_rank[0]) + 1:]:
+                    embed.description += f"\n<:{rank[0]}:{rank[1]}> **{rank[0].title()} Promotion Rewards**```"
+                    for index, reward in func.settings.RANK_BASE[rank[0]]["rewards"].items():
+                        if isinstance(reward[0], list):
+                            reward = choice(reward)
+                        
+                        reward_name, amount = reward
+                        if "$inc" not in query:
+                            query["$inc"] = {}
 
-                    query["$inc"][reward_name] = amount
-                    reward_name = reward_name.split(".")
+                        query["$inc"][reward_name] = amount
+                        reward_name = reward_name.split(".")
 
-                    embed.description += f"{index}. "
-                    if reward_name[0] == "candies":
-                        embed.description += f"{'🍬 Candies':<18} x{amount}\n"
-                    
-                    elif reward_name[0] == "roll":
-                        roll_data = func.settings.TIERS_BASE.get(reward_name[1])
-                        embed.description += f"{roll_data[0]} {reward_name[1].title() + ' Roll':<16} x{amount}\n"
+                        embed.description += f"{index}. "
+                        if reward_name[0] == "candies":
+                            embed.description += f"{'🍬 Candies':<18} x{amount}\n"
+                        
+                        elif reward_name[0] == "roll":
+                            roll_data = func.settings.TIERS_BASE.get(reward_name[1])
+                            embed.description += f"{roll_data[0]} {reward_name[1].title() + ' Roll':<16} x{amount}\n"
 
-                    elif reward_name[0] == "exp":
-                        embed.description += f"{'⚔️ Exp':<19} x{amount}\n"
+                        elif reward_name[0] == "exp":
+                            embed.description += f"{'⚔️ Exp':<19} x{amount}\n"
 
-                    else:
-                        reward_name = reward_name[1].split("_")
-                        potion_data = func.settings.POTIONS_BASE.get(reward_name[0])
-                        embed.description += f"{potion_data.get('emoji') + ' ' + reward_name[0].title() + ' ' + reward_name[1].upper() + ' Potion':<18} x{amount}\n"
+                        else:
+                            reward_name = reward_name[1].split("_")
+                            potion_data = func.settings.POTIONS_BASE.get(reward_name[0])
+                            embed.description += f"{potion_data.get('emoji') + ' ' + reward_name[0].title() + ' ' + reward_name[1].upper() + ' Potion':<18} x{amount}\n"
 
-                embed.description += "```"
+                    embed.description += "```"
 
         await func.update_user(self.author.id, query)
 
@@ -272,6 +277,53 @@ class QuizView(discord.ui.View):
         )
 
         await self.response.edit(content="This quiz has expired.", embed=embed, view=None)
+        
+        # Feature flag: Give reward card based on points
+        if use_reward_card and state['points'] > 0:
+            try:
+                from .reward_card import RewardCardView
+                
+                # Determine probabilities based on points
+                probs_config = func.settings.get("REWARD_CARD_PROBABILITIES", {}).get("NORMAL_QUIZ", {})
+                # Find the appropriate tier based on current points
+                current_points = state['points']
+                selected_probs = None
+                for threshold_str in sorted(probs_config.keys(), key=int):
+                    threshold = int(threshold_str)
+                    if current_points >= threshold:
+                        selected_probs = probs_config[threshold_str]
+                
+                if selected_probs:
+                    # Create and send reward card view
+                    reward_view = RewardCardView(None, self.author, selected_probs, initial_cost=10, cost_currency_field="candies", timeout=120)
+                    await reward_view._roll_card()
+                    
+                    reward_embed = reward_view.build_embed()
+                    file = None
+                    if reward_view.current_card:
+                        try:
+                            img_bytes = await reward_view.current_card.image_bytes()
+                            filename = f"{reward_view.current_card.id}.webp"
+                            file = discord.File(img_bytes, filename=filename)
+                            reward_embed.set_image(url=f"attachment://{filename}")
+                        except Exception:
+                            file = None
+                    
+                    reward_content = f"**{self.author.mention} This reward ends <t:{reward_view.expires_at}:R>**\n🎁 Card reward for reaching {current_points} points!"
+                    reward_msg = await self.response.channel.send(
+                        content=reward_content,
+                        embed=reward_embed,
+                        file=file,
+                        view=reward_view
+                    )
+                    reward_view.message = reward_msg
+            except Exception:
+                # Fail silently but log
+                try:
+                    func.logger.exception("Failed to present normal quiz reward card view")
+                except:
+                    pass
+        
         self.stop()
         
     def build_embed(self) -> discord.Embed:
