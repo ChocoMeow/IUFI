@@ -550,6 +550,13 @@
                 "9": {"common": 0.42, "rare": 0.35, "epic": 0.18, "legendary": 0.05},
                 "10": {"common": 0.30, "rare": 0.35, "epic": 0.25, "legendary": 0.10}
             }
+        },
+        "EMOJI_QUIZ": {
+            "1": {"common": 0.98, "rare": 0.02},
+            "2": {"common": 0.9, "rare": 0.09, "epic": 0.01},
+            "3": {"common": 0.75, "rare": 0.18, "epic": 0.07},
+            "4": {"common": 0.6, "rare": 0.25, "epic": 0.12, "legendary": 0.03},
+            "5": {"common": 0.45, "rare": 0.3, "epic": 0.18, "legendary": 0.07}
         }
     }
 }

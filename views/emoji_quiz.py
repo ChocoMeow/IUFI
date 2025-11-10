@@ -26,15 +26,6 @@ try:
 except Exception:
     SONG_EMOJIS = {}
 
-# Reward probabilities mapping per points (1..5). Keys should match tier names from CardPool (e.g., 'common','rare','epic','legendary','mystic','celestial')
-REWARD_PROBABILITIES_BY_POINTS = {
-    1: {"common": 0.98, "rare": 0.02},
-    2: {"common": 0.9,  "rare": 0.09, "epic": 0.01},
-    3: {"common": 0.75, "rare": 0.18, "epic": 0.07},
-    4: {"common": 0.6,  "rare": 0.25, "epic": 0.12, "legendary": 0.03},
-    5: {"common": 0.45, "rare": 0.3,  "epic": 0.18, "legendary": 0.07},
-}
-
 class EmojiAnswerModal(discord.ui.Modal):
     def __init__(self, prompt: str, *args, **kwargs) -> None:
         super().__init__(title="Enter your guess")
@@ -181,7 +172,9 @@ class EmojiQuizView(discord.ui.View):
                 from .reward_card import RewardCardView
 
                 points = min(5, int(total_points))
-                probs = REWARD_PROBABILITIES_BY_POINTS.get(points, REWARD_PROBABILITIES_BY_POINTS[5])
+                # Get probabilities from settings
+                probs_config = func.settings.get("REWARD_CARD_PROBABILITIES", {}).get("EMOJI_QUIZ", {})
+                probs = probs_config.get(str(points), probs_config.get("5", {}))
 
                 # Create the reward view (we won't call its send method; we'll roll a card and post on the same channel)
                 reward_view = RewardCardView(None, self.author, probs, initial_cost=10, cost_currency_field="candies", timeout=120)
