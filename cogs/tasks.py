@@ -31,6 +31,11 @@ class Tasks(commands.Cog):
             self.bot.loop.create_task(self.schedule_message(user, cd, message))
 
     async def distribute_monthly_quiz_rewards(self) -> None:
+        # Feature flag: Skip monthly rewards if reward card system is enabled
+        if func.settings.get("GIVE_REWARD_CARD", False):
+            func.logger.info("Skipping monthly quiz rewards distribution - GIVE_REWARD_CARD is enabled")
+            return
+        
         start_time, end_time = func.get_month_unix_timestamps()
         if end_time - time.time() > 3_600:
             return
