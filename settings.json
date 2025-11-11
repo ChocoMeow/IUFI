@@ -503,7 +503,7 @@
         "max-history": 30
     },
     "PVP_REWARDS_ENABLED": false,
-    "GIVE_REWARD_CARD": false,
+    "GIVE_REWARD_CARD": true,
     "REWARD_CARD_PROBABILITIES": {
         "MUSIC_QUIZ": {
             "10": {"common": 0.98, "rare": 0.02},

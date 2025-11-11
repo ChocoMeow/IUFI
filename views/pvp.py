@@ -810,6 +810,10 @@ class ChallengeView(discord.ui.View):
         if self.opponent and interaction.user.id != self.opponent.id:
             return await interaction.response.send_message("This challenge is not for you.", ephemeral=True)
 
+        # Prevent the challenger from accepting their own challenge (covers open challenges)
+        if interaction.user.id == self.challenger.id:
+            return await interaction.response.send_message("You cannot accept your own challenge.", ephemeral=True)
+
         # create PvPMatch
         opponent = interaction.user
         challenger = self.challenger
@@ -871,5 +875,3 @@ class ChallengeView(discord.ui.View):
         except Exception:
             pass
         self.stop()
-
-
