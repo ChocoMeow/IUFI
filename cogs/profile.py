@@ -9,7 +9,8 @@ from views import (
 )
 from typing import (
     Dict,
-    Any
+    Any,
+    Optional,
 )
 
 DAILY_ROWS: list[str] = ["🟥", "🟧", "🟨", "🟩", "🟦", "🟪"]
@@ -36,6 +37,94 @@ def generate_progress_bar(total, progress_percentage, filled='⣿', in_progress=
 
     return progress_bar
 
+class StatsView(discord.ui.View):
+    def __init__(self, ctx: commands.Context, member: discord.Member):
+        super().__init__(timeout=None)
+        self.ctx = ctx
+        self.member = member
+
+    @discord.ui.button(label="Game Stats", style=discord.ButtonStyle.primary)
+    async def show_stats(self, interaction: discord.Interaction, button: discord.ui.Button):
+        """Sends the full game stats when the button is clicked."""
+        # Rebuild latest user data to ensure stats are fresh
+        user = await func.get_user(self.member.id)
+
+        level, exp = func.calculate_level(user.get('exp', 0))
+        quiz_stats = user.get("game_state", {}).get("quiz_game", {
+            "points": 0,
+            "correct": 0,
+            "wrong": 0,
+            "timeout": 0,
+            "average_time": 0
+        })
+
+        card_match_stats = user.get("game_state", {}).get("match_game", {})
+        total_questions = quiz_stats["wrong"] + quiz_stats["timeout"]
+        rank_name, rank_emoji = iufi.QuestionPool.get_rank(quiz_stats["points"])
+
+        pvp_stats = user.get("pvp", {
+            "wins": 0,
+            "losses": 0,
+            "total_matches": 0
+        })
+
+        # Calculate PVP win rate safely
+        wins = pvp_stats.get('wins', 0)
+        losses = pvp_stats.get('losses', 0)
+        total_matches = pvp_stats.get('total_matches', wins + losses)
+        win_rate = round((wins / total_matches) * 100, 1) if total_matches > 0 else 0
+
+        stats_embed = discord.Embed(title=f"📊 {self.member.display_name}'s Game Stats", color=discord.Color.random())
+        stats_embed.add_field(
+            name="Quiz Stats:",
+            value=(
+                f"> <:{rank_name}:{rank_emoji}> {rank_name.title()} (`{quiz_stats['points']}`)\n"
+                f"> 🎯 K/DA: `{round(quiz_stats['correct'] / total_questions, 1) if total_questions else 0}` (C: `{quiz_stats['correct']}` | W: `{quiz_stats['wrong'] + quiz_stats['timeout']}`)\n"
+                f"> 🕒 Average Time: `{func.convert_seconds(quiz_stats['average_time'])}`"
+            ),
+            inline=False
+        )
+
+        # Card Match Stats (reuse existing presentation but keep it readable)
+        try:
+            cms_value = "\n".join(
+                f"> {DAILY_ROWS[int(level) - 4]} **Level {level}**: " + (
+                    f"🃏 `{stats.get('matched', 0)}` 🕒 `{func.convert_seconds(stats.get('finished_time'))}`" if (stats := card_match_stats.get(str(level))) else "Not attempt yet"
+                ) for level in func.settings.MATCH_GAME_SETTINGS.keys()
+            )
+        except Exception:
+            # Fallback if level-based indexing fails
+            cms_value = "No card match stats available."
+
+        stats_embed.add_field(name="Card Match Stats:", value=cms_value, inline=False)
+
+        stats_embed.add_field(
+            name="PVP Stats:",
+            value=(
+                f"> ⚔️ Matches: `{total_matches}`\n"
+                f"> 🏆 Wins: `{wins}`\n"
+                f"> 💀 Losses: `{losses}`\n"
+                f"> 📊 Win Rate: `{win_rate}%`"
+            ),
+            inline=False
+        )
+
+        await interaction.response.send_message(embed=stats_embed)
+
+    @discord.ui.button(label="Collections", style=discord.ButtonStyle.primary)
+    async def show_collections(self, interaction: discord.Interaction, button: discord.ui.Button):
+        """Shows the member's collections using the existing CollectionView."""
+        user = await func.get_user(self.member.id)
+        collections = user.get("collections", {})
+        if not collections:
+            # No collections — inform the clicker ephemerally
+            return await interaction.response.send_message(f"{self.member.display_name} has no collections.", ephemeral=True)
+
+        # Defer the interaction then send the full collection view via the original ctx
+        await interaction.response.defer()
+        view = CollectionView(self.ctx, self.member, collections)
+        await view.send_msg()
+
 class Profile(commands.Cog):
     def __init__(self, bot: commands.Bot) -> None:
         self.bot = bot
@@ -52,55 +141,35 @@ class Profile(commands.Cog):
         """
         if not member:
             member = ctx.author
-        
+
         user = await func.get_user(member.id)
-        level, exp = func.calculate_level(user['exp'])
         bio = user.get('profile', {}).get('bio', 'Empty Bio')
 
-        quiz_stats = user.get("game_state", {}).get("quiz_game", {
-            "points": 0,
-            "correct": 0,
-            "wrong": 0,
-            "timeout": 0,
-            "average_time": 0
-        })
-
-        card_match_stats = user.get("game_state", {}).get("match_game", {})
-
-        total_questions = quiz_stats["wrong"] + quiz_stats["timeout"]
-        rank_name, rank_emoji = iufi.QuestionPool.get_rank(quiz_stats["points"])
-
-        pvp_stats = user.get("pvp", {
-            "wins": 0,
-            "losses": 0,
-            "total_matches": 0
-        })
-
+        # Build the basic profile embed (minimal by default)
         embed = discord.Embed(title=f"👤 {member.display_name}'s Profile", color=discord.Color.random())
         embed.description = f"```{bio}```\u200b" if bio else ""
-        embed.description += (
-            f"""```📙 Photocards: {len(user.get('cards', []))}/{func.get_user_card_limit(user)}
-⚔️ Level: {level} ({(exp / func.settings.DEFAULT_EXP) * 100:.1f}%)
-💤 Last Active: {func.cal_last_online_time(user.get('last_active_time'), 'Not Active')}```\u200b"""
-        )
 
-        embed.add_field(name="Ranked Stats:", value=f"> <:{rank_name}:{rank_emoji}> {rank_name.title()} (`{quiz_stats['points']}`)\n> 🎯 K/DA: `{round(quiz_stats['correct'] / total_questions, 1) if total_questions else 0}` (C: `{quiz_stats['correct']}` | W: `{quiz_stats['wrong'] + quiz_stats['timeout']}`)\n> 🕒 Average Time: `{func.convert_seconds(quiz_stats['average_time'])}`", inline=True)
-        embed.add_field(name="Card Match Stats:", value="\n".join(f"> {DAILY_ROWS[int(level) - 4]} **Level {level}**: " + (f"🃏 `{stats.get('matched', 0)}` 🕒 `{func.convert_seconds(stats.get('finished_time'))}`" if (stats := card_match_stats.get(level)) else "Not attempt yet") for level in func.settings.MATCH_GAME_SETTINGS.keys()), inline=True)
+        # Show number of photocards they own
+        embed.add_field(name="```📙 Photocards: ", value=f"{len(user.get('cards', []))}/{func.get_user_card_limit(user)}```\u200b", inline=True)
 
-        # Calculate PVP win rate safely using .get() to avoid KeyError if fields are missing
-        wins = pvp_stats.get('wins', 0)
-        losses = pvp_stats.get('losses', 0)
-        total_matches = pvp_stats.get('total_matches', wins + losses)
+        # Use member's avatar as thumbnail
+        embed.set_thumbnail(url=member.display_avatar.url)
 
-        win_rate = round((wins / total_matches) * 100, 1) if total_matches > 0 else 0
-        embed.add_field(name="PVP Stats:", value=f"> ⚔️ Matches: `{total_matches}`\n> 🏆 Wins: `{wins}`\n> 💀 Losses: `{losses}`\n> 📊 Win Rate: `{win_rate}%`", inline=True)
+        # If the user has a main card that they own, attach it as the large image (show off)
+        file = None
+        main_card_id = user.get('profile', {}).get('main')
+        card = iufi.CardPool.get_card(main_card_id) if main_card_id else None
+        if card and card.owner_id == user.get('_id'):
+            file = discord.File(await card.image_bytes(), filename=f"image.{card.format}")
+            embed.set_image(url=f"attachment://image.{card.format}")
 
-        card = iufi.CardPool.get_card(user["profile"]["main"])
-        if card and card.owner_id == user["_id"]:
-            embed.set_thumbnail(url=f"attachment://image.{card.format}")
-            return await ctx.reply(file=discord.File(await card.image_bytes(), filename=f"image.{card.format}"), embed=embed)
-        
-        await ctx.reply(embed=embed)
+        # Add a Game Stats button which reveals the rest of their stats when clicked
+        view = StatsView(ctx, member)
+
+        if file:
+            await ctx.reply(file=file, embed=embed, view=view)
+        else:
+            await ctx.reply(embed=embed, view=view)
 
     @commands.command(aliases=["sb"])
     async def setbio(self, ctx: commands.Context, *, bio: str = None):
@@ -129,6 +198,7 @@ class Profile(commands.Cog):
         @prefix@main 01
         @prefix@m 01
         """
+        card = None
         if card_id:
             card = iufi.CardPool.get_card(card_id)
             if not card:
@@ -139,7 +209,7 @@ class Profile(commands.Cog):
 
         await func.update_user(ctx.author.id, {"$set": {"profile.main": card_id}})
         embed = discord.Embed(title="👤 Set Main", color=discord.Color.random())
-        embed.description=f"```{card.tier[0]} {card.id} has been set as profile card.```" if card_id else "```Your profile card has been cleared```"
+        embed.description = (f"```{card.tier[0]} {card.id} has been set as profile card.```" if card_id and card else "```Your profile card has been cleared```")
         await ctx.reply(embed=embed)
 
     @commands.command(aliases=["ml"])
@@ -164,7 +234,7 @@ class Profile(commands.Cog):
 
         await func.update_user(ctx.author.id, {"$set": {"profile.main": card_id}})
         embed = discord.Embed(title="👤 Set Main", color=discord.Color.random())
-        embed.description=f"```{card.tier[0]} {card.id} has been set as profile card.```" if card_id else "```Your profile card has been cleared```"
+        embed.description = f"```{card.tier[0]} {card.id} has been set as profile card.```" if card_id else "```Your profile card has been cleared```"
         await ctx.reply(embed=embed)
 
     @commands.command(aliases=["cc"])
@@ -207,6 +277,7 @@ class Profile(commands.Cog):
         if not user.get("collections", {}).get(name):
             return await ctx.reply(content=f"{ctx.author.mention} no collection with the name `{name}` was found.")
         
+        card = None
         if card_id:
             card = iufi.CardPool.get_card(card_id)
             if not card:
@@ -217,10 +288,10 @@ class Profile(commands.Cog):
 
         await func.update_user(ctx.author.id, {"$set": {f"collections.{name}.{slot - 1}": card.id if card_id else None}})
 
-        func.logger.info(f"User {ctx.author.name}({ctx.author.id}) added card [{card.id}] to [{name}] collection in slot [{slot}].")
+        func.logger.info(f"User {ctx.author.name}({ctx.author.id}) added card [{card.id if card else None}] to [{name}] collection in slot [{slot}].")
 
         embed = discord.Embed(title="💕 Collection Set", color=discord.Color.random())
-        embed.description = f"```📮 {name.title()}\n🆔 {card.id.zfill(5) if card_id else None}\n🎰 {slot}\n```"
+        embed.description = f"```📮 {name.title()}\n🆔 {card.id.zfill(5) if card else None}\n🎰 {slot}\n```"
         await ctx.reply(embed=embed)
 
     @commands.command(aliases=["scl"])
@@ -291,7 +362,7 @@ class Profile(commands.Cog):
 
         user = await func.get_user(member.id)
         if len(user.get("collections", {})) == 0:
-            return await ctx.reply(content=f"{member.mention} don't have any collections.", allowed_mentions=False)
+            return await ctx.reply(content=f"{member.mention} don't have any collections.", allowed_mentions=discord.AllowedMentions.none())
 
         view = CollectionView(ctx, member, user.get("collections"))
         await view.send_msg()
@@ -307,7 +378,7 @@ class Profile(commands.Cog):
         """
         user = await func.get_user(ctx.author.id)
 
-        end_time: float = user.get("cooldown", {}).get("daily", None)
+        end_time: Optional[float] = user.get("cooldown", {}).get("daily", None)
         retry = func.cal_retry_time(end_time)
         if retry:
             return await ctx.reply(f"{ctx.author.mention} your next daily is in {retry}", delete_after=5)

@@ -9,7 +9,7 @@ LEADERBOARD_EMOJIS: list[str] = ["🥇", "🥈", "🥉", "🏅"]
 def highlight_text(text: str, need: bool = True) -> str:
     if not need:
         return text + "\n"
-    return "[0;1;35m" + text + " [0m\n"
+    return "\x1b[0;1;35m" + text + " \x1b[0m\n"
 
 class Info(commands.Cog):
     def __init__(self, bot: commands.Bot) -> None:
@@ -19,25 +19,33 @@ class Info(commands.Cog):
         
     @commands.group(aliases=["l"], invoke_without_command=True)
     async def leaderboard(self, ctx: commands.Context):
-        """Shows the IUFI leaderboard."""
-        user = await func.get_user(ctx.author.id)
-        users = await func.USERS_DB.find().sort("exp", -1).limit(10).to_list(10)
-        rank = await func.USERS_DB.count_documents({'exp': {'$gt': user.get('exp', 0)}}) + 1
+        """Shows the IUFI leaderboard (monthly)."""
+        start_time, end_time = func.get_month_unix_timestamps()
 
-        embed = discord.Embed(title="🏆   IUFI Leaderboard", color=discord.Color.random())
-        embed.description = f"**Your current position is `{rank}`**\n"
+        user = await func.get_user(ctx.author.id)
+        # show monthly exp leaderboard
+        users = await func.USERS_DB.find({"monthly.exp_last_update": {"$gt": start_time, "$lte": end_time}}).sort("monthly.exp", -1).limit(10).to_list(10)
+        rank = await func.USERS_DB.count_documents({"monthly.exp_last_update": {"$gt": start_time, "$lte": end_time}, 'monthly.exp': {'$gt': user.get('monthly', {}).get('exp', 0)}}) + 1
+
+        embed = discord.Embed(title="🏆   IUFI Leaderboard (Monthly)", color=discord.Color.random())
+        embed.description = f"**The next reset is <t:{int(end_time)}:R>**\n**Your current position is `{rank}`**\n"
 
         description = ""
         for index, top_user in enumerate(users):
-            level, _ = func.calculate_level(top_user["exp"])
+            level, _ = func.calculate_level(top_user.get("exp", 0))
             member = self.bot.get_user(top_user['_id'])
 
             if member:
-                description += f"{LEADERBOARD_EMOJIS[index if index <= 2 else 3]} " + highlight_text(f"{func.truncate_string(member.display_name):<18} {level:>5} ⚔️", member == ctx.author)
-        
+                # show monthly exp converted to level for display if available
+                monthly_exp = top_user.get('monthly', {}).get('exp', 0)
+                m_level, _ = func.calculate_level(monthly_exp)
+                description += f"{LEADERBOARD_EMOJIS[index if index <= 2 else 3]} " + highlight_text(f"{func.truncate_string(member.display_name):<18} {m_level:>5} ⚔️", member == ctx.author)
+
         if rank > len(users):
-            level, _ = func.calculate_level(user['exp'])
-            description += ("┇\n" if rank > len(users) + 1 else "") + f"{LEADERBOARD_EMOJIS[3]} " + highlight_text(f"{func.truncate_string(ctx.author.display_name):<18} {level:>5} ⚔️", True)
+            level, _ = func.calculate_level(user.get('exp', 0))
+            monthly_exp = user.get('monthly', {}).get('exp', 0)
+            m_level, _ = func.calculate_level(monthly_exp)
+            description += ("┇\n" if rank > len(users) + 1 else "") + f"{LEADERBOARD_EMOJIS[3]} " + highlight_text(f"{func.truncate_string(ctx.author.display_name):<18} {m_level:>5} ⚔️", True)
 
         if not description:
             description = "The leaderboard is currently empty."
@@ -49,27 +57,31 @@ class Info(commands.Cog):
 
     @leaderboard.command(aliases=["l"],hidden=True)
     async def level(self, ctx: commands.Context, limit: str = "10"):
-        """Shows the IUFI level leaderboard with a limit. Only for admins."""
+        """Shows the IUFI level leaderboard with a limit (monthly). Only for admins."""
         if ctx.author.id not in func.settings.ADMIN_IDS:
             return
 
-        users = await func.USERS_DB.find().sort("exp", -1).limit(int(limit)).to_list(int(limit))
+        start_time, end_time = func.get_month_unix_timestamps()
+        users = await func.USERS_DB.find({"monthly.exp_last_update": {"$gt": start_time, "$lte": end_time}}).sort("monthly.exp", -1).limit(int(limit)).to_list(int(limit))
         user = await func.get_user(ctx.author.id)
-        rank = await func.USERS_DB.count_documents({'exp': {'$gt': user.get('exp', 0)}}) + 1
+        rank = await func.USERS_DB.count_documents({"monthly.exp_last_update": {"$gt": start_time, "$lte": end_time}, 'monthly.exp': {'$gt': user.get('monthly', {}).get('exp', 0)}}) + 1
 
-        embed = discord.Embed(title="🏆   Level Leaderboard", color=discord.Color.random())
-        embed.description = f"**Your current position is `{rank}`**\n"
+        embed = discord.Embed(title="🏆   Level Leaderboard (Monthly)", color=discord.Color.random())
+        embed.description = f"**The next reset is <t:{int(end_time)}:R>**\n**Your current position is `{rank}`**\n"
 
         description = ""
         for index, top_user in enumerate(users):
-            level, _ = func.calculate_level(top_user["exp"])
+            level, _ = func.calculate_level(top_user.get("exp", 0))
             member = self.bot.get_user(top_user['_id'])
             if member:
-                description += f"{LEADERBOARD_EMOJIS[index if index <= 2 else 3]} " + highlight_text(f"{func.truncate_string(member.display_name):<18} {level:>5} ⚔️", member == ctx.author)
+                monthly_exp = top_user.get('monthly', {}).get('exp', 0)
+                m_level, _ = func.calculate_level(monthly_exp)
+                description += f"{LEADERBOARD_EMOJIS[index if index <= 2 else 3]} " + highlight_text(f"{func.truncate_string(member.display_name):<18} {m_level:>5} ⚔️", member == ctx.author)
 
         if rank > int(limit):
-            level, _ = func.calculate_level(user['exp'])
-            description += ("┇\n" if rank > int(limit) + 1 else "") + f"{LEADERBOARD_EMOJIS[3]} " + highlight_text(f"{func.truncate_string(ctx.author.display_name):<18} {level:>5} ⚔️", True)
+            monthly_exp = user.get('monthly', {}).get('exp', 0)
+            m_level, _ = func.calculate_level(monthly_exp)
+            description += ("┇\n" if rank > int(limit) + 1 else "") + f"{LEADERBOARD_EMOJIS[3]} " + highlight_text(f"{func.truncate_string(ctx.author.display_name):<18} {m_level:>5} ⚔️", True)
 
         if not description:
             description = "The leaderboard is currently empty."
@@ -108,35 +120,40 @@ class Info(commands.Cog):
 
     @leaderboard.command(aliases=["mg"])
     async def matchgame(self, ctx: commands.Context, level: str = "1"):
-        """Shows the IUFI Matching Game leaderboard."""
+        """Shows the IUFI Matching Game leaderboard (monthly)."""
         if level not in (levels := func.settings.MATCH_GAME_SETTINGS.keys()):
             return await ctx.reply(f"Invalid level selection! Please select a valid level: `{', '.join(levels)}`")
-        
-        users = await func.USERS_DB.find().sort([
-            (f"game_state.match_game.{level}.matched", -1),
-            (f"game_state.match_game.{level}.click_left", -1),
-            (f"game_state.match_game.{level}.finished_time", 1)
+
+        start_time, end_time = func.get_month_unix_timestamps()
+        users = await func.USERS_DB.find({f"game_state.match_game.{level}.last_update": {"$gt":start_time, "$lte":end_time}}).sort([
+            (f"game_state.match_game.{level}.monthly_matched", -1),
+            (f"game_state.match_game.{level}.monthly_click_left", -1),
+            (f"game_state.match_game.{level}.monthly_finished_time", 1)
         ]).limit(10).to_list(10)
 
         user = await func.get_user(ctx.author.id)
         user = user.get("game_state", {}).get("match_game", {}).get(level, {})
         rank = (await func.USERS_DB.count_documents({
-            '$or': [
-                {f"game_state.match_game.{level}.matched": {'$gt': user['matched']}},
-                {'$and': [
-                    {f"game_state.match_game.{level}.matched": user['matched']},
-                    {f"game_state.match_game.{level}.click_left": {'$gt': user['click_left']}}
-                ]},
-                {'$and': [
-                    {f"game_state.match_game.{level}.matched": user['matched']},
-                    {f"game_state.match_game.{level}.click_left": user['click_left']},
-                    {f"game_state.match_game.{level}.finished_time": {'$lt': user['finished_time']}}
+            '$and': [
+                {f"game_state.match_game.{level}.last_update": {"$gt":start_time, "$lte":end_time}},
+                {'$or': [
+                    {f"game_state.match_game.{level}.monthly_matched": {'$gt': user.get('monthly_matched', 0)}},
+                    {'$and': [
+                        {f"game_state.match_game.{level}.monthly_matched": user.get('monthly_matched', 0)},
+                        {f"game_state.match_game.{level}.monthly_click_left": {'$gt': user.get('monthly_click_left', 0)}}
+                    ]},
+                    {'$and': [
+                        {f"game_state.match_game.{level}.monthly_matched": user.get('monthly_matched', 0)},
+                        {f"game_state.match_game.{level}.monthly_click_left": user.get('monthly_click_left', 0)},
+                        {f"game_state.match_game.{level}.monthly_finished_time": {'$lt': user.get('monthly_finished_time', float('inf'))}}
+                    ]}
                 ]}
             ]
         }) if user else 0) + 1
         
-        embed = discord.Embed(title=f"🏆   Level {level} Matching Game Leaderboard", color=discord.Color.random())
+        embed = discord.Embed(title=f"🏆   Level {level} Matching Game Leaderboard (Monthly)", color=discord.Color.random())
         embed.description = (f"**Your current position is `{rank}`**" if user else "**You haven't played any match game!**") + "\n"
+        embed.description = f"**The next reset is <t:{int(end_time)}:R>**\n" + embed.description
 
         description = ""
         for index, top_user in enumerate(users):
@@ -146,10 +163,10 @@ class Info(commands.Cog):
 
             member = self.bot.get_user(top_user['_id'])
             if member:
-                description += f"{LEADERBOARD_EMOJIS[index if index <= 2 else 3]} " + highlight_text(f"{func.truncate_string(member.display_name):<18} 🃏{game_state['matched']:<2} 🕒{func.convert_seconds(game_state['finished_time']):<10}", member == ctx.author)
-        
+                description += f"{LEADERBOARD_EMOJIS[index if index <= 2 else 3]} " + highlight_text(f"{func.truncate_string(member.display_name):<18} 🃏{game_state.get('monthly_matched', 0):<2} 🕒{func.convert_seconds(game_state.get('monthly_finished_time', 0)):<10}", member == ctx.author)
+
         if user and rank > len(users):
-            description += ("┇\n" if rank > len(users) + 1 else "") + f"{LEADERBOARD_EMOJIS[3]} " + highlight_text(f"{func.truncate_string(ctx.author.display_name):<18} 🃏{user['matched']:<2} 🕒{func.convert_seconds(user['finished_time']):<10}", True)
+            description += ("┇\n" if rank > len(users) + 1 else "") + f"{LEADERBOARD_EMOJIS[3]} " + highlight_text(f"{func.truncate_string(ctx.author.display_name):<18} 🃏{user.get('monthly_matched', 0):<2} 🕒{func.convert_seconds(user.get('monthly_finished_time', 0)):<10}", True)
 
         if not description:
             description = "The leaderboard is currently empty."
@@ -160,7 +177,7 @@ class Info(commands.Cog):
     
     @leaderboard.command(aliases=["q"])
     async def quiz(self, ctx: commands.Context):
-        """Shows the IUFI Quiz leaderboard."""
+        """Shows the IUFI Quiz leaderboard (monthly)."""
         start_time, end_time = func.get_month_unix_timestamps()
         user = await func.get_user(ctx.author.id)
         user = user.get("game_state", {}).get("quiz_game", {})
@@ -199,14 +216,15 @@ class Info(commands.Cog):
 
     @leaderboard.command(aliases=["m"])
     async def music(self, ctx: commands.Context):
-        """Shows the IUFI Music leaderboard."""
-        users = await func.USERS_DB.find().sort("game_state.music_game.points", -1).limit(10).to_list(10)
+        """Shows the IUFI Music leaderboard (monthly)."""
+        start_time, end_time = func.get_month_unix_timestamps()
+        users = await func.USERS_DB.find({f"game_state.music_game.last_update": {"$gt":start_time, "$lte":end_time}}).sort("game_state.music_game.monthly_points", -1).limit(10).to_list(10)
         user = await func.get_user(ctx.author.id)
         user = user.get("game_state", {}).get("music_game", {})
-        rank = await func.USERS_DB.count_documents({'game_state.music_game.points': {'$gt': user.get('points', 0)}}) + 1
+        rank = await func.USERS_DB.count_documents({"$and": [{f"game_state.music_game.last_update": {"$gt":start_time, "$lte":end_time}}, {"game_state.music_game.monthly_points": {'$gt': user.get('monthly_points', 0)}}]}) + 1
 
         embed = discord.Embed(title="🏆   Music Leaderboard", color=discord.Color.random())
-        embed.description = (f"**Your current position is `{rank}`**" if user else "**You haven't played any music quiz!**") + "\n"
+        embed.description = (f"**The next reset is <t:{int(end_time)}:R>\nYour current position is `{rank}`**" if user else "**You haven't played any music quiz!**") + "\n"
 
         description = ""
         for index, user_data in enumerate(users):
@@ -216,10 +234,10 @@ class Info(commands.Cog):
 
             member = self.bot.get_user(user_data['_id'])
             if member:
-                description += f"{LEADERBOARD_EMOJIS[index if index <= 2 else 3]} " + highlight_text(f"{func.truncate_string(member.display_name):<18} {user_data['game_state']['music_game']['points']:>6} 𝄞", member == ctx.author)
+                description += f"{LEADERBOARD_EMOJIS[index if index <= 2 else 3]} " + highlight_text(f"{func.truncate_string(member.display_name):<18} {game_state.get('monthly_points', 0):>6} 𝄞", member == ctx.author)
 
         if user and rank > len(users):
-            description += ("┇\n" if rank > len(users) + 1 else "") + f"{LEADERBOARD_EMOJIS[3]} " + highlight_text(f"{func.truncate_string(ctx.author.display_name):<18} {user['points']:>6} 𝄞", True)
+            description += ("┇\n" if rank > len(users) + 1 else "") + f"{LEADERBOARD_EMOJIS[3]} " + highlight_text(f"{func.truncate_string(ctx.author.display_name):<18} {user.get('monthly_points', 0):>6} 𝄞", True)
 
         if not description:
             description = "The leaderboard is currently empty."
@@ -232,7 +250,7 @@ class Info(commands.Cog):
 
     @leaderboard.command(aliases=["eq","elb","e"])
     async def emoji(self, ctx: commands.Context):
-        """Shows the Emoji Quiz leaderboard."""
+        """Shows the Emoji Quiz leaderboard (monthly)."""
         start_time, end_time = func.get_month_unix_timestamps()
         user = await func.get_user(ctx.author.id)
         user = user.get("game_state", {}).get("emoji_quiz", {})
@@ -276,11 +294,11 @@ class Info(commands.Cog):
         user = await func.get_user(ctx.author.id)
         user_game = user.get("game_state", {}).get("mv_guess", {})
 
-        users = await func.USERS_DB.find({f"game_state.mv_guess.last_update": {"$gt":start_time, "$lte":end_time}}).sort("game_state.mv_guess.points", -1).limit(10).to_list(10)
+        users = await func.USERS_DB.find({f"game_state.mv_guess.last_update": {"$gt":start_time, "$lte":end_time}}).sort("game_state.mv_guess.monthly_points", -1).limit(10).to_list(10)
         rank = await func.USERS_DB.count_documents({
             "$and": [
                 {f"game_state.mv_guess.last_update": {"$gt":start_time, "$lte":end_time}},
-                {"game_state.mv_guess.points": {'$gt': user_game.get('points', 0)}}
+                {"game_state.mv_guess.monthly_points": {'$gt': user_game.get('monthly_points', 0)}}
             ]
         }) + 1
 
@@ -296,10 +314,10 @@ class Info(commands.Cog):
             if not member:
                 member = self.bot.get_user(236400388847173632)
             if member:
-                description += f"`{func.truncate_string(member.display_name):<18} {game_state['points']:>6} 🎬`\n"
+                description += f"`{func.truncate_string(member.display_name):<18} {game_state.get('monthly_points', 0):>6} 🎬`\n"
 
         if description and rank > len(users):
-            description += ("┇\n" if rank > len(users) + 1 else "") + f"`{func.truncate_string(ctx.author.display_name):<18} {user_game.get('points', 0):>6} 🎬`"
+            description += ("┇\n" if rank > len(users) + 1 else "") + f"`{func.truncate_string(ctx.author.display_name):<18} {user_game.get('monthly_points', 0):>6} 🎬`"
 
         if not description:
             description = "The leaderboard is currently empty."
@@ -311,27 +329,28 @@ class Info(commands.Cog):
 
     @leaderboard.command(aliases=["p"])
     async def pvp(self, ctx: commands.Context):
-        """Shows the IUFI PVP Wins leaderboard."""
-        users = await func.USERS_DB.find().sort("pvp.wins", -1).limit(10).to_list(10)
+        """Shows the IUFI PVP Wins leaderboard (monthly)."""
+        start_time, end_time = func.get_month_unix_timestamps()
+        users = await func.USERS_DB.find({"monthly.pvp_last_update": {"$gt": start_time, "$lte": end_time}}).sort("monthly.pvp.wins", -1).limit(10).to_list(10)
         user = await func.get_user(ctx.author.id)
-        rank = await func.USERS_DB.count_documents({'pvp.wins': {'$gt': user.get('pvp', {}).get('wins', 0)}}) + 1
+        rank = await func.USERS_DB.count_documents({"monthly.pvp_last_update": {"$gt": start_time, "$lte": end_time}, 'monthly.pvp.wins': {'$gt': user.get('monthly', {}).get('pvp', {}).get('wins', 0)}}) + 1
 
-        embed = discord.Embed(title="🏆   PVP Wins Leaderboard", color=discord.Color.random())
-        embed.description = f"**Your current position is `{rank}`**\n"
+        embed = discord.Embed(title="🏆   PVP Wins Leaderboard (Monthly)", color=discord.Color.random())
+        embed.description = f"**The next reset is <t:{int(end_time)}:R>**\n**Your current position is `{rank}`**\n"
 
         description = ""
         for index, top_user in enumerate(users):
             member = self.bot.get_user(top_user['_id'])
-            wins = top_user.get('pvp', {}).get('wins', 0)
-            matches = top_user.get('pvp', {}).get('total_matches', 0)
-            losses = top_user.get('pvp', {}).get('losses', 0)
+            wins = top_user.get('monthly', {}).get('pvp', {}).get('wins', 0)
+            matches = top_user.get('monthly', {}).get('pvp', {}).get('total_matches', 0)
+            losses = top_user.get('monthly', {}).get('pvp', {}).get('losses', 0)
             if member:
                 description += f"{LEADERBOARD_EMOJIS[index if index <= 2 else 3]} " + highlight_text(f"{func.truncate_string(member.display_name):<18} 🏆{wins:<3} 💀{losses:<3} ⚔️{matches:<3}", member == ctx.author)
 
         # Show current user if not in top 10
-        user_wins = user.get('pvp', {}).get('wins', 0)
-        user_matches = user.get('pvp', {}).get('total_matches', 0)
-        user_losses = user.get('pvp', {}).get('losses', 0)
+        user_wins = user.get('monthly', {}).get('pvp', {}).get('wins', 0)
+        user_matches = user.get('monthly', {}).get('pvp', {}).get('total_matches', 0)
+        user_losses = user.get('monthly', {}).get('pvp', {}).get('losses', 0)
         if rank > len(users):
             description += ("┇\n" if rank > len(users) + 1 else "") + f"{LEADERBOARD_EMOJIS[3]} " + highlight_text(f"{func.truncate_string(ctx.author.display_name):<18} 🏆{user_wins:<3} 💀{user_losses:<3} ⚔️{user_matches:<3}", True)
 

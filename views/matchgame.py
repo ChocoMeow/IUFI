@@ -201,6 +201,33 @@ class MatchGame(discord.ui.View):
                 f"{prefix}.click_left": self.click_left
             })
 
+            # Determine user's monthly best for this level and update if current run is better
+            # Ensure update_data contains monthly fields to reflect monthly leaderboards
+            monthly_best_matched = best_state.get('monthly_matched', 0) if best_state else 0
+            monthly_best_finished = best_state.get('monthly_finished_time', float('inf')) if best_state else float('inf')
+            monthly_best_click_left = best_state.get('monthly_click_left', 0) if best_state else 0
+
+            # If current run is better than monthly best, update monthly fields
+            now_ts = time.time()
+            should_update_monthly = False
+            if matched_raw > monthly_best_matched:
+                should_update_monthly = True
+            elif matched_raw == monthly_best_matched:
+                if self.used_time < monthly_best_finished:
+                    should_update_monthly = True
+                elif self.used_time == monthly_best_finished and self.click_left > monthly_best_click_left:
+                    should_update_monthly = True
+
+            if should_update_monthly:
+                if "$set" not in update_data:
+                    update_data["$set"] = {}
+                update_data["$set"].update({
+                    f"{prefix}.monthly_matched": matched_raw,
+                    f"{prefix}.monthly_finished_time": self.used_time,
+                    f"{prefix}.monthly_click_left": self.click_left,
+                    f"{prefix}.last_update": now_ts
+                })
+
         await func.update_user(self.author.id, update_data)
 
         func.logger.info(

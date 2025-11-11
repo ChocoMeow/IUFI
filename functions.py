@@ -417,9 +417,39 @@ async def update_user(user_id: int, data: dict) -> None:
     user = await get_user(user_id)
     data.setdefault('$set', {})['last_active_time'] = time.time()
 
+    # Auto-augment monthly counters for common stats so callers don't need to update monthly fields everywhere.
+    # We'll look at $inc entries and duplicate them into monthly fields where appropriate and set last-update timestamps.
+    now_ts = time.time()
+    incs = data.get('$inc', {})
+    if incs:
+        # Handle top-level exp increments -> monthly.exp and last update
+        if 'exp' in incs:
+            data.setdefault('$inc', {})['monthly.exp'] = data['$inc'].get('exp', 0)
+            data.setdefault('$set', {})['monthly.exp_last_update'] = now_ts
+
+        # Handle PVP increments (pvp.wins, pvp.losses, pvp.total_matches)
+        for key in list(incs.keys()):
+            if key.startswith('pvp.'):
+                suffix = key.split('.', 1)[1]
+                monthly_key = f"monthly.pvp.{suffix}"
+                data.setdefault('$inc', {})[monthly_key] = data['$inc'].get(key, 0)
+                data.setdefault('$set', {})['monthly.pvp_last_update'] = now_ts
+
+        # Handle game_state.<game>.points increments (music, mv_guess, quiz, emoji etc.)
+        for key in list(incs.keys()):
+            if key.count('.') >= 2 and key.split('.')[0] == 'game_state' and key.split('.')[-1] == 'points':
+                # e.g. game_state.music_game.points -> game_state.music_game.monthly_points
+                parts = key.split('.')
+                game_path = '.'.join(parts[:3])  # game_state.<game>
+                monthly_points_key = f"{game_path}.monthly_points"
+                last_update_key = f"{game_path}.last_update"
+                data.setdefault('$inc', {})[monthly_points_key] = data['$inc'].get(key, 0)
+                data.setdefault('$set', {})[last_update_key] = now_ts
+
+    # Proceed with the original in-memory merging logic
     for mode, action in data.items():
         for key, value in action.items():
-            cursors = key.split(".")
+            cursors = key.split('.')
 
             nested_user = user
             for c in cursors[:-1]:

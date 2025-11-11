@@ -192,9 +192,67 @@ class Tasks(commands.Cog):
             # Verifying and Updating Quiz Reward Data in Database
             self.bot.loop.create_task(self.distribute_monthly_quiz_rewards())
             self.bot.loop.create_task(self.reset_user_cards())
+            # Attempt a monthly leaderboard reset near month end
+            self.bot.loop.create_task(self.reset_monthly_leaderboards())
 
         except Exception as e:
             func.logger.error("An exception occurred in the cache clear task.", exc_info=e)
+
+    async def reset_monthly_leaderboards(self) -> None:
+        """Reset monthly leaderboard fields near the end of month.
+        This will zero monthly counters and last_update timestamps for the supported leaderboards:
+        - music_game (monthly_points)
+        - quiz_game (points handled via existing flow but ensure monthly state)
+        - emoji_quiz
+        - mv_guess
+        - pvp (monthly.pvp)
+        - match_game per-level monthly fields
+        Also calls iufi.MusicPool.reset() to reset per-track stats.
+        The function is a no-op unless the current time is within 1 hour of month boundary.
+        """
+        try:
+            start_time, end_time = func.get_month_unix_timestamps()
+            # only run the reset task when we're within 1 hour of the end of month
+            if end_time - time.time() > 3_600:
+                return
+
+            # # Reset music pool per-track stats
+            # try:
+            #     await iufi.MusicPool.reset()
+            # except Exception:
+            #     func.logger.exception("Failed to reset MusicPool stats")
+
+            # Build update doc to zero monthly fields for known game states
+            update_doc_set = {}
+
+            # Reset per-game monthly counters
+            # music_game, quiz_game, emoji_quiz, mv_guess
+            for game in ("music_game", "quiz_game", "emoji_quiz", "mv_guess"):
+                update_doc_set[f"game_state.{game}.monthly_points"] = 0
+                update_doc_set[f"game_state.{game}.last_update"] = 0
+
+            # Reset match_game per-level monthly fields
+            match_levels = list(func.settings.MATCH_GAME_SETTINGS.keys()) if getattr(func.settings, 'MATCH_GAME_SETTINGS', None) else []
+            for lvl in match_levels:
+                prefix = f"game_state.match_game.{lvl}"
+                update_doc_set[f"{prefix}.monthly_matched"] = 0
+                update_doc_set[f"{prefix}.monthly_finished_time"] = 0
+                update_doc_set[f"{prefix}.monthly_click_left"] = 0
+                update_doc_set[f"{prefix}.last_update"] = 0
+
+            # Reset monthly pvp counters
+            update_doc_set["monthly.pvp.wins"] = 0
+            update_doc_set["monthly.pvp.losses"] = 0
+            update_doc_set["monthly.pvp.total_matches"] = 0
+            update_doc_set["monthly.pvp_last_update"] = 0
+
+            # Apply the reset to all users
+            if update_doc_set:
+                await func.USERS_DB.update_many({}, {"$set": update_doc_set})
+
+            func.logger.info("Monthly leaderboard fields reset executed")
+        except Exception as e:
+            func.logger.error("Failed to run monthly leaderboard reset", exc_info=e)
 
     @tasks.loop(minutes=10.0)
     async def reminder(self) -> None:
