@@ -173,7 +173,8 @@ class EmojiQuizView(discord.ui.View):
 
                 points = min(5, int(total_points))
                 # Get probabilities from settings
-                probs_config = getattr(func.settings, "REWARD_CARD_PROBABILITIES", {}) or {}
+                probs_config = func.settings.REWARD_CARD_PROBABILITIES or {}
+                probs_config = probs_config.get("EMOJI_QUIZ", {})
                 probs = probs_config.get(str(points), probs_config.get("5", {}))
 
                 # Create the reward view (we won't call its send method; we'll roll a card and post on the same channel)

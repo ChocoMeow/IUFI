@@ -284,7 +284,7 @@ class QuizView(discord.ui.View):
                 from .reward_card import RewardCardView
                 
                 # Determine probabilities based on points
-                probs_config = getattr(func.settings, "REWARD_CARD_PROBABILITIES", {}) or {}
+                probs_config = func.settings.REWARD_CARD_PROBABILITIES or {}
                 probs_config = probs_config.get("NORMAL_QUIZ", {})
                 # Find the appropriate tier based on current points
                 current_points = state['points']

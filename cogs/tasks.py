@@ -31,20 +31,16 @@ class Tasks(commands.Cog):
             self.bot.loop.create_task(self.schedule_message(user, cd, message))
 
     async def distribute_monthly_quiz_rewards(self) -> None:
-        # Feature flag: Skip monthly rewards if reward card system is enabled
-        if func.settings.GIVE_REWARD_CARD:
-            func.logger.info("Skipping monthly quiz rewards distribution - GIVE_REWARD_CARD is enabled")
-            return
-        
+
         start_time, end_time = func.get_month_unix_timestamps()
         if end_time - time.time() > 3_600:
             return
-        
+
         guild: discord.Guild = self.bot.get_guild(func.settings.MAIN_GUILD)
         if not guild:
             return
-        
-        roles: dict[str, discord.Role] = {
+
+        roles = {
             rank: guild.get_role(data["discord_role"])
             for rank, data in func.settings.RANK_BASE.items() if data["discord_role"]
         }
@@ -53,17 +49,89 @@ class Tasks(commands.Cog):
             for member in role.members:
                 await member.remove_roles(role)
 
-        users = func.USERS_DB.find({f"game_state.quiz_game.last_update": {"$gt":start_time, "$lte":end_time}})
-        updated_users: dict[str, int] = {}
-        async for user_data in users:
-            user = guild.get_member(user_data["_id"])
-            if user:
-                rank = iufi.QuestionPool.get_rank(user_data["game_state"]["quiz_game"]["points"])[0]
-                if rank in roles.keys() and roles[rank] is not None:
-                    updated_users[rank] = updated_users.get(rank, 0) + 1
-                    await user.add_roles(roles[rank])
-        
-        func.logger.info("Updated user roles: %s", ", ".join(f"{role_name}: {count}" for role_name, count in updated_users.items()))
+
+        # Feature flag: Skip monthly rewards if reward card system is enabled
+        if func.settings.GIVE_REWARD_CARD:
+            # Instead of giving reward cards, assign the same rank roles we give in the non-reward-card flow
+            # to the top-3 users in each monthly leaderboard (quiz, match_game per level, pvp, exp).
+            updated_users: dict[str, int] = {}
+
+            async def _assign_role(member: discord.Member, points: int | None) -> None:
+                # Directly assign the configured leaderboard role to the member
+                if not member:
+                    return
+                try:
+                    role = guild.get_role(func.settings.MONTHLY_LEADERBOARD_ROLE) if func.settings.MONTHLY_LEADERBOARD_ROLE else None
+                    if role:
+                        await member.add_roles(role)
+                        key = str(role.id)
+                        updated_users[key] = updated_users.get(key, 0) + 1
+                except Exception:
+                    func.logger.exception("Failed to assign direct leaderboard role to %s", member.id if member else None)
+
+            # 1) Quiz top 3
+            try:
+                quiz_users = await func.USERS_DB.find({f"game_state.quiz_game.last_update": {"$gt": start_time, "$lte": end_time}}).sort("game_state.quiz_game.points", -1).limit(3).to_list(3)
+                for ud in quiz_users:
+                    member = guild.get_member(ud["_id"]) if ud else None
+                    points = ud.get("game_state", {}).get("quiz_game", {}).get("points", 0)
+                    await _assign_role(member, points)
+            except Exception:
+                func.logger.exception("Failed to assign quiz monthly roles")
+
+            # 2) Match game top 3 — per-level
+            try:
+                for lvl in (list(func.settings.MATCH_GAME_SETTINGS.keys()) if func.settings.MATCH_GAME_SETTINGS else []):
+                    users = await func.USERS_DB.find({f"game_state.match_game.{lvl}.last_update": {"$gt": start_time, "$lte": end_time}}).sort([
+                        (f"game_state.match_game.{lvl}.monthly_matched", -1),
+                        (f"game_state.match_game.{lvl}.monthly_click_left", -1),
+                        (f"game_state.match_game.{lvl}.monthly_finished_time", 1)
+                    ]).limit(3).to_list(3)
+
+                    for ud in users:
+                        member = guild.get_member(ud["_id"]) if ud else None
+                        # try to obtain quiz points to determine rank; if absent, skip
+                        points = ud.get("game_state", {}).get("quiz_game", {}).get("points")
+                        await _assign_role(member, points)
+            except Exception:
+                func.logger.exception("Failed to assign match-game monthly roles")
+
+            # 3) PVP top 3
+            try:
+                pvp_users = await func.USERS_DB.find({"monthly.pvp_last_update": {"$gt": start_time, "$lte": end_time}}).sort("monthly.pvp.wins", -1).limit(3).to_list(3)
+                for ud in pvp_users:
+                    member = guild.get_member(ud["_id"]) if ud else None
+                    points = ud.get("game_state", {}).get("quiz_game", {}).get("points")
+                    await _assign_role(member, points)
+            except Exception:
+                func.logger.exception("Failed to assign pvp monthly roles")
+
+            # 4) EXP (level) top 3
+            try:
+                exp_users = await func.USERS_DB.find({"monthly.exp_last_update": {"$gt": start_time, "$lte": end_time}}).sort("monthly.exp", -1).limit(3).to_list(3)
+                for ud in exp_users:
+                    member = guild.get_member(ud["_id"]) if ud else None
+                    points = ud.get("game_state", {}).get("quiz_game", {}).get("points")
+                    await _assign_role(member, points)
+            except Exception:
+                func.logger.exception("Failed to assign exp monthly roles")
+
+            func.logger.info("Assigned monthly roles to leaderboard users: %s", ", ".join(f"{k}: {v}" for k, v in updated_users.items()))
+            return
+
+        else:
+            users = func.USERS_DB.find({f"game_state.quiz_game.last_update": {"$gt": start_time, "$lte": end_time}})
+            updated_users: dict[str, int] = {}
+            async for user_data in users:
+                user = guild.get_member(user_data["_id"])
+                if user:
+                    rank = iufi.QuestionPool.get_rank(user_data["game_state"]["quiz_game"]["points"])[0]
+                    if rank in roles.keys() and roles[rank] is not None:
+                        updated_users[rank] = updated_users.get(rank, 0) + 1
+                        await user.add_roles(roles[rank])
+
+            func.logger.info("Updated user roles: %s",
+                             ", ".join(f"{role_name}: {count}" for role_name, count in updated_users.items()))
 
     async def clean_user_cards(self, user: dict) -> int:
         user_id = user.get("_id")
@@ -232,7 +300,7 @@ class Tasks(commands.Cog):
                 update_doc_set[f"game_state.{game}.last_update"] = 0
 
             # Reset match_game per-level monthly fields
-            match_levels = list(func.settings.MATCH_GAME_SETTINGS.keys()) if getattr(func.settings, 'MATCH_GAME_SETTINGS', None) else []
+            match_levels = list(func.settings.MATCH_GAME_SETTINGS.keys()) if func.settings.MATCH_GAME_SETTINGS else []
             for lvl in match_levels:
                 prefix = f"game_state.match_game.{lvl}"
                 update_doc_set[f"{prefix}.monthly_matched"] = 0

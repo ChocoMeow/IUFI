@@ -504,6 +504,7 @@
     },
     "PVP_REWARDS_ENABLED": false,
     "GIVE_REWARD_CARD": true,
+    "MONTHLY_LEADERBOARD_ROLE": 1201455425820827708,
     "REWARD_CARD_PROBABILITIES": {
         "MUSIC_QUIZ": {
             "10": {"common": 0.98, "rare": 0.02},

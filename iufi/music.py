@@ -280,7 +280,7 @@ class Player(VoiceProtocol):
             )
             
             # Check if we should give a reward card based on point thresholds
-            probs_config = getattr(func.settings, "REWARD_CARD_PROBABILITIES", {}) or {}
+            probs_config = func.settings.REWARD_CARD_PROBABILITIES or {}
             probs_config = probs_config.get("MUSIC_QUIZ", {})
             selected_probs = None
             

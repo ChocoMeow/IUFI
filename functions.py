@@ -76,6 +76,10 @@ class Settings:
         self.LOGGING: Dict[Union[str, Dict[str, Union[str, bool]]]] = {}
         self.PVP_REWARDS_ENABLED: bool = False
         self.GIVE_REWARD_CARD: bool = False
+        self.MONTHLY_LEADERBOARD_ROLE: int = 0
+        # Newly added defaults so callers can reference them directly without getattr
+        self.PVP_SETTINGS: Dict[str, Any] = {}
+        self.REWARD_CARD_PROBABILITIES: Dict[str, Any] = {}
 
     def load(self):
         settings = open_json("settings.json")
@@ -110,6 +114,9 @@ class Settings:
         self.LOGGING = settings.get("LOGGING", {})
         self.PVP_REWARDS_ENABLED = settings.get("PVP_REWARDS_ENABLED", True)
         self.GIVE_REWARD_CARD = settings.get("GIVE_REWARD_CARD", True)
+        self.MONTHLY_LEADERBOARD_ROLE = settings.get("MONTHLY_LEADERBOARD_ROLE", 0)
+        self.PVP_SETTINGS = settings.get("PVP_SETTINGS", {})
+        self.REWARD_CARD_PROBABILITIES = settings.get("REWARD_CARD_PROBABILITIES", {})
 
 tokens: TOKEN = TOKEN()
 settings: Settings = Settings()
@@ -304,7 +311,13 @@ def update_quest_progress(user: Dict[str, Any], completed_quests: Union[str, Lis
     for quest_type in settings.USER_BASE["quests"].keys():
         user_quest = user.copy().get("quests", {}).get(quest_type, copy.deepcopy(settings.USER_BASE["quests"][quest_type]))
 
-        QUESTS_BASE: Dict[str, Any] = getattr(settings, f"{quest_type.upper()}_QUESTS", None)
+        # Use direct attribute access for quest bases instead of getattr
+        if quest_type.lower() == 'daily':
+            QUESTS_BASE: Dict[str, Any] = settings.DAILY_QUESTS
+        elif quest_type.lower() == 'weekly':
+            QUESTS_BASE: Dict[str, Any] = settings.WEEKLY_QUESTS
+        else:
+            QUESTS_BASE: Dict[str, Any] = {}
         if not QUESTS_BASE:
             continue
         

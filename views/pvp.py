@@ -58,7 +58,8 @@ def get_pvp_settings():
         "post_round_delay": 3,
         "max_reroll_attempts": 20
     }
-    return getattr(func.settings, "PVP_SETTINGS", {}) or defaults
+    # Prefer the repo settings.PVP_SETTINGS if available, otherwise fall back to defaults
+    return func.settings.PVP_SETTINGS or defaults
 
 
 # RPS faction helpers

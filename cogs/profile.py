@@ -613,7 +613,12 @@ class Profile(commands.Cog):
         for quest_type in func.settings.USER_BASE["quests"].keys():    
             user_quest: Dict[str, Any] = user.copy().get("quests", {}).get(quest_type, copy.deepcopy(func.settings.USER_BASE["quests"][quest_type]))
 
-            QUESTS_BASE: Dict[str, Any] = getattr(func.settings, f"{quest_type.upper()}_QUESTS", None)
+            if quest_type.lower() == 'daily':
+                QUESTS_BASE: Dict[str, Any] = func.settings.DAILY_QUESTS
+            elif quest_type.lower() == 'weekly':
+                QUESTS_BASE: Dict[str, Any] = func.settings.WEEKLY_QUESTS
+            else:
+                QUESTS_BASE: Dict[str, Any] = {}
             if not QUESTS_BASE:
                 continue
 

@@ -246,7 +246,7 @@ class MatchGame(discord.ui.View):
                 from .reward_card import RewardCardView
                 
                 # Get probabilities for this level and match count
-                probs_config = getattr(func.settings, "REWARD_CARD_PROBABILITIES", {}) or {}
+                probs_config = func.settings.REWARD_CARD_PROBABILITIES or {}
                 level_probs = probs_config.get("MATCH_GAME", {}).get(self._level, {})
                 selected_probs = level_probs.get(str(matched_raw))
                 
