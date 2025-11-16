@@ -74,6 +74,7 @@ class Settings:
         self.BUG_REPORT_CHANNEL_ID: int = 0
         self.OPUS_PATH: str = ""
         self.LOGGING: Dict[Union[str, Dict[str, Union[str, bool]]]] = {}
+        self.PITY_SETTINGS: Dict[str, int] = {}
 
     def load(self):
         settings = open_json("settings.json")
@@ -106,6 +107,7 @@ class Settings:
         self.BUG_REPORT_CHANNEL_ID = settings.get("BUG_REPORT_CHANNEL_ID")
         self.OPUS_PATH = settings.get("OPUS_PATH")
         self.LOGGING = settings.get("LOGGING", {})
+        self.PITY_SETTINGS = settings.get("PITY_SETTINGS", {})
 
 tokens: TOKEN = TOKEN()
 settings: Settings = Settings()
