@@ -71,6 +71,7 @@ class Settings:
         self.MATCH_GAME_SETTINGS: Dict[str, Dict[str, Any]] = {}
         self.MUSIC_GAME_SETTINGS: Dict[str, Any] = {}
         self.ADMIN_IDS: List[int] = []
+        self.BUG_REPORT_CHANNEL_ID: int = 0
         self.OPUS_PATH: str = ""
         self.LOGGING: Dict[Union[str, Dict[str, Union[str, bool]]]] = {}
         self.PITY_SETTINGS: Dict[str, int] = {}
@@ -103,6 +104,7 @@ class Settings:
         self.MATCH_GAME_SETTINGS = settings.get("MATCH_GAME_SETTINGS")
         self.MUSIC_GAME_SETTINGS = settings.get("MUSIC_GAME_SETTINGS")
         self.ADMIN_IDS = settings.get("ADMIN_IDS")
+        self.BUG_REPORT_CHANNEL_ID = settings.get("BUG_REPORT_CHANNEL_ID")
         self.OPUS_PATH = settings.get("OPUS_PATH")
         self.LOGGING = settings.get("LOGGING", {})
         self.PITY_SETTINGS = settings.get("PITY_SETTINGS", {})
@@ -359,6 +361,11 @@ def text_in_chunks(message: str, max_length: int = 2000) -> list:
 
     return chunks
 
+def get_user_card_limit(user: Dict[str, Any]) -> int:
+    """Returns the maximum number of cards a user can have."""
+    extra_card_slots = user.get("extra_props", {}).get("extra_card_slots", 0)
+    return settings.MAX_CARDS + extra_card_slots or settings.MAX_CARDS
+
 async def update_user(user_id: int, data: dict) -> None:
     user = await get_user(user_id)
     data.setdefault('$set', {})['last_active_time'] = time.time()
@@ -408,3 +415,18 @@ async def update_card(card_id: List[str] | str, data: dict, insert: bool = False
         return await CARDS_DB.update_many({"_id": {"$in": card_id}}, data)
 
     await CARDS_DB.update_one({"_id": card_id}, data)
+
+async def check_wishlist(message: discord.Message, card_ids: List[str]) -> None:
+    user_docs = await USERS_DB.find({"wishlist": {"$in": card_ids}}).to_list()
+    if user_docs:
+        await USERS_DB.update_many(
+            {"wishlist": {"$in": card_ids}},
+            {"$pull": {"wishlist": {"$in": card_ids}}}
+        )
+        for user_doc in user_docs:
+            try:
+                user = message.guild.get_member(user_doc["_id"])
+                if user:
+                    await user.send(f"Your wish card has been rolled or traded by another player. {message.jump_url}")
+            except Exception as _:
+                continue

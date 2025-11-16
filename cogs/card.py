@@ -38,7 +38,7 @@ class Card(commands.Cog):
             desc = "```"
             for card in cards:
                 member = ctx.guild.get_member(card.owner_id)
-                desc += f"{card.display_id} {card.display_tag} {card.display_frame} {card.display_stars} {card.tier[0]} 👤{member.display_name if member else 'None':5}\n"
+                desc += f"{card.display_id} {card.display_tag} {card.display_frame} {card.display_stars} {card.tier[0]} 👤 {member.display_name if member else 'None':5}\n"
             desc += "```"
 
             image_bytes, image_format = await iufi.gen_cards_view(cards, 4, hide_image_if_no_owner=True)
@@ -423,6 +423,7 @@ class Card(commands.Cog):
             file=discord.File(image_bytes, filename=f"image.{image_format}"),
             embed=view.build_embed(image_format), view=view
         )
+        await func.check_wishlist(view.message, [card.id for card in cards])
 
     @commands.command(aliases=["te"])
     async def tradeeveryone(self, ctx: commands.Context, candies: int, *, card_ids: str):
@@ -470,6 +471,7 @@ class Card(commands.Cog):
             file=discord.File(image_bytes, filename=f"image.{image_format}"),
             embed=view.build_embed(image_format), view=view
         )
+        await func.check_wishlist(view.message, [card.id for card in cards])
 
     @commands.command(aliases=["tl"])
     async def tradelast(self, ctx: commands.Context, member: discord.Member, candies: int):
@@ -513,6 +515,7 @@ class Card(commands.Cog):
             embed=view.build_embed(card.format),
             view=view
         )
+        await func.check_wishlist(view.message, [card_id])
 
     @commands.command(aliases=["tel"])
     async def tradeeveryonelast(self, ctx: commands.Context, candies: int):
@@ -552,6 +555,7 @@ class Card(commands.Cog):
             embed=view.build_embed(card.format),
             view=view
         )
+        await func.check_wishlist(view.message, [card_id])
 
     @commands.command(aliases=["u"])
     async def upgrade(self, ctx: commands.Context, upgrade_card_id: str, *, card_ids: str) -> None:

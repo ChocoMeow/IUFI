@@ -17,3 +17,4 @@ from .help import HelpView
 from .debugs import DebugView
 from .drop import DropView
 from .musiclearderboard import MusicLeaderboardView
+from .wishlist import WishListView

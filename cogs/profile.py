@@ -1,10 +1,11 @@
-import discord, iufi, time, asyncio, copy, random
+import discord, iufi, time, copy
 import functions as func
 
 from discord.ext import commands
 from views import (
     CollectionView,
-    PhotoCardView
+    PhotoCardView,
+    WishListView
 )
 from typing import (
     Dict,
@@ -71,7 +72,7 @@ class Profile(commands.Cog):
 
         embed = discord.Embed(title=f"👤 {member.display_name}'s Profile", color=discord.Color.random())
         embed.description = f"```{bio}```" if bio else ""
-        embed.description += f"```📙 Photocards: {len(user.get('cards', []))}/{func.settings.MAX_CARDS}\n⚔️ Level: {level} ({(exp / func.settings.DEFAULT_EXP) * 100:.1f}%)\n💤 Last Active: {func.cal_last_online_time(user.get("last_active_time"), "Not Active")}```\u200b"
+        embed.description += f"```📙 Photocards: {len(user.get('cards', []))}/{func.get_user_card_limit(user)}\n⚔️ Level: {level} ({(exp / func.settings.DEFAULT_EXP) * 100:.1f}%)\n💤 Last Active: {func.cal_last_online_time(user.get("last_active_time"), "Not Active")}```\u200b"
 
         embed.add_field(name="Ranked Stats:", value=f"> <:{rank_name}:{rank_emoji}> {rank_name.title()} (`{quiz_stats['points']}`)\n> 🎯 K/DA: `{round(quiz_stats['correct'] / total_questions, 1) if total_questions else 0}` (C: `{quiz_stats['correct']}` | W: `{quiz_stats['wrong'] + quiz_stats['timeout']}`)\n> 🕒 Average Time: `{func.convert_seconds(quiz_stats['average_time'])}`", inline=True)
         embed.add_field(name="Card Match Stats:", value="\n".join(f"> {DAILY_ROWS[int(level) - 4]} **Level {level}**: " + (f"🃏 `{stats.get('matched', 0)}` 🕒 `{func.convert_seconds(stats.get('finished_time'))}`" if (stats := card_match_stats.get(level)) else "Not attempt yet") for level in func.settings.MATCH_GAME_SETTINGS.keys()), inline=True)
@@ -334,7 +335,7 @@ class Profile(commands.Cog):
         if not user["cards"]:
             return await ctx.reply(f"**{ctx.author.mention} you have no photocards.**", delete_after=5)
 
-        view = PhotoCardView(ctx.author, user['cards'])
+        view = PhotoCardView(ctx.author, user)
         embed, _ = await view.build_embed()
         view.message = await ctx.reply(embed=embed, view=view)
 
@@ -403,6 +404,18 @@ class Profile(commands.Cog):
 
         embed.set_thumbnail(url=ctx.author.display_avatar.url)
         await ctx.reply(embed=embed)
+
+    @commands.command(aliases=["wl"])
+    async def wishlist(self, ctx: commands.Context):
+        """Add cards into your wishlist when the card got trade of roll by player you will got a dm from IUFIAdd cards to your wishlist! When a card is traded or rolled by a player, you'll receive a DM from IUFI. After that, the card will be automatically removed from your wishlist.
+
+        **Examples:**
+        @prefix@wishlist
+        @prefix@wl
+        """
+        user = await func.get_user(ctx.author.id)
+        view = WishListView(ctx, user)
+        view.message = await ctx.send(embed=view.build_embed(), view=view)
 
 async def setup(bot: commands.Bot) -> None:
     await bot.add_cog(Profile(bot))

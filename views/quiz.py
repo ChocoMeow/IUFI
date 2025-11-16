@@ -74,21 +74,36 @@ class AnswerModal(discord.ui.Modal):
         super().__init__(title="Enter your answer", *args, **kwargs)
         self.answer: str = ""
 
-        self.add_item(
-            discord.ui.TextInput(
-                label="Answer",
-                placeholder=question.question if len(question.question) <= 100 else question.question[:97] + "...",
-                min_length=1,
-                max_length=50,
-                style=discord.TextStyle.short,
-            )
-        )
+        self.add_item(discord.ui.TextInput(
+            label="Answer",
+            placeholder=question.question if len(question.question) <= 100 else question.question[:97] + "...",
+            min_length=1,
+            max_length=50,
+            style=discord.TextStyle.short,
+        ))
 
     async def on_submit(self, interaction: discord.Interaction) -> None:
         await interaction.response.defer()
         self.answer = self.children[0].value
         self.stop()
 
+class BugReportModal(discord.ui.Modal):
+    def __init__(self, *args, **kwargs) -> None:
+        super().__init__(title="Bug Report", *args, **kwargs)
+        self.description: str = ""
+
+        self.add_item(discord.ui.TextInput(
+            label="Report Description",
+            max_length=100,
+            placeholder="Please describe the bug or issue while answering this question",
+            style=discord.TextStyle.short,
+        ))
+
+    async def on_submit(self, interaction: discord.Interaction):
+        await interaction.response.defer()
+        self.description = self.children[0].value
+        self.stop()
+    
 class ResetAttemptView(discord.ui.View):
     def __init__(self, ctx: commands.Context, user_data: dict[str, Any], price: int, timeout: float = 20):
         super().__init__(timeout=timeout)
@@ -260,7 +275,7 @@ class QuizView(discord.ui.View):
         self.stop()
         
     def build_embed(self) -> discord.Embed:
-        question: Question = self.currect_question
+        question: Question = self.current_question
         best_record = question.best_record()
         
         record_msg = f"**Best Record: <@{best_record[0]}> (`{best_record[1]}s`)**\n" if best_record else ""
@@ -309,7 +324,7 @@ class QuizView(discord.ui.View):
         return round(self._ended_time - self._start_time, 2)
     
     @property
-    def currect_question(self) -> Question:
+    def current_question(self) -> Question:
         return self.questions[self.current]
 
     @discord.ui.button(label="Answer", style=discord.ButtonStyle.green)
@@ -317,7 +332,7 @@ class QuizView(discord.ui.View):
         if self._results[self.current] is not None:
             return await interaction.response.send_message("You are already answered! Please for the next question.", ephemeral=True, delete_after=5)
 
-        question = self.currect_question
+        question = self.current_question
         modal = AnswerModal(question)
         await interaction.response.send_modal(modal)
         await modal.wait()
@@ -336,7 +351,7 @@ class QuizView(discord.ui.View):
         elif modal.answer:
             correct = question.check_answer(modal.answer)
             
-            msg = self.gen_response(correct).format(time=f"`{func.convert_seconds(used_time)}`", correct_answer=f"`{self.currect_question.answers[0]}`", next=_next)
+            msg = self.gen_response(correct).format(time=f"`{func.convert_seconds(used_time)}`", correct_answer=f"`{self.current_question.answers[0]}`", next=_next)
             self._results[self.current] = correct
             if correct:
                 question.update_average_time(used_time)
@@ -346,7 +361,7 @@ class QuizView(discord.ui.View):
         await message.delete(delay=self._delay_between_questions)
         return await self.next_question()
 
-    @discord.ui.button(label="Skip", style=discord.ButtonStyle.red)
+    @discord.ui.button(label="Skip", style=discord.ButtonStyle.gray)
     async def skip(self, interaction: discord.Interaction, button: discord.ui.Button) -> None:
         if self._results[self.current] is not None:
             return await interaction.response.send_message("You cannot skip a question that you have already answered!", ephemeral=True, delete_after=5)
@@ -363,3 +378,24 @@ class QuizView(discord.ui.View):
 
         await interaction.response.send_message(msg, ephemeral=True, delete_after=self._delay_between_questions)
         return await self.next_question()
+
+    @discord.ui.button(label="Report", style=discord.ButtonStyle.red)
+    async def bug_report(self, interaction: discord.Interaction, button: discord.ui.Button) -> None:
+        question = self.current_question
+        if not question:
+            return await interaction.response.send_message("There are no questions available right now!", ephemeral=True)
+        
+        modal = BugReportModal()
+        await interaction.response.send_modal(modal)
+        await modal.wait()
+
+        bug_report_channel = interaction.client.get_channel(func.settings.BUG_REPORT_CHANNEL_ID)
+        if not bug_report_channel:
+            return await interaction.followup.send("Unable to send the bug report. Please try again later.", ephemeral=True)
+        
+        await bug_report_channel.send(
+            f"Received a bug report from {interaction.user}\n"
+            f"```Question ID: {question.id}\n"
+            f"Question: {question.question}\n"
+            f"Report Description: {modal.description}```"
+        )
