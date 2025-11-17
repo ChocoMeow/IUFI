@@ -36,17 +36,23 @@ class Gameplay(commands.Cog):
         
         actived_potions = {} if tier else func.get_potions(user.get("actived_potions", {}), func.settings.POTIONS_BASE)
         query = {}
+        guaranteed_tier = None
+
         if not tier:
+            # Normal roll - check if pity guarantees a tier
+            guaranteed_tier = func.check_pity_guarantee(user)
+
             query["$set"] = {"cooldown.roll": time.time() + (func.settings.COOLDOWN_BASE["roll"][1] * (1 - actived_potions.get("speed", 0)))}
 
         else:
+            # Purchased roll - don't affect pity
             tier = func.match_string(tier.lower(), func.settings.TIERS_BASE.keys())
             if not tier:
                 return await ctx.reply(f"Tier was not found. Please select a valid tier: `{', '.join(user.get('roll').keys())}`")
  
             if user.get("roll", {}).get(tier, 0) <= 0:
-                return await ctx.reply(f"You’ve used up all your `{tier}` rolls for now.")
-            
+                return await ctx.reply(f"You've used up all your `{tier}` rolls for now.")
+
             query["$inc"] = {f"roll.{tier}": -1}
 
         query = func.update_quest_progress(user, "ROLL", query=query)
@@ -57,7 +63,15 @@ class Gameplay(commands.Cog):
             view.add_item(discord.ui.Button(label='Beginner Guide', emoji='📗', url='https://docs.google.com/document/d/1VAD20wZQ56S_wDeMJlwIKn_jImIPuxh2lgy1fn17z0c/edit'))
             await ctx.reply(f"**Welcome to IUFI! Please have a look at the guide or use `qhelp` to begin.**", view=view)
 
-        cards = iufi.CardPool.roll(included=[tier] if tier else None, luck_rates=None if tier else actived_potions.get("luck", None))
+        # Roll cards with guaranteed tier if pity was triggered, otherwise use the purchased tier or normal roll
+        roll_tier = guaranteed_tier if guaranteed_tier else tier
+        cards = iufi.CardPool.roll(included=[roll_tier] if roll_tier else None, luck_rates=None if roll_tier else actived_potions.get("luck", None))
+
+        # Update pity based on rolled cards (only for normal rolls)
+        if not tier:
+            pity_query = func.update_pity_from_cards(user, cards)
+            await func.update_user(ctx.author.id, pity_query)
+
         image_bytes, image_format = await iufi.gen_cards_view(cards)
 
         view = RollView(ctx.author, cards)
@@ -178,6 +192,41 @@ class Gameplay(commands.Cog):
         """
         view = ShopView(ctx.author)
         view.message = await ctx.reply(embed=await view.build_embed(), view=view)
+
+    @commands.command(aliases=["mypity"], hidden=True)
+    async def pity(self, ctx: commands.Context, member: discord.Member = None):
+        """Shows pity progress for each tier. Admin only command.
+
+        **Examples:**
+        @prefix@pity
+        @prefix@pity @user
+        """
+        if ctx.author.id not in func.settings.ADMIN_IDS:
+            return await ctx.reply("This command is only available to administrators.", delete_after=5)
+
+        if not member:
+            member = ctx.author
+
+        user = await func.get_user(member.id)
+        user_pity = user.get("pity", {})
+
+        embed = discord.Embed(title=f"🎲 {member.display_name}'s Pity Progress", color=0x59b0c0)
+
+        pity_info = []
+        for tier, threshold in func.settings.PITY_SETTINGS.items():
+            current = user_pity.get(tier, 0)
+            progress_bar_length = 20
+            filled = int((current / threshold) * progress_bar_length)
+            bar = "█" * filled + "░" * (progress_bar_length - filled)
+            percentage = (current / threshold) * 100
+
+            pity_info.append(f"**{tier.capitalize()}**: {current}/{threshold} ({percentage:.1f}%)")
+            pity_info.append(f"{bar}\n")
+
+        embed.description = "\n".join(pity_info)
+        embed.set_footer(text="Normal rolls increment pity counters. Hitting pity guarantees that tier!")
+        embed.set_thumbnail(url=member.display_avatar.url)
+        await ctx.reply(embed=embed)
 
 async def setup(bot: commands.Bot) -> None:
     await bot.add_cog(Gameplay(bot))

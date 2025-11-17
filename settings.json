@@ -29,6 +29,13 @@
             "epic": 0,
             "legendary": 0
         },
+        "pity": {
+            "rare": 0,
+            "epic": 0,
+            "legendary": 0,
+            "mystic": 0,
+            "celestial": 0
+        },
         "cooldown": {
             "roll": 0,
             "claim": 0,
@@ -48,6 +55,13 @@
                 "next_update": 0
             }
         }
+    },
+    "PITY_SETTINGS": {
+        "rare": 5,
+        "epic": 100,
+        "legendary": 300,
+        "mystic": 1500,
+        "celestial": 3000
     },
     "COOLDOWN_BASE": {
         "roll": ["🎲", 600],
