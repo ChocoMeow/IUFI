@@ -62,7 +62,7 @@ class Settings:
         self.MUSIC_NODE: Dict[str, Union[str, int]] = {}
         self.USER_BASE: Dict[str, Any] = {}
         self.COOLDOWN_BASE: Dict[str, tuple[str, int]] = {}
-        self.PITY_SETTINGS: Dict[str, int] = {}
+        self.PITY_SETTINGS: Dict[str, Dict[str, Any]] = {}
         self.DAILY_QUESTS: Dict[str, Union[str, int]] = {}
         self.WEEKLY_QUESTS: Dict[str, Union[str, int]] = {}
         self.TIERS_BASE: Dict[str, List[str, int]] = {}
@@ -431,11 +431,45 @@ async def check_wishlist(message: discord.Message, card_ids: List[str]) -> None:
             except Exception as _:
                 continue
 
+def calculate_soft_pity_boost(user: Dict[str, Any]) -> Dict[str, float]:
+    """
+    Calculate the rate boost multipliers for each tier based on soft pity progress.
+    The boost increases linearly from 1.0x at soft_pity to soft_pity_boost at hard_pity-1.
+
+    Returns: Dict of {tier: boost_multiplier}
+    """
+    user_pity = user.get("pity", {})
+    tier_hierarchy = ["rare", "epic", "legendary", "mystic", "celestial"]
+    boosts = {}
+
+    for tier in tier_hierarchy:
+        pity_config = settings.PITY_SETTINGS.get(tier, {})
+        soft_pity = pity_config.get('soft_pity', 0)
+        hard_pity = pity_config.get('hard_pity', float('inf'))
+        max_boost = pity_config.get('soft_pity_boost', 1.0)
+        current_pity = user_pity.get(tier, 0)
+
+        if current_pity >= soft_pity and current_pity < hard_pity:
+            # Calculate linear increase from 1.0x to max_boost
+            soft_pity_range = hard_pity - soft_pity
+            progress_in_soft_pity = current_pity - soft_pity
+            boost_progress = progress_in_soft_pity / soft_pity_range
+            boost = 1.0 + (max_boost - 1.0) * boost_progress
+            boosts[tier] = boost
+        elif current_pity >= hard_pity:
+            # At hard pity, apply max boost (though guarantee kicks in)
+            boosts[tier] = max_boost
+        else:
+            # Not in soft pity range
+            boosts[tier] = 1.0
+
+    return boosts
+
 def check_pity_guarantee(user: Dict[str, Any]) -> str | None:
     """
-    Check if user has hit any pity threshold and return the guaranteed tier.
+    Check if user has hit any hard pity threshold and return the guaranteed tier.
     Does NOT modify pity counters - just checks and returns the tier to guarantee.
-    Returns: guaranteed_tier (highest tier that hit pity, or None)
+    Returns: guaranteed_tier (highest tier that hit hard pity, or None)
     """
     # Get user's current pity counters
     user_pity = user.get("pity", {})
@@ -443,15 +477,16 @@ def check_pity_guarantee(user: Dict[str, Any]) -> str | None:
     # Define tier hierarchy (lowest to highest)
     tier_hierarchy = ["rare", "epic", "legendary", "mystic", "celestial"]
 
-    # Check which pity thresholds have been hit, return the highest one
+    # Check which hard pity thresholds have been hit, return the highest one
     guaranteed_tier = None
 
     for tier in tier_hierarchy:
-        pity_threshold = settings.PITY_SETTINGS.get(tier, float('inf'))
+        pity_config = settings.PITY_SETTINGS.get(tier, {})
+        hard_pity_threshold = pity_config.get('hard_pity', float('inf'))
         current_pity = user_pity.get(tier, 0)
 
-        # If this tier's pity has been reached
-        if current_pity >= pity_threshold:
+        # If this tier's hard pity has been reached
+        if current_pity >= hard_pity_threshold:
             guaranteed_tier = tier  # Keep updating to get the highest tier
 
     return guaranteed_tier

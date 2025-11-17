@@ -42,6 +42,9 @@ class Gameplay(commands.Cog):
             # Normal roll - check if pity guarantees a tier
             guaranteed_tier = func.check_pity_guarantee(user)
 
+            # Calculate soft pity boosts for rate increases
+            soft_pity_boosts = func.calculate_soft_pity_boost(user)
+
             query["$set"] = {"cooldown.roll": time.time() + (func.settings.COOLDOWN_BASE["roll"][1] * (1 - actived_potions.get("speed", 0)))}
 
         else:
@@ -54,6 +57,7 @@ class Gameplay(commands.Cog):
                 return await ctx.reply(f"You've used up all your `{tier}` rolls for now.")
 
             query["$inc"] = {f"roll.{tier}": -1}
+            soft_pity_boosts = None
 
         query = func.update_quest_progress(user, "ROLL", query=query)
         await func.update_user(ctx.author.id, query)
@@ -65,7 +69,21 @@ class Gameplay(commands.Cog):
 
         # Roll cards with guaranteed tier if pity was triggered, otherwise use the purchased tier or normal roll
         roll_tier = guaranteed_tier if guaranteed_tier else tier
-        cards = iufi.CardPool.roll(included=[roll_tier] if roll_tier else None, luck_rates=None if roll_tier else actived_potions.get("luck", None))
+
+        # Apply soft pity boosts for normal rolls (combine with luck potion if present)
+        if not tier and not roll_tier:
+            # Normal roll without guarantee - apply soft pity boosts
+            cards = iufi.CardPool.roll(
+                included=[roll_tier] if roll_tier else None,
+                luck_rates=actived_potions.get("luck", None),
+                soft_pity_boosts=soft_pity_boosts
+            )
+        else:
+            # Guaranteed roll or purchased roll - no soft pity
+            cards = iufi.CardPool.roll(
+                included=[roll_tier] if roll_tier else None,
+                luck_rates=None if roll_tier else actived_potions.get("luck", None)
+            )
 
         # Update pity based on rolled cards (only for normal rolls)
         if not tier:
@@ -209,22 +227,42 @@ class Gameplay(commands.Cog):
 
         user = await func.get_user(member.id)
         user_pity = user.get("pity", {})
+        soft_pity_boosts = func.calculate_soft_pity_boost(user)
 
         embed = discord.Embed(title=f"🎲 {member.display_name}'s Pity Progress", color=0x59b0c0)
 
         pity_info = []
-        for tier, threshold in func.settings.PITY_SETTINGS.items():
+        for tier, pity_config in func.settings.PITY_SETTINGS.items():
+            soft_pity = pity_config.get('soft_pity', 0)
+            hard_pity = pity_config.get('hard_pity', 0)
+            max_boost = pity_config.get('soft_pity_boost', 1.0)
             current = user_pity.get(tier, 0)
-            progress_bar_length = 20
-            filled = int((current / threshold) * progress_bar_length)
-            bar = "█" * filled + "░" * (progress_bar_length - filled)
-            percentage = (current / threshold) * 100
+            current_boost = soft_pity_boosts.get(tier, 1.0)
 
-            pity_info.append(f"**{tier.capitalize()}**: {current}/{threshold} ({percentage:.1f}%)")
-            pity_info.append(f"{bar}\n")
+            # Determine which phase user is in
+            if current >= hard_pity:
+                phase = "🔥 HARD PITY (Guaranteed!)"
+                progress_to_show = hard_pity
+                bar_percentage = 1.0
+            elif current >= soft_pity:
+                phase = f"✨ SOFT PITY (Rates boosted {current_boost:.2f}x)"
+                progress_to_show = hard_pity
+                bar_percentage = current / hard_pity
+            else:
+                phase = f"📊 Building (Soft pity at {soft_pity})"
+                progress_to_show = soft_pity
+                bar_percentage = current / soft_pity if soft_pity > 0 else 0
+
+            # Progress bar
+            progress_bar_length = 20
+            filled = int(bar_percentage * progress_bar_length)
+            bar = "█" * filled + "░" * (progress_bar_length - filled)
+
+            pity_info.append(f"**{tier.capitalize()}**: {current}/{progress_to_show}")
+            pity_info.append(f"{bar} {phase}\n")
 
         embed.description = "\n".join(pity_info)
-        embed.set_footer(text="Normal rolls increment pity counters. Hitting pity guarantees that tier!")
+        embed.set_footer(text="Soft pity: Increased rates | Hard pity: Guaranteed! | Normal rolls only.")
         embed.set_thumbnail(url=member.display_avatar.url)
         await ctx.reply(embed=embed)
 
