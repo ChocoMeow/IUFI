@@ -101,7 +101,7 @@ class Tasks(commands.Cog):
                 {"last_active_time": {"$exists": False}}
             ]
         })
-
+        
         users_to_warn = []
         users_cleared = []
         converted_cards = 0
@@ -114,7 +114,7 @@ class Tasks(commands.Cog):
             last_active_time = user.get("last_active_time")
 
             # Warn users who are inactive and haven't been notified yet
-            if last_active_time is None or cutoff_threshold < last_active_time < last_warning_threshold:
+            if last_active_time is None or last_active_time < last_warning_threshold:
                 if user_id not in self.warned_users:
                     users_to_warn.append(user_id)
                     self.warned_users.add(user_id)
