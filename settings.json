@@ -500,7 +500,7 @@
             "discord": "INFO",
             "iufi": "INFO"
         },
-        "max-history": 30
+        "max-history": 365
     },
     "PVP_REWARDS_ENABLED": false,
     "GIVE_REWARD_CARD": true,
@@ -552,8 +552,8 @@
                 "6": {"common": 0.64, "rare": 0.25, "epic": 0.09, "legendary": 0.02},
                 "7": {"common": 0.58, "rare": 0.28, "epic": 0.11, "legendary": 0.03},
                 "8": {"common": 0.50, "rare": 0.32, "epic": 0.14, "legendary": 0.04},
-                "9": {"common": 0.42, "rare": 0.35, "epic": 0.18, "legendary": 0.05},
-                "10": {"common": 0.30, "rare": 0.35, "epic": 0.25, "legendary": 0.10}
+                "9": {"common": 0.40, "rare": 0.30, "epic": 0.20, "legendary": 0.10},
+                "10": {"common": 0.10, "rare": 0.25, "epic": 0.35, "legendary": 0.25, "mystic": 0.05}
             }
         },
         "EMOJI_QUIZ": {
