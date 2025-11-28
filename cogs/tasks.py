@@ -174,7 +174,7 @@ class Tasks(commands.Cog):
                 {"last_active_time": {"$exists": False}}
             ]
         })
-
+        
         users_to_warn = []
         users_cleared = []
         converted_cards = 0
@@ -187,7 +187,7 @@ class Tasks(commands.Cog):
             last_active_time = user.get("last_active_time")
 
             # Warn users who are inactive and haven't been notified yet
-            if last_active_time is None or last_warning_threshold < last_active_time < cutoff_threshold:
+            if last_active_time is None or last_active_time < last_warning_threshold:
                 if user_id not in self.warned_users:
                     users_to_warn.append(user_id)
                     self.warned_users.add(user_id)
@@ -201,9 +201,9 @@ class Tasks(commands.Cog):
         if users_to_warn:
             chunks = func.text_in_chunks(
                 message=f"Hi {', '.join(f'<@{user_id}>' for user_id in users_to_warn)},\n\n"
-                         "We've noticed you've been inactive for over 99 days. This is your final reminder: "
-                         "your cards will be converted tomorrow if you remain inactive. Don't worry—once converted, "
-                         "you can still recover your candies later. We hope to see you back in the game soon!"
+                        f"We've noticed you've been inactive for over {func.settings.RESET_CARD_DAY - 1} days. This is your final reminder: "
+                        "your cards will be converted tomorrow if you remain inactive. Don't worry—once converted, "
+                        "you can still recover your candies later. We hope to see you back in the game soon!"
                 )
             for chunk in chunks:
                 await channel.send(chunk, allowed_mentions=discord.AllowedMentions().none())

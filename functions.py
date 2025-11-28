@@ -62,6 +62,7 @@ class Settings:
         self.MUSIC_NODE: Dict[str, Union[str, int]] = {}
         self.USER_BASE: Dict[str, Any] = {}
         self.COOLDOWN_BASE: Dict[str, tuple[str, int]] = {}
+        self.PITY_SETTINGS: Dict[str, Dict[str, Any]] = {}
         self.DAILY_QUESTS: Dict[str, Union[str, int]] = {}
         self.WEEKLY_QUESTS: Dict[str, Union[str, int]] = {}
         self.TIERS_BASE: Dict[str, List[str, int]] = {}
@@ -100,6 +101,7 @@ class Settings:
         self.MUSIC_NODE = settings.get("MUSIC_NODE")
         self.USER_BASE = settings.get("USER_BASE")
         self.COOLDOWN_BASE = settings.get("COOLDOWN_BASE")
+        self.PITY_SETTINGS = settings.get("PITY_SETTINGS", {})
         self.DAILY_QUESTS = {k: v for k, v in settings.get("DAILY_QUESTS").items()}
         self.WEEKLY_QUESTS = {k: v for k, v in settings.get("WEEKLY_QUESTS").items()}
         self.TIERS_BASE = settings.get("TIERS_BASE")
@@ -520,3 +522,113 @@ async def check_wishlist(message: discord.Message, card_ids: List[str]) -> None:
                     await user.send(f"Your wish card has been rolled or traded by another player. {message.jump_url}")
             except Exception as _:
                 continue
+
+def calculate_soft_pity_boost(user: Dict[str, Any]) -> Dict[str, float]:
+    """
+    Calculate the rate boost multipliers for each tier based on soft pity progress.
+    The boost increases linearly from 1.0x at soft_pity to soft_pity_boost at hard_pity-1.
+
+    Returns: Dict of {tier: boost_multiplier}
+    """
+    user_pity = user.get("pity", {})
+    tier_hierarchy = ["rare", "epic", "legendary", "mystic", "celestial"]
+    boosts = {}
+
+    for tier in tier_hierarchy:
+        pity_config = settings.PITY_SETTINGS.get(tier, {})
+        soft_pity = pity_config.get('soft_pity', 0)
+        hard_pity = pity_config.get('hard_pity', float('inf'))
+        max_boost = pity_config.get('soft_pity_boost', 1.0)
+        current_pity = user_pity.get(tier, 0)
+
+        if current_pity >= soft_pity and current_pity < hard_pity:
+            # Calculate linear increase from 1.0x to max_boost
+            soft_pity_range = hard_pity - soft_pity
+            progress_in_soft_pity = current_pity - soft_pity
+            boost_progress = progress_in_soft_pity / soft_pity_range
+            boost = 1.0 + (max_boost - 1.0) * boost_progress
+            boosts[tier] = boost
+        elif current_pity >= hard_pity:
+            # At hard pity, apply max boost (though guarantee kicks in)
+            boosts[tier] = max_boost
+        else:
+            # Not in soft pity range
+            boosts[tier] = 1.0
+
+    return boosts
+
+def check_pity_guarantee(user: Dict[str, Any]) -> str | None:
+    """
+    Check if user has hit any hard pity threshold and return the guaranteed tier.
+    Does NOT modify pity counters - just checks and returns the tier to guarantee.
+    Returns: guaranteed_tier (highest tier that hit hard pity, or None)
+    """
+    # Get user's current pity counters
+    user_pity = user.get("pity", {})
+
+    # Define tier hierarchy (lowest to highest)
+    tier_hierarchy = ["rare", "epic", "legendary", "mystic", "celestial"]
+
+    # Check which hard pity thresholds have been hit, return the highest one
+    guaranteed_tier = None
+
+    for tier in tier_hierarchy:
+        pity_config = settings.PITY_SETTINGS.get(tier, {})
+        hard_pity_threshold = pity_config.get('hard_pity', float('inf'))
+        current_pity = user_pity.get(tier, 0)
+
+        # If this tier's hard pity has been reached
+        if current_pity >= hard_pity_threshold:
+            guaranteed_tier = tier  # Keep updating to get the highest tier
+
+    return guaranteed_tier
+
+def update_pity_from_cards(user: Dict[str, Any], cards: List[Any]) -> Dict[str, Any]:
+    """
+    After rolling, check the cards received and update pity accordingly.
+    - If user got a high tier card:
+      - Reset that tier's pity and all lower tiers to 0
+      - Increment all higher tiers by 1
+    - If user only got common cards, increment all pity counters by 1
+    Returns: query with pity updates
+    """
+    # Define tier hierarchy (lowest to highest)
+    tier_hierarchy = ["rare", "epic", "legendary", "mystic", "celestial"]
+
+    # Get the highest tier from the rolled cards
+    highest_tier_rolled = None
+    for card in cards:
+        card_tier = card.tier[1] if hasattr(card, 'tier') and isinstance(card.tier, tuple) else None
+        if card_tier and card_tier in tier_hierarchy:
+            if highest_tier_rolled is None:
+                highest_tier_rolled = card_tier
+            else:
+                # Compare and keep the higher tier
+                if tier_hierarchy.index(card_tier) > tier_hierarchy.index(highest_tier_rolled):
+                    highest_tier_rolled = card_tier
+
+    query = {}
+
+    if highest_tier_rolled and highest_tier_rolled != "common":
+        # User got a rare+ card
+        tier_index = tier_hierarchy.index(highest_tier_rolled)
+
+        # Reset that tier and all lower tiers to 0
+        query["$set"] = {}
+        for i in range(tier_index + 1):
+            tier_to_reset = tier_hierarchy[i]
+            query["$set"][f"pity.{tier_to_reset}"] = 0
+
+        # Increment all higher tiers by 1
+        query["$inc"] = {}
+        for i in range(tier_index + 1, len(tier_hierarchy)):
+            tier_to_increment = tier_hierarchy[i]
+            query["$inc"][f"pity.{tier_to_increment}"] = 1
+    else:
+        # User only got common cards - increment all pity counters
+        query["$inc"] = {}
+        for tier in tier_hierarchy:
+            query["$inc"][f"pity.{tier}"] = 1
+
+    return query
+

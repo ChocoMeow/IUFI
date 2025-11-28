@@ -29,6 +29,13 @@
             "epic": 0,
             "legendary": 0
         },
+        "pity": {
+            "rare": 0,
+            "epic": 0,
+            "legendary": 0,
+            "mystic": 0,
+            "celestial": 0
+        },
         "cooldown": {
             "roll": 0,
             "claim": 0,
@@ -56,6 +63,33 @@
         "extra_props": {
             "extra_card_slots": 0,
             "slot_purchases": 0
+        }
+    },
+    "PITY_SETTINGS": {
+        "rare": {
+            "soft_pity": 5,
+            "hard_pity": 10,
+            "soft_pity_boost": 2.0
+        },
+        "epic": {
+            "soft_pity": 30,
+            "hard_pity": 60,
+            "soft_pity_boost": 3.0
+        },
+        "legendary": {
+            "soft_pity": 120,
+            "hard_pity": 200,
+            "soft_pity_boost": 4.0
+        },
+        "mystic": {
+            "soft_pity": 3000,
+            "hard_pity": 5000,
+            "soft_pity_boost": 6.0
+        },
+        "celestial": {
+            "soft_pity": 5000,
+            "hard_pity": 7500,
+            "soft_pity_boost": 8.0
         }
     },
     "COOLDOWN_BASE": {

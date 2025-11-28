@@ -198,15 +198,27 @@ class CardPool:
         return cards
     
     @classmethod
-    def roll(cls, amount: int = 3, *, included: List[str] = None, avoid: List[str] = None, luck_rates: float = None) -> List[Card]:
+    def roll(cls, amount: int = 3, *, included: List[str] = None, avoid: List[str] = None, luck_rates: float = None, soft_pity_boosts: dict = None) -> List[Card]:
         results = included if included else []
 
         drop_rates = DROP_RATES.copy()
+
+        # Apply luck potion boost
         if luck_rates:
             drop_rates = {k: v if k == 'common' else v * (1 + luck_rates) for k, v in DROP_RATES.items()}
             total = sum(drop_rates.values())
             drop_rates['common'] = 1 - (total - drop_rates['common'])
         
+        # Apply soft pity boosts (multiplicative with luck rates)
+        if soft_pity_boosts:
+            for tier, boost in soft_pity_boosts.items():
+                if tier in drop_rates and boost > 1.0:
+                    drop_rates[tier] = drop_rates[tier] * boost
+
+            # Normalize rates to sum to 1.0
+            total = sum(drop_rates.values())
+            drop_rates = {k: v / total for k, v in drop_rates.items()}
+
         if avoid:
             drop_rates = {k: v for k, v in drop_rates.items() if k not in avoid}
 
