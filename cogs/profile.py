@@ -270,13 +270,16 @@ class Profile(commands.Cog):
         )
 
         # Achievements/Badges (placeholder for future expansion)
+        # Check if member has IUFI Master role
+        has_iufi_master_role = any(role.id == func.settings.MONTHLY_LEADERBOARD_ROLE for role in member.roles) if func.settings.MONTHLY_LEADERBOARD_ROLE else False
+        
         embed.add_field(
             name="🏆 Achievements",
             value=(
                 f"```\n"
-                f"{'🌟' if card_count >= 50 else '⭐'} Collector {'✓' if card_count >= 50 else ''}\n"
-                f"{'🎯' if quiz_stats.get('points', 0) >= 1000 else '🎲'} Quiz Master {'✓' if quiz_stats.get('points', 0) >= 1000 else ''}\n"
-                f"{'⚔️' if wins >= 10 else '🗡️'} PVP Warrior {'✓' if wins >= 10 else ''}\n"
+                f"{'🌟' if card_count >= 100 else '⭐'} Card Collector {'✓' if card_count >= 100 else '🔒 Locked'}\n"
+                f"{'👑' if has_iufi_master_role else '💎'} IUFI Master {'✓' if has_iufi_master_role else '🔒 Locked'}\n"
+                f"{'⚔️' if wins >= 10 else '🗡️'} PVP Champion {'✓' if wins >= 10 else '🔒 Locked'}\n"
                 f"```"
             ),
             inline=False

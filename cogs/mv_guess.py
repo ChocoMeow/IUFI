@@ -23,7 +23,7 @@ class MVGuess(commands.Cog):
         self.bot = bot
         # channel ids where a game is currently running (prevents concurrent games in same channel)
         self._running_channels: set[int] = set()
-        self.invisible = False
+        self.invisible = True
         self.emoji = "🎬"
 
     def _create_blurred_image(self, original_bytes: bytes, blur_radius: int) -> io.BytesIO:

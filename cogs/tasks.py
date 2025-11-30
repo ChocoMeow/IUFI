@@ -49,7 +49,7 @@ class Tasks(commands.Cog):
             for member in role.members:
                 await member.remove_roles(role)
 
-
+        return #for this month, we skip the reward distribution
         # Feature flag: Skip monthly rewards if reward card system is enabled
         if func.settings.GIVE_REWARD_CARD:
             # Instead of giving reward cards, assign the same rank roles we give in the non-reward-card flow

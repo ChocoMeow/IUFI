@@ -300,7 +300,7 @@ class Gameplay(commands.Cog):
         view = ChallengeView(ctx, ctx.author, opponent, timeout=get_pvp_settings().get("challenge_timeout", 300))
         view.message = await ctx.reply(f"{ctx.author.mention} issued a PvP challenge{' to ' + opponent.mention if opponent else ''}. Expires in <t:{round(time.time() + get_pvp_settings().get('challenge_timeout', 300))}:R>", view=view)
 
-    @commands.command(name="pvp_test", aliases=["pvptest", "pvp_auto"])
+    @commands.command(name="pvp_test", aliases=["pvptest", "pvp_auto"], hidden=True)
     async def pvp_test(self, ctx: commands.Context):
         """Test command: auto-start a PvP match using random cards for you and the bot, and play it through."""
         # Ensure the card pool is loaded
