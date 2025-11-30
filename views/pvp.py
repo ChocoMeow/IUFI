@@ -697,7 +697,7 @@ class PvPMatch:
 
 class TeamModal(discord.ui.Modal):
     def __init__(self, match: PvPMatch, for_user_id: int):
-        super().__init__(title="Submit your team (3 cards, different tiers, no celestial)")
+        super().__init__(title="Submit 3 cards, different tiers, no celestial")
         self.match = match
         self.for_user_id = for_user_id
 
