@@ -116,16 +116,16 @@ class RewardCardView(discord.ui.View):
         return card
 
     def build_embed(self) -> discord.Embed:
-        embed = discord.Embed(title="Reward Card", color=discord.Color.random())
+        embed = discord.Embed(title=f"Reward Card — Expires <t:{self.expires_at}:R>", color=discord.Color.random())
         embed.add_field(name="Probabilities", value=self._format_probs(), inline=False)
 
         if self.current_card:
             card = self.current_card
             embed.description = f"{card.tier[0]} **{card._tier.capitalize()}** | {card.display_id} | {card.display_stars}"
-            embed.set_footer(text=f"Reroll cost: {self.current_cost} {self.cost_currency_field} — Expires: <t:{self.expires_at}:R>")
+            embed.set_footer(text=f"Reroll cost: {self.current_cost} {self.cost_currency_field}")
         else:
             embed.description = "No card available to display."
-            embed.set_footer(text=f"Reroll cost: {self.current_cost} {self.cost_currency_field} — Expires: <t:{self.expires_at}:R>")
+            embed.set_footer(text=f"Reroll cost: {self.current_cost} {self.cost_currency_field}")
 
         return embed
 

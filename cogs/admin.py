@@ -17,7 +17,7 @@ class Admin(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
         self.emoji = "🔧"
-        self.invisible = False
+        self.invisible = True
 
     @commands.command()
     async def givecandies(self, ctx: commands.Context, user: discord.Member, amount: int):

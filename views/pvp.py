@@ -697,7 +697,7 @@ class PvPMatch:
 
 class TeamModal(discord.ui.Modal):
     def __init__(self, match: PvPMatch, for_user_id: int):
-        super().__init__(title="Submit your team (3 card IDs)")
+        super().__init__(title="Submit your team (3 cards, different tiers, no celestial)")
         self.match = match
         self.for_user_id = for_user_id
 
@@ -731,6 +731,16 @@ class TeamModal(discord.ui.Modal):
         for c in resolved:
             if str(c.id) not in owned_ids and (not c.owner_id or c.owner_id != user_id):
                 return await interaction.response.send_message("You must own all the cards you submit.", ephemeral=True)
+
+        # check for celestial cards - not allowed in PvP
+        for c in resolved:
+            if c._tier.lower() == "celestial":
+                return await interaction.response.send_message("Celestial cards are not allowed in PvP matches.", ephemeral=True)
+
+        # check tier uniqueness - all cards must have different tier types
+        tiers = [c._tier for c in resolved]
+        if len(set(tiers)) != 3:
+            return await interaction.response.send_message("All 3 cards must have different tier types.", ephemeral=True)
 
         # store the team
         self.match.teams[user_id] = resolved
@@ -822,7 +832,7 @@ class ChallengeView(discord.ui.View):
 
         # send submission message with view containing targeted submit buttons
         embed = discord.Embed(title="PvP Match - Team Submission", color=discord.Color.blurple())
-        embed.description = f"{player_label(challenger)} vs {player_label(opponent)}\nBoth players, please submit your teams (3 unique cards) by clicking your Submit button below. You must own the cards you submit."
+        embed.description = f"{player_label(challenger)} vs {player_label(opponent)}\nBoth players, please submit your teams (3 unique cards with different tier types, celestial not allowed) by clicking your Submit button below. You must own the cards you submit."
 
         # replace buttons with submission view
         view = SubmissionView(self.match, timeout=self.settings.get("challenge_timeout", 300))
