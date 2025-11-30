@@ -65,10 +65,10 @@ class Dropdown(discord.ui.Select):
                         qty = modal.quantity
                         base_price = item[2] if isinstance(item[2], int) else 100
 
-                        # compute total cost: sum of base_price * (1 + prev_purchases + i) for each purchase
+                        # compute total cost: sum of base_price + (prev_purchases + i) * 10 for each purchase
                         total_price = 0
                         for i in range(qty):
-                            total_price += base_price * (1 + prev_purchases + i)
+                            total_price += base_price + (prev_purchases + i) * 10
 
                         if user["candies"] < total_price:
                             needed = total_price - user["candies"]
@@ -131,7 +131,7 @@ class ShopView(discord.ui.View):
             # For inventory slots, show the next price per slot based on user's purchases
             if item[1] == "inventory.slots":
                 prev_purchases = user.get("extra_props", {}).get("slot_purchases", 0)
-                next_price = item[2] * (1 + prev_purchases)
+                next_price = item[2] + prev_purchases * 10
                 display_price = f"{next_price} (per slot)"
                 embed.description += f"{item[0]} {(item[1].split('.')[1].title() + ' ' + item[1].split('.')[0].title()).upper():<20} {display_price:>10} 🍬\n"
             else:
