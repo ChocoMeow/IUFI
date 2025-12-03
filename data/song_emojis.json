@@ -13,7 +13,7 @@
     "emojis": [
       "🤝🕰️💫",
       "👫🕰️🌟",
-      "⏰🪿😴"
+      "⏰🪿⚙️"
     ],
     "type": "song",
     "popularity": 7
@@ -21,8 +21,8 @@
   {
     "name": "Through the Night",
     "emojis": [
-      "🌙🕯️🎶",
-      "🌌😌🎵"
+      "🌙✉️🎶",
+      "🌌✉️🎵"
     ],
     "type": "song",
     "popularity": 8
@@ -104,8 +104,8 @@
   {
     "name": "Twenty Three",
     "emojis": [
-      "2️⃣3️⃣🎂🎶",
-      "🎈🕊️🎂",
+      "2️⃣3️⃣🎂",
+      "🎈🐈‍⬛🎂",
       "🐻🦊💜"
     ],
     "type": "song",
@@ -115,7 +115,7 @@
     "name": "Strawberry Moon",
     "emojis": [
       "🍓🌕🍨",
-      "🍭🎮💓"
+      "🍓🎮💓"
     ],
     "type": "song",
     "popularity": 7
@@ -123,7 +123,8 @@
   {
     "name": "Lullaby",
     "emojis": [
-      "😴🎶🌃"
+      "😴🎶🌃",
+      "💤🎵🌌"
     ],
     "type": "song",
     "popularity": 6
@@ -150,7 +151,7 @@
     "name": "Not Spring, Love, or Cherry Blossoms",
     "emojis": [
       "🌸❤️🍦",
-      "🌸🚗🤍"
+      "🌱❤️🌸"
     ],
     "type": "song",
     "popularity": 4
@@ -222,7 +223,7 @@
     "name": "The Red Shoes",
     "emojis": [
       "👠🖤🤍",
-      "❤🥿🪇"
+      "❤👠🪇"
     ],
     "type": "song",
     "popularity": 4
@@ -230,8 +231,7 @@
   {
     "name": "Shopper",
     "emojis": [
-      "🍭🔭🎆",
-      "🪽🧚🏻‍♀️🥷"
+      "🍭🔭🛒"
     ],
     "type": "song",
     "popularity": 7
@@ -240,7 +240,7 @@
     "name": "Shh..",
     "emojis": [
       "🫡❤🤫",
-      "👩‍👧🌨❤"
+      "👧👩👵"
     ],
     "type": "song",
     "popularity": 4
@@ -257,7 +257,8 @@
     "name": "Above The Time",
     "emojis": [
       "⛵📰💜",
-      "🪿🫗🚂"
+      "🪿🫗🚂",
+      "⬆️⏰🪿"
     ],
     "type": "song",
     "popularity": 5
@@ -271,6 +272,15 @@
     "popularity": 6
   },
   {
+    "name": "Heart",
+    "emojis": [
+      "❤💕💜",
+      "❤♾️🌟"
+    ],
+    "type": "song",
+    "popularity": 7
+  },
+  {
     "name": "Red Queen",
     "emojis": [
       "❤👸🏻💋",
@@ -278,6 +288,135 @@
     ],
     "type": "song",
     "popularity": 5
+  },
+  {
+    "name": "Love Attack",
+    "emojis": [
+      "❤🏹⚔️"
+    ],
+    "type": "song",
+    "popularity": 2
+  },
+  {
+    "name": "Sogyeokdong",
+    "emojis": [
+      "📰❤⚔️"
+    ],
+    "type": "song",
+    "popularity": 3
+  },
+  {
+    "name": "Marshmallow",
+    "emojis": [
+      "🥰⬜🤏🏻",
+      "🍮🍪👶🏻"
+    ],
+    "type": "song",
+    "popularity": 4
+  },
+  {
+    "name": "Zeze",
+    "emojis": [
+      "👦🏻🍊🌳",
+      "👦🏻🌳🌿"
+    ],
+    "type": "song",
+    "popularity": 5
+  },
+  {
+    "name": "Knees",
+    "emojis": [
+      "🧓🏻🦵🏻😴",
+      "💆🏻‍♀️💤🦵🏻"
+    ],
+    "type": "song",
+    "popularity": 5
+  },
+  {
+    "name": "Glasses",
+    "emojis": [
+      "👁❌👍🏻",
+      "👩🏻👀👓"
+    ],
+    "type": "song",
+    "popularity": 3
+  },
+  {
+    "name": "Raindrop",
+    "emojis": [
+      "💧🌧💕"
+    ],
+    "type": "song",
+    "popularity": 4
+  },
+  {
+    "name": "Last Night Story",
+    "emojis": [
+      "🪩💃🏻🍻",
+      "🧡🪩🎉"
+    ],
+    "type": "song",
+    "popularity": 6
+  },
+  {
+    "name": "Sleepless Rainy Night",
+    "emojis": [
+      "❌😴🌧",
+      "💤🌧🌃"
+    ],
+    "type": "song",
+    "popularity": 4
+  },
+  {
+    "name": "Winter Sleep",
+    "emojis": [
+      "❄🌨😴",
+      "☀🌸🍂❄"
+    ],
+    "type": "song",
+    "popularity": 7
+  },
+  {
+    "name": "I Stan U",
+    "emojis": [
+      "🎙🪩🕺🏻"
+    ],
+    "type": "song",
+    "popularity": 4
+  },
+  {
+    "name": "Secret Garden",
+    "emojis": [
+      "🤫💐🎋",
+      "🤫🌺🌼"
+    ],
+    "type": "song",
+    "popularity": 4
+  },
+  {
+    "name": "Dlwlrma",
+    "emojis": [
+      "🦚🩵💙",
+      "🎆✨🪽"
+    ],
+    "type": "song",
+    "popularity": 4
+  },
+  {
+    "name": "My Sea",
+    "emojis": [
+      "🌊💙🌙"
+    ],
+    "type": "song",
+    "popularity": 6
+  },
+  {
+    "name": "Obliviate",
+    "emojis": [
+      "🪄🧠💨"
+    ],
+    "type": "song",
+    "popularity": 6
   },
   {
     "name": "You Are the Best",
@@ -301,7 +440,8 @@
     "name": "My Mister",
     "emojis": [
       "🏠🤝🎭",
-      "☕🖤🎶"
+      "☕🖤🎶",
+      "🧓🏻🌕🛒"
     ],
     "type": "drama",
     "popularity": 7
