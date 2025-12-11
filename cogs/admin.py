@@ -7,7 +7,6 @@ from views import ConfirmView
 
 
 def is_admin_account(user_id) -> bool:
-    return True
     if user_id in func.settings.ADMIN_IDS:
         return True
     return False
