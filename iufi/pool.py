@@ -342,7 +342,7 @@ class MusicPool:
         return list(cls._questions.values())
     
     @classmethod
-    async def get_random_question(cls, history: List[str]) -> Optional[Track]:
+    async def get_random_question(cls, history: List[str], player: Optional["Player"] = None) -> Optional[Track]:
         if not cls._questions:
             await cls.fetch_data()
 
@@ -352,7 +352,28 @@ class MusicPool:
         if not available_questions:
             return None
 
-        return choice(available_questions)
+        # Check if any user in VC has 100+ points - if so, use random selection
+        use_random = False
+        if player and player.channel:
+            for member in player.channel.members:
+                if member.bot:
+                    continue
+                user = await func.get_user(member.id)
+                points = user.get("game_state", {}).get("music_game", {}).get("points", 0)
+                if points >= 100:
+                    use_random = True
+                    break
+
+        if use_random:
+            # Random selection when someone with 100+ points is in VC
+            return choice(available_questions)
+        else:
+            # Weight songs by likes (more likes = higher chance of being played)
+            # Add 1 to each like count to ensure songs with 0 likes can still be selected
+            weights = [track.likes + 1 for track in available_questions]
+            
+            # Use weighted random selection
+            return choices(available_questions, weights=weights, k=1)[0]
 
     @classmethod
     async def fetch_data(cls) -> None:

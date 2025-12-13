@@ -154,7 +154,7 @@ class Player(VoiceProtocol):
                 return await self.teardown()
             
             # Fetch a random track, checking history
-            track = await MusicPool.get_random_question(self._history)
+            track = await MusicPool.get_random_question(self._history, player=self)
             if not track:
                 return await self.teardown()
 
