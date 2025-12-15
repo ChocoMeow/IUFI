@@ -6,10 +6,11 @@ from iufi import MusicPool
 LEADERBOARD_EMOJIS: list[str] = ["🥇", "🥈", "🥉", "🏅"]
 
 class MusicLeaderboardView(discord.ui.View):
-    def __init__(self, author: discord.Member) -> None:
+    def __init__(self, author: discord.Member, default_embed: discord.Embed) -> None:
         super().__init__(timeout=60)
 
         self.author: discord.Member = author
+        self.default_embed: discord.Embed = default_embed
         self.message: discord.Message = None
 
     async def on_timeout(self) -> None:
@@ -21,6 +22,10 @@ class MusicLeaderboardView(discord.ui.View):
     async def interaction_check(self, interaction: discord.Interaction) -> bool:
         return interaction.user == self.author
     
+    @discord.ui.button(label="<")
+    async def home(self, interaction: discord.Interaction, button: discord.ui.Button) -> None:
+        await interaction.response.edit_message(embed=self.default_embed)
+
     @discord.ui.button(label="Most Liked", emoji="❤️")
     async def most_liked(self, interaction: discord.Interaction, button: discord.ui.Button) -> None:
         await interaction.response.defer()
