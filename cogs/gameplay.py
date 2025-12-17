@@ -1,5 +1,8 @@
 import discord, iufi, time, asyncio
 import functions as func
+import random
+import io, os
+from PIL import Image, ImageFilter
 
 from discord.ext import commands
 from iufi.pool import QuestionPool as QP
@@ -9,8 +12,10 @@ from views import (
     MatchGame,
     QuizView,
     ResetAttemptView,
-    QUIZ_SETTINGS
+    QUIZ_SETTINGS,
 )
+from views.emoji_quiz import EmojiQuizView, EmojiResetAttemptView, EMOJI_QUIZ_SETTINGS
+from views.pvp import ChallengeView, get_pvp_settings, PvPMatch
 
 class Gameplay(commands.Cog):
     def __init__(self, bot: commands.Bot) -> None:
@@ -211,6 +216,116 @@ class Gameplay(commands.Cog):
         view = ShopView(ctx.author)
         view.message = await ctx.reply(embed=await view.build_embed(), view=view)
 
+    @commands.command(aliases=["eq"])
+    async def emojiquiz(self, ctx: commands.Context, category: str = None):
+        """Guess IU song or drama by emoji(s).
+
+        Optional `category` can be `song` or `drama` to restrict questions.
+
+        **Examples:**
+        @prefix@emojiquiz
+        @prefix@eq song
+        @prefix@eq drama
+        """
+        user = await func.get_user(ctx.author.id)
+        # reuse the quiz cooldown logic
+        if (retry := user.get("cooldown", {}).setdefault("quiz_game", 0)) > time.time():
+            price = max(5, int(EMOJI_QUIZ_SETTINGS['reset_price'] * ((retry - time.time()) / func.settings.COOLDOWN_BASE["quiz_game"][1])))
+            view = EmojiResetAttemptView(ctx, user, price)
+            view.response = await ctx.reply(f"{ctx.author.mention} your emoji quiz is <t:{round(retry)}:R>. If you’d like to bypass this cooldown, you can do so by paying `🍬 {price}` candies.", delete_after=20, view=view)
+            return
+
+        # load emoji entries from JSON file
+        try:
+            import json
+            with open(os.path.join(func.ROOT_DIR, "data", "song_emojis.json"), encoding="utf8") as f:
+                entries = json.load(f)
+        except Exception:
+            entries = []
+
+        if not entries:
+            return await ctx.reply("There are no emoji entries available right now.")
+
+        # Normalize category param and filter entries if provided
+        category = category.lower() if category else None
+        if category and category not in ("song", "drama"):
+            return await ctx.reply("Invalid category. Please use `song` or `drama`.")
+
+        filtered = [e for e in entries if (not category) or (e.get("type", "song").lower() == category)]
+        if not filtered:
+            return await ctx.reply(f"No entries found for category: {category}")
+
+        num_q = min(5, len(filtered))
+        # Weighted sampling without replacement based on 'popularity' (1..10). Default popularity=5.
+        try:
+            items = filtered.copy()
+            sampled = []
+            for _ in range(num_q):
+                weights = [max(1, min(10, int(e.get("popularity", 5)))) for e in items]
+                chosen = random.choices(items, weights=weights, k=1)[0]
+                sampled.append(chosen)
+                # remove the chosen item for subsequent picks
+                items.remove(chosen)
+        except Exception:
+            # fallback to uniform sampling
+            sampled = random.sample(filtered, k=num_q)
+        # sampled is list of question dicts
+
+        # set cooldown
+        query = func.update_quest_progress(user, "PLAY_QUIZ_GAME", query={"$set": {"cooldown.quiz_game": time.time() + func.settings.COOLDOWN_BASE["roll"][1]}})
+        await func.update_user(ctx.author.id, query)
+
+        view = EmojiQuizView(ctx.author, sampled, timeout_per_question=40)
+        view.response = await ctx.reply(
+            content=f"**This game ends** <t:{round(time.time() + view.total_time)}:R>",
+            embed=view.build_embed(),
+            view=view
+        )
+
+        # start the view runner to manage per-question timeouts
+        asyncio.create_task(view.run())
+
+        await asyncio.sleep(view.total_time)
+        await view.end_game()
+
+    @commands.command()
+    async def pvp(self, ctx: commands.Context, opponent: discord.Member = None):
+        """Issue a PvP challenge. If opponent is omitted, the challenge is open for anyone to accept.
+
+        Example:
+        @prefix@pvp @user
+        @prefix@pvp
+        """
+        # create challenge view and message
+        view = ChallengeView(ctx, ctx.author, opponent, timeout=get_pvp_settings().get("challenge_timeout", 300))
+        view.message = await ctx.reply(f"{ctx.author.mention} issued a PvP challenge{' to ' + opponent.mention if opponent else ''}. Expires in <t:{round(time.time() + get_pvp_settings().get('challenge_timeout', 300))}:R>", view=view)
+
+    @commands.command(name="pvp_test", aliases=["pvptest", "pvp_auto"], hidden=True)
+    async def pvp_test(self, ctx: commands.Context):
+        """Test command: auto-start a PvP match using random cards for you and the bot, and play it through."""
+        # Ensure the card pool is loaded
+        try:
+            # pick random cards for each side
+            cards_a = iufi.CardPool.get_random_cards_for_match_game(3)
+            cards_b = iufi.CardPool.get_random_cards_for_match_game(3)
+        except Exception as e:
+            return await ctx.reply(f"Failed to pick random cards for test: {e}")
+
+        opponent = ctx.guild.me
+        settings = get_pvp_settings()
+        match = PvPMatch(ctx, ctx.author, opponent, settings)
+
+        # send a starter message to attach match outputs to
+        starter = await ctx.send(f"Starting automated PvP test: {ctx.author.mention} vs {opponent.mention}")
+        match.message = starter
+
+        # assign teams directly (bypass modal/ownership checks for testing)
+        match.teams[ctx.author.id] = cards_a
+        match.teams[opponent.id] = cards_b
+
+        # run the match and wait for it to complete
+        await match.run()
+        await ctx.send("Automated PvP test finished.")
     @commands.command(aliases=["mypity"], hidden=True)
     async def pity(self, ctx: commands.Context, member: discord.Member = None):
         """Shows pity progress for each tier. Admin only command.

@@ -4,7 +4,8 @@ import functions as func
 SHOP_BASE: list[tuple[str, str, int]] = [
     (func.settings.TIERS_BASE.get("rare")[0], "roll.rare", 30),
     (func.settings.TIERS_BASE.get("epic")[0], "roll.epic", 100),
-    (func.settings.TIERS_BASE.get("legendary")[0], "roll.legendary", 250)
+    (func.settings.TIERS_BASE.get("legendary")[0], "roll.legendary", 250),
+    ("📦", "inventory.slots", 100)  # 1 extra card slot per purchase; base price is 100
 ]
 
 class QuantityModal(discord.ui.Modal):
@@ -56,6 +57,38 @@ class Dropdown(discord.ui.Select):
 
                 if modal.quantity:
                     user = await func.get_user(interaction.user.id)
+
+                    # Handle inventory slots (1 slot per purchase) differently because price increases with purchases
+                    if item[1] == "inventory.slots":
+                        # number of previous slot purchases made by the user
+                        prev_purchases = user.get("extra_props", {}).get("slot_purchases", 0)
+                        qty = modal.quantity
+                        base_price = item[2] if isinstance(item[2], int) else 100
+
+                        # compute total cost: sum of base_price + (prev_purchases + i) * 10 for each purchase
+                        total_price = 0
+                        for i in range(qty):
+                            total_price += base_price + (prev_purchases + i) * 10
+
+                        if user["candies"] < total_price:
+                            needed = total_price - user["candies"]
+                            return await interaction.followup.send(f"You don't have enough candies! You need `{needed}` more candies (price goes up as you purchase more slots).", ephemeral=True)
+
+                        # apply update: decrement candies, increment extra_card_slots by qty, increment slot_purchases by qty
+                        query = func.update_quest_progress(user, "BUY_ITEM", progress=modal.quantity, query={
+                            "$inc": {"candies": -total_price, "extra_props.extra_card_slots": modal.quantity, "extra_props.slot_purchases": modal.quantity}
+                        })
+
+                        await func.update_user(interaction.user.id, query)
+
+                        func.logger.info(f"User {interaction.user.name}({interaction.user.id}) purchased {modal.quantity} extra slot(s) for {total_price} candies.")
+
+                        embed = discord.Embed(title="🛒 Shop Purchase", color=discord.Color.random())
+                        embed.description = f"```{item[0]} + {modal.quantity} slot{'s' if modal.quantity > 1 else ''}\n🍬 - {total_price}```"
+
+                        return await interaction.followup.send(content="", embed=embed)
+
+                    # default behavior for other items
                     price = modal.quantity * item[2]
                     if user["candies"] < price:
                         return await interaction.followup.send(f"You don't have enough candies! You only have `{user['candies']}` candies", ephemeral=True)
@@ -95,7 +128,14 @@ class ShopView(discord.ui.View):
         embed.description = f"🍬 Starcandies: `{user.get('candies', 0)}`\n```"
         
         for item in SHOP_BASE:
-            embed.description += f"{item[0]} {(item[1].split('.')[1].title() + ' ' + item[1].split('.')[0].title()).upper():<20} {item[2]:>3} 🍬\n"
+            # For inventory slots, show the next price per slot based on user's purchases
+            if item[1] == "inventory.slots":
+                prev_purchases = user.get("extra_props", {}).get("slot_purchases", 0)
+                next_price = item[2] + prev_purchases * 10
+                display_price = f"{next_price} (per slot)"
+                embed.description += f"{item[0]} {(item[1].split('.')[1].title() + ' ' + item[1].split('.')[0].title()).upper():<20} {display_price:>10} 🍬\n"
+            else:
+                embed.description += f"{item[0]} {(item[1].split('.')[1].title() + ' ' + item[1].split('.')[0].title()).upper():<20} {item[2]:>3} 🍬\n"
         embed.description += "```"
         
         embed.set_thumbnail(url=self.author.display_avatar.url)

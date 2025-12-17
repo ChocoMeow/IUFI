@@ -135,38 +135,50 @@ class MatchGame(discord.ui.View):
         for child in self.children:
             child.disabled = True
 
-        embed = discord.Embed(title="Game Ended (Rewards)", color=discord.Color.random())
         matched_raw = self.matched()
-        final_rewards: dict[str, int] = {}
         
-        rewards = f"{'Pairs':>9}{'Rewards':>9}\n"
-        for matched, reward in self._data.get("rewards").items():
-            if isinstance(reward[0], list):
-                reward = choice(reward)
+        # Feature flag: Use reward card system or traditional rewards
+        use_reward_card = func.settings.GIVE_REWARD_CARD
+
+        if not use_reward_card:
+            # Traditional reward system
+            embed = discord.Embed(title="Game Ended (Rewards)", color=discord.Color.random())
+            final_rewards: dict[str, int] = {}
             
-            if is_matched := (int(matched) <= matched_raw):
-                if reward[0] not in final_rewards:
-                    final_rewards[reward[0]] = 0
-                final_rewards[reward[0]] += reward[1]
+            rewards = f"{'Pairs':>9}{'Rewards':>9}\n"
+            for matched, reward in self._data.get("rewards").items():
+                if isinstance(reward[0], list):
+                    reward = choice(reward)
+                
+                if is_matched := (int(matched) <= matched_raw):
+                    if reward[0] not in final_rewards:
+                        final_rewards[reward[0]] = 0
+                    final_rewards[reward[0]] += reward[1]
 
-            reward_name, amount = reward
-            reward_name = reward_name.split(".")
+                reward_name, amount = reward
+                reward_name = reward_name.split(".")
 
-            rewards += ("✅" if is_matched else "⬛") + f"  {matched:<3}"
-            if reward_name[0] == "candies":
-                rewards += f"    {'🍬 Candies':<18} x{amount}\n"
-            
-            elif reward_name[0] == "exp":
-                rewards += f"    {'⚔️ Exp':<19} x{amount}\n"
+                rewards += ("✅" if is_matched else "⬛") + f"  {matched:<3}"
+                if reward_name[0] == "candies":
+                    rewards += f"    {'🍬 Candies':<18} x{amount}\n"
+                
+                elif reward_name[0] == "exp":
+                    rewards += f"    {'⚔️ Exp':<19} x{amount}\n"
 
-            else:
-                reward_name = reward_name[1].split("_")
-                potion_data = func.settings.POTIONS_BASE.get(reward_name[0])
-                rewards += f"    {potion_data.get('emoji') + ' ' + reward_name[0].title() + ' ' + reward_name[1].upper() + ' Potion':<18} x{amount}\n"
-            
-        embed.description = f"```{'🕔 Time Used:':<15} {func.convert_seconds(self.used_time)}\n{'🃏 Matched:':<15} {matched_raw}```\n```{rewards}```"
+                else:
+                    reward_name = reward_name[1].split("_")
+                    potion_data = func.settings.POTIONS_BASE.get(reward_name[0])
+                    rewards += f"    {potion_data.get('emoji') + ' ' + reward_name[0].title() + ' ' + reward_name[1].upper() + ' Potion':<18} x{amount}\n"
+                
+            embed.description = f"```{'🕔 Time Used:':<15} {func.convert_seconds(self.used_time)}\n{'🃏 Matched:':<15} {matched_raw}```\n```{rewards}```"
 
-        update_data = {"$inc": final_rewards}
+            update_data = {"$inc": final_rewards}
+        else:
+            # Reward card system - no traditional rewards
+            embed = discord.Embed(title="Game Ended", color=discord.Color.random())
+            embed.description = f"```{'🕔 Time Used:':<15} {func.convert_seconds(self.used_time)}\n{'🃏 Matched:':<15} {matched_raw}```"
+            update_data = {}
+        
         user = await func.get_user(self.author.id)
 
         best_state = user.get("game_state", {}).get("match_game", {}).get(self._level, {
@@ -181,11 +193,40 @@ class MatchGame(discord.ui.View):
                     self.used_time < best_state["finished_time"] or self.click_left > best_state["click_left"]
                 )
         ):
-            update_data["$set"] = {
+            if "$set" not in update_data:
+                update_data["$set"] = {}
+            update_data["$set"].update({
                 f"{prefix}.matched": matched_raw,
                 f"{prefix}.finished_time": self.used_time,
                 f"{prefix}.click_left": self.click_left
-            }
+            })
+
+            # Determine user's monthly best for this level and update if current run is better
+            # Ensure update_data contains monthly fields to reflect monthly leaderboards
+            monthly_best_matched = best_state.get('monthly_matched', 0) if best_state else 0
+            monthly_best_finished = best_state.get('monthly_finished_time', float('inf')) if best_state else float('inf')
+            monthly_best_click_left = best_state.get('monthly_click_left', 0) if best_state else 0
+
+            # If current run is better than monthly best, update monthly fields
+            now_ts = time.time()
+            should_update_monthly = False
+            if matched_raw > monthly_best_matched:
+                should_update_monthly = True
+            elif matched_raw == monthly_best_matched:
+                if self.used_time < monthly_best_finished:
+                    should_update_monthly = True
+                elif self.used_time == monthly_best_finished and self.click_left > monthly_best_click_left:
+                    should_update_monthly = True
+
+            if should_update_monthly:
+                if "$set" not in update_data:
+                    update_data["$set"] = {}
+                update_data["$set"].update({
+                    f"{prefix}.monthly_matched": matched_raw,
+                    f"{prefix}.monthly_finished_time": self.used_time,
+                    f"{prefix}.monthly_click_left": self.click_left,
+                    f"{prefix}.last_update": now_ts
+                })
 
         await func.update_user(self.author.id, update_data)
 
@@ -198,6 +239,48 @@ class MatchGame(discord.ui.View):
         )
 
         await self.response.channel.send(content=f"<@{self.author.id}>", embed=embed)
+        
+        # Feature flag: Give reward card based on matches
+        if use_reward_card and matched_raw > 0:
+            try:
+                from .reward_card import RewardCardView
+                
+                # Get probabilities for this level and match count
+                probs_config = func.settings.REWARD_CARD_PROBABILITIES or {}
+                level_probs = probs_config.get("MATCH_GAME", {}).get(self._level, {})
+                selected_probs = level_probs.get(str(matched_raw))
+                
+                if selected_probs:
+                    # Create and send reward card view
+                    reward_view = RewardCardView(None, self.author, selected_probs, initial_cost=10, cost_currency_field="candies", timeout=120)
+                    await reward_view._roll_card()
+                    
+                    reward_embed = reward_view.build_embed()
+                    file = None
+                    if reward_view.current_card:
+                        try:
+                            img_bytes = await reward_view.current_card.image_bytes()
+                            filename = f"{reward_view.current_card.id}.webp"
+                            file = discord.File(img_bytes, filename=filename)
+                            reward_embed.set_image(url=f"attachment://{filename}")
+                        except Exception:
+                            file = None
+                    
+                    reward_content = f"**{self.author.mention} This reward ends <t:{reward_view.expires_at}:R>**\n🎁 Card reward for matching {matched_raw} pairs!"
+                    reward_msg = await self.response.channel.send(
+                        content=reward_content,
+                        embed=reward_embed,
+                        file=file,
+                        view=reward_view
+                    )
+                    reward_view.message = reward_msg
+            except Exception:
+                # Fail silently but log
+                try:
+                    func.logger.exception("Failed to present match game reward card view")
+                except:
+                    pass
+        
         self.stop()
         
     async def build(self) -> tuple[discord.Embed, discord.File]:

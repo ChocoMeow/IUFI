@@ -108,7 +108,7 @@ class IUFI(commands.Bot):
         if isinstance(error, commands.CommandNotFound):
             return
 
-        elif isinstance(error, (commands.CommandOnCooldown, commands.MissingPermissions, commands.RangeError, commands.BadArgument)):
+        elif isinstance(error, (commands.CommandOnCooldown, commands.MissingPermissions, commands.RangeError, commands.BadArgument, commands.CheckFailure)):
             pass
 
         elif isinstance(error, (commands.MissingRequiredArgument, commands.MissingRequiredAttachment)):

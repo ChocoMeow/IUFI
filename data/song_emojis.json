@@ -1,0 +1,494 @@
+[
+  {
+    "name": "Good Day",
+    "emojis": [
+      "🌞🎼🎵",
+      "🌞🎸🎺"
+    ],
+    "type": "song",
+    "popularity": 10
+  },
+  {
+    "name": "You & I",
+    "emojis": [
+      "🤝🕰️💫",
+      "👫🕰️🌟",
+      "⏰🪿⚙️"
+    ],
+    "type": "song",
+    "popularity": 7
+  },
+  {
+    "name": "Through the Night",
+    "emojis": [
+      "🌙✉️🎶",
+      "🌌✉️🎵"
+    ],
+    "type": "song",
+    "popularity": 8
+  },
+  {
+    "name": "Love Poem",
+    "emojis": [
+      "💌🎵🕊️",
+      "💗✍️🎶"
+    ],
+    "type": "song",
+    "popularity": 8
+  },
+  {
+    "name": "Palette",
+    "emojis": [
+      "🎨🖌️🎶",
+      "🖼️🎵🎨",
+      "💜💄📼"
+    ],
+    "type": "song",
+    "popularity": 9
+  },
+  {
+    "name": "Blueming",
+    "emojis": [
+      "🌸💙🎶",
+      "💙💐🎵"
+    ],
+    "type": "song",
+    "popularity": 8
+  },
+  {
+    "name": "Lilac",
+    "emojis": [
+      "💜🌸🚋",
+      "🌸💜🚃"
+    ],
+    "type": "song",
+    "popularity": 7
+  },
+  {
+    "name": "Celebrity",
+    "emojis": [
+      "⭐👩\u200d🎤🌟",
+      "🎤✨⭐"
+    ],
+    "type": "song",
+    "popularity": 7
+  },
+  {
+    "name": "BBIBBI",
+    "emojis": [
+      "💛📵🚫",
+      "💅🎯🚫"
+    ],
+    "type": "song",
+    "popularity": 9
+  },
+  {
+    "name": "Eight",
+    "emojis": [
+      "8️⃣🎧🧑\u200d🎤",
+      "🎹🎶8️⃣",
+      "♾️🧡👶🏻"
+    ],
+    "type": "song",
+    "popularity": 9
+  },
+  {
+    "name": "Friday",
+    "emojis": [
+      "🎉📅🎶",
+      "🕺🎸🎵"
+    ],
+    "type": "song",
+    "popularity": 7
+  },
+  {
+    "name": "Twenty Three",
+    "emojis": [
+      "2️⃣3️⃣🎂",
+      "🎈🐈‍⬛🎂",
+      "🐻🦊💜"
+    ],
+    "type": "song",
+    "popularity": 8
+  },
+  {
+    "name": "Strawberry Moon",
+    "emojis": [
+      "🍓🌕🍨",
+      "🍓🎮💓"
+    ],
+    "type": "song",
+    "popularity": 7
+  },
+  {
+    "name": "Lullaby",
+    "emojis": [
+      "😴🎶🌃",
+      "💤🎵🌌"
+    ],
+    "type": "song",
+    "popularity": 6
+  },
+  {
+    "name": "Ending Scene",
+    "emojis": [
+      "🎬😢🎶",
+      "📽️💔🎵"
+    ],
+    "type": "song",
+    "popularity": 6
+  },
+  {
+    "name": "Hold My Hand",
+    "emojis": [
+      "🤝🎬🎶",
+      "🤲🎵🎥"
+    ],
+    "type": "song",
+    "popularity": 6
+  },
+  {
+    "name": "Not Spring, Love, or Cherry Blossoms",
+    "emojis": [
+      "🌸❤️🍦",
+      "🌱❤️🌸"
+    ],
+    "type": "song",
+    "popularity": 4
+  },
+  {
+    "name": "Autumn Morning",
+    "emojis": [
+      "🍂☕🎶",
+      "🍁🌥️🎵"
+    ],
+    "type": "song",
+    "popularity": 4
+  },
+  {
+    "name": "My Old Story",
+    "emojis": [
+      "📖🎶😭",
+      "📝🎵💭"
+    ],
+    "type": "song",
+    "popularity": 4
+  },
+  {
+    "name": "Someday",
+    "emojis": [
+      "🌈✨🎶",
+      "🤞🎵🌟"
+    ],
+    "type": "song",
+    "popularity": 5
+  },
+  {
+    "name": "Coin",
+    "emojis": [
+      "🪙🎲♣️",
+      "🎰🃏🪙",
+      "💃🏻🎙🪙"
+    ],
+    "type": "song",
+    "popularity": 4
+  },
+  {
+    "name": "Flu",
+    "emojis": [
+      "🤧🧟‍♀️💔"
+    ],
+    "type": "song",
+    "popularity": 5
+  },
+  {
+    "name": "The Shower",
+    "emojis": [
+      "🚿🎶💧",
+      "🛁🎵😌"
+    ],
+    "type": "song",
+    "popularity": 5
+  },
+  {
+    "name": "Havana",
+    "emojis": [
+      "🏝️🏄‍♀️🪼",
+      "🍍🥂🍊"
+    ],
+    "type": "song",
+    "popularity": 6
+  },
+  {
+    "name": "The Red Shoes",
+    "emojis": [
+      "👠🖤🤍",
+      "❤👠🪇"
+    ],
+    "type": "song",
+    "popularity": 4
+  },
+  {
+    "name": "Shopper",
+    "emojis": [
+      "🍭🔭🛒"
+    ],
+    "type": "song",
+    "popularity": 7
+  },
+  {
+    "name": "Shh..",
+    "emojis": [
+      "🫡❤🤫",
+      "👧👩👵"
+    ],
+    "type": "song",
+    "popularity": 4
+  },
+  {
+    "name": "Crayon",
+    "emojis": [
+      "🖍🖤💛"
+    ],
+    "type": "song",
+    "popularity": 3
+  },
+  {
+    "name": "Above The Time",
+    "emojis": [
+      "⛵📰💜",
+      "🪿🫗🚂",
+      "⬆️⏰🪿"
+    ],
+    "type": "song",
+    "popularity": 5
+  },
+  {
+    "name": "JamJam",
+    "emojis": [
+      "🍓🫦💋"
+    ],
+    "type": "song",
+    "popularity": 6
+  },
+  {
+    "name": "Heart",
+    "emojis": [
+      "❤💕💜",
+      "❤♾️🌟"
+    ],
+    "type": "song",
+    "popularity": 7
+  },
+  {
+    "name": "Red Queen",
+    "emojis": [
+      "❤👸🏻💋",
+      "🍷👑💃🏻"
+    ],
+    "type": "song",
+    "popularity": 5
+  },
+  {
+    "name": "Love Attack",
+    "emojis": [
+      "❤🏹⚔️"
+    ],
+    "type": "song",
+    "popularity": 2
+  },
+  {
+    "name": "Sogyeokdong",
+    "emojis": [
+      "📰❤⚔️"
+    ],
+    "type": "song",
+    "popularity": 3
+  },
+  {
+    "name": "Marshmallow",
+    "emojis": [
+      "🥰⬜🤏🏻",
+      "🍮🍪👶🏻"
+    ],
+    "type": "song",
+    "popularity": 4
+  },
+  {
+    "name": "Zeze",
+    "emojis": [
+      "👦🏻🍊🌳",
+      "👦🏻🌳🌿"
+    ],
+    "type": "song",
+    "popularity": 5
+  },
+  {
+    "name": "Knees",
+    "emojis": [
+      "🧓🏻🦵🏻😴",
+      "💆🏻‍♀️💤🦵🏻"
+    ],
+    "type": "song",
+    "popularity": 5
+  },
+  {
+    "name": "Glasses",
+    "emojis": [
+      "👁❌👍🏻",
+      "👩🏻👀👓"
+    ],
+    "type": "song",
+    "popularity": 3
+  },
+  {
+    "name": "Raindrop",
+    "emojis": [
+      "💧🌧💕"
+    ],
+    "type": "song",
+    "popularity": 4
+  },
+  {
+    "name": "Last Night Story",
+    "emojis": [
+      "🪩💃🏻🍻",
+      "🧡🪩🎉"
+    ],
+    "type": "song",
+    "popularity": 6
+  },
+  {
+    "name": "Sleepless Rainy Night",
+    "emojis": [
+      "❌😴🌧",
+      "💤🌧🌃"
+    ],
+    "type": "song",
+    "popularity": 4
+  },
+  {
+    "name": "Winter Sleep",
+    "emojis": [
+      "❄🌨😴",
+      "☀🌸🍂❄"
+    ],
+    "type": "song",
+    "popularity": 7
+  },
+  {
+    "name": "I Stan U",
+    "emojis": [
+      "🎙🪩🕺🏻"
+    ],
+    "type": "song",
+    "popularity": 4
+  },
+  {
+    "name": "Secret Garden",
+    "emojis": [
+      "🤫💐🎋",
+      "🤫🌺🌼"
+    ],
+    "type": "song",
+    "popularity": 4
+  },
+  {
+    "name": "Dlwlrma",
+    "emojis": [
+      "🦚🩵💙",
+      "🎆✨🪽"
+    ],
+    "type": "song",
+    "popularity": 4
+  },
+  {
+    "name": "My Sea",
+    "emojis": [
+      "🌊💙🌙"
+    ],
+    "type": "song",
+    "popularity": 6
+  },
+  {
+    "name": "Obliviate",
+    "emojis": [
+      "🪄🧠💨"
+    ],
+    "type": "song",
+    "popularity": 6
+  },
+  {
+    "name": "You Are the Best",
+    "emojis": [
+      "🏆🎶💖",
+      "👏🎵🌟"
+    ],
+    "type": "drama",
+    "popularity": 6
+  },
+  {
+    "name": "Hotel del Luna",
+    "emojis": [
+      "🏨🌙👑",
+      "🕯️👻💫"
+    ],
+    "type": "drama",
+    "popularity": 8
+  },
+  {
+    "name": "My Mister",
+    "emojis": [
+      "🏠🤝🎭",
+      "☕🖤🎶",
+      "🧓🏻🌕🛒"
+    ],
+    "type": "drama",
+    "popularity": 7
+  },
+  {
+    "name": "Dream High",
+    "emojis": [
+      "🎓🎤🌟",
+      "🏫🎵✨"
+    ],
+    "type": "drama",
+    "popularity": 5
+  },
+  {
+    "name": "The Producers",
+    "emojis": [
+      "🎬📺🎶",
+      "🎥🎙️✨"
+    ],
+    "type": "drama",
+    "popularity": 5
+  },
+  {
+    "name": "Scarlet Heart",
+    "emojis": [
+      "❤️👑🕰️",
+      "👸🏯🌹",
+      "🐺👘👑"
+    ],
+    "type": "drama",
+    "popularity": 4
+  },
+  {
+    "name": "When Life Gives You Tangerines",
+    "emojis": [
+      "🍊👨‍👩‍👧‍👧🛖",
+      "🍊⛈️⛵"
+    ],
+    "type": "drama",
+    "popularity": 9
+  },
+  {
+    "name": "Broker",
+    "emojis": [
+      "🍼🚙🎡"
+    ],
+    "type": "drama",
+    "popularity": 6
+  }
+]

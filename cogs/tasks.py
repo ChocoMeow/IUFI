@@ -31,15 +31,16 @@ class Tasks(commands.Cog):
             self.bot.loop.create_task(self.schedule_message(user, cd, message))
 
     async def distribute_monthly_quiz_rewards(self) -> None:
+
         start_time, end_time = func.get_month_unix_timestamps()
         if end_time - time.time() > 3_600:
             return
-        
+
         guild: discord.Guild = self.bot.get_guild(func.settings.MAIN_GUILD)
         if not guild:
             return
-        
-        roles: dict[str, discord.Role] = {
+
+        roles = {
             rank: guild.get_role(data["discord_role"])
             for rank, data in func.settings.RANK_BASE.items() if data["discord_role"]
         }
@@ -48,17 +49,88 @@ class Tasks(commands.Cog):
             for member in role.members:
                 await member.remove_roles(role)
 
-        users = func.USERS_DB.find({f"game_state.quiz_game.last_update": {"$gt":start_time, "$lte":end_time}})
-        updated_users: dict[str, int] = {}
-        async for user_data in users:
-            user = guild.get_member(user_data["_id"])
-            if user:
-                rank = iufi.QuestionPool.get_rank(user_data["game_state"]["quiz_game"]["points"])[0]
-                if rank in roles.keys() and roles[rank] is not None:
-                    updated_users[rank] = updated_users.get(rank, 0) + 1
-                    await user.add_roles(roles[rank])
-        
-        func.logger.info("Updated user roles: %s", ", ".join(f"{role_name}: {count}" for role_name, count in updated_users.items()))
+        # Feature flag: Skip monthly rewards if reward card system is enabled
+        if func.settings.GIVE_REWARD_CARD:
+            # Instead of giving reward cards, assign the same rank roles we give in the non-reward-card flow
+            # to the top-3 users in each monthly leaderboard (quiz, match_game per level, pvp, exp).
+            updated_users: dict[str, int] = {}
+
+            async def _assign_role(member: discord.Member, points: int | None) -> None:
+                # Directly assign the configured leaderboard role to the member
+                if not member:
+                    return
+                try:
+                    role = guild.get_role(func.settings.MONTHLY_LEADERBOARD_ROLE) if func.settings.MONTHLY_LEADERBOARD_ROLE else None
+                    if role:
+                        await member.add_roles(role)
+                        key = str(role.id)
+                        updated_users[key] = updated_users.get(key, 0) + 1
+                except Exception:
+                    func.logger.exception("Failed to assign direct leaderboard role to %s", member.id if member else None)
+
+            # 1) Quiz top 3
+            try:
+                quiz_users = await func.USERS_DB.find({f"game_state.quiz_game.last_update": {"$gt": start_time, "$lte": end_time}}).sort("game_state.quiz_game.points", -1).limit(3).to_list(3)
+                for ud in quiz_users:
+                    member = guild.get_member(ud["_id"]) if ud else None
+                    points = ud.get("game_state", {}).get("quiz_game", {}).get("points", 0)
+                    await _assign_role(member, points)
+            except Exception:
+                func.logger.exception("Failed to assign quiz monthly roles")
+
+            # 2) Match game top 3 — per-level
+            try:
+                for lvl in (list(func.settings.MATCH_GAME_SETTINGS.keys()) if func.settings.MATCH_GAME_SETTINGS else []):
+                    users = await func.USERS_DB.find({f"game_state.match_game.{lvl}.last_update": {"$gt": start_time, "$lte": end_time}}).sort([
+                        (f"game_state.match_game.{lvl}.monthly_matched", -1),
+                        (f"game_state.match_game.{lvl}.monthly_click_left", -1),
+                        (f"game_state.match_game.{lvl}.monthly_finished_time", 1)
+                    ]).limit(3).to_list(3)
+
+                    for ud in users:
+                        member = guild.get_member(ud["_id"]) if ud else None
+                        # try to obtain quiz points to determine rank; if absent, skip
+                        points = ud.get("game_state", {}).get("quiz_game", {}).get("points")
+                        await _assign_role(member, points)
+            except Exception:
+                func.logger.exception("Failed to assign match-game monthly roles")
+
+            # 3) PVP top 3
+            try:
+                pvp_users = await func.USERS_DB.find({"monthly.pvp_last_update": {"$gt": start_time, "$lte": end_time}}).sort("monthly.pvp.wins", -1).limit(3).to_list(3)
+                for ud in pvp_users:
+                    member = guild.get_member(ud["_id"]) if ud else None
+                    points = ud.get("game_state", {}).get("quiz_game", {}).get("points")
+                    await _assign_role(member, points)
+            except Exception:
+                func.logger.exception("Failed to assign pvp monthly roles")
+
+            # 4) EXP (level) top 3
+            try:
+                exp_users = await func.USERS_DB.find({"monthly.exp_last_update": {"$gt": start_time, "$lte": end_time}}).sort("monthly.exp", -1).limit(3).to_list(3)
+                for ud in exp_users:
+                    member = guild.get_member(ud["_id"]) if ud else None
+                    points = ud.get("game_state", {}).get("quiz_game", {}).get("points")
+                    await _assign_role(member, points)
+            except Exception:
+                func.logger.exception("Failed to assign exp monthly roles")
+
+            func.logger.info("Assigned monthly roles to leaderboard users: %s", ", ".join(f"{k}: {v}" for k, v in updated_users.items()))
+            return
+
+        else:
+            users = func.USERS_DB.find({f"game_state.quiz_game.last_update": {"$gt": start_time, "$lte": end_time}})
+            updated_users: dict[str, int] = {}
+            async for user_data in users:
+                user = guild.get_member(user_data["_id"])
+                if user:
+                    rank = iufi.QuestionPool.get_rank(user_data["game_state"]["quiz_game"]["points"])[0]
+                    if rank in roles.keys() and roles[rank] is not None:
+                        updated_users[rank] = updated_users.get(rank, 0) + 1
+                        await user.add_roles(roles[rank])
+
+            func.logger.info("Updated user roles: %s",
+                             ", ".join(f"{role_name}: {count}" for role_name, count in updated_users.items()))
 
     async def clean_user_cards(self, user: dict) -> int:
         user_id = user.get("_id")
@@ -187,23 +259,86 @@ class Tasks(commands.Cog):
             # Verifying and Updating Quiz Reward Data in Database
             self.bot.loop.create_task(self.distribute_monthly_quiz_rewards())
             self.bot.loop.create_task(self.reset_user_cards())
+            # Attempt a monthly leaderboard reset near month end
+            self.bot.loop.create_task(self.reset_monthly_leaderboards())
 
         except Exception as e:
             func.logger.error("An exception occurred in the cache clear task.", exc_info=e)
+
+    async def reset_monthly_leaderboards(self) -> None:
+        """Reset monthly leaderboard fields near the end of month.
+        This will zero monthly counters and last_update timestamps for the supported leaderboards:
+        - music_game (monthly_points)
+        - quiz_game (points handled via existing flow but ensure monthly state)
+        - emoji_quiz
+        - mv_guess
+        - pvp (monthly.pvp)
+        - match_game per-level monthly fields
+        Also calls iufi.MusicPool.reset() to reset per-track stats.
+        The function is a no-op unless the current time is within 1 hour of month boundary.
+        """
+        try:
+            start_time, end_time = func.get_month_unix_timestamps()
+            # only run the reset task when we're within 1 hour of the end of month
+            if end_time - time.time() > 3_600:
+                return
+
+            # # Reset music pool per-track stats
+            # try:
+            #     await iufi.MusicPool.reset()
+            # except Exception:
+            #     func.logger.exception("Failed to reset MusicPool stats")
+
+            # Build update doc to zero monthly fields for known game states
+            update_doc_set = {}
+
+            # Reset per-game monthly counters
+            # music_game, quiz_game, emoji_quiz, mv_guess
+            for game in ("music_game", "quiz_game", "emoji_quiz", "mv_guess"):
+                update_doc_set[f"game_state.{game}.monthly_points"] = 0
+                update_doc_set[f"game_state.{game}.last_update"] = 0
+
+            # Reset match_game per-level monthly fields
+            match_levels = list(func.settings.MATCH_GAME_SETTINGS.keys()) if func.settings.MATCH_GAME_SETTINGS else []
+            for lvl in match_levels:
+                prefix = f"game_state.match_game.{lvl}"
+                update_doc_set[f"{prefix}.monthly_matched"] = 0
+                update_doc_set[f"{prefix}.monthly_finished_time"] = 0
+                update_doc_set[f"{prefix}.monthly_click_left"] = 0
+                update_doc_set[f"{prefix}.last_update"] = 0
+
+            # Reset monthly pvp counters
+            update_doc_set["monthly.pvp.wins"] = 0
+            update_doc_set["monthly.pvp.losses"] = 0
+            update_doc_set["monthly.pvp.total_matches"] = 0
+            update_doc_set["monthly.pvp_last_update"] = 0
+
+            # Apply the reset to all users
+            if update_doc_set:
+                await func.USERS_DB.update_many({}, {"$set": update_doc_set})
+
+            func.logger.info("Monthly leaderboard fields reset executed")
+        except Exception as e:
+            func.logger.error("Failed to run monthly leaderboard reset", exc_info=e)
 
     @tasks.loop(minutes=10.0)
     async def reminder(self) -> None:
         try:
             # Querying the Game’s Ready Time for the Next 10 Minutes Range
             time_range = {"$gt": (current_time := time.time()), "$lt": current_time + 600}
+            # include users who either have global reminder True or have a per-key reminder set to True
+            cooldown_keys = [k for k in func.settings.COOLDOWN_BASE.keys() if k != "claim"]
+            reminder_or_clauses = [{"reminder": True}] + [{f"reminder.{k}": True} for k in cooldown_keys]
+
             query = {
-                "$and":[
-                    {"reminder": True},
+                "$and": [
+                    {"$or": reminder_or_clauses},
                     {"$or": [
                         {f"cooldown.{name}": time_range}
-                        for name in func.settings.COOLDOWN_BASE.keys() if name != "claim"
-                ]}
-            ]}
+                        for name in cooldown_keys
+                    ]}
+                ]
+            }
 
             # Verifying and Dispatching Game Readiness Notification to Player
             notification_count = 0
@@ -215,8 +350,19 @@ class Tasks(commands.Cog):
                 cd: dict[str, float] = doc["cooldown"]
                 for name, (emoji, _) in func.settings.COOLDOWN_BASE.items():
                     if name != "claim":
-                        await self.check_and_schedule(user, current_time, cd.get(name, 0), f"{emoji} Your {name.split('_')[0]} is ready! Join <#{random.choice(func.settings.GAME_CHANNEL_IDS)}> and roll now.")        
-                        notification_count += 1
+                        # Check whether the user wants reminders for this specific cooldown.
+                        reminder_pref = doc.get("reminder", False)
+
+                        # Interpret legacy boolean or new dict format
+                        enabled = False
+                        if isinstance(reminder_pref, bool):
+                            enabled = reminder_pref
+                        elif isinstance(reminder_pref, dict):
+                            enabled = bool(reminder_pref.get(name, False))
+
+                        if enabled:
+                            await self.check_and_schedule(user, current_time, cd.get(name, 0), f"{emoji} Your {name.split('_')[0]} is ready! Join <#{random.choice(func.settings.GAME_CHANNEL_IDS)}> and roll now.")
+                            notification_count += 1
 
             func.logger.info(f"Notifications sent to {notification_count} users regarding game readiness.")
 
