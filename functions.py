@@ -632,3 +632,44 @@ def update_pity_from_cards(user: Dict[str, Any], cards: List[Any]) -> Dict[str, 
 
     return query
 
+
+def framed_title(title: str, total_length: int = 30) -> str:
+    """
+    Create a single-line framed title like:
+    ╔═══ Your Title Here ═══╗
+
+    :param title: The text to display inside the frame.
+    :param total_length: The total desired length of the final string.
+    :return: A formatted string with box-drawing characters.
+    """
+    if not isinstance(title, str):
+        title = str(title) if title is not None else ""
+    if total_length < 6:
+        raise ValueError("total_length must be at least 6 to render a valid frame.")
+
+    left_corner = "╔"
+    right_corner = "╗"
+    fill_char = "═"
+
+    # Add single spaces around the title for readability
+    inner = f" {title} "
+    inner_len = len(inner)
+
+    # The total space available for fill characters on both sides
+    available = total_length - len(left_corner) - len(right_corner) - inner_len
+
+    if available < 0:
+        # If the title is too long, we truncate (you could also choose to expand instead)
+        # Here we trim the title to fit exactly.
+        trim_len = total_length - len(left_corner) - len(right_corner) - 2  # account for spaces
+        if trim_len <= 0:
+            raise ValueError("total_length is too small to fit any title content.")
+        inner = f" {title[:trim_len]} "
+        inner_len = len(inner)
+        available = total_length - len(left_corner) - len(right_corner) - inner_len
+
+    # Distribute fill characters on both sides
+    left_fill = available // 2
+    right_fill = available - left_fill
+
+    return f"**{left_corner}{fill_char * left_fill}{inner}{fill_char * right_fill}{right_corner}**"

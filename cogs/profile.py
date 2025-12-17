@@ -5,7 +5,8 @@ from discord.ext import commands
 from views import (
     CollectionView,
     PhotoCardView,
-    WishListView
+    WishListView,
+    ProfileStatsView
 )
 from typing import (
     Dict,
@@ -34,151 +35,6 @@ def generate_progress_bar(total, progress_percentage, filled='█', in_progress=
 
     return progress_bar
 
-class StatsView(discord.ui.View):
-    def __init__(self, ctx: commands.Context, member: discord.Member):
-        super().__init__(timeout=180.0)  # 3 minutes timeout
-        self.ctx = ctx
-        self.member = member
-        self.message: Optional[discord.Message] = None
-
-    async def interaction_check(self, interaction: discord.Interaction) -> bool:
-        """Only allow the command invoker and the profile owner to use buttons"""
-        if interaction.user.id not in (self.ctx.author.id, self.member.id):
-            await interaction.response.send_message(
-                "❌ You cannot use these buttons. Only the command invoker or profile owner can interact.",
-                ephemeral=True
-            )
-            return False
-        return True
-
-    async def on_timeout(self) -> None:
-        """Disable buttons when view times out"""
-        if self.message:
-            for item in self.children:
-                if isinstance(item, discord.ui.Button):
-                    item.disabled = True
-            try:
-                await self.message.edit(view=self)
-            except:
-                pass  # Message might be deleted
-
-    @discord.ui.button(label="📊 Game Stats", style=discord.ButtonStyle.primary, emoji="🎮")
-    async def show_stats(self, interaction: discord.Interaction, button: discord.ui.Button):
-        """Sends the full game stats when the button is clicked."""
-        # Rebuild latest user data to ensure stats are fresh
-        user = await func.get_user(self.member.id)
-
-        level, exp = func.calculate_level(user.get('exp', 0))
-        quiz_stats = user.get("game_state", {}).get("quiz_game", {
-            "points": 0,
-            "correct": 0,
-            "wrong": 0,
-            "timeout": 0,
-            "average_time": 0
-        })
-
-        card_match_stats = user.get("game_state", {}).get("match_game", {})
-        total_questions = quiz_stats["correct"] + quiz_stats["wrong"] + quiz_stats["timeout"]
-        total_wrong = quiz_stats["wrong"] + quiz_stats["timeout"]
-        rank_name, rank_emoji = iufi.QuestionPool.get_rank(quiz_stats["points"])
-        accuracy = round((quiz_stats['correct'] / total_questions * 100), 1) if total_questions > 0 else 0
-
-        pvp_stats = user.get("pvp", {
-            "wins": 0,
-            "losses": 0,
-            "total_matches": 0
-        })
-
-        # Calculate PVP win rate safely
-        wins = pvp_stats.get('wins', 0)
-        losses = pvp_stats.get('losses', 0)
-        total_matches = pvp_stats.get('total_matches', wins + losses)
-        win_rate = round((wins / total_matches) * 100, 1) if total_matches > 0 else 0
-
-        stats_embed = discord.Embed(
-            title=f"🎮 {self.member.display_name}'s Detailed Stats",
-            color=discord.Color.from_rgb(138, 43, 226)  # Blue Violet
-        )
-        stats_embed.set_thumbnail(url=self.member.display_avatar.url)
-
-        # Quiz Stats with better formatting
-        stats_embed.add_field(
-            name="╔══════ 🧠 Quiz Performance ══════╗",
-            value=(
-                f"```yaml\n"
-                f"Rank:         {rank_name.title()}\n"
-                f"Points:       {quiz_stats['points']:,}\n"
-                f"Accuracy:     {accuracy}%\n"
-                f"Correct:      {quiz_stats['correct']:,}\n"
-                f"Wrong:        {total_wrong:,}\n"
-                f"Avg Time:     {func.convert_seconds(quiz_stats['average_time'])}\n"
-                f"```"
-            ),
-            inline=False
-        )
-
-        # Card Match Stats with better presentation
-        try:
-            cms_lines = []
-            for level in func.settings.MATCH_GAME_SETTINGS.keys():
-                stats = card_match_stats.get(str(level))
-                if stats:
-                    cms_lines.append(
-                        f"{DAILY_ROWS[int(level) - 4]} Lvl {level}: {stats.get('matched', 0):>2} cards | {func.convert_seconds(stats.get('finished_time'))}"
-                    )
-                else:
-                    cms_lines.append(f"⬜ Lvl {level}: Not attempted")
-            cms_value = "```\n" + "\n".join(cms_lines) + "\n```"
-        except Exception:
-            cms_value = "```No card match stats available.```"
-
-        stats_embed.add_field(
-            name="╔══════ 🃏 Card Match Records ══════╗",
-            value=cms_value,
-            inline=False
-        )
-
-        # PVP Stats with win/loss ratio visualization
-        wl_ratio = f"{round(wins/losses, 2)}" if losses > 0 else "∞"
-        pvp_bar = ""
-        if total_matches > 0:
-            win_blocks = int((wins / total_matches) * 10)
-            loss_blocks = 10 - win_blocks
-            pvp_bar = f"{'🟩' * win_blocks}{'🟥' * loss_blocks}"
-
-        stats_embed.add_field(
-            name="╔══════ ⚔️ PVP Statistics ══════╗",
-            value=(
-                f"```yaml\n"
-                f"Total Matches:  {total_matches}\n"
-                f"Wins:           {wins}\n"
-                f"Losses:         {losses}\n"
-                f"Win Rate:       {win_rate}%\n"
-                f"W/L Ratio:      {wl_ratio}\n"
-                f"```"
-                + (f"{pvp_bar} `{win_rate}%`\n" if total_matches > 0 else "")
-            ),
-            inline=False
-        )
-
-        stats_embed.set_footer(text="Keep playing to improve your stats! 🌟")
-
-        await interaction.response.send_message(embed=stats_embed, ephemeral=True)
-
-    @discord.ui.button(label="💕 Collections", style=discord.ButtonStyle.primary, emoji="🖼️")
-    async def show_collections(self, interaction: discord.Interaction, button: discord.ui.Button):
-        """Shows the member's collections using the existing CollectionView."""
-        user = await func.get_user(self.member.id)
-        collections = user.get("collections", {})
-        if not collections:
-            # No collections — inform the clicker ephemerally
-            return await interaction.response.send_message(f"**{self.member.display_name}** has no collections yet.", ephemeral=True)
-
-        # Defer the interaction then send the full collection view via the original ctx
-        await interaction.response.defer()
-        view = CollectionView(self.ctx, self.member, collections)
-        await view.send_msg()
-
 class Profile(commands.Cog):
     def __init__(self, bot: commands.Bot) -> None:
         self.bot = bot
@@ -193,124 +49,81 @@ class Profile(commands.Cog):
         @prefix@profile
         @prefix@p IU
         """
-        if not member:
-            member = ctx.author
-
+        member = member or ctx.author
         user = await func.get_user(member.id)
-        bio = user.get('profile', {}).get('bio', 'Empty Bio')
+        profile = user.get("profile", {})
+        bio =  profile.get("bio")
+        level, exp_current = func.calculate_level(user.get("exp", 0))
 
-        # Calculate level and experience
-        level, exp_in_current_level = func.calculate_level(user.get('exp', 0))
+        exp_next = func.settings.DEFAULT_EXP
+        exp_pct = min((exp_current / exp_next * 100), 100) if exp_next > 0 else 0
 
-        # The exp needed for each level is DEFAULT_EXP
-        exp_for_next = func.settings.DEFAULT_EXP
-        exp_progress = exp_in_current_level
-        exp_percentage = min((exp_progress / exp_for_next * 100) if exp_for_next > 0 else 0, 100)
+        pvp = user.get("pvp", {})
+        wins = pvp.get("wins", 0)
 
-        # Get quiz rank
-        quiz_stats = user.get("game_state", {}).get("quiz_game", {"points": 0})
-        rank_name, rank_emoji = iufi.QuestionPool.get_rank(quiz_stats.get("points", 0))
-
-        # Get pvp stats
-        pvp_stats = user.get("pvp", {})
-        wins = pvp_stats.get('wins', 0)
-        losses = pvp_stats.get('losses', 0)
-        total_matches = pvp_stats.get('total_matches', wins + losses)
-        win_rate = round((wins / total_matches) * 100, 1) if total_matches > 0 else 0
-
-        # Build a beautiful profile embed
-        embed = discord.Embed(color=discord.Color.from_rgb(255, 182, 193))  # Soft pink color
+        embed = discord.Embed(color=discord.Color.from_rgb(255, 182, 193))
         embed.set_author(name=f"{member.display_name}'s Profile", icon_url=member.display_avatar.url)
+        embed.set_thumbnail(url=member.display_avatar.url)
+        embed.set_footer(text=f"Member was last online {func.cal_last_online_time(user.get("last_active_time"))} ago")
 
-        # Bio section with better formatting
-        if bio and bio != 'Empty Bio':
-            embed.description = f"╭─────────────────╮\n📝 *\"{bio}\"*\n╰─────────────────╯\n"
-        else:
-            embed.description = ""
+        embed.description = f"╭─────────────────╮\n📝 *\"{bio}\"*\n╰─────────────────╯\n" if bio else ""
 
-        # Level & Experience bar
-        exp_bar = generate_progress_bar(20, exp_percentage, filled='█', in_progress='▓', empty='░')
-        embed.description += f"\n**╔═══ Level & Experience ═══╗**\n"
-        embed.description += f"```\n"
-        embed.description += f"⭐ Level {level}\n"
-        embed.description += f"➤ {exp_bar} {int(exp_percentage)}%\n"
-        embed.description += f"➤ {exp_progress:,} / {exp_for_next:,} XP\n"
-        embed.description += f"```\n"
+        # Level / XP
+        exp_bar = generate_progress_bar(20, exp_pct, filled="█", in_progress="▓", empty="░")
+        embed.description += func.framed_title("Levels") + "\n"
+        embed.description += (
+            "```\n"
+            f"⭐ Level {level}\n"
+            f"➤ {exp_bar} {int(exp_pct)}%\n"
+            f"➤ {exp_current:,} / {exp_next:,} XP\n"
+            "```\n"
+        )
 
-        # Stats Overview
-        card_count = len(user.get('cards', []))
+        # Overview
+        cards = user.get("cards", [])
+        card_count = len(cards)
         card_limit = func.get_user_card_limit(user)
-        candies = user.get('candies', 0)
-        collections_count = len(user.get('collections', {}))
+        candies = user.get("candies", 0)
+        collections_count = len(user.get("collections", {}))
 
         embed.add_field(
-            name="📊 Overview",
+            name=func.framed_title("Overview"),
             value=(
-                f"```yaml\n"
+                "```yaml\n"
                 f"Cards:       {card_count}/{card_limit}\n"
                 f"Candies:     {candies:,} 🍬\n"
                 f"Collections: {collections_count}/5\n"
-                f"```"
+                "```"
             ),
-            inline=True
+            inline=True,
         )
 
-        # Game Performance
+        # Unlocks / Achievements
+        has_iufi_role = bool(func.settings.MONTHLY_LEADERBOARD_ROLE and any(role.id == func.settings.MONTHLY_LEADERBOARD_ROLE for role in member.roles))
         embed.add_field(
-            name="🎮 Performance",
+            name=func.framed_title("Unlocks"),
             value=(
-                f"```yaml\n"
-                f"Quiz Rank:   {rank_name.title()}\n"
-                f"Quiz Points: {quiz_stats.get('points', 0):,}\n"
-                f"PVP Matches: {total_matches}\n"
-                f"Win Rate:    {win_rate}%\n"
-                f"```"
+                "```"
+                f"{'🌟' if card_count >= 100 else '⭐'} {'Card Collector':<16} {'✅' if card_count >= 100 else '🔒'}\n"
+                f"{'👑' if has_iufi_role else '💎'} {'IUFI Master':<16} {'✅' if has_iufi_role else '🔒'}\n"
+                f"{'⚔️' if wins >= 10 else '🗡️'} {'PVP Champion':<16} {'✅' if wins >= 10 else '🔒'}\n"
+                "```"
             ),
-            inline=True
+            inline=False,
         )
 
-        # Achievements/Badges (placeholder for future expansion)
-        # Check if member has IUFI Master role
-        has_iufi_master_role = any(role.id == func.settings.MONTHLY_LEADERBOARD_ROLE for role in member.roles) if func.settings.MONTHLY_LEADERBOARD_ROLE else False
-        
-        embed.add_field(
-            name="🏆 Achievements",
-            value=(
-                f"```\n"
-                f"{'🌟' if card_count >= 100 else '⭐'} Card Collector {'✓' if card_count >= 100 else '🔒 Locked'}\n"
-                f"{'👑' if has_iufi_master_role else '💎'} IUFI Master {'✓' if has_iufi_master_role else '🔒 Locked'}\n"
-                f"{'⚔️' if wins >= 10 else '🗡️'} PVP Champion {'✓' if wins >= 10 else '🔒 Locked'}\n"
-                f"```"
-            ),
-            inline=False
-        )
+        # Showcase main card if owned
+        file = discord.utils.MISSING
+        main_id = profile.get("main")
+        card = iufi.CardPool.get_card(main_id) if main_id else None
+        if card and card.owner_id == member.id:
+            image_name = f"image.{card.format}"
+            file = discord.File(await card.image_bytes(), filename=image_name)
+            embed.set_image(url=f"attachment://{image_name}")
+            embed.add_field(name=func.framed_title("Showcase"), value=f"```{card}```", inline=False)
 
-        # Use member's avatar as thumbnail
-        embed.set_thumbnail(url=member.display_avatar.url)
-
-        # If the user has a main card that they own, attach it as the large image (show off)
-        file = None
-        main_card_id = user.get('profile', {}).get('main')
-        card = iufi.CardPool.get_card(main_card_id) if main_card_id else None
-        if card and card.owner_id == user.get('_id'):
-            file = discord.File(await card.image_bytes(), filename=f"image.{card.format}")
-            embed.set_image(url=f"attachment://image.{card.format}")
-            embed.add_field(
-                name="✨ Showcase Card",
-                value=f"```{card.tier[0]} {card.display_id}```",
-                inline=False
-            )
-
-        # Footer with join date or other info
-        embed.set_footer(text=f"Member since {member.joined_at.strftime('%B %d, %Y') if member.joined_at else 'Unknown'}")
-
-        # Add interactive buttons
-        view = StatsView(ctx, member)
-
-        if file:
-            view.message = await ctx.reply(file=file, embed=embed, view=view)
-        else:
-            view.message = await ctx.reply(embed=embed, view=view)
+        view = ProfileStatsView(ctx, member, DAILY_ROWS)
+        view.message = await ctx.reply(embed=embed, file=file, view=view)
 
     @commands.command(aliases=["sb"])
     async def setbio(self, ctx: commands.Context, *, bio: str = None):
@@ -616,12 +429,7 @@ class Profile(commands.Cog):
         for quest_type in func.settings.USER_BASE["quests"].keys():    
             user_quest: Dict[str, Any] = user.copy().get("quests", {}).get(quest_type, copy.deepcopy(func.settings.USER_BASE["quests"][quest_type]))
 
-            if quest_type.lower() == 'daily':
-                QUESTS_BASE: Dict[str, Any] = func.settings.DAILY_QUESTS
-            elif quest_type.lower() == 'weekly':
-                QUESTS_BASE: Dict[str, Any] = func.settings.WEEKLY_QUESTS
-            else:
-                QUESTS_BASE: Dict[str, Any] = {}
+            QUESTS_BASE: Dict[str, Any] = getattr(func.settings, f"{quest_type.upper()}_QUESTS", None)
             if not QUESTS_BASE:
                 continue
 

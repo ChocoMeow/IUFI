@@ -19,3 +19,4 @@ from .drop import DropView
 from .musiclearderboard import MusicLeaderboardView
 from .wishlist import WishListView
 from .reward_card import RewardCardView
+from .profile_status import ProfileStatsView

@@ -15,7 +15,6 @@ class LeaderboardConfig:
     sort_fields: list | tuple
     limit: int = 10
     icon_emoji: str = "🏆"
-    rank_emoji: str = "🔥"
     is_monthly: bool = True
     is_admin_only: bool = False
     is_code_block: bool = True,
