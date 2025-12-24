@@ -1,4 +1,6 @@
-import discord, iufi, asyncio
+import discord, iufi, asyncio, random
+from io import BytesIO
+from PIL import Image, ImageDraw, ImageFont
 from collections import Counter
 import functions as func
 
@@ -378,14 +380,26 @@ class WrappedView(discord.ui.View):
         self.users_stats = users_stats
         self.page = 0
         self.total_pages = 6
+        self.update_buttons()
 
+    def update_buttons(self):
+        for child in self.children:
+            if isinstance(child, discord.ui.Button):
+                if child.label == "Previous":
+                    child.disabled = (self.page == 0)
+                elif child.label == "Next":
+                    child.disabled = (self.page == self.total_pages - 1)
+                elif child.label == "Download":
+                    # Only show/enable download on the last page
+                    child.disabled = (self.page != self.total_pages - 1)
     async def get_page(self, page: int):
         embed = discord.Embed(title=f"✨ IUFI Wrapped 2025 - {self.ctx.author.display_name} ✨", color=0xB784B7)
         file = None
 
         if page == 0:
             # Slide 1: Intro & Playtime
-            first_roll = self.user_data.get("first_roll_date", "N/A")
+            embed.description = "\u200b\n"
+            first_roll = self.user_data.get("first_roll_date", "N/A").split(" ")[0]
             active_days = self.user_data.get("active_days_count", 0)
             percentage = (active_days / 365) * 100
             
@@ -412,6 +426,7 @@ class WrappedView(discord.ui.View):
                 card = iufi.CardPool.get_card(card_id)
                 if card:
                     embed.title = "🍀 Your Luckiest Moment"
+                    embed.description = "\u200b\n"
                     embed.add_field(name="💎 First High Rarity", value=f"Card ID: `{card_id}`\nRarity: {self.user_data.get('first_high_rarity_rarity')}\nDate: {self.user_data.get('first_high_rarity_date')}", inline=False)
                     
                     rolls = self.user_data.get("rolls_until_high_rarity", 0)
@@ -422,10 +437,12 @@ class WrappedView(discord.ui.View):
                     file = discord.File(image_bytes, filename=f"{card_id}.webp")
                     embed.set_image(url=f"attachment://{card_id}.webp")
             else:
-                embed.description = "You haven't found a high rarity card yet this year. Keep rolling! 🍀"
+                prediction = random.choice(["mystic 🦄", "celestial 💫"])
+                embed.description = f"\u200b\nUnfortunately you didn't find a single mystic or celestial card this year, but keep rolling, because I see a {prediction} coming for you in 2026! 🔮"
 
         elif page == 2:
             # Slide 3: Activity & Most active day
+            embed.description = "\u200b\n"
             active_day = self.user_data.get("most_active_day", {})
             date = active_day.get("date", "N/A")
             count = active_day.get("count", 0)
@@ -445,7 +462,7 @@ class WrappedView(discord.ui.View):
             # Collection Stats
             collected = self.user_data.get("cards_collected_count", 0)
             rarity_counts = self.user_data.get("rarity_counts", {})
-            rarity_text = " • ".join([f"{k} {v}" for k, v in rarity_counts.items()])
+            rarity_text = "\n".join([f"{k} {v}" for k, v in rarity_counts.items()])
             
             embed.add_field(name="🃏 Collection Stats", value=f"Total Cards: **{collected}**", inline=False)
             if rarity_text:
@@ -479,7 +496,10 @@ class WrappedView(discord.ui.View):
             
             if gallery_reactions > 0:
                 highest_post = self.user_data.get("highest_reaction_gallery_post", {})
-                description += f"**📸 Gallery Star**\nYour gallery posts received **{gallery_reactions}** reactions!\nBest post: {highest_post.get('count', 0)} reactions on specific post.\n\n"
+                msg_id = highest_post.get("msg_id") 
+                # msg_id is string. 
+                link = f"https://discord.com/channels/214199357170253834/1004494130874953769/{msg_id}"
+                description += f"**📸 Gallery Star**\nYour gallery posts received **{gallery_reactions}** reactions!\nBest post: [{highest_post.get('count', 0)} reactions on specific post]({link}).\n\n"
             
             # Chatty
             game_msgs = self.user_data.get("game_room_msgs", 0)
@@ -489,10 +509,11 @@ class WrappedView(discord.ui.View):
             if not description:
                 description = "You are a mysterious player with no specific traits yet!"
             
-            embed.description = description
+            embed.description = "\u200b\n" + description
 
         elif page == 4:
             # Slide 5: Percentiles
+            embed.description = "\u200b\n"
             coll_count = self.user_data.get("cards_collected_count", 0)
             if coll_count > 0:
                 # Calculate rank
@@ -518,7 +539,7 @@ class WrappedView(discord.ui.View):
                 except ValueError:
                     pass
             else:
-                embed.description = "Start collecting cards to see your global ranking!"
+                embed.description += "Start collecting cards to see your global ranking!"
 
         elif page == 5:
             # Slide 6: Community Milestones
@@ -527,10 +548,11 @@ class WrappedView(discord.ui.View):
             stadiums = total_cards / stadium_capacity
             
             embed.title = "🌍 Community Milestones"
+            embed.description = "\u200b\n"
             embed.add_field(name="🃏 Total Pulled Cards", value=f"Together, this server pulled **{total_cards:,}** IU cards this year!", inline=False)
             embed.add_field(name="🏟️ That's a lot!", value=f"That’s enough to fill **{stadiums:.1f}** stadiums with cards!", inline=False)
             
-            embed.description = "Thank you for being part of this amazing journey! ❤️"
+            embed.description += "Thank you for being part of this amazing journey! ❤️"
 
         embed.set_footer(text=f"Page {page + 1}/{self.total_pages}")
         return embed, file
@@ -539,21 +561,154 @@ class WrappedView(discord.ui.View):
     async def prev_button(self, interaction: discord.Interaction, button: discord.ui.Button):
         if self.page > 0:
             self.page -= 1
+            self.update_buttons()
             embed, file = await self.get_page(self.page)
             # Edit the message
             await interaction.response.edit_message(embed=embed, attachments=[file] if file else [], view=self)
-        else:
-            await interaction.response.defer()
 
     @discord.ui.button(label="Next", style=discord.ButtonStyle.primary)
     async def next_button(self, interaction: discord.Interaction, button: discord.ui.Button):
         if self.page < self.total_pages - 1:
             self.page += 1
+            self.update_buttons()
             embed, file = await self.get_page(self.page)
             # Edit the message
             await interaction.response.edit_message(embed=embed, attachments=[file] if file else [], view=self)
-        else:
-             await interaction.response.defer()
+
+    @discord.ui.button(label="Download", style=discord.ButtonStyle.success)
+    async def download_button(self, interaction: discord.Interaction, button: discord.ui.Button):
+        button.disabled = True
+        await interaction.response.edit_message(view=self)
+        
+        try:
+            image_bytes = await self.generate_image(self.page)
+            file = discord.File(image_bytes, filename="wrapped_stats.png")
+            await interaction.followup.send(content=f"Here's your IUFI wrapped card, share it with your friends! 💖", file=file)
+        except Exception as e:
+            await interaction.followup.send(content=f"An error occurred while generating the image: {e}", ephemeral=True)
+
+    async def generate_image(self, page: int):
+        avatar_bytes = await self.ctx.author.display_avatar.read()
+        return await self.ctx.bot.loop.run_in_executor(None, self._generate_image_sync, avatar_bytes)
+
+    def _generate_image_sync(self, avatar_bytes: bytes):
+        base = Image.open("cover/wrapped.png").convert("RGBA")
+        draw = ImageDraw.Draw(base)
+        W, H = base.size
+        
+        # Fonts - Massively increasing sizes
+        font_path = "fonts/Roboto-Regular.ttf"
+        try:
+            name_font = ImageFont.truetype(font_path, 120)
+            stat_label_font = ImageFont.truetype(font_path, 100)
+            stat_value_font = ImageFont.truetype(font_path, 280)
+            persona_font = ImageFont.truetype(font_path, 150)
+        except:
+            name_font = ImageFont.load_default()
+            stat_label_font = ImageFont.load_default()
+            stat_value_font = ImageFont.load_default()
+            persona_font = ImageFont.load_default()
+
+        # 1. Avatar (Left Side Middle)
+        avatar_size = 500
+        avatar = Image.open(BytesIO(avatar_bytes)).convert("RGBA")
+        avatar = avatar.resize((avatar_size, avatar_size))
+        
+        mask = Image.new("L", (avatar_size, avatar_size), 0)
+        draw_mask = ImageDraw.Draw(mask)
+        draw_mask.ellipse((0, 0, avatar_size, avatar_size), fill=255)
+        avatar.putalpha(mask)
+        
+        # Position: Left side, Vertically aligned to Middle
+        avatar_x = 100
+        avatar_y = (H - avatar_size) // 2
+        
+        base.paste(avatar, (avatar_x, avatar_y), avatar)
+        
+        # 2. User Name (Centered above Avatar)
+        name_bbox = draw.textbbox((0, 0), self.ctx.author.display_name, font=name_font)
+        name_w = name_bbox[2] - name_bbox[0]
+        name_x = avatar_x + (avatar_size - name_w) // 2
+        name_y = avatar_y - 150
+        draw.text((name_x, name_y), self.ctx.author.display_name, font=name_font, fill="white")
+
+        # 3. Stats Collection
+        active_days = self.user_data.get("active_days_count", 0)
+        streak = self.user_data.get("longest_streak", 0)
+        collected = self.user_data.get("cards_collected_count", 0)
+        
+        rank_text = "N/A"
+        if collected > 0:
+            all_counts = [u.get("cards_collected_count", 0) for u in self.users_stats.values()]
+            all_counts.sort(reverse=True)
+            try:
+                rank_num = all_counts.index(collected) + 1
+                rank_text = f"#{rank_num}"
+            except:
+                pass
+        
+        persona = "Mysterious Player"
+        msg_count = self.user_data.get("iufi_chat_msgs", 0)
+        react_count = self.user_data.get("iufi_chat_reactions_given", 0)
+        
+        if msg_count < react_count and react_count > 10:
+            persona = "Silent Supporter"
+        
+        room_counts = self.user_data.get("room_command_counts", {})
+        total_commands = sum(sum(cmds.values()) for cmds in room_counts.values())
+        if total_commands > 0:
+            for room, cmds in room_counts.items():
+                if sum(cmds.values()) / total_commands >= 0.9:
+                    persona = f"Resident of {room}"
+                    break
+        
+        gallery_posts = self.user_data.get("gallery_posts", 0)
+        if gallery_posts > 10: 
+             persona = "The Flexer"
+        
+        game_msgs = self.user_data.get("game_room_msgs", 0)
+        if game_msgs > 100:
+             persona = "Chatterbox"
+
+        # 4. Layout Stats - Two Columns
+        left_col_x = W * 0.42
+        right_col_x = W * 0.72
+        
+        start_y = H * 0.32
+        spacing = 450
+        
+        # Helper to draw centered text at x, y
+        def draw_centered(text, font, x, y, color="white"):
+            bbox = draw.textbbox((0, 0), text, font=font)
+            w = bbox[2] - bbox[0]
+            draw.text((x - w / 2, y), text, font=font, fill=color)
+
+        # Row 1
+        draw_centered("Active Days", stat_label_font, left_col_x, start_y, (200, 200, 200))
+        draw_centered(str(active_days), stat_value_font, left_col_x, start_y + 110)
+
+        draw_centered("Cards Collected", stat_label_font, right_col_x, start_y, (200, 200, 200))
+        draw_centered(f"{collected:,}", stat_value_font, right_col_x, start_y + 110)
+        
+        # Row 2
+        start_y += spacing
+        draw_centered("Longest Streak", stat_label_font, left_col_x, start_y, (200, 200, 200))
+        draw_centered(f"{streak} days", stat_value_font, left_col_x, start_y + 110)
+
+        draw_centered("Global Rank", stat_label_font, right_col_x, start_y, (200, 200, 200))
+        draw_centered(rank_text, stat_value_font, right_col_x, start_y + 110)
+
+        # Row 3 - Persona Centered
+        stats_center_x = (left_col_x + right_col_x) / 2
+        start_y += spacing + 50
+        draw_centered("Your Persona", stat_label_font, stats_center_x, start_y, (200, 200, 200))
+        draw_centered(persona, persona_font, stats_center_x, start_y + 110, (255, 215, 0)) # Gold color for Persona
+
+        # Save
+        buffer = BytesIO()
+        base.save(buffer, format="PNG")
+        buffer.seek(0)
+        return buffer
 
 async def setup(bot: commands.Bot) -> None:
     await bot.add_cog(Info(bot))
