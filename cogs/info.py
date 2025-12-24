@@ -420,25 +420,35 @@ class WrappedView(discord.ui.View):
             embed.add_field(name="🔥 Longest Streak", value=f"**{streak} days**. {streak_msg}", inline=False)
 
         elif page == 1:
-            # Slide 2: First High Rarity
+            # Slide 2: First High Rarity or Most Collected
             card_id = self.user_data.get("first_high_rarity_card_id")
-            if card_id:
-                card = iufi.CardPool.get_card(card_id)
-                if card:
-                    embed.title = "🍀 Your Luckiest Moment"
-                    embed.description = "\u200b\n"
-                    embed.add_field(name="💎 First High Rarity", value=f"Card ID: `{card_id}`\nRarity: {self.user_data.get('first_high_rarity_rarity')}\nDate: {self.user_data.get('first_high_rarity_date')}", inline=False)
-                    
-                    rolls = self.user_data.get("rolls_until_high_rarity", 0)
-                    title = "🍀 Pure Luck!" if rolls <= 100 else "💪 True Persistence!" if rolls > 1000 else "✨ Well Deserved!"
-                    embed.add_field(name=title, value=f"It took you **{rolls}** rolls to find this gem.", inline=False)
-                    
-                    image_bytes = await card.image_bytes()
-                    file = discord.File(image_bytes, filename=f"{card_id}.webp")
-                    embed.set_image(url=f"attachment://{card_id}.webp")
+            card = iufi.CardPool.get_card(card_id) if card_id else None
+
+            if card:
+                embed.title = "🍀 Your Luckiest Moment"
+                embed.description = "\u200b\n"
+                embed.add_field(name="💎 First High Rarity", value=f"Card ID: `{card_id}`\nRarity: {self.user_data.get('first_high_rarity_rarity')}\nDate: {self.user_data.get('first_high_rarity_date')}", inline=False)
+                
+                rolls = self.user_data.get("rolls_until_high_rarity", 0)
+                title = "🍀 Pure Luck!" if rolls <= 100 else "💪 True Persistence!" if rolls > 1000 else "✨ Well Deserved!"
+                embed.add_field(name=title, value=f"It took you **{rolls}** rolls to find this gem.", inline=False)
+                
+                image_bytes = await card.image_bytes()
+                file = discord.File(image_bytes, filename=f"{card_id}.webp")
+                embed.set_image(url=f"attachment://{card_id}.webp")
             else:
-                prediction = random.choice(["mystic 🦄", "celestial 💫"])
-                embed.description = f"\u200b\nUnfortunately you didn't find a single mystic or celestial card this year, but keep rolling, because I see a {prediction} coming for you in 2026! 🔮"
+                most_collected_id = self.user_data.get("most_collected_card")
+                if most_collected_id and (mc_card := iufi.CardPool.get_card(most_collected_id)):
+                    embed.title = "🃏 The Familiar Face"
+                    embed.description = "\u200b\nYou didn't find a mystic or celestial card this year, but this card appeared again and again! It's your most collected card."
+                    embed.add_field(name="🆔 Card Details", value=f"Card ID: `{most_collected_id}`\nTier: {mc_card.tier[0]}", inline=False)
+                    
+                    image_bytes = await mc_card.image_bytes()
+                    file = discord.File(image_bytes, filename=f"{most_collected_id}.webp")
+                    embed.set_image(url=f"attachment://{most_collected_id}.webp")
+                else:
+                    prediction = random.choice(["mystic 🦄", "celestial 💫"])
+                    embed.description = f"\u200b\nUnfortunately you didn't find a single mystic or celestial card this year, but keep rolling, because I see a {prediction} coming for you in 2026! 🔮"
 
         elif page == 2:
             # Slide 3: Activity & Most active day
@@ -734,16 +744,16 @@ class WrappedView(discord.ui.View):
             except:
                 pass
         
-        draw_stat("GLOBAL RANK", rank_text, col2_x, start_y + row_spacing)
+        draw_stat("IUFI RANK", rank_text, col2_x, start_y + row_spacing)
 
         # Persona at the bottom
         p_label = "YOUR IUFI PERSONA"
         p_l_bbox = draw.textbbox((0, 0), p_label, font=label_font)
-        draw.text((center_x - (p_l_bbox[2]-p_l_bbox[0])//2, H - 360), 
+        draw.text((center_x - (p_l_bbox[2]-p_l_bbox[0])//2, H - 400), 
                   p_label, font=label_font, fill=WHITE_COLOR)
         
         p_bbox = draw.textbbox((0, 0), persona, font=persona_font)
-        draw.text((center_x - (p_bbox[2]-p_bbox[0])//2, H - 260), 
+        draw.text((center_x - (p_bbox[2]-p_bbox[0])//2, H - 300), 
                   persona, font=persona_font, fill=GOLD_COLOR)
 
         # Save
