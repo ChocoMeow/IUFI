@@ -1,6 +1,6 @@
 import discord, iufi, asyncio, random
 from io import BytesIO
-from PIL import Image, ImageDraw, ImageFont
+from PIL import Image, ImageDraw, ImageFont, ImageFilter
 from collections import Counter
 import functions as func
 
@@ -581,61 +581,148 @@ class WrappedView(discord.ui.View):
         await interaction.response.edit_message(view=self)
         
         try:
-            image_bytes = await self.generate_image(self.page)
-            file = discord.File(image_bytes, filename="wrapped_stats.png")
-            await interaction.followup.send(content=f"Here's your IUFI wrapped card, share it with your friends! 💖", file=file)
+            images = await self.generate_images(self.page)
+            files = [discord.File(img, filename=f"wrapped_{name}.png") for name, img in images]
+            await interaction.followup.send(content=f"Here's your IUFI wrapped card, share it with your friends! 💖", files=files)
         except Exception as e:
             await interaction.followup.send(content=f"An error occurred while generating the image: {e}", ephemeral=True)
-
-    async def generate_image(self, page: int):
+    async def generate_images(self, page: int):
         avatar_bytes = await self.ctx.author.display_avatar.read()
-        return await self.ctx.bot.loop.run_in_executor(None, self._generate_image_sync, avatar_bytes)
+        return await self.ctx.bot.loop.run_in_executor(None, self._generate_images_sync, avatar_bytes)
 
-    def _generate_image_sync(self, avatar_bytes: bytes):
+    FONT_CANDIDATES = [
+        'fonts/DejaVuSans.ttf',
+        'fonts/Roboto-Regular.ttf',
+        '/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf',
+        '/Library/Fonts/Arial.ttf',
+        '/System/Library/Fonts/Supplemental/Arial.ttf',
+    ]
+
+    def load_truetype(self, size: int) -> ImageFont.FreeTypeFont | ImageFont.ImageFont:
+        for candidate in self.FONT_CANDIDATES:
+            try:
+                f = ImageFont.truetype(candidate, size)
+                return f
+            except Exception:
+                continue
+        return ImageFont.load_default()
+
+    def _generate_images_sync(self, avatar_bytes: bytes):
+        results = []
+        
+        # Load base image
         base = Image.open("cover/wrapped.png").convert("RGBA")
         draw = ImageDraw.Draw(base)
         W, H = base.size
         
-        # Fonts - Massively increasing sizes
-        font_path = "fonts/Roboto-Regular.ttf"
-        try:
-            name_font = ImageFont.truetype(font_path, 120)
-            stat_label_font = ImageFont.truetype(font_path, 100)
-            stat_value_font = ImageFont.truetype(font_path, 280)
-            persona_font = ImageFont.truetype(font_path, 150)
-        except:
-            name_font = ImageFont.load_default()
-            stat_label_font = ImageFont.load_default()
-            stat_value_font = ImageFont.load_default()
-            persona_font = ImageFont.load_default()
-
-        # 1. Avatar (Left Side Middle)
-        avatar_size = 500
-        avatar = Image.open(BytesIO(avatar_bytes)).convert("RGBA")
-        avatar = avatar.resize((avatar_size, avatar_size))
+        # --- Configuration ---
+        GOLD_COLOR = (255, 215, 0)
+        WHITE_COLOR = (255, 255, 255)
+        LABEL_COLOR = (240, 240, 240) # Slightly off-white for labels
         
+        try:
+            name_font = self.load_truetype(120)
+            label_font = self.load_truetype(65)
+            value_font = self.load_truetype(150)
+            persona_font = self.load_truetype(110)
+        except Exception as e:
+            print(f"Error loading font: {e}")
+            name_font = label_font = value_font = persona_font = ImageFont.load_default()
+
+        # --- 1. Avatar with Border ---
+        avatar_size = 420
+        avatar = Image.open(BytesIO(avatar_bytes)).convert("RGBA").resize((avatar_size, avatar_size), Image.LANCZOS)
+        
+        # Create circular mask
         mask = Image.new("L", (avatar_size, avatar_size), 0)
-        draw_mask = ImageDraw.Draw(mask)
-        draw_mask.ellipse((0, 0, avatar_size, avatar_size), fill=255)
+        ImageDraw.Draw(mask).ellipse((0, 0, avatar_size, avatar_size), fill=255)
         avatar.putalpha(mask)
         
-        # Position: Left side, Vertically aligned to Middle
-        avatar_x = 100
-        avatar_y = (H - avatar_size) // 2
+        # Position Avatar
+        avatar_x = 220
+        avatar_y = (H // 2) - (avatar_size // 2) - 80
+        
+        # Draw a gold glow/border behind avatar
+        border_thickness = 15
+        draw.ellipse((avatar_x - border_thickness, avatar_y - border_thickness, 
+                    avatar_x + avatar_size + border_thickness, avatar_y + avatar_size + border_thickness), 
+                    outline=GOLD_COLOR, width=8)
         
         base.paste(avatar, (avatar_x, avatar_y), avatar)
-        
-        # 2. User Name (Centered above Avatar)
-        name_bbox = draw.textbbox((0, 0), self.ctx.author.display_name, font=name_font)
-        name_w = name_bbox[2] - name_bbox[0]
-        name_x = avatar_x + (avatar_size - name_w) // 2
-        name_y = avatar_y - 150
-        draw.text((name_x, name_y), self.ctx.author.display_name, font=name_font, fill="white")
 
-        # 3. Stats Collection
+        # --- 2. User Name ---
+        name_text = self.ctx.author.display_name.upper()
+        
+        # Fallback for getmask error on some systems with specific fonts
+        try:
+            name_bbox = draw.textbbox((0, 0), name_text, font=name_font)
+        except Exception:
+             name_font = ImageFont.load_default()
+             name_bbox = draw.textbbox((0, 0), name_text, font=name_font)
+             
+        name_w = name_bbox[2] - name_bbox[0]
+        # Center name under avatar
+        draw.text((avatar_x + (avatar_size//2) - (name_w//2), avatar_y + avatar_size + 60), 
+                  name_text, font=name_font, fill=WHITE_COLOR)
+
+        # --- 3. Stats Helper ---
+        def draw_stat(label, value, x, y):
+            # Draw Shadow for readability
+            shadow_off = 4
+            # Label
+            l_bbox = draw.textbbox((0, 0), label, font=label_font)
+            l_w = l_bbox[2] - l_bbox[0]
+            draw.text((x - l_w//2 + shadow_off, y + shadow_off), label, font=label_font, fill=(0,0,0,150))
+            draw.text((x - l_w//2, y), label, font=label_font, fill=LABEL_COLOR)
+            
+            # Value
+            v_bbox = draw.textbbox((0, 0), str(value), font=value_font)
+            v_w = v_bbox[2] - v_bbox[0]
+            draw.text((x - v_w//2 + shadow_off, y + 90 + shadow_off), str(value), font=value_font, fill=(0,0,0,150))
+            draw.text((x - v_w//2, y + 90), str(value), font=value_font, fill=GOLD_COLOR)
+
+        # --- 4. Logic for Persona & Stats ---
         active_days = self.user_data.get("active_days_count", 0)
         streak = self.user_data.get("longest_streak", 0)
         collected = self.user_data.get("cards_collected_count", 0)
+        
+        persona = "MYSTERIOUS PLAYER"
+        msg_count = self.user_data.get("iufi_chat_msgs", 0)
+        react_count = self.user_data.get("iufi_chat_reactions_given", 0)
+        
+        if msg_count < react_count and react_count > 10:
+            persona = "SILENT SUPPORTER"
+        
+        room_counts = self.user_data.get("room_command_counts", {})
+        total_commands = sum(sum(cmds.values()) for cmds in room_counts.values())
+        if total_commands > 0:
+            for room, cmds in room_counts.items():
+                if sum(cmds.values()) / total_commands >= 0.9:
+                    persona = f"RESIDENT OF {room.upper()}"
+                    break
+        
+        gallery_posts = self.user_data.get("gallery_posts", 0)
+        if gallery_posts > 10: 
+            persona = "THE FLEXER"
+        
+        game_msgs = self.user_data.get("game_room_msgs", 0)
+        if game_msgs > 100:
+            persona = "CHATTERBOX"
+
+        # --- 5. Layout Grid ---
+        center_x = ((W + avatar_x + avatar_size) // 2) - 50
+        col_offset = W * 0.13
+        col1_x = center_x - col_offset
+        col2_x = center_x + col_offset
+        start_y = H * 0.24
+        row_spacing = 350
+
+        # Row 1
+        draw_stat("ACTIVE DAYS", active_days, col1_x, start_y)
+        draw_stat("CARDS COLLECTED", f"{collected:,}", col2_x, start_y)
+
+        # Row 2
+        draw_stat("LONGEST STREAK", f"{streak} Days", col1_x, start_y + row_spacing)
         
         rank_text = "N/A"
         if collected > 0:
@@ -647,68 +734,25 @@ class WrappedView(discord.ui.View):
             except:
                 pass
         
-        persona = "Mysterious Player"
-        msg_count = self.user_data.get("iufi_chat_msgs", 0)
-        react_count = self.user_data.get("iufi_chat_reactions_given", 0)
-        
-        if msg_count < react_count and react_count > 10:
-            persona = "Silent Supporter"
-        
-        room_counts = self.user_data.get("room_command_counts", {})
-        total_commands = sum(sum(cmds.values()) for cmds in room_counts.values())
-        if total_commands > 0:
-            for room, cmds in room_counts.items():
-                if sum(cmds.values()) / total_commands >= 0.9:
-                    persona = f"Resident of {room}"
-                    break
-        
-        gallery_posts = self.user_data.get("gallery_posts", 0)
-        if gallery_posts > 10: 
-             persona = "The Flexer"
-        
-        game_msgs = self.user_data.get("game_room_msgs", 0)
-        if game_msgs > 100:
-             persona = "Chatterbox"
+        draw_stat("GLOBAL RANK", rank_text, col2_x, start_y + row_spacing)
 
-        # 4. Layout Stats - Two Columns
-        left_col_x = W * 0.42
-        right_col_x = W * 0.72
+        # Persona at the bottom
+        p_label = "YOUR IUFI PERSONA"
+        p_l_bbox = draw.textbbox((0, 0), p_label, font=label_font)
+        draw.text((center_x - (p_l_bbox[2]-p_l_bbox[0])//2, H - 360), 
+                  p_label, font=label_font, fill=WHITE_COLOR)
         
-        start_y = H * 0.32
-        spacing = 450
-        
-        # Helper to draw centered text at x, y
-        def draw_centered(text, font, x, y, color="white"):
-            bbox = draw.textbbox((0, 0), text, font=font)
-            w = bbox[2] - bbox[0]
-            draw.text((x - w / 2, y), text, font=font, fill=color)
-
-        # Row 1
-        draw_centered("Active Days", stat_label_font, left_col_x, start_y, (200, 200, 200))
-        draw_centered(str(active_days), stat_value_font, left_col_x, start_y + 110)
-
-        draw_centered("Cards Collected", stat_label_font, right_col_x, start_y, (200, 200, 200))
-        draw_centered(f"{collected:,}", stat_value_font, right_col_x, start_y + 110)
-        
-        # Row 2
-        start_y += spacing
-        draw_centered("Longest Streak", stat_label_font, left_col_x, start_y, (200, 200, 200))
-        draw_centered(f"{streak} days", stat_value_font, left_col_x, start_y + 110)
-
-        draw_centered("Global Rank", stat_label_font, right_col_x, start_y, (200, 200, 200))
-        draw_centered(rank_text, stat_value_font, right_col_x, start_y + 110)
-
-        # Row 3 - Persona Centered
-        stats_center_x = (left_col_x + right_col_x) / 2
-        start_y += spacing + 50
-        draw_centered("Your Persona", stat_label_font, stats_center_x, start_y, (200, 200, 200))
-        draw_centered(persona, persona_font, stats_center_x, start_y + 110, (255, 215, 0)) # Gold color for Persona
+        p_bbox = draw.textbbox((0, 0), persona, font=persona_font)
+        draw.text((center_x - (p_bbox[2]-p_bbox[0])//2, H - 260), 
+                  persona, font=persona_font, fill=GOLD_COLOR)
 
         # Save
         buffer = BytesIO()
-        base.save(buffer, format="PNG")
+        base.save(buffer, format="PNG", optimize=True)
         buffer.seek(0)
-        return buffer
+        results.append(("final", buffer))
+
+        return results
 
 async def setup(bot: commands.Bot) -> None:
     await bot.add_cog(Info(bot))
