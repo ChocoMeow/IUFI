@@ -712,11 +712,11 @@ class WrappedView(discord.ui.View):
                     break
         
         gallery_posts = self.user_data.get("gallery_posts", 0)
-        if gallery_posts > 10: 
+        if gallery_posts > 12: 
             persona = "THE FLEXER"
         
         game_msgs = self.user_data.get("game_room_msgs", 0)
-        if game_msgs > 100:
+        if game_msgs > 1000:
             persona = "CHATTERBOX"
 
         # --- 5. Layout Grid ---
