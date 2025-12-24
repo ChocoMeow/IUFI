@@ -1,4 +1,5 @@
-import discord, iufi
+import discord, iufi, asyncio
+from collections import Counter
 import functions as func
 
 from typing import Callable
@@ -347,6 +348,212 @@ class Info(commands.Cog):
 
         view = HelpView(self.bot, ctx.author, ctx.prefix)
         await ctx.reply(embed=view.build_embed(), view=view)
+
+    @commands.command(aliases=["w"])
+    async def wrapped(self, ctx: commands.Context):
+        """Shows your IUFI Wrapped stats for the year."""
+        user_stats = func.open_json("data/user_stats.json")
+        global_stats = func.open_json("data/global_stats.json")
+        
+        user_id = str(ctx.author.id)
+        if user_id not in user_stats:
+            return await ctx.reply("You don't have any stats recorded for this year yet! Start playing to generate your story.")
+            
+        user_data = user_stats[user_id]
+        
+        view = WrappedView(ctx, user_data, global_stats, user_stats)
+        embed, file = await view.get_page(0)
+        
+        if file:
+            await ctx.reply(embed=embed, file=file, view=view)
+        else:
+            await ctx.reply(embed=embed, view=view)
+
+class WrappedView(discord.ui.View):
+    def __init__(self, ctx: commands.Context, user_data: dict, global_stats: dict, users_stats: dict):
+        super().__init__(timeout=300)
+        self.ctx = ctx
+        self.user_data = user_data
+        self.global_stats = global_stats
+        self.users_stats = users_stats
+        self.page = 0
+        self.total_pages = 6
+
+    async def get_page(self, page: int):
+        embed = discord.Embed(title=f"✨ IUFI Wrapped 2025 - {self.ctx.author.display_name} ✨", color=0xB784B7)
+        file = None
+
+        if page == 0:
+            # Slide 1: Intro & Playtime
+            first_roll = self.user_data.get("first_roll_date", "N/A")
+            active_days = self.user_data.get("active_days_count", 0)
+            percentage = (active_days / 365) * 100
+            
+            embed.add_field(name="📅 The First Roll", value=f"Your first pull this year was on **{first_roll}**.\nLook how far you've come!", inline=False)
+            embed.add_field(name="⏳ Your Total Playtime", value=f"You interacted with IUFI on **{active_days}** different days this year.\nThat’s **{percentage:.1f}%** of your year spent with IU!", inline=False)
+            
+            streak = self.user_data.get("longest_streak", 0)
+            streak_msg = "Keep it up!"
+            if streak > 100:
+                streak_msg = "Incredible dedication! 💯"
+            elif streak > 50:
+                streak_msg = "You're on fire! 🔥"
+            elif streak > 10: 
+                streak_msg = "Nice streak! 🚀"
+            elif streak > 3:
+                streak_msg = "Good start!"
+
+            embed.add_field(name="🔥 Longest Streak", value=f"**{streak} days**. {streak_msg}", inline=False)
+
+        elif page == 1:
+            # Slide 2: First High Rarity
+            card_id = self.user_data.get("first_high_rarity_card_id")
+            if card_id:
+                card = iufi.CardPool.get_card(card_id)
+                if card:
+                    embed.title = "🍀 Your Luckiest Moment"
+                    embed.add_field(name="💎 First High Rarity", value=f"Card ID: `{card_id}`\nRarity: {self.user_data.get('first_high_rarity_rarity')}\nDate: {self.user_data.get('first_high_rarity_date')}", inline=False)
+                    
+                    rolls = self.user_data.get("rolls_until_high_rarity", 0)
+                    title = "🍀 Pure Luck!" if rolls <= 100 else "💪 True Persistence!" if rolls > 1000 else "✨ Well Deserved!"
+                    embed.add_field(name=title, value=f"It took you **{rolls}** rolls to find this gem.", inline=False)
+                    
+                    image_bytes = await card.image_bytes()
+                    file = discord.File(image_bytes, filename=f"{card_id}.webp")
+                    embed.set_image(url=f"attachment://{card_id}.webp")
+            else:
+                embed.description = "You haven't found a high rarity card yet this year. Keep rolling! 🍀"
+
+        elif page == 2:
+            # Slide 3: Activity & Most active day
+            active_day = self.user_data.get("most_active_day", {})
+            date = active_day.get("date", "N/A")
+            count = active_day.get("count", 0)
+            
+            embed.add_field(name="📅 Most Active Day", value=f"On **{date}**, you used **{count}** commands!\nYou were really grinding that day! 🏃‍♂️💨", inline=False)
+            
+            # Top 5 commands
+            command_counts = Counter()
+            # Aggregate room commands
+            for room_cmds in self.user_data.get("room_command_counts", {}).values():
+                command_counts.update(room_cmds)
+            
+            top_cmds = command_counts.most_common(5)
+            cmd_text = "\n".join([f"`{cmd}`: {cnt}" for cmd, cnt in top_cmds]) if top_cmds else "No commands used."
+            embed.add_field(name="⌨️ Top Commands", value=cmd_text, inline=False)
+            
+            # Collection Stats
+            collected = self.user_data.get("cards_collected_count", 0)
+            rarity_counts = self.user_data.get("rarity_counts", {})
+            rarity_text = " • ".join([f"{k} {v}" for k, v in rarity_counts.items()])
+            
+            embed.add_field(name="🃏 Collection Stats", value=f"Total Cards: **{collected}**", inline=False)
+            if rarity_text:
+                embed.add_field(name="✨ Rarity Breakdown", value=rarity_text, inline=False)
+
+        elif page == 3:
+            # Slide 4: Titles/Persona
+            embed.title = "🏆 Your IUFI Persona"
+            description = ""
+            
+            # Silent Supporter
+            msg_count = self.user_data.get("iufi_chat_msgs", 0)
+            react_count = self.user_data.get("iufi_chat_reactions_given", 0)
+            if msg_count < react_count and react_count > 10:
+                description += "**🤫 The Silent Supporter**\nYou react more than you type! A true observer.\n\n"
+            
+            # Resident of Room X
+            room_counts = self.user_data.get("room_command_counts", {})
+            total_commands = sum(sum(cmds.values()) for cmds in room_counts.values())
+            if total_commands > 0:
+                for room, cmds in room_counts.items():
+                    if sum(cmds.values()) / total_commands >= 0.9:
+                        description += f"**🏠 Resident of {room}**\nThis is your home. You rarely leave!\n\n"
+                        break
+            
+            # Flexer / Gallery
+            gallery_posts = self.user_data.get("gallery_posts", 0)
+            gallery_reactions = self.user_data.get("gallery_reactions_received", 0)
+            if gallery_posts > 10: 
+                 description += "**💪 The Flexer**\nYou love showing off your collection!\n\n"
+            
+            if gallery_reactions > 0:
+                highest_post = self.user_data.get("highest_reaction_gallery_post", {})
+                description += f"**📸 Gallery Star**\nYour gallery posts received **{gallery_reactions}** reactions!\nBest post: {highest_post.get('count', 0)} reactions on specific post.\n\n"
+            
+            # Chatty
+            game_msgs = self.user_data.get("game_room_msgs", 0)
+            if game_msgs > 100:
+                 description += "**🗣️ Chatterbox**\nYou love chatting in the game rooms!\n\n"
+
+            if not description:
+                description = "You are a mysterious player with no specific traits yet!"
+            
+            embed.description = description
+
+        elif page == 4:
+            # Slide 5: Percentiles
+            coll_count = self.user_data.get("cards_collected_count", 0)
+            if coll_count > 0:
+                # Calculate rank
+                all_counts = [u.get("cards_collected_count", 0) for u in self.users_stats.values()]
+                all_counts.sort(reverse=True)
+                try:
+                    rank = all_counts.index(coll_count) + 1
+                    percentile = (rank / len(all_counts)) * 100
+                    
+                    if percentile <= 1:
+                        top_text = "Top 1%"
+                    elif percentile <= 5:
+                        top_text = "Top 5%"
+                    elif percentile <= 10:
+                        top_text = "Top 10%"
+                    elif percentile <= 25:
+                        top_text = "Top 25%"
+                    else:
+                        top_text = f"Top {int(percentile)}%"
+                        
+                    embed.add_field(name="🌟 Global Standing", value=f"You are among the **{top_text}** of collectors in the server!", inline=False)
+                    embed.add_field(name="📊 Your Rank", value=f"#{rank} out of {len(all_counts)} users", inline=False)
+                except ValueError:
+                    pass
+            else:
+                embed.description = "Start collecting cards to see your global ranking!"
+
+        elif page == 5:
+            # Slide 6: Community Milestones
+            total_cards = self.global_stats.get("total_cards_collected", 0)
+            stadium_capacity = 50000 
+            stadiums = total_cards / stadium_capacity
+            
+            embed.title = "🌍 Community Milestones"
+            embed.add_field(name="🃏 Total Pulled Cards", value=f"Together, this server pulled **{total_cards:,}** IU cards this year!", inline=False)
+            embed.add_field(name="🏟️ That's a lot!", value=f"That’s enough to fill **{stadiums:.1f}** stadiums with cards!", inline=False)
+            
+            embed.description = "Thank you for being part of this amazing journey! ❤️"
+
+        embed.set_footer(text=f"Page {page + 1}/{self.total_pages}")
+        return embed, file
+
+    @discord.ui.button(label="Previous", style=discord.ButtonStyle.secondary)
+    async def prev_button(self, interaction: discord.Interaction, button: discord.ui.Button):
+        if self.page > 0:
+            self.page -= 1
+            embed, file = await self.get_page(self.page)
+            # Edit the message
+            await interaction.response.edit_message(embed=embed, attachments=[file] if file else [], view=self)
+        else:
+            await interaction.response.defer()
+
+    @discord.ui.button(label="Next", style=discord.ButtonStyle.primary)
+    async def next_button(self, interaction: discord.Interaction, button: discord.ui.Button):
+        if self.page < self.total_pages - 1:
+            self.page += 1
+            embed, file = await self.get_page(self.page)
+            # Edit the message
+            await interaction.response.edit_message(embed=embed, attachments=[file] if file else [], view=self)
+        else:
+             await interaction.response.defer()
 
 async def setup(bot: commands.Bot) -> None:
     await bot.add_cog(Info(bot))
