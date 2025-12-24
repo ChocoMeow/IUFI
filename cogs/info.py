@@ -501,7 +501,7 @@ class WrappedView(discord.ui.View):
             # Flexer / Gallery
             gallery_posts = self.user_data.get("gallery_posts", 0)
             gallery_reactions = self.user_data.get("gallery_reactions_received", 0)
-            if gallery_posts > 10: 
+            if gallery_posts > 12: 
                  description += "**💪 The Flexer**\nYou love showing off your collection!\n\n"
             
             if gallery_reactions > 0:
@@ -513,7 +513,7 @@ class WrappedView(discord.ui.View):
             
             # Chatty
             game_msgs = self.user_data.get("game_room_msgs", 0)
-            if game_msgs > 100:
+            if game_msgs > 1000:
                  description += "**🗣️ Chatterbox**\nYou love chatting in the game rooms!\n\n"
 
             if not description:
@@ -708,7 +708,9 @@ class WrappedView(discord.ui.View):
         if total_commands > 0:
             for room, cmds in room_counts.items():
                 if sum(cmds.values()) / total_commands >= 0.9:
-                    persona = f"RESIDENT OF {room.upper()}"
+                    parts = room.split('-')
+                    room_name = " ".join(parts[1:]).upper() if len(parts) > 1 else room.upper()
+                    persona = f"RESIDENT OF {room_name}"
                     break
         
         gallery_posts = self.user_data.get("gallery_posts", 0)
