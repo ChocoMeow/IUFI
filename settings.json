@@ -419,7 +419,7 @@
         "master": {
             "emoji_id": "1173063919846293535",
             "points": 350,
-            "discord_role": 1201455425820827708,
+            "discord_role": "1201455425820827708",
             "questions": [["medium", 3], ["hard", 2]],
             "rewards": {
                 "1": ["exp", 150],
@@ -432,7 +432,7 @@
         "challenger": {
             "emoji_id": "1173064415453663242",
             "points": 500,
-            "discord_role": 1201455425820827708,
+            "discord_role": "1201455425820827708",
             "questions": [["medium", 2], ["hard", 3]],
             "rewards": {
                 "1": ["exp", 200],
@@ -489,28 +489,13 @@
     },
     "MUSIC_GAME_SETTINGS": {
         "next_song_interval": 15,
-        "GAME_REWARDS": [
-            {
-                "amount": 200,
-                "rewards": [["⚔️", "exp", 10], [["⚡", "potions.speed_i", 1], ["🍀", "potions.luck_i", 1]]]
-            },
-            {
-                "amount": 300,
-                "rewards": [["⚔️", "exp", 50], ["🌸", "roll.rare", 1]]
-            },
-            {
-                "amount": 500,
-                "rewards": [["⚔️", "exp", 70], [["⚡", "potions.speed_ii", 1], ["🍀", "potions.luck_ii", 1]]]
-            },
-            {   
-                "amount": 1000,
-                "rewards": [["⚔️", "exp", 100], ["💎", "roll.epic", 1]]
-            },
-            {   
-                "amount": 5000,
-                "rewards": [["⚔️", "exp", 200], ["👑", "roll.legendary", 1]]
-            }
-        ]
+        "rewards": {
+            "200": [["exp", 10], [["potions.speed_i", 1], ["potions.luck_i", 1]]],
+            "300": [["exp", 50], ["roll.rare", 1]],
+            "500": [["exp", 70], [["potions.speed_ii", 1], ["potions.luck_ii", 1]]],
+            "1000": [["exp", 100], ["roll.epic", 1]],
+            "5000": [["exp", 200], ["roll.legendary", 1]]
+        }
     },
     "PVP_SETTINGS": {
         "power_ranges": {
@@ -523,18 +508,20 @@
         },
         "challenge_timeout": 300,
         "round_delay": 4,
-        "max_reroll_attempts": 20
+        "max_reroll_attempts": 20,
+        "reward_enabled": false
     },
     "LOGGING": {
         "file": {
             "path": "./logs",
-            "enable": true
+            "enabled": false
         },
         "level": {
             "discord": "INFO",
             "iufi": "INFO"
         },
-        "max-history": 365
+        "max_history": 365,
+        "enabled": true
     },
     "PVP_REWARDS_ENABLED": false,
     "GIVE_REWARD_CARD": true,

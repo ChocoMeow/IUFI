@@ -24,8 +24,8 @@ from random import (
 from .objects import (
     Card,
     Question,
+    Track,
     QUIZ_LEVEL_BASE,
-    Track
 )
 
 from .exceptions import IUFIException, DuplicatedCardError, DuplicatedTagError

@@ -41,7 +41,7 @@ class Tasks(commands.Cog):
             return
 
         roles = {
-            rank: guild.get_role(data["discord_role"])
+            rank: guild.get_role(int(data["discord_role"]))
             for rank, data in func.settings.RANK_BASE.items() if data["discord_role"]
         }
         for role in roles.values():

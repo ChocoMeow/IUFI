@@ -18,7 +18,6 @@ from typing import (
 )
 
 from discord.ext import commands
-
 from dotenv import load_dotenv
 
 ROOT_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -43,85 +42,8 @@ class TOKEN:
         self.mongodb_url = os.getenv("MONGODB_URL")
         self.mongodb_name = os.getenv("MONGODB_NAME")
 
-class Settings:
-    def __init__(self):
-        self.BOT_PREFIX: List[str] = []
-        self.MAX_CARDS: int = 0
-        self.DEFAULT_EXP: int = 0
-        self.LAST_TRADE_TIMER: int = 0
-        self.RESET_CARD_DAY: int = 0
-        self.MAIN_GUILD: int = 0
-        self.MAIN_CHAT_CHANNEL: int = 0
-        self.MUSIC_TEXT_CHANNEL: int = 0
-        self.MUSIC_VOICE_CHANNEL: int = 0
-        self.GALLERY_CHANNEL: int = 0
-        self.MARKET_CHANNEL: int = 0
-        self.ALLOWED_CATEGORY_IDS: List[int] = []
-        self.IGNORE_CHANNEL_IDS: List[int] = []
-        self.GAME_CHANNEL_IDS: List[int] = []
-        self.MUSIC_NODE: Dict[str, Union[str, int]] = {}
-        self.USER_BASE: Dict[str, Any] = {}
-        self.COOLDOWN_BASE: Dict[str, tuple[str, int]] = {}
-        self.PITY_SETTINGS: Dict[str, Dict[str, Any]] = {}
-        self.DAILY_QUESTS: Dict[str, Union[str, int]] = {}
-        self.WEEKLY_QUESTS: Dict[str, Union[str, int]] = {}
-        self.TIERS_BASE: Dict[str, List[str, int]] = {}
-        self.FRAMES_BASE: Dict[str, List[str, str]] = {}
-        self.POTIONS_BASE: Dict[str, Union[str, Dict[str, float]]] = {}
-        self.RANK_BASE: Dict[Dict, Dict[str, Any]] = {}
-        self.MATCH_GAME_SETTINGS: Dict[str, Dict[str, Any]] = {}
-        self.MUSIC_GAME_SETTINGS: Dict[str, Any] = {}
-        self.ADMIN_IDS: List[int] = []
-        self.BUG_REPORT_CHANNEL_ID: int = 0
-        self.OPUS_PATH: str = ""
-        self.LOGGING: Dict[Union[str, Dict[str, Union[str, bool]]]] = {}
-        self.PVP_REWARDS_ENABLED: bool = False
-        self.GIVE_REWARD_CARD: bool = False
-        self.MONTHLY_LEADERBOARD_ROLE: int = 0
-        # Newly added defaults so callers can reference them directly without getattr
-        self.PVP_SETTINGS: Dict[str, Any] = {}
-        self.REWARD_CARD_PROBABILITIES: Dict[str, Any] = {}
-
-    def load(self):
-        settings = open_json("settings.json")
-        self.BOT_PREFIX = settings.get("BOT_PREFIX", [])
-        self.MAX_CARDS = settings.get("MAX_CARDS")
-        self.DEFAULT_EXP = settings.get("DEFAULT_EXP")
-        self.LAST_TRADE_TIMER = settings.get("LAST_TRADE_TIMER")
-        self.RESET_CARD_DAY = settings.get("RESET_CARD_DAY")
-        self.MAIN_GUILD = settings.get("MAIN_GUILD")
-        self.MAIN_CHAT_CHANNEL = settings.get("MAIN_CHAT_CHANNEL")
-        self.MUSIC_TEXT_CHANNEL = settings.get("MUSIC_TEXT_CHANNEL")
-        self.MUSIC_VOICE_CHANNEL = settings.get("MUSIC_VOICE_CHANNEL")
-        self.GALLERY_CHANNEL = settings.get("GALLERY_CHANNEL")
-        self.MARKET_CHANNEL = settings.get("MARKET_CHANNEL")
-        self.ALLOWED_CATEGORY_IDS = settings.get("ALLOWED_CATEGORY_IDS")
-        self.IGNORE_CHANNEL_IDS = settings.get("IGNORE_CHANNEL_IDS")
-        self.GAME_CHANNEL_IDS = settings.get("GAME_CHANNEL_IDS")
-        self.MUSIC_NODE = settings.get("MUSIC_NODE")
-        self.USER_BASE = settings.get("USER_BASE")
-        self.COOLDOWN_BASE = settings.get("COOLDOWN_BASE")
-        self.PITY_SETTINGS = settings.get("PITY_SETTINGS", {})
-        self.DAILY_QUESTS = {k: v for k, v in settings.get("DAILY_QUESTS").items()}
-        self.WEEKLY_QUESTS = {k: v for k, v in settings.get("WEEKLY_QUESTS").items()}
-        self.TIERS_BASE = settings.get("TIERS_BASE")
-        self.FRAMES_BASE = settings.get("FRAMES_BASE")
-        self.POTIONS_BASE = settings.get("POTIONS_BASE")
-        self.RANK_BASE = settings.get("RANK_BASE")
-        self.MATCH_GAME_SETTINGS = settings.get("MATCH_GAME_SETTINGS")
-        self.MUSIC_GAME_SETTINGS = settings.get("MUSIC_GAME_SETTINGS")
-        self.ADMIN_IDS = settings.get("ADMIN_IDS")
-        self.BUG_REPORT_CHANNEL_ID = settings.get("BUG_REPORT_CHANNEL_ID")
-        self.OPUS_PATH = settings.get("OPUS_PATH")
-        self.LOGGING = settings.get("LOGGING", {})
-        self.PVP_REWARDS_ENABLED = settings.get("PVP_REWARDS_ENABLED", True)
-        self.GIVE_REWARD_CARD = settings.get("GIVE_REWARD_CARD", True)
-        self.MONTHLY_LEADERBOARD_ROLE = settings.get("MONTHLY_LEADERBOARD_ROLE", 0)
-        self.PVP_SETTINGS = settings.get("PVP_SETTINGS", {})
-        self.REWARD_CARD_PROBABILITIES = settings.get("REWARD_CARD_PROBABILITIES", {})
-
 tokens: TOKEN = TOKEN()
-settings: Settings = Settings()
+# settings: Optional[Settings] = None
 logger: logging.Logger = logging.getLogger("iufi")
 
 # DB Var
@@ -293,16 +215,6 @@ def match_string(input_string: str, word_list: List[str]) -> str:
 def truncate_string(text: str, length: int = 18) -> str:
     return text[:length - 3] + "..." if len(text) > length else text
 
-async def get_user(user_id: int, *, insert: bool = True) -> Dict[str, Any]:
-    user = USERS_BUFFER.get(user_id)
-    if not user:
-        user = await USERS_DB.find_one({"_id": user_id})
-        if not user and insert:
-            await USERS_DB.insert_one({"_id": user_id, **settings.USER_BASE})
-
-        user = USERS_BUFFER[user_id] = user if user else copy.deepcopy(settings.USER_BASE) | {"_id": user_id}
-    return user
-
 def update_quest_progress(user: Dict[str, Any], completed_quests: Union[str, List[str]], progress: int = 1, *, query: Dict[str, Any] = None) -> Dict[str, Any]:
     global settings
 
@@ -314,12 +226,8 @@ def update_quest_progress(user: Dict[str, Any], completed_quests: Union[str, Lis
         user_quest = user.copy().get("quests", {}).get(quest_type, copy.deepcopy(settings.USER_BASE["quests"][quest_type]))
 
         # Use direct attribute access for quest bases instead of getattr
-        if quest_type.lower() == 'daily':
-            QUESTS_BASE: Dict[str, Any] = settings.DAILY_QUESTS
-        elif quest_type.lower() == 'weekly':
-            QUESTS_BASE: Dict[str, Any] = settings.WEEKLY_QUESTS
-        else:
-            QUESTS_BASE: Dict[str, Any] = {}
+        QUESTS_BASE: Dict[str, Any] = getattr(settings, f"{quest_type.upper()}_QUESTS", None)
+        
         if not QUESTS_BASE:
             continue
         
@@ -428,85 +336,97 @@ def get_user_card_limit(user: Dict[str, Any]) -> int:
     extra_card_slots = user.get("extra_props", {}).get("extra_card_slots", 0)
     return settings.MAX_CARDS + extra_card_slots or settings.MAX_CARDS
 
+async def get_user(user_id: int, *, insert: bool = True) -> Dict[str, Any]:
+    user = USERS_BUFFER.get(user_id)
+    if not user:
+        user = await USERS_DB.find_one({"_id": user_id})
+        if not user and insert:
+            await USERS_DB.insert_one({"_id": user_id, **settings.USER_BASE})
+
+        user = USERS_BUFFER[user_id] = user if user else copy.deepcopy(settings.USER_BASE) | {"_id": user_id}
+    return user
+
 async def update_user(user_id: int, data: dict) -> None:
-    user = await get_user(user_id)
-    data.setdefault('$set', {})['last_active_time'] = time.time()
+    ...
+    # user = await get_user(user_id)
+    # data.setdefault('$set', {})['last_active_time'] = time.time()
 
-    # Auto-augment monthly counters for common stats so callers don't need to update monthly fields everywhere.
-    # We'll look at $inc entries and duplicate them into monthly fields where appropriate and set last-update timestamps.
-    now_ts = time.time()
-    incs = data.get('$inc', {})
-    if incs:
-        # Handle top-level exp increments -> monthly.exp and last update
-        if 'exp' in incs:
-            data.setdefault('$inc', {})['monthly.exp'] = data['$inc'].get('exp', 0)
-            data.setdefault('$set', {})['monthly.exp_last_update'] = now_ts
+    # # Auto-augment monthly counters for common stats so callers don't need to update monthly fields everywhere.
+    # # We'll look at $inc entries and duplicate them into monthly fields where appropriate and set last-update timestamps.
+    # now_ts = time.time()
+    # incs = data.get('$inc', {})
+    # if incs:
+    #     # Handle top-level exp increments -> monthly.exp and last update
+    #     if 'exp' in incs:
+    #         data.setdefault('$inc', {})['monthly.exp'] = data['$inc'].get('exp', 0)
+    #         data.setdefault('$set', {})['monthly.exp_last_update'] = now_ts
 
-        # Handle PVP increments (pvp.wins, pvp.losses, pvp.total_matches)
-        for key in list(incs.keys()):
-            if key.startswith('pvp.'):
-                suffix = key.split('.', 1)[1]
-                monthly_key = f"monthly.pvp.{suffix}"
-                data.setdefault('$inc', {})[monthly_key] = data['$inc'].get(key, 0)
-                data.setdefault('$set', {})['monthly.pvp_last_update'] = now_ts
+    #     # Handle PVP increments (pvp.wins, pvp.losses, pvp.total_matches)
+    #     for key in list(incs.keys()):
+    #         if key.startswith('pvp.'):
+    #             suffix = key.split('.', 1)[1]
+    #             monthly_key = f"monthly.pvp.{suffix}"
+    #             data.setdefault('$inc', {})[monthly_key] = data['$inc'].get(key, 0)
+    #             data.setdefault('$set', {})['monthly.pvp_last_update'] = now_ts
 
-        # Handle game_state.<game>.points increments (music, mv_guess, quiz, emoji etc.)
-        for key in list(incs.keys()):
-            if key.count('.') >= 2 and key.split('.')[0] == 'game_state' and key.split('.')[-1] == 'points':
-                # e.g. game_state.music_game.points -> game_state.music_game.monthly_points
-                parts = key.split('.')
-                game_path = '.'.join(parts[:3])  # game_state.<game>
-                monthly_points_key = f"{game_path}.monthly_points"
-                last_update_key = f"{game_path}.last_update"
-                data.setdefault('$inc', {})[monthly_points_key] = data['$inc'].get(key, 0)
-                data.setdefault('$set', {})[last_update_key] = now_ts
+    #     # Handle game_state.<game>.points increments (music, mv_guess, quiz, emoji etc.)
+    #     for key in list(incs.keys()):
+    #         if key.count('.') >= 2 and key.split('.')[0] == 'game_state' and key.split('.')[-1] == 'points':
+    #             # e.g. game_state.music_game.points -> game_state.music_game.monthly_points
+    #             parts = key.split('.')
+    #             game_path = '.'.join(parts[:3])  # game_state.<game>
+    #             monthly_points_key = f"{game_path}.monthly_points"
+    #             last_update_key = f"{game_path}.last_update"
+    #             data.setdefault('$inc', {})[monthly_points_key] = data['$inc'].get(key, 0)
+    #             data.setdefault('$set', {})[last_update_key] = now_ts
 
-    # Proceed with the original in-memory merging logic
-    for mode, action in data.items():
-        for key, value in action.items():
-            cursors = key.split('.')
+    # # Proceed with the original in-memory merging logic
+    # for mode, action in data.items():
+    #     for key, value in action.items():
+    #         cursors = key.split('.')
 
-            nested_user = user
-            for c in cursors[:-1]:
-                nested_user = nested_user.setdefault(c, {})
+    #         nested_user = user
+    #         for c in cursors[:-1]:
+    #             nested_user = nested_user.setdefault(c, {})
 
-            if mode == "$set":
-                try:
-                    nested_user[cursors[-1]] = value
-                except TypeError:
-                    nested_user[int(cursors[-1])] = value
+    #         if mode == "$set":
+    #             try:
+    #                 nested_user[cursors[-1]] = value
+    #             except TypeError:
+    #                 nested_user[int(cursors[-1])] = value
 
-            elif mode == "$unset":
-                nested_user.pop(cursors[-1], None)
+    #         elif mode == "$unset":
+    #             nested_user.pop(cursors[-1], None)
 
-            elif mode == "$inc":
-                nested_user[cursors[-1]] = nested_user.get(cursors[-1], 0) + value
+    #         elif mode == "$inc":
+    #             nested_user[cursors[-1]] = nested_user.get(cursors[-1], 0) + value
 
-            elif mode == "$push":
-                # Check if the value contains $each
-                if isinstance(value, dict) and "$each" in value:
-                    nested_user.setdefault(cursors[-1], []).extend(value["$each"])
-                else:
-                    nested_user.setdefault(cursors[-1], []).append(value)
+    #         elif mode == "$push":
+    #             # Check if the value contains $each
+    #             if isinstance(value, dict) and "$each" in value:
+    #                 nested_user.setdefault(cursors[-1], []).extend(value["$each"])
+    #             else:
+    #                 nested_user.setdefault(cursors[-1], []).append(value)
 
-            elif mode == "$pull":
-                if cursors[-1] in nested_user:
-                    value = value.get("$in", []) if isinstance(value, dict) else [value]
-                    nested_user[cursors[-1]] = [item for item in nested_user[cursors[-1]] if item not in value]
+    #         elif mode == "$pull":
+    #             if cursors[-1] in nested_user:
+    #                 value = value.get("$in", []) if isinstance(value, dict) else [value]
+    #                 nested_user[cursors[-1]] = [item for item in nested_user[cursors[-1]] if item not in value]
 
-            else:
-                raise ValueError(f"Invalid mode: {mode}")
+    #         else:
+    #             raise ValueError(f"Invalid mode: {mode}")
 
-    await USERS_DB.update_one({"_id": user_id}, data)
+    # await USERS_DB.update_one({"_id": user_id}, data)
 
 async def update_card(card_id: List[str] | str, data: dict, insert: bool = False) -> None:
-    if insert:
-        await CARDS_DB.insert_one({"_id": card_id})
+    ...
+    # if insert:
+    #     await CARDS_DB.insert_one({"_id": card_id})
 
-    if isinstance(card_id, list):
-        return await CARDS_DB.update_many({"_id": {"$in": card_id}}, data)
+    # if isinstance(card_id, list):
+    #     return await CARDS_DB.update_many({"_id": {"$in": card_id}}, data)
 
-    await CARDS_DB.update_one({"_id": card_id}, data)
+    # await CARDS_DB.update_one({"_id": card_id}, data)
 
 async def check_wishlist(message: discord.Message, card_ids: List[str]) -> None:
     user_docs = await USERS_DB.find({"wishlist": {"$in": card_ids}}).to_list()

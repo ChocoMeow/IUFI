@@ -127,24 +127,24 @@ class IUFI(commands.Bot):
             pass
 
 # Load IUFI Settings
-func.settings.load()
+config = iufi.Config(func.open_json("settings.json"))
 
 # Initialize logging settings for the bot to ensure proper monitoring and debugging
-LOG_SETTINGS = func.settings.LOGGING
-if (LOG_FILE := LOG_SETTINGS.get("file", {})).get("enable", True):
-    log_path = os.path.abspath(LOG_FILE.get("path", "./logs"))
-    if not os.path.exists(log_path):
-        os.makedirs(log_path)
-
-    file_handler = TimedRotatingFileHandler(filename=f'{log_path}/iufi.log', encoding="utf-8", backupCount=LOG_SETTINGS.get("max-history", 30), when="d")
-    file_handler.namer = lambda name: name.replace(".log", "") + ".log"
-    file_handler.setFormatter(logging.Formatter('{asctime} [{levelname:<8}] {name}: {message}', '%Y-%m-%d %H:%M:%S', style='{'))
-
-    for log_name, log_level in LOG_SETTINGS.get("level", {}).items():
+LOG_SETTINGS = config.get().LOGGING
+if LOG_SETTINGS.enabled:
+    for log_name, log_level in LOG_SETTINGS.level.items():
         _logger = logging.getLogger(log_name)
         _logger.setLevel(log_level)
-        
-    logging.getLogger().addHandler(file_handler)
+
+    if LOG_SETTINGS.file.enabled:
+        log_path = os.path.abspath(LOG_SETTINGS.file.path)
+        if not os.path.exists(log_path):
+            os.makedirs(log_path)
+
+        file_handler = TimedRotatingFileHandler(filename=f'{log_path}/iufi.log', encoding="utf-8", backupCount=LOG_SETTINGS.file.max_history, when="d")
+        file_handler.namer = lambda name: name.replace(".log", "") + ".log"
+        file_handler.setFormatter(logging.Formatter('{asctime} [{levelname:<8}] {name}: {message}', '%Y-%m-%d %H:%M:%S', style='{'))
+        logging.getLogger().addHandler(file_handler)
 
 # Configure the Discord intents for the bot
 intents = discord.Intents.default()
@@ -153,10 +153,10 @@ intents.message_content = True
 
 # Initialize the bot with specified parameters
 bot = IUFI(
-    command_prefix=func.settings.BOT_PREFIX,
+    command_prefix=config.get().BOT_PREFIX,
     help_command=None,
     chunk_guilds_at_startup=True,
-    activity=discord.Activity(type=discord.ActivityType.listening, name=f"{func.settings.BOT_PREFIX[0]}help"),
+    activity=discord.Activity(type=discord.ActivityType.listening, name=f"{config.get().BOT_PREFIX[0]}help"),
     case_insensitive=True,
     intents=intents
 )
