@@ -15,6 +15,11 @@
     "GAME_CHANNEL_IDS": [1155772660979093555, 1155772719909044224, 1155772738858913792, 1155772756730859580],
     "ADMIN_IDS": [605776164744724512, 705783356767338648, 1223531350972174337],
     "BUG_REPORT_CHANNEL_ID": 1384723383131967622,
+    "PERFECT_CROWN_TREASURY_CARDS": {
+        "mystic": [],
+        "legendary": [],
+        "epic": []
+    },
     "OPUS_PATH": "",
     "USER_BASE": {
         "candies": 0,
@@ -63,6 +68,10 @@
         "extra_props": {
             "extra_card_slots": 0,
             "slot_purchases": 0
+        },
+        "event_tokens": {
+            "perfect_crown": {},
+            "perfect_crown_count": 0
         }
     },
     "PITY_SETTINGS": {

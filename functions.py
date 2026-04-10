@@ -81,6 +81,7 @@ class Settings:
         # Newly added defaults so callers can reference them directly without getattr
         self.PVP_SETTINGS: Dict[str, Any] = {}
         self.REWARD_CARD_PROBABILITIES: Dict[str, Any] = {}
+        self.PERFECT_CROWN_TREASURY_CARDS: Dict[str, List[str]] = {}
 
     def load(self):
         settings = open_json("settings.json")
@@ -119,6 +120,7 @@ class Settings:
         self.MONTHLY_LEADERBOARD_ROLE = settings.get("MONTHLY_LEADERBOARD_ROLE", 0)
         self.PVP_SETTINGS = settings.get("PVP_SETTINGS", {})
         self.REWARD_CARD_PROBABILITIES = settings.get("REWARD_CARD_PROBABILITIES", {})
+        self.PERFECT_CROWN_TREASURY_CARDS = settings.get("PERFECT_CROWN_TREASURY_CARDS", {})
 
 tokens: TOKEN = TOKEN()
 settings: Settings = Settings()

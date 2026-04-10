@@ -3,6 +3,7 @@ import functions as func
 import random
 import io, os
 from PIL import Image, ImageFilter
+from iufi.perfect_crown import inject_perfect_crown_token
 
 from discord.ext import commands
 from iufi.pool import QuestionPool as QP
@@ -94,6 +95,7 @@ class Gameplay(commands.Cog):
         if not tier:
             pity_query = func.update_pity_from_cards(user, cards)
             await func.update_user(ctx.author.id, pity_query)
+            cards = inject_perfect_crown_token(cards, user)
 
         image_bytes, image_format = await iufi.gen_cards_view(cards)
 

@@ -399,6 +399,19 @@ class Profile(commands.Cog):
                 emoji, _ = func.settings.TIERS_BASE.get(tier)
                 embed.description += f"{emoji} {tier.title() + ' Rolls':<18} x{count}\n"
 
+        perfect_crown_tokens = user.get("event_tokens", {}).get("perfect_crown", {})
+        perfect_crown_count = user.get("event_tokens", {}).get(
+            "perfect_crown_count",
+            len([token_id for token_id, owned in perfect_crown_tokens.items() if owned])
+        )
+        if perfect_crown_count > 0:
+            owned_ids = sorted([token_id.replace("pc_ep", "EP") for token_id, owned in perfect_crown_tokens.items() if owned])
+            embed.description += f"👑 {'Perfect Crown':<18} x{perfect_crown_count}/12\n"
+            embed.description += f"   {', '.join(owned_ids[:6])}"
+            if len(owned_ids) > 6:
+                embed.description += " ..."
+            embed.description += "\n"
+
         embed.description += f"\n\n"
 
         potions_data: dict[str, int] = user.get("potions", {})
