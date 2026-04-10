@@ -5,8 +5,7 @@ from discord.ext import commands
 from views import (
     CollectionView,
     PhotoCardView,
-    WishListView,
-    ProfileStatsView
+    WishListView
 )
 from typing import (
     Dict,
@@ -122,8 +121,7 @@ class Profile(commands.Cog):
             embed.set_image(url=f"attachment://{image_name}")
             embed.add_field(name=func.framed_title("Showcase"), value=f"```{card}```", inline=False)
 
-        view = ProfileStatsView(ctx, member, DAILY_ROWS)
-        view.message = await ctx.reply(embed=embed, file=file, view=view)
+        await ctx.reply(embed=embed, file=file)
 
     @commands.command(aliases=["sb"])
     async def setbio(self, ctx: commands.Context, *, bio: str = None):
