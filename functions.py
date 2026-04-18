@@ -456,8 +456,9 @@ async def update_user(user_id: int, data: dict) -> None:
         for key in list(incs.keys()):
             if key.count('.') >= 2 and key.split('.')[0] == 'game_state' and key.split('.')[-1] == 'points':
                 # e.g. game_state.music_game.points -> game_state.music_game.monthly_points
+                # (parent path must exclude `points`; otherwise Mongo conflicts: points vs points.monthly_points)
                 parts = key.split('.')
-                game_path = '.'.join(parts[:3])  # game_state.<game>
+                game_path = '.'.join(parts[:-1])
                 monthly_points_key = f"{game_path}.monthly_points"
                 last_update_key = f"{game_path}.last_update"
                 data.setdefault('$inc', {})[monthly_points_key] = data['$inc'].get(key, 0)
@@ -470,7 +471,11 @@ async def update_user(user_id: int, data: dict) -> None:
 
             nested_user = user
             for c in cursors[:-1]:
-                nested_user = nested_user.setdefault(c, {})
+                nxt = nested_user.get(c)
+                if not isinstance(nxt, dict):
+                    nxt = {}
+                    nested_user[c] = nxt
+                nested_user = nxt
 
             if mode == "$set":
                 try:
