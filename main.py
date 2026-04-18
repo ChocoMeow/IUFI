@@ -8,6 +8,7 @@ from logging.handlers import TimedRotatingFileHandler
 class IUFI(commands.Bot):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
+        self._treasury_sync_done = False
 
     async def on_message(self, message: discord.Message, /) -> None:
         # Ignore messages from bots or outside of guilds
@@ -91,6 +92,15 @@ class IUFI(commands.Bot):
                 func.logger.info(f"Loaded {module[:-3]}")
 
     async def on_ready(self):
+        if not self._treasury_sync_done and self.user:
+            from iufi.perfect_crown import ensure_royal_treasury_cards_claimed
+
+            sync_result = await ensure_royal_treasury_cards_claimed(self.user.id)
+            self._treasury_sync_done = True
+            func.logger.info(
+                f"Royal treasury sync complete. claimed={sync_result.get('synced', 0)} skipped={sync_result.get('skipped', 0)}"
+            )
+
         func.logger.info("------------------")
         func.logger.info(f"Logging As {self.user}")
         func.logger.info(f"Bot ID: {self.user.id}")

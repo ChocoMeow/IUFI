@@ -3,6 +3,7 @@ import functions as func
 import random
 import io, os
 from PIL import Image, ImageFilter
+from iufi.perfect_crown import inject_perfect_crown_token, apply_contract_cooldown
 
 from discord.ext import commands
 from iufi.pool import QuestionPool as QP
@@ -50,7 +51,8 @@ class Gameplay(commands.Cog):
             # Calculate soft pity boosts for rate increases
             soft_pity_boosts = func.calculate_soft_pity_boost(user)
 
-            query["$set"] = {"cooldown.roll": time.time() + (func.settings.COOLDOWN_BASE["roll"][1] * (1 - actived_potions.get("speed", 0)))}
+            roll_cooldown = func.settings.COOLDOWN_BASE["roll"][1] * (1 - actived_potions.get("speed", 0))
+            query["$set"] = {"cooldown.roll": time.time() + apply_contract_cooldown(roll_cooldown, user)}
 
         else:
             # Purchased roll - don't affect pity
@@ -94,6 +96,7 @@ class Gameplay(commands.Cog):
         if not tier:
             pity_query = func.update_pity_from_cards(user, cards)
             await func.update_user(ctx.author.id, pity_query)
+            cards = inject_perfect_crown_token(cards, user)
 
         image_bytes, image_format = await iufi.gen_cards_view(cards)
 
@@ -125,7 +128,12 @@ class Gameplay(commands.Cog):
         view = MatchGame(ctx.author, level)
         actived_potions = func.get_potions(user.get("actived_potions", {}), func.settings.POTIONS_BASE)
 
-        query = func.update_quest_progress(user, f"PLAY_MATCH_GAME_LVL_{level}", query={"$set": {"cooldown.match_game": time.time() + (view._data.get("cooldown", 0) * (1 - actived_potions.get("speed", 0)))}})
+        match_cooldown = view._data.get("cooldown", 0) * (1 - actived_potions.get("speed", 0))
+        query = func.update_quest_progress(
+            user,
+            f"PLAY_MATCH_GAME_LVL_{level}",
+            query={"$set": {"cooldown.match_game": time.time() + apply_contract_cooldown(match_cooldown, user)}},
+        )
         await func.update_user(ctx.author.id, query)
         
         embed, file = await view.build()
@@ -150,7 +158,8 @@ class Gameplay(commands.Cog):
 
         # If the cooldown is still in effect, inform the user and exit
         if (retry := user.get("cooldown", {}).setdefault("quiz_game", 0)) > time.time():
-            price = max(5, int(QUIZ_SETTINGS['reset_price'] * ((retry - time.time()) / func.settings.COOLDOWN_BASE["quiz_game"][1])))
+            quiz_cd = apply_contract_cooldown(func.settings.COOLDOWN_BASE["quiz_game"][1], user)
+            price = max(5, int(QUIZ_SETTINGS['reset_price'] * ((retry - time.time()) / max(1, quiz_cd))))
             view = ResetAttemptView(ctx, user, price)
             view.response = await ctx.reply(f"{ctx.author.mention} your quiz is <t:{round(retry)}:R>. If you’d like to bypass this cooldown, you can do so by paying `🍬 {price}` candies.", delete_after=20, view=view)
             return 
@@ -164,7 +173,12 @@ class Gameplay(commands.Cog):
             return await ctx.send("There are no questions for you right now! Please try again later.")
 
         # Update the user's cooldown time
-        query = func.update_quest_progress(user, "PLAY_QUIZ_GAME", query={"$set": {"cooldown.quiz_game": time.time() + func.settings.COOLDOWN_BASE["roll"][1]}})
+        quiz_cooldown = apply_contract_cooldown(func.settings.COOLDOWN_BASE["roll"][1], user)
+        query = func.update_quest_progress(
+            user,
+            "PLAY_QUIZ_GAME",
+            query={"$set": {"cooldown.quiz_game": time.time() + quiz_cooldown}},
+        )
         await func.update_user(ctx.author.id, query)
 
         # Create the quiz view and send the initial message
@@ -230,7 +244,8 @@ class Gameplay(commands.Cog):
         user = await func.get_user(ctx.author.id)
         # reuse the quiz cooldown logic
         if (retry := user.get("cooldown", {}).setdefault("quiz_game", 0)) > time.time():
-            price = max(5, int(EMOJI_QUIZ_SETTINGS['reset_price'] * ((retry - time.time()) / func.settings.COOLDOWN_BASE["quiz_game"][1])))
+            quiz_cd = apply_contract_cooldown(func.settings.COOLDOWN_BASE["quiz_game"][1], user)
+            price = max(5, int(EMOJI_QUIZ_SETTINGS['reset_price'] * ((retry - time.time()) / max(1, quiz_cd))))
             view = EmojiResetAttemptView(ctx, user, price)
             view.response = await ctx.reply(f"{ctx.author.mention} your emoji quiz is <t:{round(retry)}:R>. If you’d like to bypass this cooldown, you can do so by paying `🍬 {price}` candies.", delete_after=20, view=view)
             return
@@ -272,7 +287,12 @@ class Gameplay(commands.Cog):
         # sampled is list of question dicts
 
         # set cooldown
-        query = func.update_quest_progress(user, "PLAY_QUIZ_GAME", query={"$set": {"cooldown.quiz_game": time.time() + func.settings.COOLDOWN_BASE["roll"][1]}})
+        quiz_cooldown = apply_contract_cooldown(func.settings.COOLDOWN_BASE["roll"][1], user)
+        query = func.update_quest_progress(
+            user,
+            "PLAY_QUIZ_GAME",
+            query={"$set": {"cooldown.quiz_game": time.time() + quiz_cooldown}},
+        )
         await func.update_user(ctx.author.id, query)
 
         view = EmojiQuizView(ctx.author, sampled, timeout_per_question=40)

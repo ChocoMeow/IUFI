@@ -3,6 +3,7 @@ import functions as func
 
 from discord import app_commands
 from discord.ext import commands
+from iufi.perfect_crown import apply_contract_candy_reward
 
 from views import (
     ConfirmView,
@@ -107,6 +108,7 @@ class Card(commands.Cog):
                 converted_cards.append(card)
         
         user = await func.get_user(ctx.author.id)
+        candies = apply_contract_candy_reward(candies, user)
         query = func.update_quest_progress(user, "CONVERT_ANY_CARD", progress=len(converted_cards), query={
             "$pull": {"cards": {"$in": (card_ids := [card.id for card in converted_cards])}},
             "$inc": {"candies": candies}
@@ -140,7 +142,8 @@ class Card(commands.Cog):
             return
         
         embed = discord.Embed(color=discord.Color.random())
-        embed.description = f"```🆔 {card} \n🍬 + {card.cost}```"
+        reward_candies = apply_contract_candy_reward(card.cost, user)
+        embed.description = f"```🆔 {card} \n🍬 + {reward_candies}```"
         message: discord.Message = None
 
         if card.tier[1] not in ["common", "rare"] or card.tag:
@@ -160,12 +163,12 @@ class Card(commands.Cog):
 
         query = func.update_quest_progress(user, "CONVERT_ANY_CARD", query={
             "$pull": {"cards": card.id},
-            "$inc": {"candies": card.cost}
+            "$inc": {"candies": reward_candies}
         })
         await func.update_user(ctx.author.id, query)
         await func.update_card(card.id, {"$set": {"owner_id": None, "tag": None, "frame": None, "last_trade_time": 0}})
         
-        func.logger.info(f"User {ctx.author.name}({ctx.author.id}) converted 1 card(s): [{card.id}]. Gained {card.cost} candies.")
+        func.logger.info(f"User {ctx.author.name}({ctx.author.id}) converted 1 card(s): [{card.id}]. Gained {reward_candies} candies.")
 
         embed.title="✨ Converted"
         await message.edit(embed=embed, view=None) if message else await ctx.reply(embed=embed)
@@ -192,6 +195,7 @@ class Card(commands.Cog):
 
         card_ids = [card.id for card in converted_cards]
         candies = sum([card.cost for card in converted_cards])
+        candies = apply_contract_candy_reward(candies, user)
                        
         embed = discord.Embed(title="✨ Confirm to convert?", color=discord.Color.random())
         embed.description = f"```🆔 {', '.join([f'{card}' for card in converted_cards])} \n🍬 + {candies}```"
@@ -254,6 +258,7 @@ class Card(commands.Cog):
 
         card_ids = [card.id for card in converted_cards]
         candies = sum([card.cost for card in converted_cards])
+        candies = apply_contract_candy_reward(candies, user)
                        
         embed = discord.Embed(title="✨ Confirm to convert?", color=discord.Color.random())
         embed.description = f"```🆔 {', '.join([f'{card}' for card in converted_cards])} \n🍬 + {candies}```"

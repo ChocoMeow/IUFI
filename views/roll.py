@@ -2,6 +2,7 @@ import discord, time, asyncio
 import functions as func
 
 from iufi import CardPool, Card
+from iufi.perfect_crown import build_perfect_crown_claim_update, apply_contract_cooldown
 
 class RollButton(discord.ui.Button):
     def __init__(self, card: Card, **kwargs):
@@ -16,6 +17,7 @@ class RollButton(discord.ui.Button):
     
     async def callback(self, interaction: discord.Interaction) -> None:
         async with self.view._lock:
+            is_perfect_crown_token = bool(getattr(self.card, "is_perfect_crown_token", False))
             if (owner_id := self.card.owner_id):
                 if owner_id != interaction.user.id:
                     return await interaction.response.send_message(f"{interaction.user.mention} This card has been claimed by <@{owner_id}>")
@@ -37,17 +39,42 @@ class RollButton(discord.ui.Button):
             self.style = discord.ButtonStyle.gray
             
             self.card.change_owner(interaction.user.id)
-            CardPool.remove_available_card(self.card)
+            if not is_perfect_crown_token:
+                CardPool.remove_available_card(self.card)
             
             await interaction.response.defer()
-            actived_potions = func.get_potions(user.get("actived_potions", {}), func.settings.POTIONS_BASE)
-            query = func.update_quest_progress(user, ["COLLECT_ANY_CARD", f"COLLECT_{self.card._tier.upper()}_CARD"], query={
-                "$push": {"cards": self.card.id},
-                "$set": {"cooldown.claim": time.time() + (func.settings.COOLDOWN_BASE["claim"][1] * (1 - actived_potions.get("speed", 0)))},
-                "$inc": {"exp": 10}
-            })
-            await func.update_user(interaction.user.id, query)
-            await func.update_card(self.card.id, {"$set": {"owner_id": interaction.user.id}})
+            if is_perfect_crown_token:
+                token_id = self.card.id
+                owned_tokens = user.get("event_tokens", {}).get("perfect_crown", {})
+                if owned_tokens.get(token_id):
+                    self.card.change_owner(None)
+                    self.disabled = False
+                    self.style = discord.ButtonStyle.green
+                    return await interaction.followup.send(f"{interaction.user.mention} You already own `{token_id.upper()}`.", ephemeral=True)
+
+                token_query = build_perfect_crown_claim_update(token_id)
+                actived_potions = func.get_potions(user.get("actived_potions", {}), func.settings.POTIONS_BASE)
+                token_query.setdefault("$set", {})["cooldown.claim"] = time.time() + (
+                    apply_contract_cooldown(
+                        func.settings.COOLDOWN_BASE["claim"][1] * (1 - actived_potions.get("speed", 0)),
+                        user,
+                    )
+                )
+                await func.update_user(interaction.user.id, token_query)
+            else:
+                actived_potions = func.get_potions(user.get("actived_potions", {}), func.settings.POTIONS_BASE)
+                query = func.update_quest_progress(user, ["COLLECT_ANY_CARD", f"COLLECT_{self.card._tier.upper()}_CARD"], query={
+                    "$push": {"cards": self.card.id},
+                    "$set": {
+                        "cooldown.claim": time.time() + apply_contract_cooldown(
+                            func.settings.COOLDOWN_BASE["claim"][1] * (1 - actived_potions.get("speed", 0)),
+                            user,
+                        )
+                    },
+                    "$inc": {"exp": 10}
+                })
+                await func.update_user(interaction.user.id, query)
+                await func.update_card(self.card.id, {"$set": {"owner_id": interaction.user.id}})
 
             func.logger.info(f"User {interaction.user.name}({interaction.user.id}) has successfully claimed the card: [{self.card.id}].")
 

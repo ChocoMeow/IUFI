@@ -81,6 +81,7 @@ class Settings:
         # Newly added defaults so callers can reference them directly without getattr
         self.PVP_SETTINGS: Dict[str, Any] = {}
         self.REWARD_CARD_PROBABILITIES: Dict[str, Any] = {}
+        self.PERFECT_CROWN_TREASURY_CARDS: Dict[str, List[str]] = {}
 
     def load(self):
         settings = open_json("settings.json")
@@ -119,6 +120,7 @@ class Settings:
         self.MONTHLY_LEADERBOARD_ROLE = settings.get("MONTHLY_LEADERBOARD_ROLE", 0)
         self.PVP_SETTINGS = settings.get("PVP_SETTINGS", {})
         self.REWARD_CARD_PROBABILITIES = settings.get("REWARD_CARD_PROBABILITIES", {})
+        self.PERFECT_CROWN_TREASURY_CARDS = settings.get("PERFECT_CROWN_TREASURY_CARDS", {})
 
 tokens: TOKEN = TOKEN()
 settings: Settings = Settings()
@@ -454,8 +456,9 @@ async def update_user(user_id: int, data: dict) -> None:
         for key in list(incs.keys()):
             if key.count('.') >= 2 and key.split('.')[0] == 'game_state' and key.split('.')[-1] == 'points':
                 # e.g. game_state.music_game.points -> game_state.music_game.monthly_points
+                # (parent path must exclude `points`; otherwise Mongo conflicts: points vs points.monthly_points)
                 parts = key.split('.')
-                game_path = '.'.join(parts[:3])  # game_state.<game>
+                game_path = '.'.join(parts[:-1])
                 monthly_points_key = f"{game_path}.monthly_points"
                 last_update_key = f"{game_path}.last_update"
                 data.setdefault('$inc', {})[monthly_points_key] = data['$inc'].get(key, 0)
@@ -468,7 +471,11 @@ async def update_user(user_id: int, data: dict) -> None:
 
             nested_user = user
             for c in cursors[:-1]:
-                nested_user = nested_user.setdefault(c, {})
+                nxt = nested_user.get(c)
+                if not isinstance(nxt, dict):
+                    nxt = {}
+                    nested_user[c] = nxt
+                nested_user = nxt
 
             if mode == "$set":
                 try:

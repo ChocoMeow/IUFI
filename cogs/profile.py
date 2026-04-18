@@ -2,11 +2,11 @@ import discord, iufi, time, copy
 import functions as func
 
 from discord.ext import commands
+from iufi.perfect_crown import apply_contract_cooldown
 from views import (
     CollectionView,
     PhotoCardView,
-    WishListView,
-    ProfileStatsView
+    WishListView
 )
 from typing import (
     Dict,
@@ -122,8 +122,7 @@ class Profile(commands.Cog):
             embed.set_image(url=f"attachment://{image_name}")
             embed.add_field(name=func.framed_title("Showcase"), value=f"```{card}```", inline=False)
 
-        view = ProfileStatsView(ctx, member, DAILY_ROWS)
-        view.message = await ctx.reply(embed=embed, file=file, view=view)
+        await ctx.reply(embed=embed, file=file)
 
     @commands.command(aliases=["sb"])
     async def setbio(self, ctx: commands.Context, *, bio: str = None):
@@ -343,7 +342,10 @@ class Profile(commands.Cog):
         
         reward = {"candies": 5} if claimed % 5 else {WEEKLY_REWARDS[(claimed//5) - 1][1]: WEEKLY_REWARDS[(claimed//5) - 1][2]}
         await func.update_user(ctx.author.id, {
-            "$set": {"claimed": claimed, "cooldown.daily": time.time() + func.settings.COOLDOWN_BASE["daily"][1]},
+            "$set": {
+                "claimed": claimed,
+                "cooldown.daily": time.time() + apply_contract_cooldown(func.settings.COOLDOWN_BASE["daily"][1], user),
+            },
             "$inc": reward
         })
 
@@ -398,6 +400,19 @@ class Profile(commands.Cog):
             if count > 0 and tier in func.settings.TIERS_BASE.keys():
                 emoji, _ = func.settings.TIERS_BASE.get(tier)
                 embed.description += f"{emoji} {tier.title() + ' Rolls':<18} x{count}\n"
+
+        perfect_crown_tokens = user.get("event_tokens", {}).get("perfect_crown", {})
+        perfect_crown_count = user.get("event_tokens", {}).get(
+            "perfect_crown_count",
+            len([token_id for token_id, owned in perfect_crown_tokens.items() if owned])
+        )
+        if perfect_crown_count > 0:
+            owned_ids = sorted([token_id.replace("pc_ep", "EP") for token_id, owned in perfect_crown_tokens.items() if owned])
+            embed.description += f"👑 {'Perfect Crown':<18} x{perfect_crown_count}/12\n"
+            embed.description += f"   {', '.join(owned_ids[:6])}"
+            if len(owned_ids) > 6:
+                embed.description += " ..."
+            embed.description += "\n"
 
         embed.description += f"\n\n"
 
