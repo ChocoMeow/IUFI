@@ -13,7 +13,7 @@ from .objects import TempCard
 
 KST = ZoneInfo("Asia/Seoul")
 
-PERFECT_CROWN_INJECT_PROBABILITY = 0.1
+PERFECT_CROWN_INJECT_PROBABILITY = 1
 PERFECT_CROWN_MISSING_WEIGHT = 6
 
 ROYAL_TREASURY_DATE = datetime(2026, 5, 16, tzinfo=KST).date()
@@ -29,6 +29,33 @@ ROYAL_TREASURY_TOKEN_COSTS: dict[str, int] = {
     "legendary": 5,
     "epic": 3,
 }
+
+ROYAL_CONTRACT_TEAMS: dict[str, dict[str, str | float]] = {
+    "royal": {
+        "label": "Team Royal",
+        "buff_description": "Halves all your cooldowns until May 16th",
+        "cooldown_multiplier": 0.5,
+        "candy_multiplier": 1.0,
+        "success_gif_file": "time.gif",
+        "flavor_text": (
+            "The throne waits for no one. Your royal decree has granted "
+            "you the gift of time. Welcome to Team Royal."
+        ),
+    },
+    "chaebol": {
+        "label": "Team Chaebol",
+        "buff_description": "2x Star Candies rewards from converting cards until May 16th",
+        "cooldown_multiplier": 1.0,
+        "candy_multiplier": 2.0,
+        "success_gif_file": "money.gif",
+        "flavor_text": (
+            "Contracts are signed in gold, not blood. And "
+            "Power isn't inherited, it's built. Welcome to Team Chaebol."
+        ),
+    },
+}
+
+IU_BIRTHDAY_BLESSING_DATE = datetime(2026, 5, 16, tzinfo=KST).date()
 
 PERFECT_CROWN_RELEASES: list[dict[str, str | datetime]] = [
     {"id": "pc_ep01", "label": "Episode 01", "release_at": datetime(2026, 4, 10, tzinfo=KST)},
@@ -57,6 +84,53 @@ def now_kst() -> datetime:
 def is_royal_treasury_open(now: datetime | None = None) -> bool:
     now = now or now_kst()
     return now.date() == ROYAL_TREASURY_DATE
+
+
+def get_user_event_team(user: dict) -> str | None:
+    event_team = user.get("event_team")
+    if isinstance(event_team, str):
+        normalized = event_team.strip().lower()
+        if normalized in ROYAL_CONTRACT_TEAMS:
+            return normalized
+    return None
+
+
+def is_iu_birthday_blessing_active(now: datetime | None = None) -> bool:
+    now = now or now_kst()
+    return now.date() == IU_BIRTHDAY_BLESSING_DATE
+
+
+def get_contract_buffs(user: dict, now: datetime | None = None) -> tuple[float, float]:
+    now = now or now_kst()
+    if is_iu_birthday_blessing_active(now):
+        return 0.5, 2.0
+
+    event_team = get_user_event_team(user)
+    if not event_team:
+        return 1.0, 1.0
+
+    team_data = ROYAL_CONTRACT_TEAMS[event_team]
+    cooldown_multiplier = float(team_data.get("cooldown_multiplier", 1.0))
+    candy_multiplier = float(team_data.get("candy_multiplier", 1.0))
+    return cooldown_multiplier, candy_multiplier
+
+
+def apply_contract_cooldown(base_seconds: int | float, user: dict, now: datetime | None = None) -> int:
+    if base_seconds <= 0:
+        return int(base_seconds)
+
+    cooldown_multiplier, _ = get_contract_buffs(user, now)
+    adjusted = base_seconds * cooldown_multiplier
+    return max(1, int(adjusted))
+
+
+def apply_contract_candy_reward(base_candies: int | float, user: dict, now: datetime | None = None) -> int:
+    if base_candies <= 0:
+        return int(base_candies)
+
+    _, candy_multiplier = get_contract_buffs(user, now)
+    adjusted = base_candies * candy_multiplier
+    return max(0, int(adjusted))
 
 
 def get_user_perfect_crown_tokens(user: dict) -> set[str]:

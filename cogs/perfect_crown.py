@@ -1,3 +1,5 @@
+import os
+
 import discord
 import time
 import functions as func
@@ -5,6 +7,8 @@ import functions as func
 from discord.ext import commands
 
 from iufi.perfect_crown import (
+    apply_contract_cooldown,
+    ROYAL_CONTRACT_TEAMS,
     ROYAL_TREASURY_TIERS,
     ROYAL_TREASURY_TOKEN_COSTS,
     is_royal_treasury_open,
@@ -100,7 +104,10 @@ class TreasuryBuyModal(discord.ui.Modal):
                 "$push": {"cards": card.id},
                 "$set": {
                     "cooldown.claim": time.time() + (
-                        func.settings.COOLDOWN_BASE["claim"][1] * (1 - actived_potions.get("speed", 0))
+                        apply_contract_cooldown(
+                            func.settings.COOLDOWN_BASE["claim"][1] * (1 - actived_potions.get("speed", 0)),
+                            user,
+                        )
                     )
                 },
                 "$inc": {"exp": 10, "event_tokens.perfect_crown_count": -token_cost},
@@ -180,6 +187,67 @@ class RoyalTreasuryView(discord.ui.View):
         return embed
 
 
+class ContractTeamSelectionView(discord.ui.View):
+    def __init__(self, author: discord.Member):
+        super().__init__(timeout=60)
+        self.author = author
+        self.message: discord.Message | None = None
+
+    async def interaction_check(self, interaction: discord.Interaction) -> bool:
+        if interaction.user != self.author:
+            await interaction.response.send_message("Only the command author can choose a team here.", ephemeral=True)
+            return False
+        return True
+
+    async def on_timeout(self) -> None:
+        for child in self.children:
+            child.disabled = True
+        if self.message:
+            await self.message.edit(view=self)
+
+    async def _sign_contract(self, interaction: discord.Interaction, team_key: str) -> None:
+        user = await func.get_user(self.author.id)
+        if user.get("event_team"):
+            for child in self.children:
+                child.disabled = True
+            await interaction.response.edit_message(
+                content="Your contract is already signed. No turning back now!",
+                embed=None,
+                attachments=[],
+                view=self,
+            )
+            self.stop()
+            return
+
+        team_data = ROYAL_CONTRACT_TEAMS[team_key]
+        await func.update_user(self.author.id, {"$set": {"event_team": team_key}})
+
+        embed = discord.Embed(
+            title=f"🤝 Contract Signed: {team_data['label']}",
+            description=str(team_data["flavor_text"]),
+            color=discord.Color.gold() if team_key == "royal" else discord.Color.green(),
+        )
+        embed.add_field(name="Active Buff", value=str(team_data["buff_description"]), inline=False)
+
+        gif_name = str(team_data["success_gif_file"])
+        gif_path = os.path.join(func.ROOT_DIR, "perfect_crown", gif_name)
+        embed.set_image(url=f"attachment://{gif_name}")
+        file = discord.File(gif_path, filename=gif_name)
+
+        for child in self.children:
+            child.disabled = True
+        await interaction.response.edit_message(content=None, embed=embed, attachments=[file], view=self)
+        self.stop()
+
+    @discord.ui.button(label="Team Royal", emoji="👑", style=discord.ButtonStyle.blurple)
+    async def choose_royal(self, interaction: discord.Interaction, _: discord.ui.Button):
+        await self._sign_contract(interaction, "royal")
+
+    @discord.ui.button(label="Team Chaebol", emoji="💸", style=discord.ButtonStyle.green)
+    async def choose_chaebol(self, interaction: discord.Interaction, _: discord.ui.Button):
+        await self._sign_contract(interaction, "chaebol")
+
+
 class PerfectCrown(commands.Cog):
     def __init__(self, bot: commands.Bot):
         self.bot = bot
@@ -199,6 +267,30 @@ class PerfectCrown(commands.Cog):
 
         view = RoyalTreasuryView(ctx.author, ctx.me.id)
         view.message = await ctx.reply(embed=await view.build_embed(), view=view)
+
+    @commands.command(aliases=["ct"])
+    async def contract(self, ctx: commands.Context):
+        """Sign a Royal Contract with one event team.
+
+        **Examples:**
+        @prefix@contract
+        @prefix@ct
+        """
+        user = await func.get_user(ctx.author.id)
+        if user.get("event_team"):
+            return await ctx.reply("Your contract is already signed. No turning back now!")
+
+        embed = discord.Embed(
+            title="🤝 Royal Contract",
+            description=(
+                "Choose your side for the event. **This cannot be changed later.**\n\n"
+                "👑 **Team Royal** — Halves your cooldowns until May 16th.\n"
+                "💸 **Team Chaebol** — 2× Star Candies from converting cards until May 16th."
+            ),
+            color=discord.Color.random(),
+        )
+        view = ContractTeamSelectionView(ctx.author)
+        view.message = await ctx.reply(embed=embed, view=view)
 
 
 async def setup(bot: commands.Bot) -> None:

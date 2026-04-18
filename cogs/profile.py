@@ -2,6 +2,7 @@ import discord, iufi, time, copy
 import functions as func
 
 from discord.ext import commands
+from iufi.perfect_crown import apply_contract_cooldown
 from views import (
     CollectionView,
     PhotoCardView,
@@ -341,7 +342,10 @@ class Profile(commands.Cog):
         
         reward = {"candies": 5} if claimed % 5 else {WEEKLY_REWARDS[(claimed//5) - 1][1]: WEEKLY_REWARDS[(claimed//5) - 1][2]}
         await func.update_user(ctx.author.id, {
-            "$set": {"claimed": claimed, "cooldown.daily": time.time() + func.settings.COOLDOWN_BASE["daily"][1]},
+            "$set": {
+                "claimed": claimed,
+                "cooldown.daily": time.time() + apply_contract_cooldown(func.settings.COOLDOWN_BASE["daily"][1], user),
+            },
             "$inc": reward
         })
 

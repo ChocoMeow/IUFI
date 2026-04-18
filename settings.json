@@ -72,7 +72,8 @@
         "event_tokens": {
             "perfect_crown": {},
             "perfect_crown_count": 0
-        }
+        },
+        "event_team": null
     },
     "PITY_SETTINGS": {
         "rare": {

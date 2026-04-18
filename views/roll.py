@@ -2,7 +2,7 @@ import discord, time, asyncio
 import functions as func
 
 from iufi import CardPool, Card
-from iufi.perfect_crown import build_perfect_crown_claim_update
+from iufi.perfect_crown import build_perfect_crown_claim_update, apply_contract_cooldown
 
 class RollButton(discord.ui.Button):
     def __init__(self, card: Card, **kwargs):
@@ -55,14 +55,22 @@ class RollButton(discord.ui.Button):
                 token_query = build_perfect_crown_claim_update(token_id)
                 actived_potions = func.get_potions(user.get("actived_potions", {}), func.settings.POTIONS_BASE)
                 token_query.setdefault("$set", {})["cooldown.claim"] = time.time() + (
-                    func.settings.COOLDOWN_BASE["claim"][1] * (1 - actived_potions.get("speed", 0))
+                    apply_contract_cooldown(
+                        func.settings.COOLDOWN_BASE["claim"][1] * (1 - actived_potions.get("speed", 0)),
+                        user,
+                    )
                 )
                 await func.update_user(interaction.user.id, token_query)
             else:
                 actived_potions = func.get_potions(user.get("actived_potions", {}), func.settings.POTIONS_BASE)
                 query = func.update_quest_progress(user, ["COLLECT_ANY_CARD", f"COLLECT_{self.card._tier.upper()}_CARD"], query={
                     "$push": {"cards": self.card.id},
-                    "$set": {"cooldown.claim": time.time() + (func.settings.COOLDOWN_BASE["claim"][1] * (1 - actived_potions.get("speed", 0)))},
+                    "$set": {
+                        "cooldown.claim": time.time() + apply_contract_cooldown(
+                            func.settings.COOLDOWN_BASE["claim"][1] * (1 - actived_potions.get("speed", 0)),
+                            user,
+                        )
+                    },
                     "$inc": {"exp": 10}
                 })
                 await func.update_user(interaction.user.id, query)
