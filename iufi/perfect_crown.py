@@ -13,7 +13,7 @@ from .objects import TempCard
 
 KST = ZoneInfo("Asia/Seoul")
 
-PERFECT_CROWN_INJECT_PROBABILITY = 1
+PERFECT_CROWN_INJECT_PROBABILITY = 0.08
 PERFECT_CROWN_MISSING_WEIGHT = 6
 
 ROYAL_TREASURY_DATE = datetime(2026, 5, 16, tzinfo=KST).date()
