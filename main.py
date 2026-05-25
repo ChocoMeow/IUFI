@@ -70,12 +70,17 @@ class IUFI(commands.Bot):
         func.MUSIC_DB = func.MONGO_DB[db_name]["musics"]
 
     async def setup_hook(self) -> None:
+        func.logger.info("Startup: connecting to database...")
         # Connecting to MongoDB
         await self.connect_db()
 
+        func.logger.info("Startup: loading card pool...")
         await iufi.CardPool.fetch_data()
+        func.logger.info("Startup: processing new cards folder...")
         await iufi.CardPool.process_new_cards()
+        func.logger.info("Startup: loading quiz question pool...")
         await iufi.QuestionPool.fetch_data()
+        func.logger.info("Startup: loading music question pool...")
         await iufi.MusicPool.fetch_data()
 
         try:
@@ -86,10 +91,13 @@ class IUFI(commands.Bot):
             func.logger.error("Not able to load opus!", exc_info=e)
 
         # Load cog modules
+        func.logger.info("Startup: loading cogs...")
         for module in os.listdir(os.path.join(func.ROOT_DIR, 'cogs')):
             if module.endswith(".py"):
                 await self.load_extension(f"cogs.{module[:-3]}")
                 func.logger.info(f"Loaded {module[:-3]}")
+
+        func.logger.info("Startup: setup_hook complete, waiting for Discord READY event...")
 
     async def on_ready(self):
         if not self._treasury_sync_done and self.user:
@@ -165,7 +173,7 @@ intents.message_content = True
 bot = IUFI(
     command_prefix=func.settings.BOT_PREFIX,
     help_command=None,
-    chunk_guilds_at_startup=True,
+    chunk_guilds_at_startup=False,
     activity=discord.Activity(type=discord.ActivityType.listening, name=f"{func.settings.BOT_PREFIX[0]}help"),
     case_insensitive=True,
     intents=intents

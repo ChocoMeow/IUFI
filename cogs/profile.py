@@ -64,7 +64,7 @@ class Profile(commands.Cog):
         embed = discord.Embed(color=discord.Color.from_rgb(255, 182, 193))
         embed.set_author(name=f"{member.display_name}'s Profile", icon_url=member.display_avatar.url)
         embed.set_thumbnail(url=member.display_avatar.url)
-        embed.set_footer(text=f"Member was last online {func.cal_last_online_time(user.get("last_active_time"))} ago")
+        embed.set_footer(text=f"Member was last online {func.cal_last_online_time(user.get('last_active_time'))} ago")
 
         embed.description = f"╭─────────────────╮\n📝 *\"{bio}\"*\n╰─────────────────╯\n" if bio else ""
 

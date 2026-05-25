@@ -31,7 +31,7 @@ class Developer(commands.Cog):
             raise commands.CheckFailure("You do not have permission to use this command.")
         return True
     
-    @commands.command()
+    @commands.command(name="dev_givecandies")
     async def givecandies(self, ctx: commands.Context, member: discord.Member, amount: int):
         """
         Gives a specified number of candies to a user.
@@ -49,7 +49,7 @@ class Developer(commands.Cog):
         await func.update_user(member.id, {"$inc": {"candies": amount}})
         await ctx.reply(f"{amount} candies have been given to {member.display_name}.")
 
-    @commands.command()
+    @commands.command(name="dev_removecandies")
     async def removecandies(self, ctx: commands.Context, member: discord.Member, amount: int):
         """
         Removes a specified number of candies from a user's inventory.
@@ -67,7 +67,7 @@ class Developer(commands.Cog):
         await func.update_user(member.id, {"$inc": {"candies": -amount}})
         await ctx.reply(f"{amount} candies have been removed from {member.display_name}.")
 
-    @commands.command()
+    @commands.command(name="dev_resetCooldown")
     async def resetCooldown(self, ctx: commands.Context, member: discord.Member, cooldown: str):
         """
         Resets a specific cooldown for a user.
@@ -91,7 +91,7 @@ class Developer(commands.Cog):
         await func.update_user(member.id, {"$set": {f"cooldown.{cooldown}": 0}})
         await ctx.reply(f"{cooldown} cooldown has been reset for {member.display_name}.")
 
-    @commands.command()
+    @commands.command(name="dev_resetCardTradeCooldown")
     async def resetCardTradeCooldown(self, ctx: commands.Context, card_id: str):
         """
         Resets the trade cooldown for a specific card.
@@ -109,7 +109,7 @@ class Developer(commands.Cog):
         await func.update_card(card_id, {"$set": {"last_trade_time": 0}})
         await ctx.reply(f"Cooldown has been reset for card {card_id}.")
 
-    @commands.command()
+    @commands.command(name="dev_giveCardToUser")
     async def giveCardToUser(self, ctx: commands.Context, member: discord.Member, card_id: str):
         """
         Gives a specific card to a user.
@@ -142,7 +142,7 @@ class Developer(commands.Cog):
 
         await ctx.reply(f"Card {card_id} has been given to {member.display_name}.")
 
-    @commands.command()
+    @commands.command(name="dev_removeCardFromUser")
     async def removeCardFromUser(self, ctx: commands.Context, card_id: str):
         """
         Removes a specific card from a user's collection.
@@ -167,7 +167,7 @@ class Developer(commands.Cog):
 
         await ctx.reply(f"Card {card_id} has been removed from user.")
 
-    @commands.command()
+    @commands.command(name="dev_giveRollToUser")
     async def giveRollToUser(self, ctx: commands.Context, member: discord.Member, roll_type: str, amount: int = 1):
         """
         Grants a specified number of rolls of a given type to a user.
@@ -191,7 +191,7 @@ class Developer(commands.Cog):
         await func.update_user(member.id, {"$inc": {f"roll.{roll_type}": amount}})
         await ctx.reply(f"{amount} {roll_type} rolls have been given to {member.display_name}.")
 
-    @commands.command()
+    @commands.command(name="dev_giveBirthdayCard")
     async def giveBirthdayCard(self, ctx: commands.Context, member: discord.Member, day_number: int):
         """
         Gives a birthday card to a specified user for a particular day.
@@ -227,7 +227,7 @@ class Developer(commands.Cog):
         await func.update_user(member.id, update_query)
         await ctx.reply(f"Birthday card #{day_number} has been given to {member.display_name}.")
 
-    @commands.command()
+    @commands.command(name="dev_setBirthdayCardsCount")
     async def setBirthdayCardsCount(self, ctx: commands.Context, member: discord.Member, count: int):
         """Set the birthday cards count for a user."""
         user_data = await func.get_user(member.id)
@@ -238,7 +238,7 @@ class Developer(commands.Cog):
         await func.update_user(member.id, {"$set": {"birthday_cards_count": count}})
         await ctx.reply(f"Birthday cards count for {member.display_name} has been set to {count}.")
 
-    @commands.command()
+    @commands.command(name="dev_quit")
     async def quit(self, ctx: commands.Context, member: discord.Member = None):
         """[ADMIN ONLY] Deletes a user's profile after confirmation. All cards will be converted.
 

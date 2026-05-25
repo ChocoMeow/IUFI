@@ -51,6 +51,36 @@ YTDL_FORMAT_OPTIONS: Dict[str, str] = {
     'source_address': '0.0.0.0',
 }
 
+# Optional authentication for restricted YouTube videos.
+# Configure via environment variables in .env:
+# - YTDLP_COOKIE_FILE=/absolute/path/to/cookies.txt
+# - YTDLP_COOKIES_FROM_BROWSER=firefox[:profile[:keyring[:container]]]
+if cookie_file := os.getenv("YTDLP_COOKIE_FILE"):
+    YTDL_FORMAT_OPTIONS["cookiefile"] = cookie_file
+
+if cookies_from_browser := os.getenv("YTDLP_COOKIES_FROM_BROWSER"):
+    YTDL_FORMAT_OPTIONS["cookiesfrombrowser"] = tuple(
+        part.strip() for part in cookies_from_browser.split(":") if part.strip()
+    )
+
+# Optional JS challenge runtime setup for modern YouTube extraction.
+# Examples:
+# - YTDLP_JS_RUNTIMES=node
+# - YTDLP_JS_RUNTIMES=deno:/usr/bin/deno,node
+if js_runtimes := os.getenv("YTDLP_JS_RUNTIMES"):
+    YTDL_FORMAT_OPTIONS["js_runtimes"] = [
+        item.strip() for item in js_runtimes.split(",") if item.strip()
+    ]
+
+# Optional remote EJS component source.
+# Examples:
+# - YTDLP_REMOTE_COMPONENTS=ejs:github
+# - YTDLP_REMOTE_COMPONENTS=ejs:npm
+if remote_components := os.getenv("YTDLP_REMOTE_COMPONENTS"):
+    YTDL_FORMAT_OPTIONS["remote_components"] = [
+        item.strip() for item in remote_components.split(",") if item.strip()
+    ]
+
 YTDL = yt_dlp.YoutubeDL(YTDL_FORMAT_OPTIONS)
 
 class CardObject:
@@ -472,7 +502,7 @@ class Track():
         self.data: Dict[str, Any] = data
         self.is_updated: bool = False
 
-    async def load_data(self, *, stream=False) -> Dict[str, Any]:
+    async def load_data(self, *, stream=False) -> bool:
         try:
             loop = asyncio.get_event_loop()
             data = await loop.run_in_executor(None, lambda: YTDL.extract_info(self.url, download=not stream))
@@ -485,17 +515,25 @@ class Track():
                 "release_year": data.get("release_year", "----")
             }
             self.is_updated = True
+            return True
         
         except Exception as e:
             func.logger.info("An exception occurred while loading track info from YouTube.", exc_info=e)
+            return False
     
-    async def get_audio_file_path(self) -> Optional[str]:
+    async def get_audio_file_path(self, retries: int = 1) -> Optional[str]:
         for item in os.listdir(func.MUSIC_TRACKS_FOLDER):
             if os.path.splitext(item)[0] == self.id:
                 return os.path.join(func.MUSIC_TRACKS_FOLDER, item)
-        
-        await self.load_data()
-        return self.get_audio_file_path(self)
+
+        if retries <= 0:
+            return None
+
+        loaded = await self.load_data()
+        if not loaded:
+            return None
+
+        return await self.get_audio_file_path(retries=retries - 1)
 
     def check_answer(self, answer: str, threshold: float = .9) -> bool:
         answer = answer.lower()
@@ -530,7 +568,11 @@ class Track():
         self.data[key] = self.data.get(key, 0) + 1
 
     async def source(self, start: float = 0) -> FFmpegPCMAudio:
-        return FFmpegPCMAudio(await Track.get_audio_file_path(self), options=f'-vn -ss {start}')
+        audio_file_path = await Track.get_audio_file_path(self)
+        if not audio_file_path:
+            raise IUFIException(f"Audio source unavailable for track {self.id}")
+
+        return FFmpegPCMAudio(audio_file_path, options=f'-vn -ss {start}')
     
     @property
     def is_loaded(self) -> bool:

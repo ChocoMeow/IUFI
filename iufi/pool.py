@@ -1,10 +1,12 @@
 from __future__ import annotations
 
 import os
+import time
 import functions as func
 
 from collections import Counter
 from random import randint
+from pymongo import UpdateOne
 
 from typing import (
     Optional,
@@ -65,26 +67,89 @@ class CardPool:
 
     @classmethod
     async def fetch_data(cls) -> None:
+        start_at = time.perf_counter()
+
         # Fetch all card data from the database
         all_card_data: Dict[str, Any] = {doc["_id"]: doc async for doc in func.CARDS_DB.find()}
+        missing_docs: List[Dict[str, Any]] = []
+        stars_backfill_ops: List[UpdateOne] = []
+
+        categories = [category for category in os.listdir(func.CARDS_FOLDER) if not category.startswith(".")]
+        category_images: Dict[str, List[str]] = {}
+        total_images = 0
+
+        for category in categories:
+            images = [
+                image
+                for image in os.listdir(os.path.join(func.CARDS_FOLDER, category))
+                if not image.startswith(".")
+            ]
+            category_images[category] = images
+            total_images += len(images)
+
+        func.logger.info(
+            f"Startup: discovered {total_images} card image files across {len(category_images)} tiers."
+        )
+        processed = 0
+        progress_step = 1000
 
         # Process existing cards in the cards folder
-        for category in os.listdir(func.CARDS_FOLDER):
-            if category.startswith("."):
-                continue
+        for category, images in category_images.items():
+            category_start = time.perf_counter()
 
-            for image in os.listdir(os.path.join(func.CARDS_FOLDER, category)):
-                if image.startswith("."):
-                    continue
+            for image in images:
 
                 card_id = os.path.splitext(image)[0]
-                card_data = all_card_data.get(card_id, {"_id": card_id})
+                card_data = all_card_data.get(card_id)
 
-                # Initialize stars if not present
-                if "stars" not in card_data:
-                    card_data["stars"] = (stars := randint(1, 5))
-                    await func.update_card(card_id, {"$set": {"stars": stars}})
+                # First run on a fresh DB: seed missing card documents in bulk
+                if not card_data:
+                    stars = randint(1, 5)
+                    card_data = {
+                        "_id": card_id,
+                        "stars": stars,
+                        "owner_id": None,
+                        "tag": None,
+                        "frame": None,
+                        "last_trade_time": 0,
+                    }
+                    missing_docs.append(card_data.copy())
+
+                # Existing doc without stars: backfill stars in one bulk update
+                elif "stars" not in card_data:
+                    stars = randint(1, 5)
+                    card_data["stars"] = stars
+                    stars_backfill_ops.append(
+                        UpdateOne({"_id": card_id}, {"$set": {"stars": stars}})
+                    )
+
                 cls.add_card(tier=category, **card_data)
+                processed += 1
+
+                if total_images > 0 and (processed % progress_step == 0 or processed == total_images):
+                    elapsed = time.perf_counter() - start_at
+                    progress_pct = (processed / total_images) * 100
+                    func.logger.info(
+                        f"Card pool progress: {processed}/{total_images} ({progress_pct:.1f}%) in {elapsed:.1f}s"
+                    )
+
+            category_elapsed = time.perf_counter() - category_start
+            func.logger.info(
+                f"Card tier loaded: {category} ({len(images)} cards, {category_elapsed:.1f}s)"
+            )
+
+        if missing_docs:
+            await func.CARDS_DB.insert_many(missing_docs, ordered=False)
+            func.logger.info(f"Seeded {len(missing_docs)} missing card documents.")
+
+        if stars_backfill_ops:
+            await func.CARDS_DB.bulk_write(stars_backfill_ops, ordered=False)
+            func.logger.info(f"Backfilled stars for {len(stars_backfill_ops)} card documents.")
+
+        total_elapsed = time.perf_counter() - start_at
+        func.logger.info(
+            f"Startup: card pool ready. loaded={len(cls._cards)} elapsed={total_elapsed:.1f}s"
+        )
 
     @classmethod
     async def process_new_cards(cls) -> None:
@@ -342,7 +407,7 @@ class MusicPool:
         return list(cls._questions.values())
     
     @classmethod
-    async def get_random_question(cls, history: List[str], player: Optional["Player"] = None) -> Optional[Track]:
+    async def get_random_question(cls, history: List[str]) -> Optional[Track]:
         if not cls._questions:
             await cls.fetch_data()
 
@@ -352,28 +417,12 @@ class MusicPool:
         if not available_questions:
             return None
 
-        # Check if any user in VC has 100+ points - if so, use random selection
-        use_random = False
-        if player and player.channel:
-            for member in player.channel.members:
-                if member.bot:
-                    continue
-                user = await func.get_user(member.id)
-                points = user.get("game_state", {}).get("music_game", {}).get("points", 0)
-                if points >= 100:
-                    use_random = True
-                    break
-
-        if use_random:
-            # Random selection when someone with 100+ points is in VC
-            return choice(available_questions)
-        else:
-            # Weight songs by likes (more likes = higher chance of being played)
-            # Add 1 to each like count to ensure songs with 0 likes can still be selected
-            weights = [track.likes + 1 for track in available_questions]
-            
-            # Use weighted random selection
-            return choices(available_questions, weights=weights, k=1)[0]
+        # Weight songs by likes (more likes = higher chance of being played)
+        # Add 1 to each like count to ensure songs with 0 likes can still be selected
+        weights = [track.likes + 1 for track in available_questions]
+        
+        # Use weighted random selection
+        return choices(available_questions, weights=weights, k=1)[0]
 
     @classmethod
     async def fetch_data(cls) -> None:

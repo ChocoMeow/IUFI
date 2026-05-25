@@ -133,6 +133,9 @@ class Player(VoiceProtocol):
         self._message: Optional[Message] = None
         self._current: Track = None
         self._history: List[str] = []
+        # Keep history proportional to pool size.
+        # For tiny pools this can be 0, which intentionally disables history
+        # so tracks can repeat instead of causing empty-availability edge cases.
         self._max_history_size: int = int(len(MusicPool._questions) * .7)
         self._is_skipping: bool = False
 
@@ -152,24 +155,40 @@ class Player(VoiceProtocol):
             # Prevent AFK player
             if (time.time() - self.last_answer_time) >= 600:
                 return await self.teardown()
-            
-            # Fetch a random track, checking history
-            track = await MusicPool.get_random_question(self._history, player=self)
-            if not track:
-                return await self.teardown()
 
-            if not track.is_loaded:
+            # Try a few candidates in case some tracks are unavailable (e.g. YouTube sign-in required)
+            track: Optional[Track] = None
+            for _ in range(5):
+                candidate = await MusicPool.get_random_question(self._history)
+                if not candidate:
+                    break
+
+                if not candidate.is_loaded:
+                    await candidate.load_data()
+
+                # Skip invalid metadata and keep moving
+                if (not candidate.is_loaded) or candidate.duration <= 0:
+                    self.add_to_history(candidate)
+                    continue
+
+                # Determine a random start time within the track's duration
+                self.track_start_time = random.uniform(candidate.duration * 0.2, candidate.duration * 0.6)
+
                 try:
-                    await track.load_data()
-                except Exception as _:
-                    return await self.do_next();
+                    source = await candidate.source(self.track_start_time)
+                except Exception:
+                    self.add_to_history(candidate)
+                    continue
 
-            # Determine a random start time within the track's duration
-            self.track_start_time = random.uniform(track.duration * 0.2, track.duration * 0.6)
+                # Set the current track and play it
+                track = candidate
+                self._current = track
+                self.voice_client.play(source, after=lambda e: self.bot.loop.create_task(self.skip_song()))
+                break
 
-            # Set the current track and play it
-            self._current = track
-            self.voice_client.play(await track.source(self.track_start_time), after=lambda e: self.bot.loop.create_task(self.skip_song()))
+            if not track:
+                func.logger.warning("No playable music track found. Tearing down music player.")
+                return await self.teardown()
             
             # Update guesser, history and track usage time
             self.guesser = None
@@ -250,7 +269,7 @@ class Player(VoiceProtocol):
                 r_emoji, r_amount = reward_data["emoji"], reward_data["amount"]
 
                 if len(r_display_name) == 1:
-                    reward_message += f"{r_emoji} {r_display_name[0].title():<18} x{reward_data["amount"]}\n"
+                    reward_message += f"{r_emoji} {r_display_name[0].title():<18} x{r_amount}\n"
                 else:
                     reward_parts = r_display_name[1].split("_")
                     format_name = f"{reward_parts[0].title()}" if len(reward_parts) == 1 else f"{reward_parts[0].title()} {reward_parts[1].upper()}"
@@ -373,7 +392,10 @@ class Player(VoiceProtocol):
     
     def add_to_history(self, track: Track):
         """Add a track ID to the history, removing the oldest entry if the history exceeds half the size of the MusicPool's questions."""
-        if len(self._history) >= self._max_history_size:
+        if self._max_history_size <= 0:
+            return
+
+        if len(self._history) >= self._max_history_size and self._history:
             self._history.pop(0)  # Remove the oldest element
         self._history.append(track.id)  # Add the new track id
 
