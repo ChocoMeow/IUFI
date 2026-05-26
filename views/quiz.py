@@ -226,7 +226,6 @@ class QuizView(discord.ui.View):
         # Feature flag: Use reward card system or traditional rewards
         use_reward_card = func.settings.GIVE_REWARD_CARD
 
-        state["points"] = 10
 
         if not use_reward_card:
             # Traditional reward system (promotion rewards)
