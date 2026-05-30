@@ -295,6 +295,27 @@ def match_string(input_string: str, word_list: List[str]) -> str:
 def truncate_string(text: str, length: int = 18) -> str:
     return text[:length - 3] + "..." if len(text) > length else text
 
+def _normalize_user_collections(user: Dict[str, Any]) -> None:
+    collections = user.get("collections")
+    if not isinstance(collections, dict):
+        return
+
+    for name, slots in list(collections.items()):
+        if isinstance(slots, list):
+            continue
+        if not isinstance(slots, dict):
+            collections[name] = [None] * 6
+            continue
+
+        # Heal legacy/corrupted in-memory shape where slots became a dict with numeric keys.
+        fixed_slots = [None] * 6
+        for key, card_id in slots.items():
+            if str(key).isdigit():
+                idx = int(key)
+                if 0 <= idx < 6:
+                    fixed_slots[idx] = card_id
+        collections[name] = fixed_slots
+
 async def get_user(user_id: int, *, insert: bool = True) -> Dict[str, Any]:
     user = USERS_BUFFER.get(user_id)
     if not user:
@@ -303,6 +324,7 @@ async def get_user(user_id: int, *, insert: bool = True) -> Dict[str, Any]:
             await USERS_DB.insert_one({"_id": user_id, **settings.USER_BASE})
 
         user = USERS_BUFFER[user_id] = user if user else copy.deepcopy(settings.USER_BASE) | {"_id": user_id}
+    _normalize_user_collections(user)
     return user
 
 def update_quest_progress(user: Dict[str, Any], completed_quests: Union[str, List[str]], progress: int = 1, *, query: Dict[str, Any] = None) -> Dict[str, Any]:
@@ -464,42 +486,77 @@ async def update_user(user_id: int, data: dict) -> None:
                 data.setdefault('$inc', {})[monthly_points_key] = data['$inc'].get(key, 0)
                 data.setdefault('$set', {})[last_update_key] = now_ts
 
+    def _is_index(part: str) -> bool:
+        return part.isdigit()
+
+    def _ensure_list_index(lst: list, idx: int, default_value=None) -> None:
+        while len(lst) <= idx:
+            lst.append(default_value)
+
     # Proceed with the original in-memory merging logic
     for mode, action in data.items():
         for key, value in action.items():
             cursors = key.split('.')
 
             nested_user = user
-            for c in cursors[:-1]:
+            for idx, c in enumerate(cursors[:-1]):
+                next_cursor = cursors[idx + 1]
+
+                if isinstance(nested_user, list):
+                    if not _is_index(c):
+                        break
+
+                    list_idx = int(c)
+                    default_container = [] if _is_index(next_cursor) else {}
+                    _ensure_list_index(nested_user, list_idx, None)
+                    if not isinstance(nested_user[list_idx], (dict, list)):
+                        nested_user[list_idx] = default_container
+                    nested_user = nested_user[list_idx]
+                    continue
+
                 nxt = nested_user.get(c)
-                if not isinstance(nxt, dict):
-                    nxt = {}
+                if not isinstance(nxt, (dict, list)):
+                    nxt = [] if _is_index(next_cursor) else {}
                     nested_user[c] = nxt
                 nested_user = nxt
 
+            last_cursor = cursors[-1]
+
             if mode == "$set":
-                try:
-                    nested_user[cursors[-1]] = value
-                except TypeError:
-                    nested_user[int(cursors[-1])] = value
+                if isinstance(nested_user, list) and _is_index(last_cursor):
+                    list_idx = int(last_cursor)
+                    _ensure_list_index(nested_user, list_idx, None)
+                    nested_user[list_idx] = value
+                else:
+                    nested_user[last_cursor] = value
 
             elif mode == "$unset":
-                nested_user.pop(cursors[-1], None)
+                if isinstance(nested_user, list) and _is_index(last_cursor):
+                    list_idx = int(last_cursor)
+                    if 0 <= list_idx < len(nested_user):
+                        nested_user[list_idx] = None
+                else:
+                    nested_user.pop(last_cursor, None)
 
             elif mode == "$inc":
-                nested_user[cursors[-1]] = nested_user.get(cursors[-1], 0) + value
+                if isinstance(nested_user, list) and _is_index(last_cursor):
+                    list_idx = int(last_cursor)
+                    _ensure_list_index(nested_user, list_idx, 0)
+                    nested_user[list_idx] = (nested_user[list_idx] or 0) + value
+                else:
+                    nested_user[last_cursor] = nested_user.get(last_cursor, 0) + value
 
             elif mode == "$push":
                 # Check if the value contains $each
                 if isinstance(value, dict) and "$each" in value:
-                    nested_user.setdefault(cursors[-1], []).extend(value["$each"])
+                    nested_user.setdefault(last_cursor, []).extend(value["$each"])
                 else:
-                    nested_user.setdefault(cursors[-1], []).append(value)
+                    nested_user.setdefault(last_cursor, []).append(value)
 
             elif mode == "$pull":
-                if cursors[-1] in nested_user:
+                if last_cursor in nested_user:
                     value = value.get("$in", []) if isinstance(value, dict) else [value]
-                    nested_user[cursors[-1]] = [item for item in nested_user[cursors[-1]] if item not in value]
+                    nested_user[last_cursor] = [item for item in nested_user[last_cursor] if item not in value]
 
             else:
                 raise ValueError(f"Invalid mode: {mode}")
