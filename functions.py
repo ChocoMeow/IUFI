@@ -1,4 +1,4 @@
-import os, time, copy, json, random, logging, discord
+import os, time, copy, json, random, logging, discord, Levenshtein
 
 from motor.motor_asyncio import (
     AsyncIOMotorClient,
@@ -75,6 +75,13 @@ class Settings:
         self.BUG_REPORT_CHANNEL_ID: int = 0
         self.OPUS_PATH: str = ""
         self.LOGGING: Dict[Union[str, Dict[str, Union[str, bool]]]] = {}
+        self.PVP_REWARDS_ENABLED: bool = False
+        self.GIVE_REWARD_CARD: bool = False
+        self.MONTHLY_LEADERBOARD_ROLE: int = 0
+        # Newly added defaults so callers can reference them directly without getattr
+        self.PVP_SETTINGS: Dict[str, Any] = {}
+        self.REWARD_CARD_PROBABILITIES: Dict[str, Any] = {}
+        self.PERFECT_CROWN_TREASURY_CARDS: Dict[str, List[str]] = {}
 
     def load(self):
         settings = open_json("settings.json")
@@ -108,6 +115,12 @@ class Settings:
         self.BUG_REPORT_CHANNEL_ID = settings.get("BUG_REPORT_CHANNEL_ID")
         self.OPUS_PATH = settings.get("OPUS_PATH")
         self.LOGGING = settings.get("LOGGING", {})
+        self.PVP_REWARDS_ENABLED = settings.get("PVP_REWARDS_ENABLED", True)
+        self.GIVE_REWARD_CARD = settings.get("GIVE_REWARD_CARD", True)
+        self.MONTHLY_LEADERBOARD_ROLE = settings.get("MONTHLY_LEADERBOARD_ROLE", 0)
+        self.PVP_SETTINGS = settings.get("PVP_SETTINGS", {})
+        self.REWARD_CARD_PROBABILITIES = settings.get("REWARD_CARD_PROBABILITIES", {})
+        self.PERFECT_CROWN_TREASURY_CARDS = settings.get("PERFECT_CROWN_TREASURY_CARDS", {})
 
 tokens: TOKEN = TOKEN()
 settings: Settings = Settings()
@@ -152,15 +165,31 @@ def cal_retry_time(end_time: float, default: str = None) -> str | None:
     return (f"{hours}h " if hours > 0 else "") + f"{minutes}m {seconds}s"
 
 def cal_last_online_time(start_time: float, default: str = "") -> str | None:
+    """
+    Return a compact two-unit representation of how long ago `start_time` was.
+
+    Formats:
+      - If >= 1 day: "Xd Yh" (days and hours)
+      - Else: "Xh Ym" (hours and minutes)
+
+    If `start_time` is falsy or in the future, returns `default`.
+    """
     if not start_time or start_time > (current_time := time.time()):
         return default
 
-    duration_since_start: float = int(current_time - start_time)
+    # total seconds elapsed
+    total_seconds = int(current_time - start_time)
 
-    minutes, seconds = divmod(duration_since_start, 60)
-    hours, minutes = divmod(minutes, 60)
+    # If duration is at least 1 day, show days and hours
+    days = total_seconds // 86_400
+    if days >= 1:
+        hours = (total_seconds % 86_400) // 3600
+        return f"{days}d {hours}h"
 
-    return (f"{hours}h " if hours > 0 else "") + f"{minutes}m {seconds}s"
+    # Otherwise show hours and minutes
+    hours = total_seconds // 3600
+    minutes = (total_seconds % 3600) // 60
+    return f"{hours}h {minutes}m"
 
 def calculate_level(exp: int) -> tuple[int, int]:
     level = 0
@@ -202,6 +231,35 @@ def clean_text(input_text: str, allow_spaces: bool = True, convert_to_lower: boo
         cleaned_text = cleaned_text.lower()
     
     return cleaned_text
+
+def jac_similarity(str1: str, str2: str) -> float:
+    """
+    Calculate Jaccard similarity between two strings based on character sets.
+    Returns a float between 0 and 1, where 1 means identical character sets.
+    """
+    if not str1 or not str2:
+        return 0.0
+
+    set1 = set(str1.lower())
+    set2 = set(str2.lower())
+
+    intersection = len(set1.intersection(set2))
+    union = len(set1.union(set2))
+
+    return intersection / union if union > 0 else 0.0
+
+def lev_similarity(str1: str, str2: str) -> float:
+    """
+    Calculate normalized Levenshtein similarity between two strings.
+    Returns a float between 0 and 1, where 1 means identical strings.
+    """
+    if not str1 or not str2:
+        return 0.0
+
+    distance = Levenshtein.distance(str1.lower(), str2.lower())
+    max_len = max(len(str1), len(str2))
+
+    return 1 - (distance / max_len) if max_len > 0 else 0.0
 
 def get_week_unix_timestamps() -> tuple[float, float]:
     today = date.today()
@@ -257,7 +315,13 @@ def update_quest_progress(user: Dict[str, Any], completed_quests: Union[str, Lis
     for quest_type in settings.USER_BASE["quests"].keys():
         user_quest = user.copy().get("quests", {}).get(quest_type, copy.deepcopy(settings.USER_BASE["quests"][quest_type]))
 
-        QUESTS_BASE: Dict[str, Any] = getattr(settings, f"{quest_type.upper()}_QUESTS", None)
+        # Use direct attribute access for quest bases instead of getattr
+        if quest_type.lower() == 'daily':
+            QUESTS_BASE: Dict[str, Any] = settings.DAILY_QUESTS
+        elif quest_type.lower() == 'weekly':
+            QUESTS_BASE: Dict[str, Any] = settings.WEEKLY_QUESTS
+        else:
+            QUESTS_BASE: Dict[str, Any] = {}
         if not QUESTS_BASE:
             continue
         
@@ -370,13 +434,48 @@ async def update_user(user_id: int, data: dict) -> None:
     user = await get_user(user_id)
     data.setdefault('$set', {})['last_active_time'] = time.time()
 
+    # Auto-augment monthly counters for common stats so callers don't need to update monthly fields everywhere.
+    # We'll look at $inc entries and duplicate them into monthly fields where appropriate and set last-update timestamps.
+    now_ts = time.time()
+    incs = data.get('$inc', {})
+    if incs:
+        # Handle top-level exp increments -> monthly.exp and last update
+        if 'exp' in incs:
+            data.setdefault('$inc', {})['monthly.exp'] = data['$inc'].get('exp', 0)
+            data.setdefault('$set', {})['monthly.exp_last_update'] = now_ts
+
+        # Handle PVP increments (pvp.wins, pvp.losses, pvp.total_matches)
+        for key in list(incs.keys()):
+            if key.startswith('pvp.'):
+                suffix = key.split('.', 1)[1]
+                monthly_key = f"monthly.pvp.{suffix}"
+                data.setdefault('$inc', {})[monthly_key] = data['$inc'].get(key, 0)
+                data.setdefault('$set', {})['monthly.pvp_last_update'] = now_ts
+
+        # Handle game_state.<game>.points increments (music, mv_guess, quiz, emoji etc.)
+        for key in list(incs.keys()):
+            if key.count('.') >= 2 and key.split('.')[0] == 'game_state' and key.split('.')[-1] == 'points':
+                # e.g. game_state.music_game.points -> game_state.music_game.monthly_points
+                # (parent path must exclude `points`; otherwise Mongo conflicts: points vs points.monthly_points)
+                parts = key.split('.')
+                game_path = '.'.join(parts[:-1])
+                monthly_points_key = f"{game_path}.monthly_points"
+                last_update_key = f"{game_path}.last_update"
+                data.setdefault('$inc', {})[monthly_points_key] = data['$inc'].get(key, 0)
+                data.setdefault('$set', {})[last_update_key] = now_ts
+
+    # Proceed with the original in-memory merging logic
     for mode, action in data.items():
         for key, value in action.items():
-            cursors = key.split(".")
+            cursors = key.split('.')
 
             nested_user = user
             for c in cursors[:-1]:
-                nested_user = nested_user.setdefault(c, {})
+                nxt = nested_user.get(c)
+                if not isinstance(nxt, dict):
+                    nxt = {}
+                    nested_user[c] = nxt
+                nested_user = nxt
 
             if mode == "$set":
                 try:
@@ -540,3 +639,44 @@ def update_pity_from_cards(user: Dict[str, Any], cards: List[Any]) -> Dict[str, 
 
     return query
 
+
+def framed_title(title: str, total_length: int = 25) -> str:
+    """
+    Create a single-line framed title like:
+    ╔═══ Your Title Here ═══╗
+
+    :param title: The text to display inside the frame.
+    :param total_length: The total desired length of the final string.
+    :return: A formatted string with box-drawing characters.
+    """
+    if not isinstance(title, str):
+        title = str(title) if title is not None else ""
+    if total_length < 6:
+        raise ValueError("total_length must be at least 6 to render a valid frame.")
+
+    left_corner = "╔"
+    right_corner = "╗"
+    fill_char = "═"
+
+    # Add single spaces around the title for readability
+    inner = f" {title} "
+    inner_len = len(inner)
+
+    # The total space available for fill characters on both sides
+    available = total_length - len(left_corner) - len(right_corner) - inner_len
+
+    if available < 0:
+        # If the title is too long, we truncate (you could also choose to expand instead)
+        # Here we trim the title to fit exactly.
+        trim_len = total_length - len(left_corner) - len(right_corner) - 2  # account for spaces
+        if trim_len <= 0:
+            raise ValueError("total_length is too small to fit any title content.")
+        inner = f" {title[:trim_len]} "
+        inner_len = len(inner)
+        available = total_length - len(left_corner) - len(right_corner) - inner_len
+
+    # Distribute fill characters on both sides
+    left_fill = available // 2
+    right_fill = available - left_fill
+
+    return f"**{left_corner}{fill_char * left_fill}{inner}{fill_char * right_fill}{right_corner}**"
