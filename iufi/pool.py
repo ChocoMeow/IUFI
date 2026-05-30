@@ -123,7 +123,12 @@ class CardPool:
                         UpdateOne({"_id": card_id}, {"$set": {"stars": stars}})
                     )
 
-                cls.add_card(tier=category, **card_data)
+                card_kwargs = {
+                    key: value
+                    for key, value in card_data.items()
+                    if key in {"owner_id", "stars", "tag", "frame", "last_trade_time"}
+                }
+                cls.add_card(_id=card_id, tier=category, **card_kwargs)
                 processed += 1
 
                 if total_images > 0 and (processed % progress_step == 0 or processed == total_images):
