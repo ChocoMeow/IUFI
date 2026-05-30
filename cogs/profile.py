@@ -9,7 +9,8 @@ from views import (
 )
 from typing import (
     Dict,
-    Any
+    Any,
+    Optional,
 )
 
 DAILY_ROWS: list[str] = ["🟥", "🟧", "🟨", "🟩", "🟦", "🟪"]
@@ -22,17 +23,14 @@ WEEKLY_REWARDS: list[tuple[str, str, int]] = [
     (func.settings.TIERS_BASE.get("legendary")[0], "roll.legendary", 1),
 ]
 
-def generate_progress_bar(total, progress_percentage, filled='⣿', in_progress='⣦', empty='⣀'):
+def generate_progress_bar(total, progress_percentage, filled='█', in_progress='▓', empty='░'):
+    """Generate a simple progress bar without ANSI codes"""
     progress = int(total * progress_percentage / 100)
     filled_length = progress
-    in_progress_length = 1 if progress_percentage - filled_length > 0 else 0
+    in_progress_length = 1 if (progress_percentage % (100 / total)) > 0 and progress < total else 0
     empty_length = total - filled_length - in_progress_length
 
-    # ANSI escape code for magenta color
-    start_color = f"[0;1;{'32' if total == progress else '35'}m"
-    end_color = "[0m"
-
-    progress_bar = start_color + filled * filled_length + in_progress * in_progress_length + end_color + empty * empty_length
+    progress_bar = filled * filled_length + in_progress * in_progress_length + empty * empty_length
 
     return progress_bar
 
@@ -50,39 +48,80 @@ class Profile(commands.Cog):
         @prefix@profile
         @prefix@p IU
         """
-        if not member:
-            member = ctx.author
-        
+        member = member or ctx.author
         user = await func.get_user(member.id)
-        level, exp = func.calculate_level(user['exp'])
-        bio = user.get('profile', {}).get('bio', 'Empty Bio')
+        profile = user.get("profile", {})
+        bio =  profile.get("bio")
+        level, exp_current = func.calculate_level(user.get("exp", 0))
 
-        quiz_stats = user.get("game_state", {}).get("quiz_game", {
-            "points": 0,
-            "correct": 0,
-            "wrong": 0,
-            "timeout": 0,
-            "average_time": 0
-        })
+        exp_next = func.settings.DEFAULT_EXP
+        exp_pct = min((exp_current / exp_next * 100), 100) if exp_next > 0 else 0
 
-        card_match_stats = user.get("game_state", {}).get("match_game", {})
+        pvp = user.get("pvp", {})
+        wins = pvp.get("wins", 0)
 
-        total_questions = quiz_stats["wrong"] + quiz_stats["timeout"]
-        rank_name, rank_emoji = iufi.QuestionPool.get_rank(quiz_stats["points"])
+        embed = discord.Embed(color=discord.Color.from_rgb(255, 182, 193))
+        embed.set_author(name=f"{member.display_name}'s Profile", icon_url=member.display_avatar.url)
+        embed.set_thumbnail(url=member.display_avatar.url)
+        embed.set_footer(text=f"Member was last online {func.cal_last_online_time(user.get('last_active_time'))} ago")
 
-        embed = discord.Embed(title=f"👤 {member.display_name}'s Profile", color=discord.Color.random())
-        embed.description = f"```{bio}```" if bio else ""
-        embed.description += f"```📙 Photocards: {len(user.get('cards', []))}/{func.get_user_card_limit(user)}\n⚔️ Level: {level} ({(exp / func.settings.DEFAULT_EXP) * 100:.1f}%)\n💤 Last Active: {func.cal_last_online_time(user.get("last_active_time"), "Not Active")}```\u200b"
+        embed.description = f"╭─────────────────╮\n📝 *\"{bio}\"*\n╰─────────────────╯\n" if bio else ""
 
-        embed.add_field(name="Ranked Stats:", value=f"> <:{rank_name}:{rank_emoji}> {rank_name.title()} (`{quiz_stats['points']}`)\n> 🎯 K/DA: `{round(quiz_stats['correct'] / total_questions, 1) if total_questions else 0}` (C: `{quiz_stats['correct']}` | W: `{quiz_stats['wrong'] + quiz_stats['timeout']}`)\n> 🕒 Average Time: `{func.convert_seconds(quiz_stats['average_time'])}`", inline=True)
-        embed.add_field(name="Card Match Stats:", value="\n".join(f"> {DAILY_ROWS[int(level) - 4]} **Level {level}**: " + (f"🃏 `{stats.get('matched', 0)}` 🕒 `{func.convert_seconds(stats.get('finished_time'))}`" if (stats := card_match_stats.get(level)) else "Not attempt yet") for level in func.settings.MATCH_GAME_SETTINGS.keys()), inline=True)
+        # Level / XP
+        exp_bar = generate_progress_bar(20, exp_pct, filled="█", in_progress="▓", empty="░")
+        embed.description += func.framed_title("Levels") + "\n"
+        embed.description += (
+            "```\n"
+            f"⭐ Level {level}\n"
+            f"➤ {exp_bar} {int(exp_pct)}%\n"
+            f"➤ {exp_current:,} / {exp_next:,} XP\n"
+            "```\n"
+        )
 
-        card = iufi.CardPool.get_card(user["profile"]["main"])
-        if card and card.owner_id == user["_id"]:
-            embed.set_thumbnail(url=f"attachment://image.{card.format}")
-            return await ctx.reply(file=discord.File(await card.image_bytes(), filename=f"image.{card.format}"), embed=embed)
-        
-        await ctx.reply(embed=embed)
+        # Overview
+        cards = user.get("cards", [])
+        card_count = len(cards)
+        card_limit = func.get_user_card_limit(user)
+        candies = user.get("candies", 0)
+        collections_count = len(user.get("collections", {}))
+
+        embed.add_field(
+            name=func.framed_title("Overview"),
+            value=(
+                "```yaml\n"
+                f"Cards:       {card_count}/{card_limit}\n"
+                f"Candies:     {candies:,} 🍬\n"
+                f"Collections: {collections_count}/5\n"
+                "```"
+            ),
+            inline=True,
+        )
+
+        # Unlocks / Achievements
+        has_iufi_role = bool(func.settings.MONTHLY_LEADERBOARD_ROLE and any(role.id == func.settings.MONTHLY_LEADERBOARD_ROLE for role in member.roles))
+        embed.add_field(
+            name=func.framed_title("Unlocks"),
+            value=(
+                "```"
+                f"{'🌟' if card_count >= 100 else '⭐'} {'Card Collector':<16} {'✅' if card_count >= 100 else '🔒'}\n"
+                f"{'👑' if has_iufi_role else '💎'} {'IUFI Master':<16} {'✅' if has_iufi_role else '🔒'}\n"
+                f"{'⚔️' if wins >= 10 else '🗡️'} {'PVP Champion':<16} {'✅' if wins >= 10 else '🔒'}\n"
+                "```"
+            ),
+            inline=False,
+        )
+
+        # Showcase main card if owned
+        file = discord.utils.MISSING
+        main_id = profile.get("main")
+        card = iufi.CardPool.get_card(main_id) if main_id else None
+        if card and card.owner_id == member.id:
+            image_name = f"image.{card.format}"
+            file = discord.File(await card.image_bytes(), filename=image_name)
+            embed.set_image(url=f"attachment://{image_name}")
+            embed.add_field(name=func.framed_title("Showcase"), value=f"```{card}```", inline=False)
+
+        await ctx.reply(embed=embed, file=file)
 
     @commands.command(aliases=["sb"])
     async def setbio(self, ctx: commands.Context, *, bio: str = None):
@@ -111,6 +150,7 @@ class Profile(commands.Cog):
         @prefix@main 01
         @prefix@m 01
         """
+        card = None
         if card_id:
             card = iufi.CardPool.get_card(card_id)
             if not card:
@@ -121,7 +161,7 @@ class Profile(commands.Cog):
 
         await func.update_user(ctx.author.id, {"$set": {"profile.main": card_id}})
         embed = discord.Embed(title="👤 Set Main", color=discord.Color.random())
-        embed.description=f"```{card.tier[0]} {card.id} has been set as profile card.```" if card_id else "```Your profile card has been cleared```"
+        embed.description = (f"```{card.tier[0]} {card.id} has been set as profile card.```" if card_id and card else "```Your profile card has been cleared```")
         await ctx.reply(embed=embed)
 
     @commands.command(aliases=["ml"])
@@ -146,7 +186,7 @@ class Profile(commands.Cog):
 
         await func.update_user(ctx.author.id, {"$set": {"profile.main": card_id}})
         embed = discord.Embed(title="👤 Set Main", color=discord.Color.random())
-        embed.description=f"```{card.tier[0]} {card.id} has been set as profile card.```" if card_id else "```Your profile card has been cleared```"
+        embed.description = f"```{card.tier[0]} {card.id} has been set as profile card.```" if card_id else "```Your profile card has been cleared```"
         await ctx.reply(embed=embed)
 
     @commands.command(aliases=["cc"])
@@ -189,6 +229,7 @@ class Profile(commands.Cog):
         if not user.get("collections", {}).get(name):
             return await ctx.reply(content=f"{ctx.author.mention} no collection with the name `{name}` was found.")
         
+        card = None
         if card_id:
             card = iufi.CardPool.get_card(card_id)
             if not card:
@@ -199,10 +240,10 @@ class Profile(commands.Cog):
 
         await func.update_user(ctx.author.id, {"$set": {f"collections.{name}.{slot - 1}": card.id if card_id else None}})
 
-        func.logger.info(f"User {ctx.author.name}({ctx.author.id}) added card [{card.id}] to [{name}] collection in slot [{slot}].")
+        func.logger.info(f"User {ctx.author.name}({ctx.author.id}) added card [{card.id if card else None}] to [{name}] collection in slot [{slot}].")
 
         embed = discord.Embed(title="💕 Collection Set", color=discord.Color.random())
-        embed.description = f"```📮 {name.title()}\n🆔 {card.id.zfill(5) if card_id else None}\n🎰 {slot}\n```"
+        embed.description = f"```📮 {name.title()}\n🆔 {card.id.zfill(5) if card else None}\n🎰 {slot}\n```"
         await ctx.reply(embed=embed)
 
     @commands.command(aliases=["scl"])
@@ -273,7 +314,7 @@ class Profile(commands.Cog):
 
         user = await func.get_user(member.id)
         if len(user.get("collections", {})) == 0:
-            return await ctx.reply(content=f"{member.mention} don't have any collections.", allowed_mentions=False)
+            return await ctx.reply(content=f"{member.mention} don't have any collections.", allowed_mentions=discord.AllowedMentions.none())
 
         view = CollectionView(ctx, member, user.get("collections"))
         await view.send_msg()
@@ -289,7 +330,7 @@ class Profile(commands.Cog):
         """
         user = await func.get_user(ctx.author.id)
 
-        end_time: float = user.get("cooldown", {}).get("daily", None)
+        end_time: Optional[float] = user.get("cooldown", {}).get("daily", None)
         retry = func.cal_retry_time(end_time)
         if retry:
             return await ctx.reply(f"{ctx.author.mention} your next daily is in {retry}", delete_after=5)
