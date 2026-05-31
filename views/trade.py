@@ -112,3 +112,129 @@ class TradeView(discord.ui.View):
         if interaction.user == self.seller:
             await self.on_timeout()
             self.stop()
+
+
+class PotionTradeView(discord.ui.View):
+    def __init__(
+        self,
+        seller: discord.Member,
+        buyer: discord.Member | None,
+        potion_name: str,
+        potion_amount: int,
+        candies: int,
+        timeout: float | None = 43_200,
+    ) -> None:
+
+        super().__init__(timeout=timeout)
+
+        self.seller: discord.Member = seller
+        self.buyer: discord.Member | None = buyer
+        self.potion_name: str = potion_name
+        self.potion_amount: int = potion_amount
+        self.candies: int = candies
+
+        self._lock: asyncio.Lock = asyncio.Lock()
+        self.message: discord.Message = None
+
+    async def on_timeout(self) -> None:
+        for child in self.children:
+            child.disabled = True
+
+        if self.message:
+            await self.message.edit(view=self)
+        self.stop()
+
+    def build_embed(self) -> discord.Embed:
+        potion_type, potion_level = self.potion_name.split("_", 1)
+        potion_data = func.settings.POTIONS_BASE.get(potion_type, {})
+        emoji = potion_data.get("emoji", "🧪")
+        level_map = {"i": "1", "ii": "2", "iii": "3"}
+        level_text = level_map.get(potion_level.lower(), potion_level.upper())
+
+        embed = discord.Embed(title="⤵️ Potion Trade", color=discord.Color.random())
+        embed.description = (
+            "```"
+            f"Seller: {self.seller.display_name}\n"
+            f"Buyer: {self.buyer.display_name if self.buyer else 'Anyone'}\n"
+            f"Price: 🍬 {self.candies}\n\n"
+            f"Potion: {emoji} {potion_type.title()} Lvl {level_text} x{self.potion_amount}"
+            "```"
+        )
+        return embed
+
+    @discord.ui.button(label="Trade Now", style=discord.ButtonStyle.green)
+    async def trade(self, interaction: discord.Interaction, button: discord.ui.Button):
+        await interaction.response.defer()
+        async with self._lock:
+            buyer = self.buyer or interaction.user
+
+            if interaction.user != buyer:
+                return await interaction.followup.send(f"This potion is being traded to {buyer.mention}", ephemeral=True)
+
+            if interaction.user == self.seller:
+                return await interaction.followup.send("You can't trade with yourself!", ephemeral=True)
+
+            seller_user = await func.get_user(self.seller.id)
+            seller_potions = seller_user.get("potions", {})
+            seller_potion_amount = seller_potions.get(self.potion_name, 0)
+            if seller_potion_amount < self.potion_amount:
+                await self.on_timeout()
+                return await interaction.followup.send(
+                    f"Trade failed because {self.seller.mention} no longer has enough potions.",
+                    ephemeral=True
+                )
+
+            buyer_user = await func.get_user(buyer.id)
+            if buyer_user.get("candies", 0) < self.candies:
+                return await interaction.followup.send(
+                    f"You don't have enough candies! You only have `{buyer_user.get('candies', 0)}` candies",
+                    ephemeral=True
+                )
+
+            seller_query = {
+                "$inc": {
+                    f"potions.{self.potion_name}": -self.potion_amount,
+                    "candies": self.candies,
+                }
+            }
+            await func.update_user(self.seller.id, seller_query)
+
+            buyer_query = {
+                "$inc": {
+                    f"potions.{self.potion_name}": self.potion_amount,
+                    "candies": -self.candies,
+                }
+            }
+            await func.update_user(buyer.id, buyer_query)
+
+            potion_type, potion_level = self.potion_name.split("_", 1)
+            potion_data = func.settings.POTIONS_BASE.get(potion_type, {})
+            emoji = potion_data.get("emoji", "🧪")
+            level_map = {"i": "1", "ii": "2", "iii": "3"}
+            level_text = level_map.get(potion_level.lower(), potion_level.upper())
+
+            func.logger.info(
+                f"User {buyer.name}({buyer.id}) bought {self.potion_name} x{self.potion_amount} "
+                f"from User {self.seller.name}({self.seller.id}) for {self.candies} candies."
+            )
+
+            embed = discord.Embed(title="✅ Traded", color=discord.Color.random())
+            embed.description = (
+                "```"
+                f"{emoji} {potion_type.title()} Lvl {level_text} x{self.potion_amount}\n"
+                f"🍬 - {self.candies}"
+                "```"
+            )
+
+            await self.on_timeout()
+            await interaction.followup.send(
+                content=f"{self.seller.mention}, {buyer.mention} has made a trade with you for the potion!",
+                embed=embed,
+            )
+
+    @discord.ui.button(label="Cancel", style=discord.ButtonStyle.red)
+    async def cancel(self, interaction: discord.Interaction, button: discord.ui.Button):
+        await interaction.response.defer()
+        if interaction.user == self.seller:
+            await self.on_timeout()
+            self.stop()

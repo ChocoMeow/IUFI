@@ -84,6 +84,8 @@ class Profile(commands.Cog):
         card_limit = func.get_user_card_limit(user)
         candies = user.get("candies", 0)
         collections_count = len(user.get("collections", {}))
+        streak = user.get("claimed", 0)
+        streak_multiplier = ((streak - 1) // 30) + 1 if streak > 0 else 1
 
         embed.add_field(
             name=func.framed_title("Overview"),
@@ -92,6 +94,8 @@ class Profile(commands.Cog):
                 f"Cards:       {card_count}/{card_limit}\n"
                 f"Candies:     {candies:,} 🍬\n"
                 f"Collections: {collections_count}/5\n"
+                f"Streak:      {streak}\n"
+                f"Streak Mult: x{streak_multiplier}\n"
                 "```"
             ),
             inline=True,
@@ -335,31 +339,54 @@ class Profile(commands.Cog):
         if retry:
             return await ctx.reply(f"{ctx.author.mention} your next daily is in {retry}", delete_after=5)
 
+        current_time = time.time()
         claimed = user.get("claimed", 0) + 1
-        if (time.time() - end_time) >= 72000 or claimed > 30:
+        if (current_time - end_time) >= 72000:
             claimed = 1
-        
-        reward = {"candies": 5} if claimed % 5 else {WEEKLY_REWARDS[(claimed//5) - 1][1]: WEEKLY_REWARDS[(claimed//5) - 1][2]}
+
+        cycle_index = (claimed - 1) // 30
+        cycle_multiplier = cycle_index + 1
+        day_in_cycle = ((claimed - 1) % 30) + 1
+
+        if day_in_cycle % 5:
+            reward_emoji, reward_key, base_amount = "🍬", "candies", 5
+        else:
+            reward_emoji, reward_key, base_amount = WEEKLY_REWARDS[(day_in_cycle // 5) - 1]
+
+        reward_amount = base_amount * cycle_multiplier
+        reward = {reward_key: reward_amount}
+
         await func.update_user(ctx.author.id, {
-            "$set": {"claimed": claimed, "cooldown.daily": time.time() + func.settings.COOLDOWN_BASE["daily"][1]},
+            "$set": {"claimed": claimed, "cooldown.daily": current_time + func.settings.COOLDOWN_BASE["daily"][1]},
             "$inc": reward
         })
 
-        func.logger.info(f"User {ctx.author.name}({ctx.author.id}) claimed their daily reward. Strike: [{claimed}]")
+        func.logger.info(
+            f"User {ctx.author.name}({ctx.author.id}) claimed their daily reward. "
+            f"Strike: [{claimed}] Cycle: [{cycle_index + 1}] Multiplier: [x{cycle_multiplier}]"
+        )
 
         embed = discord.Embed(title="📅   Daily Reward", color=discord.Color.random())
-        embed.description = f"Daily reward claimed! + {'🍬 5' if claimed % 5 else f'{WEEKLY_REWARDS[(claimed//5) - 1][0]} {WEEKLY_REWARDS[(claimed//5) - 1][2]}'}"
+        streak_status = f"Streak: **{claimed}** | Day: **{day_in_cycle}/30**"
+        if cycle_multiplier > 1:
+            streak_status += f" | Multiplier: **x{cycle_multiplier}**"
+
+        embed.description = (
+            f"Daily reward claimed! + {reward_emoji} {reward_amount}\n"
+            f"{streak_status}"
+        )
         embed.set_thumbnail(url=ctx.author.display_avatar.url)
 
         value = "```"
+        progress_in_cycle = day_in_cycle
         for index, reward in enumerate(WEEKLY_REWARDS):
             for _ in range(5):
-                if claimed > 0:
+                if progress_in_cycle > 0:
                     value += DAILY_ROWS[index]
                 else:
                     value += "⬜"
-                claimed -= 1
-            value += f"  {reward[2]:>4} {reward[0]} " + ("✅" if claimed >= 0 else "⬛") + "\n"
+                progress_in_cycle -= 1
+            value += f"  {(reward[2] * cycle_multiplier):>4} {reward[0]} " + ("✅" if day_in_cycle >= ((index + 1) * 5) else "⬛") + "\n"
         embed.add_field(name="Streak Rewards", value=value + "```")
         await ctx.reply(embed=embed)
 
@@ -423,6 +450,25 @@ class Profile(commands.Cog):
         query = func.update_quest_progress(user, "", progress=0, query={})
         if query:
             await func.update_user(ctx.author.id, query)
+
+        def format_quest_reward(reward: list[Any]) -> str:
+            emoji, reward_key, reward_amount = reward
+            if isinstance(reward_key, str) and reward_key.startswith("potions."):
+                potion_suffix = reward_key.split(".", 1)[1]
+                potion_level = potion_suffix.split("_")[-1]
+                level_map = {"i": "1", "ii": "2", "iii": "3"}
+                level_text = level_map.get(potion_level.lower(), potion_level.upper())
+
+                if isinstance(reward_amount, list):
+                    min_qty, max_qty = reward_amount
+                    qty_text = f"x{min_qty}" if min_qty == max_qty else f"x{min_qty}~{max_qty}"
+                else:
+                    qty_text = f"x{reward_amount}"
+                return f"{emoji} Lvl {level_text} {qty_text}"
+
+            if isinstance(reward_amount, list):
+                return f"{emoji} {reward_amount[0]} ~ {reward_amount[1]}"
+            return f"{emoji} {reward_amount}"
         
         for quest_type in func.settings.USER_BASE["quests"].keys():    
             user_quest: Dict[str, Any] = user.copy().get("quests", {}).get(quest_type, copy.deepcopy(func.settings.USER_BASE["quests"][quest_type]))
@@ -439,7 +485,7 @@ class Profile(commands.Cog):
                     progress_percentage = (progress / quest['amount']) * 100
                     progress_bar = generate_progress_bar(15, progress_percentage)
                     details += f"{'✅' if progress >= quest['amount'] else '❌'} {quest['title']}\n"
-                    details += f"```ansi\n➢ Reward: " + " | ".join(f"{r[0]} {f'{r[2][0]} ~ {r[2][1]}' if isinstance(r[2], list) else r[2]}" for r in quest["rewards"]) + f"\n➢ {progress_bar} {int(progress_percentage)}% ({progress}/{quest['amount']})```\n"
+                    details += f"```ansi\n➢ Reward: " + " | ".join(format_quest_reward(r) for r in quest["rewards"]) + f"\n➢ {progress_bar} {int(progress_percentage)}% ({progress}/{quest['amount']})```\n"
             
             embed.add_field(name=f"{quest_type.title()} Quests", value=f"Resets at <t:{reset_time}:t> (<t:{reset_time}:R>)\n\n{details}", inline=False)
 

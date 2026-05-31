@@ -10,7 +10,7 @@ from .quiz import QuizView, ResetAttemptView, QUIZ_SETTINGS
 from .frame import FrameView
 from .photocard import PhotoCardView
 from .shop import ShopView
-from .trade import TradeView
+from .trade import TradeView, PotionTradeView
 from .confirm import ConfirmView
 from .collection import CollectionView
 from .help import HelpView

@@ -6,7 +6,8 @@ from discord.ext import commands
 
 from views import (
     ConfirmView,
-    TradeView
+    TradeView,
+    PotionTradeView,
 )
 
 class Card(commands.Cog):
@@ -14,6 +15,20 @@ class Card(commands.Cog):
         self.bot = bot
         self.emoji = "🎴"
         self.invisible = False
+
+    def _parse_potion_name(self, potion_type: str, potion_level: str) -> str | None:
+        potion_type = potion_type.lower().strip()
+        potion_level = potion_level.lower().strip()
+        potions_base = func.settings.POTIONS_BASE
+
+        if potion_type not in potions_base:
+            return None
+
+        levels = potions_base.get(potion_type, {}).get("levels", {})
+        if potion_level not in levels:
+            return None
+
+        return f"{potion_type}_{potion_level}"
 
     @commands.command(aliases=["i"])
     async def cardinfo(self, ctx: commands.Context, *, card_ids: str):
@@ -556,6 +571,93 @@ class Card(commands.Cog):
             view=view
         )
         await func.check_wishlist(view.message, [card_id])
+
+    @commands.command(aliases=["tp"])
+    async def tradepotion(
+        self,
+        ctx: commands.Context,
+        member: discord.Member,
+        candies: int,
+        potion_type: str,
+        potion_level: str,
+        quantity: int,
+    ):
+        """Trades your potion with a member for candies.
+
+        **Examples:**
+        @prefix@tradepotion IU 10 speed iii 2
+        @prefix@tp IU 10 luck ii 1
+        """
+        if member.bot:
+            return await ctx.reply("You are not able to trade with a bot.")
+        if member == ctx.author:
+            return await ctx.reply("You are not able to trade with yourself.")
+        if candies < 0:
+            return await ctx.reply("The candy count cannot be set to a negative value.")
+        if quantity <= 0:
+            return await ctx.reply("Potion quantity must be at least 1.")
+
+        potion_name = self._parse_potion_name(potion_type, potion_level)
+        if not potion_name:
+            return await ctx.reply("Invalid potion type or level. Use `speed/luck` with level `i/ii/iii`.")
+
+        seller = await func.get_user(ctx.author.id)
+        seller_potion_amount = seller.get("potions", {}).get(potion_name, 0)
+        if seller_potion_amount < quantity:
+            return await ctx.reply(f"You only have `{seller_potion_amount}` of `{potion_name}`.", delete_after=8)
+
+        func.logger.info(
+            f"User {ctx.author.name}({ctx.author.id}) initiated potion trade with {member.name}({member.id}). "
+            f"Potion [{potion_name}] x{quantity} for {candies} candies."
+        )
+
+        view = PotionTradeView(ctx.author, member, potion_name, quantity, candies)
+        view.message = await ctx.reply(
+            content=f"{member.mention}, {ctx.author.mention} want to trade with you.",
+            embed=view.build_embed(),
+            view=view,
+        )
+
+    @commands.command(aliases=["tpe"])
+    async def tradepotioneveryone(
+        self,
+        ctx: commands.Context,
+        candies: int,
+        potion_type: str,
+        potion_level: str,
+        quantity: int,
+    ):
+        """Trades your potion with everyone for candies.
+
+        **Examples:**
+        @prefix@tradepotioneveryone 10 speed iii 2
+        @prefix@tpe 10 luck ii 1
+        """
+        if candies < 0:
+            return await ctx.reply("The candy count cannot be set to a negative value.")
+        if quantity <= 0:
+            return await ctx.reply("Potion quantity must be at least 1.")
+
+        potion_name = self._parse_potion_name(potion_type, potion_level)
+        if not potion_name:
+            return await ctx.reply("Invalid potion type or level. Use `speed/luck` with level `i/ii/iii`.")
+
+        seller = await func.get_user(ctx.author.id)
+        seller_potion_amount = seller.get("potions", {}).get(potion_name, 0)
+        if seller_potion_amount < quantity:
+            return await ctx.reply(f"You only have `{seller_potion_amount}` of `{potion_name}`.", delete_after=8)
+
+        func.logger.info(
+            f"User {ctx.author.name}({ctx.author.id}) initiated potion trade with everyone. "
+            f"Potion [{potion_name}] x{quantity} for {candies} candies."
+        )
+
+        view = PotionTradeView(ctx.author, None, potion_name, quantity, candies)
+        view.message = await ctx.reply(
+            content=f"{ctx.author.mention} wants to trade",
+            embed=view.build_embed(),
+            view=view,
+        )
 
     @commands.command(aliases=["u"])
     async def upgrade(self, ctx: commands.Context, upgrade_card_id: str, *, card_ids: str) -> None:
