@@ -8,7 +8,7 @@ from iufi import (
     gen_cards_view
 )
 
-from random import shuffle, choice
+from random import shuffle
 from typing import Any
 from collections import Counter
 
@@ -135,38 +135,15 @@ class MatchGame(discord.ui.View):
         for child in self.children:
             child.disabled = True
 
-        embed = discord.Embed(title="Game Ended (Rewards)", color=discord.Color.random())
+        embed = discord.Embed(title="Game Ended", color=discord.Color.random())
         matched_raw = self.matched()
-        final_rewards: dict[str, int] = {}
-        
-        rewards = f"{'Pairs':>9}{'Rewards':>9}\n"
-        for matched, reward in self._data.get("rewards").items():
-            if isinstance(reward[0], list):
-                reward = choice(reward)
-            
-            if is_matched := (int(matched) <= matched_raw):
-                if reward[0] not in final_rewards:
-                    final_rewards[reward[0]] = 0
-                final_rewards[reward[0]] += reward[1]
+        embed.description = (
+            f"```{'🕔 Time Used:':<15} {func.convert_seconds(self.used_time)}\n"
+            f"{'🃏 Matched:':<15} {matched_raw}```\n"
+            "Reward type: claimable card drop (probability-based)."
+        )
 
-            reward_name, amount = reward
-            reward_name = reward_name.split(".")
-
-            rewards += ("✅" if is_matched else "⬛") + f"  {matched:<3}"
-            if reward_name[0] == "candies":
-                rewards += f"    {'🍬 Candies':<18} x{amount}\n"
-            
-            elif reward_name[0] == "exp":
-                rewards += f"    {'⚔️ Exp':<19} x{amount}\n"
-
-            else:
-                reward_name = reward_name[1].split("_")
-                potion_data = func.settings.POTIONS_BASE.get(reward_name[0])
-                rewards += f"    {potion_data.get('emoji') + ' ' + reward_name[0].title() + ' ' + reward_name[1].upper() + ' Potion':<18} x{amount}\n"
-            
-        embed.description = f"```{'🕔 Time Used:':<15} {func.convert_seconds(self.used_time)}\n{'🃏 Matched:':<15} {matched_raw}```\n```{rewards}```"
-
-        update_data = {"$inc": final_rewards}
+        update_data: dict[str, Any] = {}
         user = await func.get_user(self.author.id)
 
         best_state = user.get("game_state", {}).get("match_game", {}).get(self._level, {
@@ -198,6 +175,54 @@ class MatchGame(discord.ui.View):
         )
 
         await self.response.channel.send(content=f"<@{self.author.id}>", embed=embed)
+
+        # Present probability-based reward card for match game performance.
+        if matched_raw > 0:
+            try:
+                from .reward_card import RewardCardView
+
+                probs_config = func.settings.REWARD_CARD_PROBABILITIES or {}
+                level_probs = probs_config.get("MATCH_GAME", {}).get(str(self._level), {})
+
+                probs = level_probs.get(str(matched_raw))
+                if not probs and level_probs:
+                    # Fallback to the highest configured threshold <= matched pairs.
+                    eligible = [(int(k), v) for k, v in level_probs.items() if str(k).isdigit() and int(k) <= matched_raw]
+                    if eligible:
+                        probs = max(eligible, key=lambda item: item[0])[1]
+
+                if probs:
+                    reward_view = RewardCardView(None, self.author, probs, initial_cost=10, cost_currency_field="candies", timeout=120)
+                    await reward_view._roll_card()
+
+                    reward_embed = reward_view.build_embed()
+                    file = None
+                    if reward_view.current_card:
+                        try:
+                            img_bytes = await reward_view.current_card.image_bytes()
+                            filename = f"{reward_view.current_card.id}.webp"
+                            file = discord.File(img_bytes, filename=filename)
+                            reward_embed.set_image(url=f"attachment://{filename}")
+                        except Exception:
+                            file = None
+
+                    reward_content = (
+                        f"**{self.author.mention} This reward ends <t:{reward_view.expires_at}:R>**\n"
+                        f"🎁 Card reward for matching {matched_raw} pair{'s' if matched_raw != 1 else ''} on level {self._level}!"
+                    )
+                    reward_msg = await self.response.channel.send(
+                        content=reward_content,
+                        embed=reward_embed,
+                        file=file,
+                        view=reward_view
+                    )
+                    reward_view.message = reward_msg
+            except Exception:
+                try:
+                    func.logger.exception("Failed to present match game reward card view")
+                except Exception:
+                    pass
+
         self.stop()
         
     async def build(self) -> tuple[discord.Embed, discord.File]:

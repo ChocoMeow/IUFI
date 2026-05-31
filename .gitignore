@@ -8,3 +8,4 @@ questions.json
 /.idea
 logs
 .venv
+/venv
