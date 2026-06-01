@@ -133,6 +133,9 @@ class Player(VoiceProtocol):
         self._message: Optional[Message] = None
         self._current: Track = None
         self._history: List[str] = []
+        # Keep history proportional to pool size.
+        # For tiny pools this can be 0, which intentionally disables history
+        # so tracks can repeat instead of causing empty-availability edge cases.
         self._max_history_size: int = int(len(MusicPool._questions) * .7)
         self._is_skipping: bool = False
 
@@ -152,24 +155,40 @@ class Player(VoiceProtocol):
             # Prevent AFK player
             if (time.time() - self.last_answer_time) >= 600:
                 return await self.teardown()
-            
-            # Fetch a random track, checking history
-            track = await MusicPool.get_random_question(self._history)
-            if not track:
-                return await self.teardown()
 
-            if not track.is_loaded:
+            # Try a few candidates in case some tracks are unavailable (e.g. YouTube sign-in required)
+            track: Optional[Track] = None
+            for _ in range(5):
+                candidate = await MusicPool.get_random_question(self._history)
+                if not candidate:
+                    break
+
+                if not candidate.is_loaded:
+                    await candidate.load_data()
+
+                # Skip invalid metadata and keep moving
+                if (not candidate.is_loaded) or candidate.duration <= 0:
+                    self.add_to_history(candidate)
+                    continue
+
+                # Determine a random start time within the track's duration
+                self.track_start_time = random.uniform(candidate.duration * 0.2, candidate.duration * 0.6)
+
                 try:
-                    await track.load_data()
-                except Exception as _:
-                    return await self.do_next();
+                    source = await candidate.source(self.track_start_time)
+                except Exception:
+                    self.add_to_history(candidate)
+                    continue
 
-            # Determine a random start time within the track's duration
-            self.track_start_time = random.uniform(track.duration * 0.2, track.duration * 0.6)
+                # Set the current track and play it
+                track = candidate
+                self._current = track
+                self.voice_client.play(source, after=lambda e: self.bot.loop.create_task(self.skip_song()))
+                break
 
-            # Set the current track and play it
-            self._current = track
-            self.voice_client.play(await track.source(self.track_start_time), after=lambda e: self.bot.loop.create_task(self.skip_song()))
+            if not track:
+                func.logger.warning("No playable music track found. Tearing down music player.")
+                return await self.teardown()
             
             # Update guesser, history and track usage time
             self.guesser = None
@@ -212,54 +231,120 @@ class Player(VoiceProtocol):
 
         user = await func.get_user(message.author.id)
         last_points: int = user.get("game_state", {}).get("music_game", {}).get("points", 0)
+        new_points = last_points + points
 
-        # Prepare the query for updating points and rewards
+        # Prepare the query for updating points
         query: Dict[str, Any] = {"$inc": {"game_state.music_game.points": points}}
-        rewards: Dict[str, Dict[str, Union[str, int]]] = {}
+        
+        # Feature flag: Use reward card system or traditional rewards
+        use_reward_card = func.settings.GIVE_REWARD_CARD
 
-        # Calculate milestones and rewards
-        for game_reward in func.settings.MUSIC_GAME_SETTINGS["GAME_REWARDS"]:
-            last_milestone = last_points // game_reward["amount"]
-            current_milestone = (last_points + points) // game_reward["amount"]
+        if not use_reward_card:
+            # Traditional reward system (milestone rewards)
+            rewards: Dict[str, Dict[str, Union[str, int]]] = {}
+            
+            # Calculate milestones and rewards
+            for game_reward in func.settings.MUSIC_GAME_SETTINGS["GAME_REWARDS"]:
+                last_milestone = last_points // game_reward["amount"]
+                current_milestone = new_points // game_reward["amount"]
 
-            # Check if the user has reached a new milestone
-            if current_milestone > last_milestone:
-                for reward in game_reward["rewards"]:
-                    if isinstance(reward[0], list):
-                        reward = random.choice(reward)
-                    r_emoji, r_name, r_amount = reward
+                # Check if the user has reached a new milestone
+                if current_milestone > last_milestone:
+                    for reward in game_reward["rewards"]:
+                        if isinstance(reward[0], list):
+                            reward = random.choice(reward)
+                        r_emoji, r_name, r_amount = reward
 
-                    # Update the query for rewards
-                    query["$inc"][r_name] = query["$inc"].get(r_name, 0) + r_amount
+                        # Update the query for rewards
+                        query["$inc"][r_name] = query["$inc"].get(r_name, 0) + r_amount
 
-                    # Update rewards with emoji and amount
-                    rewards[r_name] = rewards.setdefault(r_name, {"emoji": r_emoji, "amount": 0})
-                    rewards[r_name]["amount"] += r_amount
+                        # Update rewards with emoji and amount
+                        rewards[r_name] = rewards.setdefault(r_name, {"emoji": r_emoji, "amount": 0})
+                        rewards[r_name]["amount"] += r_amount
 
-        # Prepare reward message
-        reward_message = ""
-        for reward_name, reward_data in rewards.items():
-            r_display_name = reward_name.split(".")
-            r_emoji, r_amount = reward_data["emoji"], reward_data["amount"]
+            # Prepare reward message
+            reward_message = ""
+            for reward_name, reward_data in rewards.items():
+                r_display_name = reward_name.split(".")
+                r_emoji, r_amount = reward_data["emoji"], reward_data["amount"]
 
-            if len(r_display_name) == 1:
-                reward_message += f"{r_emoji} {r_display_name[0].title():<18} x{reward_data["amount"]}\n"
-            else:
-                reward_parts = r_display_name[1].split("_")
-                format_name = f"{reward_parts[0].title()}" if len(reward_parts) == 1 else f"{reward_parts[0].title()} {reward_parts[1].upper()}"
-                reward_message += f"{r_emoji} {f'{format_name} {r_display_name[0].title()}':<18} x{r_amount}\n"
+                if len(r_display_name) == 1:
+                    reward_message += f"{r_emoji} {r_display_name[0].title():<18} x{r_amount}\n"
+                else:
+                    reward_parts = r_display_name[1].split("_")
+                    format_name = f"{reward_parts[0].title()}" if len(reward_parts) == 1 else f"{reward_parts[0].title()} {reward_parts[1].upper()}"
+                    reward_message += f"{r_emoji} {f'{format_name} {r_display_name[0].title()}':<18} x{r_amount}\n"
 
-        # Update user data in the database
-        query = func.update_quest_progress(user, "PLAY_MUSIC_QUIZ_GAME", progress=points, query=query)
-        await func.update_user(message.author.id, query)
-        func.logger.info(f"User {message.author.name}({message.author.id}) earned {points} points in the music quiz by answering in {time_used:.2f} seconds.")
+            # Update user data in the database
+            query = func.update_quest_progress(user, "PLAY_MUSIC_QUIZ_GAME", progress=points, query=query)
+            await func.update_user(message.author.id, query)
+            func.logger.info(f"User {message.author.name}({message.author.id}) earned {points} points in the music quiz by answering in {time_used:.2f} seconds.")
 
-        # Create and send the response embed
-        embed = Embed(title="Music Quiz Reward", description=f"```{reward_message}```", color=Color.random()) if reward_message else None
-        await message.reply(
-            random.choice(MESSAGES).format(time=func.convert_seconds(time_used), points=points),
-            embed=embed
-        )
+            # Create and send the response embed
+            embed = Embed(title="Music Quiz Reward", description=f"```{reward_message}```", color=Color.random()) if reward_message else None
+            await message.reply(
+                random.choice(MESSAGES).format(time=func.convert_seconds(time_used), points=points),
+                embed=embed
+            )
+        else:
+            # Reward card system
+            # Update user data in the database (no traditional rewards)
+            query = func.update_quest_progress(user, "PLAY_MUSIC_QUIZ_GAME", progress=points, query=query)
+            await func.update_user(message.author.id, query)
+            func.logger.info(f"User {message.author.name}({message.author.id}) earned {points} points in the music quiz by answering in {time_used:.2f} seconds.")
+            
+            # Send basic message
+            await message.reply(
+                random.choice(MESSAGES).format(time=func.convert_seconds(time_used), points=points)
+            )
+            
+            # Check if we should give a reward card based on point thresholds
+            probs_config = func.settings.REWARD_CARD_PROBABILITIES or {}
+            probs_config = probs_config.get("MUSIC_QUIZ", {})
+            selected_probs = None
+            
+            # Find if user has crossed a threshold (every 10, 100, etc.)
+            for threshold_str in sorted(probs_config.keys(), key=int):
+                threshold = int(threshold_str)
+                # Check if this answer caused them to cross a threshold
+                if last_points < threshold <= new_points:
+                    selected_probs = probs_config[threshold_str]
+                    break
+            
+            if selected_probs:
+                try:
+                    # Import RewardCardView from views package
+                    from views.reward_card import RewardCardView
+                    
+                    # Create and send reward card view
+                    reward_view = RewardCardView(None, message.author, selected_probs, initial_cost=10, cost_currency_field="candies", timeout=120)
+                    await reward_view._roll_card()
+                    
+                    reward_embed = reward_view.build_embed()
+                    file = None
+                    if reward_view.current_card:
+                        try:
+                            img_bytes = await reward_view.current_card.image_bytes()
+                            filename = f"{reward_view.current_card.id}.webp"
+                            file = discord.File(img_bytes, filename=filename)
+                            reward_embed.set_image(url=f"attachment://{filename}")
+                        except Exception:
+                            file = None
+                    
+                    reward_content = f"**{message.author.mention} This reward ends <t:{reward_view.expires_at}:R>**\n🎁 Card reward for reaching {new_points} points!"
+                    reward_msg = await self._text_channel.send(
+                        content=reward_content,
+                        embed=reward_embed,
+                        file=file,
+                        view=reward_view
+                    )
+                    reward_view.message = reward_msg
+                except Exception:
+                    # Fail silently but log
+                    try:
+                        func.logger.exception("Failed to present music quiz reward card view")
+                    except:
+                        pass
 
     async def connect(self, *, reconnect: bool, timeout: float, self_deaf: bool = False, self_mute: bool = False) -> None:
         await self.channel.connect(reconnect=reconnect, timeout=timeout, self_deaf=self_deaf, self_mute=self_mute)
@@ -307,7 +392,10 @@ class Player(VoiceProtocol):
     
     def add_to_history(self, track: Track):
         """Add a track ID to the history, removing the oldest entry if the history exceeds half the size of the MusicPool's questions."""
-        if len(self._history) >= self._max_history_size:
+        if self._max_history_size <= 0:
+            return
+
+        if len(self._history) >= self._max_history_size and self._history:
             self._history.pop(0)  # Remove the oldest element
         self._history.append(track.id)  # Add the new track id
 

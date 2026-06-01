@@ -86,6 +86,7 @@ class EditModal(discord.ui.Modal):
     async def on_submit(self, interaction: discord.Interaction) -> None:
         await interaction.response.defer()
         slot, card_id = self.children[0].value, self.children[1].value
+        card = None
         if not slot.isdigit():
             return await interaction.followup.send(content=f"{interaction.user.mention} Please enter a integer in slot field.", ephemeral=True)
         
@@ -106,9 +107,10 @@ class EditModal(discord.ui.Modal):
             if card.owner_id != interaction.user.id:
                 return await interaction.followup.send("You are not the owner of this card.")
 
-        self.view.collections[self.view.sel_collection][slot - 1] = card_id
+        resolved_card_id = card.id if card else None
+        self.view.collections[self.view.sel_collection][slot - 1] = resolved_card_id
         await func.update_user(interaction.user.id, {"$set": {f"collections.{name}.{slot - 1}": card.id if card_id else None}})
-        func.logger.info(f"User {interaction.user.name}({interaction.user.id}) added card [{card.id}] to [{name}] collection in slot [{slot - 1}].")
+        func.logger.info(f"User {interaction.user.name}({interaction.user.id}) added card [{resolved_card_id}] to [{name}] collection in slot [{slot - 1}].")
         await self.view.send_msg()
 
 class CollectionDropdown(discord.ui.Select):
