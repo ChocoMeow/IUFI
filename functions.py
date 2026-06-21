@@ -316,6 +316,45 @@ def _normalize_user_collections(user: Dict[str, Any]) -> None:
                     fixed_slots[idx] = card_id
         collections[name] = fixed_slots
 
+def _quest_has_level_iii_potion_reward(quest: Dict[str, Any]) -> bool:
+    for reward in quest.get("rewards", []):
+        if len(reward) < 2:
+            continue
+        reward_key = reward[1]
+        if isinstance(reward_key, str) and reward_key.startswith("potions.") and reward_key.endswith("_iii"):
+            return True
+    return False
+
+def _pick_new_quests(quest_type: str, quests_base: Dict[str, Any], items: int) -> List[str]:
+    quests_by_type: Dict[str, List[str]] = {}
+
+    for quest_name, quest_details in quests_base.items():
+        quest_group = quest_details["type"]
+        quests_by_type.setdefault(quest_group, []).append(quest_name)
+
+    candidates = [random.choice(grouped_quests) for grouped_quests in quests_by_type.values()]
+    sample_size = min(items, len(candidates))
+    if sample_size <= 0:
+        return []
+
+    if quest_type.lower() != "weekly":
+        return random.sample(candidates, k=sample_size)
+
+    level_iii_candidates = [
+        quest_name for quest_name in candidates
+        if _quest_has_level_iii_potion_reward(quests_base.get(quest_name, {}))
+    ]
+
+    if not level_iii_candidates:
+        return random.sample(candidates, k=sample_size)
+
+    guaranteed_quest = random.choice(level_iii_candidates)
+    if sample_size == 1:
+        return [guaranteed_quest]
+
+    other_candidates = [quest_name for quest_name in candidates if quest_name != guaranteed_quest]
+    return [guaranteed_quest] + random.sample(other_candidates, k=sample_size - 1)
+
 async def get_user(user_id: int, *, insert: bool = True) -> Dict[str, Any]:
     user = USERS_BUFFER.get(user_id)
     if not user:
@@ -350,19 +389,11 @@ def update_quest_progress(user: Dict[str, Any], completed_quests: Union[str, Lis
         #  Check if the quests need to be updated
         if (quest_updated := user_quest["next_update"] < (now := time.time())):
             _settings = QUESTS_SETTINGS.get(quest_type, {})
-            quests_by_type = {}
-
-            # Group quests by their type
-            for quest_name, quest_details in QUESTS_BASE.items():
-                type = quest_details['type']
-                if type not in quests_by_type:
-                    quests_by_type[type] = []
-                quests_by_type[type].append(quest_name)
-
-            # Now pick one quest from each type
-            new_quests = [random.choice(quests) for quests in quests_by_type.values()]
-
-            new_quests = random.sample(new_quests, k=_settings.get("items", len(new_quests)))
+            new_quests = _pick_new_quests(
+                quest_type,
+                QUESTS_BASE,
+                _settings.get("items", len(QUESTS_BASE))
+            )
 
             user_quest["progresses"] = query.setdefault("$set", {})[f"quests.{quest_type}.progresses"] = {str(quest): 0 for quest in new_quests}
             query["$set"][f"quests.{quest_type}.next_update"] = now + _settings.get("update_time", 0)

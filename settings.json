@@ -217,7 +217,7 @@
         "PLAY_QUIZ_GAME": {
             "title": "Play quiz 50 times",
             "amount": 50,
-            "rewards": [["🍀", "potions.luck_ii", [1, 2]]],
+            "rewards": [["🍀", "potions.luck_iii", [1, 2]]],
             "type": "QUIZ"
         },
         "PLAY_MUSIC_QUIZ_GAME": {
@@ -253,7 +253,7 @@
         "UPGRADE_CARD": {
             "title": "Upgrade any 10 card",
             "amount": 10,
-            "rewards": [["⚡", "potions.speed_i", [1, 2]]],
+            "rewards": [["⚡", "potions.speed_ii", [1, 2]]],
             "type": "UPGRADE"
         },
         "USE_ANY_POTION": {
@@ -289,19 +289,19 @@
         "CONVERT_ANY_CARD": {
             "title": "Convert 100 cards of any tier",
             "amount": 100,
-            "rewards": [["🍀", "potions.luck_i", [1, 2]]],
+            "rewards": [["🍀", "potions.luck_ii", [1, 2]]],
             "type": "CONVERT"
         },
         "TRADE_ANY_CARD": {
             "title": "Trade 50 cards of any tier",
             "amount": 50,
-            "rewards": [["⚡", "potions.speed_ii", [1, 2]]],
+            "rewards": [["⚡", "potions.speed_iii", [1, 2]]],
             "type": "TRADE"
         },
         "BUY_ITEM": {
             "title": "Buy 10 items from the shop",
             "amount": 10,
-            "rewards": [["🍀", "potions.luck_iii", [2, 3]]],
+            "rewards": [["🍀", "potions.luck_ii", [2, 3]]],
             "type": "SHOP"
         }
     },
