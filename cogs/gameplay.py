@@ -4,6 +4,7 @@ import random
 import io, os
 from PIL import Image, ImageFilter
 
+from discord import app_commands
 from discord.ext import commands
 from iufi.pool import QuestionPool as QP
 from views import (
@@ -23,22 +24,17 @@ class Gameplay(commands.Cog):
         self.emoji = "🎮"
         self.invisible = False
 
-    @commands.command(aliases=["r"])
-    @commands.cooldown(1, 5, commands.BucketType.user)
-    async def roll(self, ctx: commands.Context, *, tier: str = None):
-        """Rolls a set of photocards for claiming.
-
-        **Examples:**
-        @prefix@roll
-        @prefix@r rare
-        """
-        user = await func.get_user(ctx.author.id)
+    @app_commands.command(name="roll", description="Rolls a set of photocards for claiming.")
+    @app_commands.describe(tier="Optional tier to use a purchased roll on")
+    @app_commands.checks.cooldown(1, 5, key=lambda i: i.user.id)
+    async def roll(self, interaction: discord.Interaction, tier: str = None):
+        user = await func.get_user(interaction.user.id)
         if not tier and (retry := user["cooldown"]["roll"]) > time.time():
-            return await ctx.reply(f"{ctx.author.mention} your next roll is <t:{round(retry)}:R>", delete_after=10)
+            return await interaction.response.send_message(f"{interaction.user.mention} your next roll is <t:{round(retry)}:R>", ephemeral=True)
 
         if len(user["cards"]) >= func.get_user_card_limit(user):
-            return await ctx.reply(f"**{ctx.author.mention} your inventory is full.**", delete_after=5)
-        
+            return await interaction.response.send_message(f"**{interaction.user.mention} your inventory is full.**", ephemeral=True)
+
         actived_potions = {} if tier else func.get_potions(user.get("actived_potions", {}), func.settings.POTIONS_BASE)
         query = {}
         guaranteed_tier = None
@@ -56,21 +52,23 @@ class Gameplay(commands.Cog):
             # Purchased roll - don't affect pity
             tier = func.match_string(tier.lower(), func.settings.TIERS_BASE.keys())
             if not tier:
-                return await ctx.reply(f"Tier was not found. Please select a valid tier: `{', '.join(user.get('roll').keys())}`")
- 
+                return await interaction.response.send_message(f"Tier was not found. Please select a valid tier: `{', '.join(user.get('roll').keys())}`")
+
             if user.get("roll", {}).get(tier, 0) <= 0:
-                return await ctx.reply(f"You've used up all your `{tier}` rolls for now.")
+                return await interaction.response.send_message(f"You've used up all your `{tier}` rolls for now.")
 
             query["$inc"] = {f"roll.{tier}": -1}
             soft_pity_boosts = None
 
-        query = func.update_quest_progress(user, "ROLL", query=query)
-        await func.update_user(ctx.author.id, query)
-        
+        if not tier:
+            query = func.update_quest_progress(user, "ROLL", query=query)
+            query = func.add_battlepass_xp(user, func.get_battlepass_xp_for_action("roll"), query=query)
+        await func.update_user(interaction.user.id, query)
+
         if user["exp"] == 0:
-            view = discord.ui.View()
-            view.add_item(discord.ui.Button(label='Beginner Guide', emoji='📗', url='https://docs.google.com/document/d/1VAD20wZQ56S_wDeMJlwIKn_jImIPuxh2lgy1fn17z0c/edit'))
-            await ctx.reply(f"**Welcome to IUFI! Please have a look at the guide or use `qhelp` to begin.**", view=view)
+            guide_view = discord.ui.View()
+            guide_view.add_item(discord.ui.Button(label='Beginner Guide', emoji='📗', url='https://docs.google.com/document/d/1VAD20wZQ56S_wDeMJlwIKn_jImIPuxh2lgy1fn17z0c/edit'))
+            await interaction.followup.send(f"**Welcome to IUFI! Please have a look at the guide or use `/help` to begin.**", view=guide_view) if interaction.response.is_done() else await interaction.response.send_message(f"**Welcome to IUFI! Please have a look at the guide or use `/help` to begin.**", view=guide_view)
 
         # Roll cards with guaranteed tier if pity was triggered, otherwise use the purchased tier or normal roll
         roll_tier = guaranteed_tier if guaranteed_tier else tier
@@ -93,106 +91,105 @@ class Gameplay(commands.Cog):
         # Update pity based on rolled cards (only for normal rolls)
         if not tier:
             pity_query = func.update_pity_from_cards(user, cards)
-            await func.update_user(ctx.author.id, pity_query)
+            await func.update_user(interaction.user.id, pity_query)
 
         image_bytes, image_format = await iufi.gen_cards_view(cards)
 
-        view = RollView(ctx.author, cards)
-        view.message = await ctx.send(
-            content=f"**{ctx.author.mention} This is your roll!** (Ends: <t:{round(time.time()) + 71}:R>)",
-            file=discord.File(image_bytes, filename=f'image.{image_format}'),
-            view=view
-        )
-        
+        view = RollView(interaction.user, cards)
+        message_content = f"**{interaction.user.mention} This is your roll!** (Ends: <t:{round(time.time()) + 71}:R>)"
+        file = discord.File(image_bytes, filename=f'image.{image_format}')
+        if interaction.response.is_done():
+            view.message = await interaction.followup.send(content=message_content, file=file, view=view)
+        else:
+            await interaction.response.send_message(content=message_content, file=file, view=view)
+            view.message = await interaction.original_response()
+
         await view.timeout_count()
         await func.check_wishlist(view.message, [card.id for card in cards])
 
-    @commands.command(aliases=["mg"])
-    async def game(self, ctx: commands.Context, level: str):
-        """IUFI Matching game.
-
-        **Examples:**
-        @prefix@game 1
-        @prefix@mg 2
-        """
+    @app_commands.command(name="game", description="IUFI Matching game.")
+    @app_commands.describe(level="The match game level")
+    async def game(self, interaction: discord.Interaction, level: str):
         if level not in (levels := func.settings.MATCH_GAME_SETTINGS.keys()):
-            return await ctx.reply(f"Invalid level selection! Please select a valid level: `{', '.join(levels)}`")
+            return await interaction.response.send_message(f"Invalid level selection! Please select a valid level: `{', '.join(levels)}`")
 
-        user = await func.get_user(ctx.author.id)
+        user = await func.get_user(interaction.user.id)
         if (retry := user.get("cooldown", {}).setdefault("match_game", 0)) > time.time():
-            return await ctx.reply(f"{ctx.author.mention} your game is <t:{round(retry)}:R>", delete_after=10)
+            return await interaction.response.send_message(f"{interaction.user.mention} your game is <t:{round(retry)}:R>", ephemeral=True)
 
-        view = MatchGame(ctx.author, level)
+        view = MatchGame(interaction.user, level)
         actived_potions = func.get_potions(user.get("actived_potions", {}), func.settings.POTIONS_BASE)
 
         query = func.update_quest_progress(user, f"PLAY_MATCH_GAME_LVL_{level}", query={"$set": {"cooldown.match_game": time.time() + (view._data.get("cooldown", 0) * (1 - actived_potions.get("speed", 0)))}})
-        await func.update_user(ctx.author.id, query)
-        
+        await func.update_user(interaction.user.id, query)
+
         embed, file = await view.build()
-        view.response = await ctx.reply(
+        await interaction.response.send_message(
             content=f"**This game ends** <t:{round(view._start_time + view._data.get('timeout', 0))}:R>",
             embed=embed, file=file, view=view
         )
+        view.response = await interaction.original_response()
         await asyncio.sleep(view._data.get("timeout", 280))
         await view.end_game()
         await view.response.edit(view=view)
 
-    @commands.command(aliases=["q"])
-    async def quiz(self, ctx: commands.Context):
-        """IUFI Quiz
-        
-        **Examples:**
-        @prefix@quiz
-        @prefix@q
-        """
+    @app_commands.command(name="quiz", description="IUFI Quiz")
+    async def quiz(self, interaction: discord.Interaction):
         # Fetch the user data
-        user = await func.get_user(ctx.author.id)
+        user = await func.get_user(interaction.user.id)
 
         # If the cooldown is still in effect, inform the user and exit
         if (retry := user.get("cooldown", {}).setdefault("quiz_game", 0)) > time.time():
             price = max(5, int(QUIZ_SETTINGS['reset_price'] * ((retry - time.time()) / func.settings.COOLDOWN_BASE["quiz_game"][1])))
-            view = ResetAttemptView(ctx, user, price)
-            view.response = await ctx.reply(f"{ctx.author.mention} your quiz is <t:{round(retry)}:R>. If you’d like to bypass this cooldown, you can do so by paying `🍬 {price}` candies.", delete_after=20, view=view)
-            return 
-        
+            view = ResetAttemptView(interaction, user, price)
+            content = f"{interaction.user.mention} your quiz is <t:{round(retry)}:R>. If you\u2019d like to bypass this cooldown, you can do so by paying `🍬 {price}` candies."
+            if interaction.response.is_done():
+                view.response = await interaction.followup.send(content, view=view)
+            else:
+                await interaction.response.send_message(content, view=view)
+                view.response = await interaction.original_response()
+            return
+
         # Get the rank and questions for the user
         rank = QP.get_question_distribution_by_rank(QP.get_rank(user.get("game_state", {}).get("quiz_game", {}).get("points", 0))[0])
         questions = QP.get_question_by_rank(rank)
 
         # If there are no questions, inform the user and exit
         if not questions:
-            return await ctx.send("There are no questions for you right now! Please try again later.")
+            return await interaction.response.send_message("There are no questions for you right now! Please try again later.")
 
         # Update the user's cooldown time
         query = func.update_quest_progress(user, "PLAY_QUIZ_GAME", query={"$set": {"cooldown.quiz_game": time.time() + func.settings.COOLDOWN_BASE["quiz_game"][1]}})
-        await func.update_user(ctx.author.id, query)
+        await func.update_user(interaction.user.id, query)
 
         # Create the quiz view and send the initial message
-        view = QuizView(ctx.author, questions)
-        view.response = await ctx.reply(
-            content=f"**This game ends** <t:{round(view._start_time + view.total_time)}:R>",
-            embed=view.build_embed(),
-            view=view
-        )
+        view = QuizView(interaction.user, questions)
+        if interaction.response.is_done():
+            view.response = await interaction.followup.send(
+                content=f"**This game ends** <t:{round(view._start_time + view.total_time)}:R>",
+                embed=view.build_embed(),
+                view=view
+            )
+        else:
+            await interaction.response.send_message(
+                content=f"**This game ends** <t:{round(view._start_time + view.total_time)}:R>",
+                embed=view.build_embed(),
+                view=view
+            )
+            view.response = await interaction.original_response()
 
         # Wait for the game to end
         await asyncio.sleep(view.total_time)
         await view.end_game()
 
-    @commands.command(aliases=["cd"])
-    async def cooldown(self, ctx: commands.Context):
-        """Shows all your cooldowns.
-
-        **Examples:**
-        @prefix@cooldown
-        @prefix@cd
-        """
-        user = await func.get_user(ctx.author.id)
+    @app_commands.command(name="cooldown", description="Shows all your cooldowns.")
+    async def cooldown(self, interaction: discord.Interaction):
+        user = await func.get_user(interaction.user.id)
 
         cooldown: dict[str, float] = user.get("cooldown", {})
-        embed = discord.Embed(title=f"⏰ {ctx.author.display_name}'s Cooldowns", color=0x59b0c0)
+        embed = discord.Embed(title=f"⏰ {interaction.user.display_name}'s Cooldowns", color=0x59b0c0)
         embed.description = "```" + "".join(f"{emoji} {name.split('_')[0].title():<5}: {func.cal_retry_time(cooldown.get(name, 0), 'Ready')}\n" for name, (emoji, cd) in func.settings.COOLDOWN_BASE.items())
-        
+
         embed.description += f"🔔 Reminder: {'On' if user.get('reminder', False) else 'Off'}\n\n" \
                              f"Potion Time Left:\n"
 
@@ -202,38 +199,100 @@ class Gameplay(commands.Cog):
         )
 
         embed.description += (potion_status if potion_status else "No potions are activated.") + "```"
-        embed.set_thumbnail(url=ctx.author.display_avatar.url)
-        await ctx.reply(embed=embed)
+        embed.set_thumbnail(url=interaction.user.display_avatar.url)
+        await interaction.response.send_message(embed=embed)
 
-    @commands.command(aliases=["s"])
-    async def shop(self, ctx: commands.Context):
-        """Brings up the IUFI shop.
+    @app_commands.command(name="shop", description="Brings up the IUFI shop.")
+    async def shop(self, interaction: discord.Interaction):
+        view = ShopView(interaction.user)
+        await interaction.response.send_message(embed=await view.build_embed(), view=view)
+        view.message = await interaction.original_response()
 
-        **Examples:**
-        @prefix@shop
-        @prefix@s
-        """
-        view = ShopView(ctx.author)
-        view.message = await ctx.reply(embed=await view.build_embed(), view=view)
+    @app_commands.command(name="battlepass", description="Shows your Battle Pass status, progress, and reward outline.")
+    async def battlepass(self, interaction: discord.Interaction):
+        if not func.battlepass_enabled():
+            return await interaction.response.send_message("Battle Pass is currently disabled.")
 
-    @commands.command(aliases=["eq"])
-    async def emojiquiz(self, ctx: commands.Context, category: str = None):
-        """Guess IU song or drama by emoji(s).
+        user = await func.get_user(interaction.user.id)
+        state, sync_query = func.with_battlepass_state_synced(user)
+        if sync_query:
+            await func.update_user(interaction.user.id, sync_query)
 
-        Optional `category` can be `song` or `drama` to restrict questions.
+        bp_settings = func.get_battlepass_settings()
+        max_level = max(1, int(bp_settings.get("max_level", 100)))
+        xp_per_level = max(1, int(bp_settings.get("xp_per_level", 150)))
+        price = int(bp_settings.get("shop_price_candies", 0))
 
-        **Examples:**
-        @prefix@emojiquiz
-        @prefix@eq song
-        @prefix@eq drama
-        """
-        user = await func.get_user(ctx.author.id)
+        level, in_level_xp, xp_to_next = func.calculate_battlepass_level(state.get("xp", 0))
+        progress_pct = 100 if level >= max_level else int((in_level_xp / xp_per_level) * 100)
+
+        def build_progress_bar(current: int, total: int, size: int = 20) -> str:
+            if total <= 0:
+                return "█" * size
+            ratio = max(0.0, min(1.0, current / total))
+            filled = int(size * ratio)
+            return "█" * filled + "░" * (size - filled)
+
+        progress_bar = build_progress_bar(in_level_xp if level < max_level else xp_per_level, xp_per_level)
+        status = "Active" if state.get("is_active") else "Inactive"
+
+        summary = discord.Embed(title=f"🎫 {interaction.user.display_name}'s Battle Pass", color=discord.Color.random())
+        summary.description = (
+            f"Season: `{state.get('season_id')}`\n"
+            f"Status: **{status}**\n"
+            f"Price: `🍬 {price}`\n"
+            f"```\n"
+            f"Level:       {level}/{max_level}\n"
+            f"Progress:    {progress_bar} {progress_pct}%\n"
+            f"XP in Level: {in_level_xp if level < max_level else xp_per_level}/{xp_per_level}\n"
+            f"XP to Next:  {xp_to_next if level < max_level else 0}\n"
+            f"```"
+        )
+
+        if not state.get("is_active"):
+            summary.description += "\nBuy Battle Pass from the shop to start earning Battle Pass XP."
+
+        await interaction.response.send_message(embed=summary)
+
+        lines = []
+        for reward_level in range(1, max_level + 1):
+            rewards = func.get_battlepass_rewards_for_level(reward_level)
+            reward_text = ", ".join(func.format_battlepass_reward(item) for item in rewards) if rewards else "No reward"
+
+            if reward_level <= level:
+                marker = "✅"
+            elif reward_level == level + 1:
+                marker = "👉"
+            else:
+                marker = "⬜"
+
+            lines.append(f"{marker} L{reward_level:>3}: {reward_text}")
+
+        page_size = 15
+        for start in range(0, len(lines), page_size):
+            page = lines[start:start + page_size]
+            page_embed = discord.Embed(
+                title=f"Battle Pass Rewards ({start + 1}-{min(start + page_size, len(lines))})",
+                description="```\n" + "\n".join(page) + "\n```",
+                color=discord.Color.random()
+            )
+            await interaction.followup.send(embed=page_embed)
+
+    @app_commands.command(name="emojiquiz", description="Guess IU song or drama by emoji(s).")
+    @app_commands.describe(category="Restrict questions to 'song' or 'drama'")
+    async def emojiquiz(self, interaction: discord.Interaction, category: str = None):
+        user = await func.get_user(interaction.user.id)
         # reuse the quiz cooldown logic
         if (retry := user.get("cooldown", {}).setdefault("quiz_game", 0)) > time.time():
             quiz_cd = func.settings.COOLDOWN_BASE["quiz_game"][1]
             price = max(5, int(EMOJI_QUIZ_SETTINGS['reset_price'] * ((retry - time.time()) / max(1, quiz_cd))))
-            view = EmojiResetAttemptView(ctx, user, price)
-            view.response = await ctx.reply(f"{ctx.author.mention} your emoji quiz is <t:{round(retry)}:R>. If you’d like to bypass this cooldown, you can do so by paying `🍬 {price}` candies.", delete_after=20, view=view)
+            view = EmojiResetAttemptView(interaction, user, price)
+            content = f"{interaction.user.mention} your emoji quiz is <t:{round(retry)}:R>. If you\u2019d like to bypass this cooldown, you can do so by paying `🍬 {price}` candies."
+            if interaction.response.is_done():
+                view.response = await interaction.followup.send(content, view=view)
+            else:
+                await interaction.response.send_message(content, view=view)
+                view.response = await interaction.original_response()
             return
 
         # load emoji entries from JSON file
@@ -245,16 +304,16 @@ class Gameplay(commands.Cog):
             entries = []
 
         if not entries:
-            return await ctx.reply("There are no emoji entries available right now.")
+            return await interaction.response.send_message("There are no emoji entries available right now.")
 
         # Normalize category param and filter entries if provided
         category = category.lower() if category else None
         if category and category not in ("song", "drama"):
-            return await ctx.reply("Invalid category. Please use `song` or `drama`.")
+            return await interaction.response.send_message("Invalid category. Please use `song` or `drama`.")
 
         filtered = [e for e in entries if (not category) or (e.get("type", "song").lower() == category)]
         if not filtered:
-            return await ctx.reply(f"No entries found for category: {category}")
+            return await interaction.response.send_message(f"No entries found for category: {category}")
 
         num_q = min(5, len(filtered))
         # Weighted sampling without replacement based on 'popularity' (1..10). Default popularity=5.
@@ -279,14 +338,22 @@ class Gameplay(commands.Cog):
             "PLAY_QUIZ_GAME",
             query={"$set": {"cooldown.quiz_game": time.time() + quiz_cooldown}},
         )
-        await func.update_user(ctx.author.id, query)
+        await func.update_user(interaction.user.id, query)
 
-        view = EmojiQuizView(ctx.author, sampled, timeout_per_question=40)
-        view.response = await ctx.reply(
-            content=f"**This game ends** <t:{round(time.time() + view.total_time)}:R>",
-            embed=view.build_embed(),
-            view=view
-        )
+        view = EmojiQuizView(interaction.user, sampled, timeout_per_question=40)
+        if interaction.response.is_done():
+            view.response = await interaction.followup.send(
+                content=f"**This game ends** <t:{round(time.time() + view.total_time)}:R>",
+                embed=view.build_embed(),
+                view=view
+            )
+        else:
+            await interaction.response.send_message(
+                content=f"**This game ends** <t:{round(time.time() + view.total_time)}:R>",
+                embed=view.build_embed(),
+                view=view
+            )
+            view.response = await interaction.original_response()
 
         # start the view runner to manage per-question timeouts
         asyncio.create_task(view.run())
@@ -294,57 +361,46 @@ class Gameplay(commands.Cog):
         await asyncio.sleep(view.total_time)
         await view.end_game()
 
-    @commands.command()
-    async def pvp(self, ctx: commands.Context, opponent: discord.Member = None):
-        """Issue a PvP challenge. If opponent is omitted, the challenge is open for anyone to accept.
-
-        Example:
-        @prefix@pvp @user
-        @prefix@pvp
-        """
+    @app_commands.command(name="pvp", description="Issue a PvP challenge. If opponent is omitted, the challenge is open for anyone to accept.")
+    @app_commands.describe(opponent="The member to challenge (omit for an open challenge)")
+    async def pvp(self, interaction: discord.Interaction, opponent: discord.Member = None):
         # create challenge view and message
-        view = ChallengeView(ctx, ctx.author, opponent, timeout=get_pvp_settings().get("challenge_timeout", 300))
-        view.message = await ctx.reply(f"{ctx.author.mention} issued a PvP challenge{' to ' + opponent.mention if opponent else ''}. Expires in <t:{round(time.time() + get_pvp_settings().get('challenge_timeout', 300))}:R>", view=view)
+        view = ChallengeView(interaction, interaction.user, opponent, timeout=get_pvp_settings().get("challenge_timeout", 300))
+        await interaction.response.send_message(f"{interaction.user.mention} issued a PvP challenge{' to ' + opponent.mention if opponent else ''}. Expires in <t:{round(time.time() + get_pvp_settings().get('challenge_timeout', 300))}:R>", view=view)
+        view.message = await interaction.original_response()
 
-    @commands.command(name="pvp_test", aliases=["pvptest", "pvp_auto"], hidden=True)
-    async def pvp_test(self, ctx: commands.Context):
-        """Test command: auto-start a PvP match using random cards for you and the bot, and play it through."""
-        # Ensure the card pool is loaded
+    @app_commands.command(name="pvp_test", description="[Admin] Auto-start a PvP match using random cards for testing.")
+    @app_commands.check(func.is_admin_interaction)
+    async def pvp_test(self, interaction: discord.Interaction):
         try:
             # pick random cards for each side
             cards_a = iufi.CardPool.get_random_cards_for_match_game(3)
             cards_b = iufi.CardPool.get_random_cards_for_match_game(3)
         except Exception as e:
-            return await ctx.reply(f"Failed to pick random cards for test: {e}")
+            return await interaction.response.send_message(f"Failed to pick random cards for test: {e}")
 
-        opponent = ctx.guild.me
+        opponent = interaction.guild.me
         settings = get_pvp_settings()
-        match = PvPMatch(ctx, ctx.author, opponent, settings)
+        match = PvPMatch(interaction, interaction.user, opponent, settings)
 
         # send a starter message to attach match outputs to
-        starter = await ctx.send(f"Starting automated PvP test: {ctx.author.mention} vs {opponent.mention}")
-        match.message = starter
+        await interaction.response.send_message(f"Starting automated PvP test: {interaction.user.mention} vs {opponent.mention}")
+        match.message = await interaction.original_response()
 
         # assign teams directly (bypass modal/ownership checks for testing)
-        match.teams[ctx.author.id] = cards_a
+        match.teams[interaction.user.id] = cards_a
         match.teams[opponent.id] = cards_b
 
         # run the match and wait for it to complete
         await match.run()
-        await ctx.send("Automated PvP test finished.")
-    @commands.command(aliases=["mypity"], hidden=True)
-    async def pity(self, ctx: commands.Context, member: discord.Member = None):
-        """Shows pity progress for each tier. Admin only command.
+        await interaction.followup.send("Automated PvP test finished.")
 
-        **Examples:**
-        @prefix@pity
-        @prefix@pity @user
-        """
-        if ctx.author.id not in func.settings.ADMIN_IDS:
-            return await ctx.reply("This command is only available to administrators.", delete_after=5)
-
+    @app_commands.command(name="pity", description="[Admin] Shows pity progress for each tier.")
+    @app_commands.describe(member="The member to inspect (defaults to yourself)")
+    @app_commands.check(func.is_admin_interaction)
+    async def pity(self, interaction: discord.Interaction, member: discord.Member = None):
         if not member:
-            member = ctx.author
+            member = interaction.user
 
         user = await func.get_user(member.id)
         user_pity = user.get("pity", {})
@@ -385,7 +441,7 @@ class Gameplay(commands.Cog):
         embed.description = "\n".join(pity_info)
         embed.set_footer(text="Soft pity: Increased rates | Hard pity: Guaranteed! | Normal rolls only.")
         embed.set_thumbnail(url=member.display_avatar.url)
-        await ctx.reply(embed=embed)
+        await interaction.response.send_message(embed=embed)
 
 async def setup(bot: commands.Bot) -> None:
     await bot.add_cog(Gameplay(bot))

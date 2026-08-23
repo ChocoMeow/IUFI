@@ -322,8 +322,8 @@ async def compose_three_image(cards: list[Card], *, size_rate: float = 0.28, use
 
 
 class PvPMatch:
-    def __init__(self, ctx: Optional[commands.Context], challenger: discord.Member, opponent: discord.Member, settings: dict):
-        self.ctx = ctx
+    def __init__(self, interaction: Optional[discord.Interaction], challenger: discord.Member, opponent: discord.Member, settings: dict):
+        self.interaction = interaction
         self.challenger = challenger
         self.opponent = opponent
         self.started_at = time.time()
@@ -806,9 +806,9 @@ class SubmissionView(discord.ui.View):
 
 
 class ChallengeView(discord.ui.View):
-    def __init__(self, ctx: commands.Context, challenger: discord.Member, opponent: Optional[discord.Member] = None, timeout: float = None):
+    def __init__(self, interaction: discord.Interaction, challenger: discord.Member, opponent: Optional[discord.Member] = None, timeout: float = None):
         super().__init__(timeout=timeout)
-        self.ctx = ctx
+        self.interaction = interaction
         self.challenger = challenger
         self.opponent = opponent
         self.settings = get_pvp_settings()
@@ -828,7 +828,7 @@ class ChallengeView(discord.ui.View):
         # create PvPMatch
         opponent = interaction.user
         challenger = self.challenger
-        self.match = PvPMatch(self.ctx, challenger, opponent, self.settings)
+        self.match = PvPMatch(self.interaction, challenger, opponent, self.settings)
 
         # send submission message with view containing targeted submit buttons
         embed = discord.Embed(title="PvP Match - Team Submission", color=discord.Color.blurple())
@@ -844,7 +844,7 @@ class ChallengeView(discord.ui.View):
             await interaction.response.send_message("Match accepted. Submit your team using the buttons in the match message.", ephemeral=True)
         except Exception:
             # fallback: send a new message
-            sent = await self.ctx.send(embed=embed, view=view)
+            sent = await self.interaction.followup.send(embed=embed, view=view)
             self.match.message = sent
             await interaction.response.send_message("Match accepted. Submit your team using the buttons in the match message.", ephemeral=True)
 

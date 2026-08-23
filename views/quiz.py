@@ -105,10 +105,11 @@ class BugReportModal(discord.ui.Modal):
         self.stop()
     
 class ResetAttemptView(discord.ui.View):
-    def __init__(self, ctx: commands.Context, user_data: dict[str, Any], price: int, timeout: float = 20):
+    def __init__(self, interaction: discord.Interaction, user_data: dict[str, Any], price: int, timeout: float = 20):
         super().__init__(timeout=timeout)
 
-        self.ctx: commands.Context = ctx
+        self.author: discord.Member = interaction.user
+        self.bot: commands.Bot = interaction.client
         self.data: dict[str, Any] = user_data
         self.price: int = price
         self.response: discord.Message = None
@@ -124,7 +125,7 @@ class ResetAttemptView(discord.ui.View):
             pass
 
     async def interaction_check(self, interaction: discord.Interaction) -> bool:
-        return interaction.user == self.ctx.author
+        return interaction.user == self.author
 
     @discord.ui.button(label="Buy", emoji="🛍️", style=discord.ButtonStyle.green)
     async def buy(self, interaction: discord.Interaction, button: discord.ui.Button) -> None:
@@ -132,7 +133,7 @@ class ResetAttemptView(discord.ui.View):
             await interaction.response.send_message("You do not have enough candies to initiate the reset!", ephemeral=True)
             return await self.on_timeout()
         
-        await func.update_user(self.ctx.author.id, {
+        await func.update_user(self.author.id, {
             "$set": {"cooldown.quiz_game": 0},
             "$inc": {"candies": -self.price}
         })
@@ -140,7 +141,8 @@ class ResetAttemptView(discord.ui.View):
         if self.response:
             await self.response.delete()
 
-        await self.ctx.invoke(self.ctx.bot.get_command("quiz"))
+        gameplay_cog = self.bot.get_cog("Gameplay")
+        await gameplay_cog.quiz.callback(gameplay_cog, interaction)
 
 class QuizView(discord.ui.View):
     def __init__(self, author: discord.Member, questions: list[Question], timeout: float = None):
@@ -198,6 +200,7 @@ class QuizView(discord.ui.View):
             state = copy.deepcopy(QUIZ_SETTINGS["default"])
 
         # Increase points by total_points and ensure it's not less than 0 and update the highest_points
+        old_points = state["points"]
         old_highest_points = state["highest_points"]
         state["points"] = max(0, state["points"] + total_points)
         if state["points"] > old_highest_points:
@@ -264,6 +267,9 @@ class QuizView(discord.ui.View):
                             embed.description += f"{potion_data.get('emoji') + ' ' + reward_name[0].title() + ' ' + reward_name[1].upper() + ' Potion':<18} x{amount}\n"
 
                     embed.description += "```"
+
+        if state["points"] > old_points:
+            query = func.add_battlepass_xp(user, func.get_battlepass_xp_for_action("quiz"), query=query)
 
         await func.update_user(self.author.id, query)
 

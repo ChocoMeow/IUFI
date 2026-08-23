@@ -2,7 +2,6 @@ import iufi
 import discord
 import functions as func
 
-from discord.ext import commands
 from typing import Dict, List, Any
 from math import ceil
 
@@ -92,10 +91,10 @@ class RemoveDropDown(discord.ui.Select):
         await self.view.update_data()
 
 class WishListView(discord.ui.View):
-    def __init__(self, ctx: commands.Context, user: Dict[str, Any], timeout: float | None = 180):
+    def __init__(self, interaction: discord.Interaction, user: Dict[str, Any], timeout: float | None = 180):
         super().__init__(timeout=timeout)
 
-        self.ctx: commands.Context = ctx
+        self.interaction: discord.Interaction = interaction
         self.wishlist = user.get("wishlist", [])
         self.cards = iufi.CardPool.search_valid_cards(self.wishlist)
         self.select_dropdown = None
@@ -117,7 +116,7 @@ class WishListView(discord.ui.View):
         else:
             desc = f"Here are the cards in your wishlist: [{len(self.cards)}/25]\n```"
             for card in cards:
-                member = self.ctx.guild.get_member(card.owner_id)
+                member = self.interaction.guild.get_member(card.owner_id)
                 desc += f"{card.display_id} {card.display_frame} {card.display_stars} {card.tier[0]} 👤 {member.display_name if member else 'None':5}\n"
             desc += "```"
 
@@ -129,7 +128,7 @@ class WishListView(discord.ui.View):
         return embed
 
     async def update_data(self) -> None:
-        user = await func.get_user(self.ctx.author.id)
+        user = await func.get_user(self.interaction.user.id)
         self.wishlist = user.get("wishlist", [])
         self.cards = iufi.CardPool.search_valid_cards(self.wishlist)
         self.page: int = ceil(len(self.cards) / 13)
@@ -154,7 +153,7 @@ class WishListView(discord.ui.View):
         await self.message.edit(view=self)
     
     async def interaction_check(self, interaction: discord.Interaction) -> bool:
-        return self.ctx.author == interaction.user
+        return self.interaction.user == interaction.user
     
     @discord.ui.button(label='Back', style=discord.ButtonStyle.blurple)
     async def back_button(self, interaction: discord.Interaction, button: discord.ui.Button):

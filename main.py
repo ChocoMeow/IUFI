@@ -1,6 +1,7 @@
 import discord, os, iufi, logging, ctypes, ctypes.util
 import functions as func
 
+from discord import app_commands
 from discord.ext import commands
 from motor.motor_asyncio import AsyncIOMotorClient
 from logging.handlers import TimedRotatingFileHandler
@@ -8,41 +9,45 @@ from logging.handlers import TimedRotatingFileHandler
 class IUFI(commands.Bot):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
+        self.tree.on_error = self.on_app_command_error
 
     async def on_message(self, message: discord.Message, /) -> None:
-        # Ignore messages from bots or outside of guilds
+        # All commands are slash commands now; on_message only forwards music quiz answers.
         if message.author.bot or not message.guild:
-            return False
+            return
 
-        # Handle messages in the music text channel
         if message.channel.id == func.settings.MUSIC_TEXT_CHANNEL:
-            cmd = message.content.split(" ")[0].lower()
-            if any(cmd.startswith(prefix + 'l') for prefix in bot.command_prefix):
-                return await self.process_commands(message)
-
             player: iufi.Player = iufi.MusicPool.get_player(message.guild.id)
             if player and message.author in player.channel.members:
                 await player.check_answer(message)
 
-            return False
-        
-        # Check if the channel is allowed for the game
-        if message.channel.category_id not in func.settings.ALLOWED_CATEGORY_IDS:
-            return False
-        
-        # Ignore messages in certain channels
-        if message.channel.id in func.settings.IGNORE_CHANNEL_IDS:
-            return False
-        
-        # Validate commands for a market channel
-        elif message.channel.id == func.settings.MARKET_CHANNEL:
-            cmd = message.content.split(" ")[0].lower()
-            valid_commands = {"i", "t", "cardinfo"}
-            if not any(cmd.startswith(prefix + command) for prefix in bot.command_prefix for command in valid_commands):
-                return False
-        
-        # Process commands normally
-        await self.process_commands(message)
+    async def on_app_command_error(self, interaction: discord.Interaction, exception: app_commands.AppCommandError, /) -> None:
+        error = getattr(exception, 'original', exception)
+
+        if isinstance(error, app_commands.CommandOnCooldown):
+            message = str(error)
+
+        elif isinstance(error, (app_commands.MissingPermissions, app_commands.CheckFailure)):
+            message = "You do not have permission to use this command."
+
+        elif issubclass(error.__class__, iufi.IUFIException):
+            message = str(error)
+
+        else:
+            message = "An unexpected error occurred. Please try again later!"
+            cmd_name = interaction.command.qualified_name if interaction.command else "unknown"
+            func.logger.error(
+                f"An unexpected error occurred in the `{cmd_name}` command on the {interaction.guild.name}({interaction.guild.id}) executed by {interaction.user.name}({interaction.user.id}).",
+                exc_info=exception
+            )
+
+        try:
+            if interaction.response.is_done():
+                await interaction.followup.send(message, ephemeral=True)
+            else:
+                await interaction.response.send_message(message, ephemeral=True)
+        except discord.HTTPException:
+            pass
 
     async def connect_db(self) -> None:
         if not ((db_name := func.tokens.mongodb_name) and (db_url := func.tokens.mongodb_url)):
@@ -96,6 +101,10 @@ class IUFI(commands.Bot):
                 await self.load_extension(f"cogs.{module[:-3]}")
                 func.logger.info(f"Loaded {module[:-3]}")
 
+        func.logger.info("Startup: syncing slash commands...")
+        synced = await self.tree.sync()
+        func.logger.info(f"Synced {len(synced)} slash commands globally.")
+
         func.logger.info("Startup: setup_hook complete, waiting for Discord READY event...")
 
     async def on_ready(self):
@@ -107,32 +116,6 @@ class IUFI(commands.Bot):
         func.logger.info(f"Loaded {len(iufi.CardPool._cards)} images")
         func.logger.info(f"Loaded {len(iufi.QuestionPool._questions)} questions")
         func.logger.info(f"Loaded {len(iufi.MusicPool._questions)} questions")
-
-    async def on_command_error(self, ctx: commands.Context, exception, /) -> None:
-        error = getattr(exception, 'original', exception)
-        if ctx.interaction:
-            error = getattr(error, 'original', error)
-
-        if isinstance(error, commands.CommandNotFound):
-            return
-
-        elif isinstance(error, (commands.CommandOnCooldown, commands.MissingPermissions, commands.RangeError, commands.BadArgument, commands.CheckFailure)):
-            pass
-
-        elif isinstance(error, (commands.MissingRequiredArgument, commands.MissingRequiredAttachment)):
-            return await ctx.reply(embed=func.create_help_embed(ctx))
-
-        elif not issubclass(error.__class__, iufi.IUFIException):
-            error = "An unexpected error occurred. Please try again later!"
-            func.logger.error(
-                f"An unexpected error occurred in the `{ctx.command.name}` command on the {ctx.guild.name}({ctx.guild.id}) executed by {ctx.author.name}({ctx.author.id}).",
-                exc_info=exception
-            )
-           
-        try:
-            return await ctx.reply(error)
-        except:
-            pass
 
 # Load IUFI Settings
 func.settings.load()
@@ -161,10 +144,10 @@ intents.message_content = True
 
 # Initialize the bot with specified parameters
 bot = IUFI(
-    command_prefix=func.settings.BOT_PREFIX,
+    command_prefix=func.settings.BOT_PREFIX,  # required by commands.Bot ctor but unused; all commands are slash commands
     help_command=None,
     chunk_guilds_at_startup=False,
-    activity=discord.Activity(type=discord.ActivityType.listening, name=f"{func.settings.BOT_PREFIX[0]}help"),
+    activity=discord.Activity(type=discord.ActivityType.listening, name="/help"),
     case_insensitive=True,
     intents=intents
 )

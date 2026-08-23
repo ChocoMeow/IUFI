@@ -1,6 +1,7 @@
 import discord, iufi, time, copy
 import functions as func
 
+from discord import app_commands
 from discord.ext import commands
 from views import (
     CollectionView,
@@ -40,15 +41,10 @@ class Profile(commands.Cog):
         self.emoji = "👤"
         self.invisible = False
 
-    @commands.command(aliases=["p"])
-    async def profile(self, ctx: commands.Context, member: discord.Member = None):
-        """Shows the profile of a member. If called without a member, shows your own profile.
-
-        **Examples:**
-        @prefix@profile
-        @prefix@p IU
-        """
-        member = member or ctx.author
+    @app_commands.command(name="profile", description="Shows the profile of a member. If not specified, shows your own profile.")
+    @app_commands.describe(member="The member to view (defaults to yourself)")
+    async def profile(self, interaction: discord.Interaction, member: discord.Member = None):
+        member = member or interaction.user
         user = await func.get_user(member.id)
         profile = user.get("profile", {})
         bio =  profile.get("bio")
@@ -125,219 +121,172 @@ class Profile(commands.Cog):
             embed.set_image(url=f"attachment://{image_name}")
             embed.add_field(name=func.framed_title("Showcase"), value=f"```{card}```", inline=False)
 
-        await ctx.reply(embed=embed, file=file)
+        await interaction.response.send_message(embed=embed, file=file)
 
-    @commands.command(aliases=["sb"])
-    async def setbio(self, ctx: commands.Context, *, bio: str = None):
-        """Sets your profile bio
-
-        **Examples:**
-        @prefix@setbio IU is the best
-        @prefix@sb IU is the best
-        """
+    @app_commands.command(name="setbio", description="Sets your profile bio.")
+    @app_commands.describe(bio="The bio text (max 30 chars)")
+    async def setbio(self, interaction: discord.Interaction, bio: str = None):
         bio = func.clean_text(bio)
         if bio and len(bio) > 30:
-            return await ctx.reply(content="Please shorten the bio as it is too long. (No more than 30 chars)")
+            return await interaction.response.send_message(content="Please shorten the bio as it is too long. (No more than 30 chars)")
         
-        await func.update_user(ctx.author.id, {"$set": {"profile.bio": bio}})
+        await func.update_user(interaction.user.id, {"$set": {"profile.bio": bio}})
 
-        func.logger.info(f"User {ctx.author.name}({ctx.author.id}) changed the bio to [{bio}].")
+        func.logger.info(f"User {interaction.user.name}({interaction.user.id}) changed the bio to [{bio}].")
 
         embed = discord.Embed(description=f"Bio has been set to\n```{bio}```", color=discord.Color.random())
-        await ctx.reply(embed=embed)
+        await interaction.response.send_message(embed=embed)
     
-    @commands.command(aliases=["m"])
-    async def main(self, ctx: commands.Context, card_id: str = None):
-        """Sets the photocard as your profile display. Card can be identified by its ID or given tag.
-
-        **Examples:**
-        @prefix@main 01
-        @prefix@m 01
-        """
+    @app_commands.command(name="main", description="Sets a photocard as your profile display. Card can be identified by its ID or given tag.")
+    @app_commands.describe(card_id="The card ID or tag (omit to clear your profile card)")
+    async def main(self, interaction: discord.Interaction, card_id: str = None):
         card = None
         if card_id:
             card = iufi.CardPool.get_card(card_id)
             if not card:
-                return await ctx.reply("The card was not found. Please try again.")
+                return await interaction.response.send_message("The card was not found. Please try again.")
 
-            if card.owner_id != ctx.author.id:
-                return await ctx.reply("You are not the owner of this card.")
+            if card.owner_id != interaction.user.id:
+                return await interaction.response.send_message("You are not the owner of this card.")
 
-        await func.update_user(ctx.author.id, {"$set": {"profile.main": card_id}})
+        await func.update_user(interaction.user.id, {"$set": {"profile.main": card_id}})
         embed = discord.Embed(title="👤 Set Main", color=discord.Color.random())
         embed.description = (f"```{card.tier[0]} {card.id} has been set as profile card.```" if card_id and card else "```Your profile card has been cleared```")
-        await ctx.reply(embed=embed)
+        await interaction.response.send_message(embed=embed)
 
-    @commands.command(aliases=["ml"])
-    async def mainlast(self, ctx: commands.Context):
-        """Sets the last photocard in your collection as your profile display.
-
-        **Examples:**
-        @prefix@mainlast
-        @prefix@ml
-        """
-        user = await func.get_user(ctx.author.id)
+    @app_commands.command(name="mainlast", description="Sets the last photocard in your collection as your profile display.")
+    async def mainlast(self, interaction: discord.Interaction):
+        user = await func.get_user(interaction.user.id)
         if not user["cards"]:
-            return await ctx.reply(f"**{ctx.author.mention} you have no photocards.**", delete_after=5)
+            return await interaction.response.send_message(f"**{interaction.user.mention} you have no photocards.**", ephemeral=True)
         
         card_id = user["cards"][-1]
         card = iufi.CardPool.get_card(card_id)
         if not card:
-            return await ctx.reply("The card was not found. Please try again.")
+            return await interaction.response.send_message("The card was not found. Please try again.")
 
-        if card.owner_id != ctx.author.id:
-            return await ctx.reply("You are not the owner of this card.")
+        if card.owner_id != interaction.user.id:
+            return await interaction.response.send_message("You are not the owner of this card.")
 
-        await func.update_user(ctx.author.id, {"$set": {"profile.main": card_id}})
+        await func.update_user(interaction.user.id, {"$set": {"profile.main": card_id}})
         embed = discord.Embed(title="👤 Set Main", color=discord.Color.random())
         embed.description = f"```{card.tier[0]} {card.id} has been set as profile card.```" if card_id else "```Your profile card has been cleared```"
-        await ctx.reply(embed=embed)
+        await interaction.response.send_message(embed=embed)
 
-    @commands.command(aliases=["cc"])
-    async def createcollection(self, ctx: commands.Context, name: str):
-        """Creates a collection.
-
-        **Examples:**
-        @prefix@createcollection IU
-        @prefix@cc IU
-        """
+    @app_commands.command(name="createcollection", description="Creates a collection.")
+    @app_commands.describe(name="The collection name (max 10 chars)")
+    async def createcollection(self, interaction: discord.Interaction, name: str):
         name = func.clean_text(name, allow_spaces=False, convert_to_lower=True)
         if len(name) > 10:
-            return await ctx.reply(content="Please shorten the collection name as it is too long. (No more than 10 chars)")
+            return await interaction.response.send_message(content="Please shorten the collection name as it is too long. (No more than 10 chars)")
 
-        user = await func.get_user(ctx.author.id)
+        user = await func.get_user(interaction.user.id)
         if user.get("collections", {}).get(name):
-            return await ctx.reply(content=f"{ctx.author.mention} a collection with the name `{name.title()}` already exists.")
+            return await interaction.response.send_message(content=f"{interaction.user.mention} a collection with the name `{name.title()}` already exists.")
 
         if len(user.get("collections")) >= 5:
-            return await ctx.reply(content=f"{ctx.author.mention} you have reached the maximum limit of 5 collections.")
+            return await interaction.response.send_message(content=f"{interaction.user.mention} you have reached the maximum limit of 5 collections.")
         
-        func.logger.info(f"User {ctx.author.name}({ctx.author.id}) created a collection named as [{name}].")
+        func.logger.info(f"User {interaction.user.name}({interaction.user.id}) created a collection named as [{name}].")
 
-        await func.update_user(ctx.author.id, {"$set": {f"collections.{name}": [None] * 6}})
-        await ctx.reply(content=f"{ctx.author.mention} collection successfully created with the name `{name.title()}`. You can now use qsetcollection to edit your collection.")
-    
-    @commands.command(aliases=["sc"])
-    async def setcollection(self, ctx: commands.Context, name:str, slot: int, card_id: str = None):
-        """Sets a photocard in the given slot [1 to 6] as your collection. Card can be identified by its ID or given tag.
-        
-        **Examples:**
-        @prefix@setcollection IU 1 01
-        @prefix@sc IU 2 04
-        """
+        await func.update_user(interaction.user.id, {"$set": {f"collections.{name}": [None] * 6}})
+        await interaction.response.send_message(content=f"{interaction.user.mention} collection successfully created with the name `{name.title()}`. You can now use /setcollection to edit your collection.")
+
+    @app_commands.command(name="setcollection", description="Sets a photocard in a collection slot [1-6]. Card can be ID or tag.")
+    @app_commands.describe(name="The collection name", slot="The slot number (1-6)", card_id="The card ID or tag (omit to clear the slot)")
+    async def setcollection(self, interaction: discord.Interaction, name: str, slot: int, card_id: str = None):
         if not (1 <= slot <= 6):
-            return await ctx.reply(content=f"{ctx.author.mention} the slot must be within `the range of 1 to 6`.")
+            return await interaction.response.send_message(content=f"{interaction.user.mention} the slot must be within `the range of 1 to 6`.")
         
         name = name.lower()
-        user = await func.get_user(ctx.author.id)
+        user = await func.get_user(interaction.user.id)
         if not user.get("collections", {}).get(name):
-            return await ctx.reply(content=f"{ctx.author.mention} no collection with the name `{name}` was found.")
+            return await interaction.response.send_message(content=f"{interaction.user.mention} no collection with the name `{name}` was found.")
         
         card = None
         if card_id:
             card = iufi.CardPool.get_card(card_id)
             if not card:
-                return await ctx.reply("The card was not found. Please try again.")
+                return await interaction.response.send_message("The card was not found. Please try again.")
 
-            if card.owner_id != ctx.author.id:
-                return await ctx.reply("You are not the owner of this card.")
+            if card.owner_id != interaction.user.id:
+                return await interaction.response.send_message("You are not the owner of this card.")
 
-        await func.update_user(ctx.author.id, {"$set": {f"collections.{name}.{slot - 1}": card.id if card_id else None}})
+        await func.update_user(interaction.user.id, {"$set": {f"collections.{name}.{slot - 1}": card.id if card_id else None}})
 
-        func.logger.info(f"User {ctx.author.name}({ctx.author.id}) added card [{card.id if card else None}] to [{name}] collection in slot [{slot}].")
+        func.logger.info(f"User {interaction.user.name}({interaction.user.id}) added card [{card.id if card else None}] to [{name}] collection in slot [{slot}].")
 
         embed = discord.Embed(title="💕 Collection Set", color=discord.Color.random())
         embed.description = f"```📮 {name.title()}\n🆔 {card.id.zfill(5) if card else None}\n🎰 {slot}\n```"
-        await ctx.reply(embed=embed)
+        await interaction.response.send_message(embed=embed)
 
-    @commands.command(aliases=["scl"])
-    async def setcollectionlast(self, ctx: commands.Context, name:str, slot: int):
-        """Sets your last photocard as a collection in the given slot [1 to 6].
-
-        **Examples:**
-        @prefix@setcollectionlast IU 1
-        @prefix@scl IU 2
-        """
+    @app_commands.command(name="setcollectionlast", description="Sets your last photocard as a collection in the given slot [1 to 6].")
+    @app_commands.describe(name="The collection name", slot="The slot number (1-6)")
+    async def setcollectionlast(self, interaction: discord.Interaction, name: str, slot: int):
         if not (1 <= slot <= 6):
-            return await ctx.reply(content=f"{ctx.author.mention} the slot must be within `the range of 1 to 6`.")
+            return await interaction.response.send_message(content=f"{interaction.user.mention} the slot must be within `the range of 1 to 6`.")
         
         name = name.lower()
-        user = await func.get_user(ctx.author.id)
+        user = await func.get_user(interaction.user.id)
         if not user.get("collections", {}).get(name):
-            return await ctx.reply(content=f"{ctx.author.mention} no collection with the name `{name}` was found.")
+            return await interaction.response.send_message(content=f"{interaction.user.mention} no collection with the name `{name}` was found.")
         
         if not user["cards"]:
-            return await ctx.reply(f"**{ctx.author.mention} you have no photocards.**", delete_after=5)
+            return await interaction.response.send_message(f"**{interaction.user.mention} you have no photocards.**", ephemeral=True)
         
         card_id = user["cards"][-1]
         card = iufi.CardPool.get_card(card_id)
         if not card:
-            return await ctx.reply("The card was not found. Please try again.")
+            return await interaction.response.send_message("The card was not found. Please try again.")
 
-        if card.owner_id != ctx.author.id:
-            return await ctx.reply("You are not the owner of this card.")
+        if card.owner_id != interaction.user.id:
+            return await interaction.response.send_message("You are not the owner of this card.")
 
-        await func.update_user(ctx.author.id, {"$set": {f"collections.{name}.{slot - 1}": card.id}})
+        await func.update_user(interaction.user.id, {"$set": {f"collections.{name}.{slot - 1}": card.id}})
 
-        func.logger.info(f"User {ctx.author.name}({ctx.author.id}) added card [{card.id}] to [{name}] collection in slot [{slot}].")
+        func.logger.info(f"User {interaction.user.name}({interaction.user.id}) added card [{card.id}] to [{name}] collection in slot [{slot}].")
 
         embed = discord.Embed(title="💕 Collection Set", color=discord.Color.random())
         embed.description = f"```📮 {name.title()}\n{card.display_id}\n🎰 {slot}\n```"
-        await ctx.reply(embed=embed)
+        await interaction.response.send_message(embed=embed)
 
-    @commands.command(aliases=["rc"])
-    async def removecollection(self, ctx: commands.Context, name: str):
-        """Removes the collection.
-
-        **Examples:**
-        @prefix@removecollection IU
-        @prefix@rc IU
-        """
-        user = await func.get_user(ctx.author.id)
+    @app_commands.command(name="removecollection", description="Removes a collection.")
+    @app_commands.describe(name="The collection name")
+    async def removecollection(self, interaction: discord.Interaction, name: str):
+        user = await func.get_user(interaction.user.id)
 
         name = name.lower()
         if not user.get("collections", {}).get(name):
-            return await ctx.reply(content=f"{ctx.author.mention} no collection with the name `{name}` was found.")
+            return await interaction.response.send_message(content=f"{interaction.user.mention} no collection with the name `{name}` was found.")
         
-        await func.update_user(ctx.author.id, {"$unset": {f"collections.{name}": ""}})
+        await func.update_user(interaction.user.id, {"$unset": {f"collections.{name}": ""}})
 
-        func.logger.info(f"User {ctx.author.name}({ctx.author.id}) removed [{name}] collection.")
+        func.logger.info(f"User {interaction.user.name}({interaction.user.id}) removed [{name}] collection.")
 
-        await ctx.reply(content=f"{ctx.author.mention}, the collection with the name `{name}` has been successfully removed.")
+        await interaction.response.send_message(content=f"{interaction.user.mention}, the collection with the name `{name}` has been successfully removed.")
 
-    @commands.command(aliases=["f"])
-    async def showcollection(self, ctx: commands.Context, member: discord.Member = None):
-        """Shows the given member's collection photocards. If not specified, shows your own.
-
-        **Examples:**
-        @prefix@showcollection
-        @prefix@f IU
-        """
+    @app_commands.command(name="showcollection", description="Shows the given member's collection photocards. If not specified, shows your own.")
+    @app_commands.describe(member="The member to view (defaults to yourself)")
+    async def showcollection(self, interaction: discord.Interaction, member: discord.Member = None):
         if not member:
-            member = ctx.author
+            member = interaction.user
 
         user = await func.get_user(member.id)
         if len(user.get("collections", {})) == 0:
-            return await ctx.reply(content=f"{member.mention} don't have any collections.", allowed_mentions=discord.AllowedMentions.none())
+            return await interaction.response.send_message(content=f"{member.mention} don't have any collections.", allowed_mentions=discord.AllowedMentions.none())
 
-        view = CollectionView(ctx, member, user.get("collections"))
+        view = CollectionView(interaction, member, user.get("collections"))
         await view.send_msg()
 
-    @commands.command(aliases=["d"])
-    @commands.cooldown(1, 5, commands.BucketType.user)
-    async def daily(self, ctx: commands.Context):
-        """Claims your daily reward.
-
-        **Examples:**
-        @prefix@daily
-        @prefix@d
-        """
-        user = await func.get_user(ctx.author.id)
+    @app_commands.command(name="daily", description="Claims your daily reward.")
+    @app_commands.checks.cooldown(1, 5, key=lambda i: i.user.id)
+    async def daily(self, interaction: discord.Interaction):
+        user = await func.get_user(interaction.user.id)
 
         end_time: Optional[float] = user.get("cooldown", {}).get("daily", None)
         retry = func.cal_retry_time(end_time)
         if retry:
-            return await ctx.reply(f"{ctx.author.mention} your next daily is in {retry}", delete_after=5)
+            return await interaction.response.send_message(f"{interaction.user.mention} your next daily is in {retry}", ephemeral=True)
 
         current_time = time.time()
         claimed = user.get("claimed", 0) + 1
@@ -356,13 +305,13 @@ class Profile(commands.Cog):
         reward_amount = base_amount * cycle_multiplier
         reward = {reward_key: reward_amount}
 
-        await func.update_user(ctx.author.id, {
+        await func.update_user(interaction.user.id, {
             "$set": {"claimed": claimed, "cooldown.daily": current_time + func.settings.COOLDOWN_BASE["daily"][1]},
             "$inc": reward
         })
 
         func.logger.info(
-            f"User {ctx.author.name}({ctx.author.id}) claimed their daily reward. "
+            f"User {interaction.user.name}({interaction.user.id}) claimed their daily reward. "
             f"Strike: [{claimed}] Cycle: [{cycle_index + 1}] Multiplier: [x{cycle_multiplier}]"
         )
 
@@ -375,7 +324,7 @@ class Profile(commands.Cog):
             f"Daily reward claimed! + {reward_emoji} {reward_amount}\n"
             f"{streak_status}"
         )
-        embed.set_thumbnail(url=ctx.author.display_avatar.url)
+        embed.set_thumbnail(url=interaction.user.display_avatar.url)
 
         value = "```"
         progress_in_cycle = day_in_cycle
@@ -388,35 +337,25 @@ class Profile(commands.Cog):
                 progress_in_cycle -= 1
             value += f"  {(reward[2] * cycle_multiplier):>4} {reward[0]} " + ("✅" if day_in_cycle >= ((index + 1) * 5) else "⬛") + "\n"
         embed.add_field(name="Streak Rewards", value=value + "```")
-        await ctx.reply(embed=embed)
+        await interaction.response.send_message(embed=embed)
 
-    @commands.command(aliases=["v"])
-    async def view(self, ctx: commands.Context):
-        """View your photocard collection.
-
-        **Examples:**
-        @prefix@view
-        @prefix@v
-        """
-        user = await func.get_user(ctx.author.id)
+    @app_commands.command(name="view", description="View your photocard collection.")
+    @app_commands.checks.cooldown(1, 5, key=lambda i: i.user.id)
+    async def view(self, interaction: discord.Interaction):
+        user = await func.get_user(interaction.user.id)
 
         if not user["cards"]:
-            return await ctx.reply(f"**{ctx.author.mention} you have no photocards.**", delete_after=5)
+            return await interaction.response.send_message(f"**{interaction.user.mention} you have no photocards.**", ephemeral=True)
 
-        view = PhotoCardView(ctx.author, user)
+        view = PhotoCardView(interaction.user, user)
         embed, _ = await view.build_embed()
-        view.message = await ctx.reply(embed=embed, view=view)
+        await interaction.response.send_message(embed=embed, view=view)
+        view.message = await interaction.original_response()
 
-    @commands.command(aliases=["in"])
-    async def inventory(self, ctx: commands.Context):
-        """Shows the items that you own.
-        
-        **Examples:**
-        @prefix@inventory
-        @prefix@in
-        """
-        user = await func.get_user(ctx.author.id)
-        embed = discord.Embed(title=f"🎒 {ctx.author.display_name}'s Inventory", color=0x5cb045)
+    @app_commands.command(name="inventory", description="Shows the items that you own.")
+    async def inventory(self, interaction: discord.Interaction):
+        user = await func.get_user(interaction.user.id)
+        embed = discord.Embed(title=f"🎒 {interaction.user.display_name}'s Inventory", color=0x5cb045)
         embed.description = f"```{'🍬 Starcandies':<20} x{user['candies']}\n"
 
         for tier, count in user.get("roll").items():
@@ -433,23 +372,17 @@ class Profile(commands.Cog):
         ) if sum(potions_data.values()) else "Potion not found!")
 
         embed.description += f"🍶 Potions:\n{potions}```"
-        embed.set_thumbnail(url=ctx.author.display_avatar.url)
-        await ctx.reply(embed=embed)
+        embed.set_thumbnail(url=interaction.user.display_avatar.url)
+        await interaction.response.send_message(embed=embed)
 
-    @commands.command(aliases=["qu"])
-    async def quests(self, ctx: commands.Context):
-        """Shows the daily quests
-
-        **Examples:**
-        @prefix@quests
-        @prefix@qu
-        """
-        user = await func.get_user(ctx.author.id)
+    @app_commands.command(name="quests", description="Shows your daily/weekly quest progress.")
+    async def quests(self, interaction: discord.Interaction):
+        user = await func.get_user(interaction.user.id)
 
         embed = discord.Embed(color=discord.Color.random())
         query = func.update_quest_progress(user, "", progress=0, query={})
         if query:
-            await func.update_user(ctx.author.id, query)
+            await func.update_user(interaction.user.id, query)
 
         def format_quest_reward(reward: list[Any]) -> str:
             emoji, reward_key, reward_amount = reward
@@ -489,20 +422,15 @@ class Profile(commands.Cog):
             
             embed.add_field(name=f"{quest_type.title()} Quests", value=f"Resets at <t:{reset_time}:t> (<t:{reset_time}:R>)\n\n{details}", inline=False)
 
-        embed.set_thumbnail(url=ctx.author.display_avatar.url)
-        await ctx.reply(embed=embed)
+        embed.set_thumbnail(url=interaction.user.display_avatar.url)
+        await interaction.response.send_message(embed=embed)
 
-    @commands.command(aliases=["wl"])
-    async def wishlist(self, ctx: commands.Context):
-        """Add cards into your wishlist when the card got trade of roll by player you will got a dm from IUFIAdd cards to your wishlist! When a card is traded or rolled by a player, you'll receive a DM from IUFI. After that, the card will be automatically removed from your wishlist.
-
-        **Examples:**
-        @prefix@wishlist
-        @prefix@wl
-        """
-        user = await func.get_user(ctx.author.id)
-        view = WishListView(ctx, user)
-        view.message = await ctx.send(embed=view.build_embed(), view=view)
+    @app_commands.command(name="wishlist", description="Manage your wishlist. You'll get a DM when a wishlisted card is traded or rolled.")
+    async def wishlist(self, interaction: discord.Interaction):
+        user = await func.get_user(interaction.user.id)
+        view = WishListView(interaction, user)
+        await interaction.response.send_message(embed=view.build_embed(), view=view)
+        view.message = await interaction.original_response()
 
 async def setup(bot: commands.Bot) -> None:
     await bot.add_cog(Profile(bot))

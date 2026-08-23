@@ -334,10 +334,11 @@ class EmojiQuizView(discord.ui.View):
             await self.end_game()
 
 class EmojiResetAttemptView(discord.ui.View):
-    def __init__(self, ctx: commands.Context, user_data: dict, price: int, timeout: float = 20):
+    def __init__(self, interaction: discord.Interaction, user_data: dict, price: int, timeout: float = 20):
         super().__init__(timeout=timeout)
 
-        self.ctx: commands.Context = ctx
+        self.author: discord.Member = interaction.user
+        self.bot: commands.Bot = interaction.client
         self.data: dict = user_data
         self.price: int = price
         self.response: discord.Message = None
@@ -352,7 +353,7 @@ class EmojiResetAttemptView(discord.ui.View):
             pass
 
     async def interaction_check(self, interaction: discord.Interaction) -> bool:
-        return interaction.user == self.ctx.author
+        return interaction.user == self.author
 
     @discord.ui.button(label="Buy", emoji="🛍️", style=discord.ButtonStyle.green)
     async def buy(self, interaction: discord.Interaction, button: discord.ui.Button) -> None:
@@ -360,7 +361,7 @@ class EmojiResetAttemptView(discord.ui.View):
             await interaction.response.send_message("You do not have enough candies to initiate the reset!", ephemeral=True)
             return await self.on_timeout()
 
-        await func.update_user(self.ctx.author.id, {
+        await func.update_user(self.author.id, {
             "$set": {"cooldown.quiz_game": 0},
             "$inc": {"candies": -self.price}
         })
@@ -372,4 +373,5 @@ class EmojiResetAttemptView(discord.ui.View):
                 pass
 
         # invoke emojiquiz command (not the normal quiz)
-        await self.ctx.invoke(self.ctx.bot.get_command("emojiquiz"))
+        gameplay_cog = self.bot.get_cog("Gameplay")
+        await gameplay_cog.emojiquiz.callback(gameplay_cog, interaction, None)

@@ -2,8 +2,6 @@
 import discord, iufi, time
 import functions as func
 
-from discord.ext import commands
-
 class CaptionModal(discord.ui.Modal):
     def __init__(self, view: discord.ui.View) -> None:
         super().__init__(title="Add Caption")
@@ -132,16 +130,16 @@ class CollectionDropdown(discord.ui.Select):
 class CollectionView(discord.ui.View):
     def __init__(
             self,
-            ctx: commands.Context,
+            interaction: discord.Interaction,
             member: discord.Member,
             collections: dict[str, list[str]],
             timeout: float | None = 60
         ):
         super().__init__(timeout=timeout)
         
-        self.ctx: commands.Context = ctx
+        self.interaction: discord.Interaction = interaction
         self.member: discord.Member = member
-        self.is_author: bool = ctx.author == member
+        self.is_author: bool = interaction.user == member
         self.collections: dict[str, list[str | None]] = collections
         self.sel_collection: str = list(self.collections.keys())[0]
         self.cards: list[iufi.Card | None] = []
@@ -163,7 +161,7 @@ class CollectionView(discord.ui.View):
         await self.message.edit(view=self)
 
     async def interaction_check(self, interaction: discord.Interaction) -> bool:
-        return self.ctx.author == interaction.user
+        return self.interaction.user == interaction.user
     
     async def send_msg(self, size_rate: float = iufi.objects.SIZE_RATE) -> None:
         self.cards.clear()
@@ -188,7 +186,12 @@ class CollectionView(discord.ui.View):
 
         if self.message:
             return await self.message.edit(attachments=[image_file], embed=embed, view=self)
-        self.message = await self.ctx.reply(file=image_file, embed=embed, view=self)
+
+        if self.interaction.response.is_done():
+            self.message = await self.interaction.followup.send(file=image_file, embed=embed, view=self)
+        else:
+            await self.interaction.response.send_message(file=image_file, embed=embed, view=self)
+            self.message = await self.interaction.original_response()
     
     def is_gif(self) -> bool:
         return any(card.is_gif for card in self.cards)
