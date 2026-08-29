@@ -9,3 +9,4 @@ questions.json
 logs
 .venv
 /venv
+/data

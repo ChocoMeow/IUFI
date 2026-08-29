@@ -1,12 +1,19 @@
 import discord
 import functions as func
 
-SHOP_BASE: list[tuple[str, str, int]] = [
-    (func.settings.TIERS_BASE.get("rare")[0], "roll.rare", 30),
-    (func.settings.TIERS_BASE.get("epic")[0], "roll.epic", 100),
-    (func.settings.TIERS_BASE.get("legendary")[0], "roll.legendary", 250),
-    ("📦", "inventory.slots", 100)  # 1 extra card slot per purchase; base price is 100
-]
+def _build_shop_base() -> list[tuple[str, str, int]]:
+    items = [
+        (func.settings.TIERS_BASE.get("rare")[0], "roll.rare", 30),
+        (func.settings.TIERS_BASE.get("epic")[0], "roll.epic", 100),
+        (func.settings.TIERS_BASE.get("legendary")[0], "roll.legendary", 250),
+        ("📦", "inventory.slots", 100),  # 1 extra card slot per purchase; base price is 100
+    ]
+    bp_settings = func.get_battlepass_settings()
+    if bp_settings.get("enabled", False):
+        items.append(("🎫", "battlepass.pass", int(bp_settings.get("shop_price_candies", 0))))
+    return items
+
+SHOP_BASE: list[tuple[str, str, int]] = _build_shop_base()
 
 class QuantityModal(discord.ui.Modal):
     def __init__(self, *args, **kwargs) -> None:
@@ -37,7 +44,11 @@ class QuantityModal(discord.ui.Modal):
 class Dropdown(discord.ui.Select):
     def __init__(self) -> None:
         options = [
-            discord.SelectOption(label=f"{item[1].split('.')[1].title()} {item[1].split('.')[0].title()}", emoji=item[0])
+            discord.SelectOption(
+                label="Battle Pass" if item[1] == "battlepass.pass" else f"{item[1].split('.')[1].title()} {item[1].split('.')[0].title()}",
+                emoji=item[0],
+                value=item[1]
+            )
             for item in SHOP_BASE
         ]
 
@@ -48,9 +59,29 @@ class Dropdown(discord.ui.Select):
         )
 
     async def callback(self, interaction: discord.Interaction) -> None:
-        selected_item = self.values[0].split(" ")[0]
+        selected_item = self.values[0]
         for item in SHOP_BASE:
-            if item[1].split(".")[1] == selected_item.lower():
+            if item[1] == selected_item:
+                if item[1] == "battlepass.pass":
+                    user = await func.get_user(interaction.user.id)
+                    state = func.get_battlepass_state(user)
+                    if state.get("is_active") or state.get("is_purchased"):
+                        return await interaction.response.send_message("You already own this Battle Pass.", ephemeral=True)
+
+                    price = item[2]
+                    if user.get("candies", 0) < price:
+                        return await interaction.response.send_message(f"You don't have enough candies! You need `{price - user.get('candies', 0)}` more candies.", ephemeral=True)
+
+                    query = func.update_quest_progress(user, "BUY_ITEM", progress=1, query={
+                        "$inc": {"candies": -price},
+                        "$set": {"battlepass.is_active": True, "battlepass.is_purchased": True}
+                    })
+                    await func.update_user(interaction.user.id, query)
+
+                    embed = discord.Embed(title="🛒 Shop Purchase", color=discord.Color.random())
+                    embed.description = f"```🎫 Battle Pass\n🍬 - {price}```"
+                    return await interaction.response.send_message(embed=embed)
+
                 modal = QuantityModal()
                 await interaction.response.send_modal(modal)
                 await modal.wait()
@@ -134,6 +165,10 @@ class ShopView(discord.ui.View):
                 next_price = item[2] + prev_purchases * 10
                 display_price = f"{next_price} (per slot)"
                 embed.description += f"{item[0]} {(item[1].split('.')[1].title() + ' ' + item[1].split('.')[0].title()).upper():<20} {display_price:>10} 🍬\n"
+            elif item[1] == "battlepass.pass":
+                state = func.get_battlepass_state(user)
+                status = "OWNED" if state.get("is_active") or state.get("is_purchased") else f"{item[2]} 🍬"
+                embed.description += f"{item[0]} {'BATTLE PASS':<20} {status:>10}\n"
             else:
                 embed.description += f"{item[0]} {(item[1].split('.')[1].title() + ' ' + item[1].split('.')[0].title()).upper():<20} {item[2]:>3} 🍬\n"
         embed.description += "```"

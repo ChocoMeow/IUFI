@@ -18,6 +18,43 @@ from views import (
 from views.emoji_quiz import EmojiQuizView, EmojiResetAttemptView, EMOJI_QUIZ_SETTINGS
 from views.pvp import ChallengeView, get_pvp_settings, PvPMatch
 
+class BattlepassRewardsView(discord.ui.View):
+    def __init__(self, author: discord.abc.User, pages: list[discord.Embed], timeout: float = 120):
+        super().__init__(timeout=timeout)
+        self.author = author
+        self.pages = pages
+        self.current_page = 0
+        self.message = None
+        self._update_buttons()
+
+    def _update_buttons(self):
+        self.previous_button.disabled = self.current_page == 0
+        self.next_button.disabled = self.current_page >= len(self.pages) - 1
+
+    async def interaction_check(self, interaction: discord.Interaction) -> bool:
+        if interaction.user != self.author:
+            await interaction.response.send_message("Only the player who opened this Battle Pass can change pages.", ephemeral=True)
+            return False
+        return True
+
+    async def on_timeout(self):
+        for child in self.children:
+            child.disabled = True
+        if self.message:
+            await self.message.edit(view=self)
+
+    @discord.ui.button(label="Previous", style=discord.ButtonStyle.secondary)
+    async def previous_button(self, interaction: discord.Interaction, button: discord.ui.Button):
+        self.current_page -= 1
+        self._update_buttons()
+        await interaction.response.edit_message(embed=self.pages[self.current_page], view=self)
+
+    @discord.ui.button(label="Next", style=discord.ButtonStyle.primary)
+    async def next_button(self, interaction: discord.Interaction, button: discord.ui.Button):
+        self.current_page += 1
+        self._update_buttons()
+        await interaction.response.edit_message(embed=self.pages[self.current_page], view=self)
+
 class Gameplay(commands.Cog):
     def __init__(self, bot: commands.Bot) -> None:
         self.bot = bot
@@ -269,14 +306,17 @@ class Gameplay(commands.Cog):
             lines.append(f"{marker} L{reward_level:>3}: {reward_text}")
 
         page_size = 15
+        pages = []
         for start in range(0, len(lines), page_size):
             page = lines[start:start + page_size]
-            page_embed = discord.Embed(
+            pages.append(discord.Embed(
                 title=f"Battle Pass Rewards ({start + 1}-{min(start + page_size, len(lines))})",
                 description="```\n" + "\n".join(page) + "\n```",
                 color=discord.Color.random()
-            )
-            await interaction.followup.send(embed=page_embed)
+            ))
+
+        rewards_view = BattlepassRewardsView(interaction.user, pages)
+        rewards_view.message = await interaction.followup.send(embed=pages[0], view=rewards_view)
 
     @app_commands.command(name="emojiquiz", description="Guess IU song or drama by emoji(s).")
     @app_commands.describe(category="Restrict questions to 'song' or 'drama'")

@@ -78,11 +78,11 @@ class Settings:
         self.PVP_REWARDS_ENABLED: bool = False
         self.GIVE_REWARD_CARD: bool = False
         self.MONTHLY_LEADERBOARD_ROLE: int = 0
+        self.BATTLEPASS_SETTINGS: Dict[str, Any] = {}
         # Newly added defaults so callers can reference them directly without getattr
         self.PVP_SETTINGS: Dict[str, Any] = {}
         self.REWARD_CARD_PROBABILITIES: Dict[str, Any] = {}
         self.PERFECT_CROWN_TREASURY_CARDS: Dict[str, List[str]] = {}
-        self.BATTLEPASS_SETTINGS: Dict[str, Any] = {}
 
     def load(self):
         settings = open_json("settings.json")
@@ -119,11 +119,14 @@ class Settings:
         self.PVP_REWARDS_ENABLED = settings.get("PVP_REWARDS_ENABLED", True)
         self.GIVE_REWARD_CARD = settings.get("GIVE_REWARD_CARD", True)
         self.MONTHLY_LEADERBOARD_ROLE = settings.get("MONTHLY_LEADERBOARD_ROLE", 0)
+        self.BATTLEPASS_SETTINGS = settings.get("BATTLEPASS_SETTINGS", {})
         self.PVP_SETTINGS = settings.get("PVP_SETTINGS", {})
         self.REWARD_CARD_PROBABILITIES = settings.get("REWARD_CARD_PROBABILITIES", {})
         self.PERFECT_CROWN_TREASURY_CARDS = settings.get("PERFECT_CROWN_TREASURY_CARDS", {})
-        self.BATTLEPASS_SETTINGS = settings.get("BATTLEPASS_SETTINGS", {})
 
+
+# Runtime globals used across the bot
+# Keep these in place so the project still loads with the old slash/message command design.
 tokens: TOKEN = TOKEN()
 settings: Settings = Settings()
 logger: logging.Logger = logging.getLogger("iufi")
@@ -152,7 +155,7 @@ def open_json(path: str) -> dict:
     try:
         with open(os.path.join(ROOT_DIR, path), encoding="utf8") as json_file:
             return json.load(json_file)
-    except:
+    except Exception:
         return {}
 
 def cal_retry_time(end_time: float, default: str = None) -> str | None:
@@ -160,35 +163,22 @@ def cal_retry_time(end_time: float, default: str = None) -> str | None:
         return default
 
     retry: float = int(end_time - current_time)
-
     minutes, seconds = divmod(retry, 60)
     hours, minutes = divmod(minutes, 60)
 
     return (f"{hours}h " if hours > 0 else "") + f"{minutes}m {seconds}s"
 
 def cal_last_online_time(start_time: float, default: str = "") -> str | None:
-    """
-    Return a compact two-unit representation of how long ago `start_time` was.
-
-    Formats:
-      - If >= 1 day: "Xd Yh" (days and hours)
-      - Else: "Xh Ym" (hours and minutes)
-
-    If `start_time` is falsy or in the future, returns `default`.
-    """
     if not start_time or start_time > (current_time := time.time()):
         return default
 
-    # total seconds elapsed
     total_seconds = int(current_time - start_time)
 
-    # If duration is at least 1 day, show days and hours
     days = total_seconds // 86_400
     if days >= 1:
         hours = (total_seconds % 86_400) // 3600
         return f"{days}d {hours}h"
 
-    # Otherwise show hours and minutes
     hours = total_seconds // 3600
     minutes = (total_seconds % 3600) // 60
     return f"{hours}h {minutes}m"
@@ -201,159 +191,6 @@ def calculate_level(exp: int) -> tuple[int, int]:
         level += 1
 
     return level, exp
-
-def get_battlepass_settings() -> Dict[str, Any]:
-    return settings.BATTLEPASS_SETTINGS or {}
-
-def battlepass_enabled() -> bool:
-    return bool(get_battlepass_settings().get("enabled", False))
-
-def get_battlepass_default_state() -> Dict[str, Any]:
-    bp_settings = get_battlepass_settings()
-    return {
-        "season_id": bp_settings.get("season_id", "default"),
-        "is_active": False,
-        "is_purchased": False,
-        "xp": 0,
-        "claimed_rewards": [],
-        "claimed_one_time": {
-            "mg2_click_plus_2": False,
-            "mg3_click_plus_2": False
-        }
-    }
-
-def get_battlepass_state(user: Dict[str, Any]) -> Dict[str, Any]:
-    state = user.get("battlepass")
-    default_state = get_battlepass_default_state()
-
-    if not isinstance(state, dict):
-        return copy.deepcopy(default_state)
-
-    merged_state = copy.deepcopy(default_state)
-    merged_state.update(state)
-
-    # Keep one-time claim structure stable even if legacy data exists.
-    claimed_one_time = merged_state.get("claimed_one_time", {})
-    if not isinstance(claimed_one_time, dict):
-        claimed_one_time = {}
-    base_one_time = default_state["claimed_one_time"]
-    merged_state["claimed_one_time"] = {
-        "mg2_click_plus_2": bool(claimed_one_time.get("mg2_click_plus_2", base_one_time["mg2_click_plus_2"])),
-        "mg3_click_plus_2": bool(claimed_one_time.get("mg3_click_plus_2", base_one_time["mg3_click_plus_2"]))
-    }
-
-    if merged_state.get("season_id") != default_state["season_id"]:
-        return copy.deepcopy(default_state)
-
-    return merged_state
-
-def with_battlepass_state_synced(user: Dict[str, Any], query: Dict[str, Any] = None) -> tuple[Dict[str, Any], Dict[str, Any]]:
-    if query is None:
-        query = {}
-
-    synced_state = get_battlepass_state(user)
-    if user.get("battlepass") != synced_state:
-        query.setdefault("$set", {})["battlepass"] = synced_state
-
-    return synced_state, query
-
-def get_battlepass_xp_for_action(action: str) -> int:
-    xp_map = get_battlepass_settings().get("xp_per_action", {})
-    try:
-        return int(xp_map.get(action, 0))
-    except Exception:
-        return 0
-
-def add_battlepass_xp(user: Dict[str, Any], amount: int, *, query: Dict[str, Any] = None) -> Dict[str, Any]:
-    if query is None:
-        query = {}
-
-    if not battlepass_enabled():
-        return query
-
-    try:
-        amount = int(amount)
-    except Exception:
-        return query
-
-    if amount <= 0:
-        return query
-
-    state, query = with_battlepass_state_synced(user, query)
-    if not state.get("is_active", False):
-        return query
-
-    bp_settings = get_battlepass_settings()
-    xp_per_level = max(1, int(bp_settings.get("xp_per_level", 150)))
-    max_level = max(1, int(bp_settings.get("max_level", 100)))
-    max_total_xp = xp_per_level * max_level
-
-    pending_inc = int(query.get("$inc", {}).get("battlepass.xp", 0))
-    current_xp = max(0, int(state.get("xp", 0))) + pending_inc
-    available_room = max_total_xp - current_xp
-    if available_room <= 0:
-        return query
-
-    grant = min(amount, available_room)
-    query.setdefault("$inc", {})["battlepass.xp"] = query["$inc"].get("battlepass.xp", 0) + grant
-    return query
-
-def calculate_battlepass_level(xp: int) -> tuple[int, int, int]:
-    bp_settings = get_battlepass_settings()
-    xp_per_level = max(1, int(bp_settings.get("xp_per_level", 150)))
-    max_level = max(1, int(bp_settings.get("max_level", 100)))
-    max_total_xp = xp_per_level * max_level
-
-    xp = min(max(0, int(xp)), max_total_xp)
-    level = min(max_level, xp // xp_per_level)
-
-    if level >= max_level:
-        return level, xp_per_level, 0
-
-    in_level_xp = xp % xp_per_level
-    return level, in_level_xp, xp_per_level - in_level_xp
-
-def get_battlepass_rewards_for_level(level: int) -> List[Dict[str, Any]]:
-    bp_settings = get_battlepass_settings()
-    reward_table = bp_settings.get("reward_table", {})
-
-    milestones = reward_table.get("milestones", {})
-    if str(level) in milestones:
-        return milestones.get(str(level), [])
-
-    filler = reward_table.get("filler", {})
-    if isinstance(filler.get("rewards"), list):
-        return filler.get("rewards", [])
-
-    # Use one filler progression for all non-milestone levels.
-    base = int(filler.get("starcandies_base", filler.get("even_starcandies_base", 50)))
-    step = int(filler.get("starcandies_step_per_10_levels", filler.get("even_starcandies_step_per_10_levels", 10)))
-    cap = int(filler.get("starcandies_cap", filler.get("even_starcandies_cap", 120)))
-    amount = min(cap, base + ((max(1, level) - 1) // 10) * step)
-    return [{"type": "starcandies", "amount": amount}]
-
-def format_battlepass_reward(reward: Dict[str, Any]) -> str:
-    reward_type = reward.get("type", "unknown")
-    amount = reward.get("amount", 1)
-
-    if reward_type == "starcandies":
-        return f"🍬 Starcandies x{amount}"
-    if reward_type == "potion":
-        potion_key = reward.get("key", "potions.speed_i")
-        potion_name = potion_key.split(".", 1)[1].replace("_", " ").upper() if "." in potion_key else potion_key.upper()
-        return f"🧪 {potion_name} x{amount}"
-    if reward_type == "free_rare":
-        return "🌸 Free Rare"
-    if reward_type == "free_epic":
-        return "💎 Free Epic"
-    if reward_type == "free_legend":
-        return "👑 Free Legend"
-    if reward_type == "mg2_click_plus_2":
-        return "🎯 MG2 +2 Click (one-time)"
-    if reward_type == "mg3_click_plus_2":
-        return "🎯 MG3 +2 Click (one-time)"
-
-    return f"{reward_type} x{amount}"
 
 def convert_seconds(seconds: float) -> str:
     if seconds >= 60:
@@ -446,6 +283,158 @@ def match_string(input_string: str, word_list: List[str]) -> str:
         if word.startswith(input_string):
             return word
     return None
+
+def get_battlepass_settings() -> Dict[str, Any]:
+    return settings.BATTLEPASS_SETTINGS or {}
+
+def battlepass_enabled() -> bool:
+    return bool(get_battlepass_settings().get("enabled", False))
+
+def get_battlepass_default_state() -> Dict[str, Any]:
+    bp_settings = get_battlepass_settings()
+    return {
+        "season_id": bp_settings.get("season_id", "default"),
+        "is_active": False,
+        "is_purchased": False,
+        "xp": 0,
+        "claimed_rewards": [],
+        "claimed_one_time": {
+            "mg2_click_plus_2": False,
+            "mg3_click_plus_2": False
+        }
+    }
+
+def get_battlepass_state(user: Dict[str, Any]) -> Dict[str, Any]:
+    state = user.get("battlepass")
+    default_state = get_battlepass_default_state()
+
+    if not isinstance(state, dict):
+        return copy.deepcopy(default_state)
+
+    merged_state = copy.deepcopy(default_state)
+    merged_state.update(state)
+
+    claimed_one_time = merged_state.get("claimed_one_time", {})
+    if not isinstance(claimed_one_time, dict):
+        claimed_one_time = {}
+    base_one_time = default_state["claimed_one_time"]
+    merged_state["claimed_one_time"] = {
+        "mg2_click_plus_2": bool(claimed_one_time.get("mg2_click_plus_2", base_one_time["mg2_click_plus_2"])),
+        "mg3_click_plus_2": bool(claimed_one_time.get("mg3_click_plus_2", base_one_time["mg3_click_plus_2"]))
+    }
+
+    if merged_state.get("season_id") != default_state["season_id"]:
+        return copy.deepcopy(default_state)
+
+    return merged_state
+
+def with_battlepass_state_synced(user: Dict[str, Any], query: Dict[str, Any] = None) -> tuple[Dict[str, Any], Dict[str, Any]]:
+    if query is None:
+        query = {}
+
+    synced_state = get_battlepass_state(user)
+    if user.get("battlepass") != synced_state:
+        query.setdefault("$set", {})["battlepass"] = synced_state
+
+    return synced_state, query
+
+def get_battlepass_xp_for_action(action: str) -> int:
+    xp_map = get_battlepass_settings().get("xp_per_action", {})
+    try:
+        return int(xp_map.get(action, 0))
+    except Exception:
+        return 0
+
+def add_battlepass_xp(user: Dict[str, Any], amount: int, *, query: Dict[str, Any] = None) -> Dict[str, Any]:
+    if query is None:
+        query = {}
+
+    if not battlepass_enabled():
+        return query
+
+    try:
+        amount = int(amount)
+    except Exception:
+        return query
+
+    if amount <= 0:
+        return query
+
+    state, query = with_battlepass_state_synced(user, query)
+    if not state.get("is_active", False):
+        return query
+
+    bp_settings = get_battlepass_settings()
+    xp_per_level = max(1, int(bp_settings.get("xp_per_level", 150)))
+    max_level = max(1, int(bp_settings.get("max_level", 100)))
+    max_total_xp = xp_per_level * max_level
+
+    pending_inc = int(query.get("$inc", {}).get("battlepass.xp", 0))
+    current_xp = max(0, int(state.get("xp", 0))) + pending_inc
+    available_room = max_total_xp - current_xp
+    if available_room <= 0:
+        return query
+
+    grant = min(amount, available_room)
+    increments = query.setdefault("$inc", {})
+    increments["battlepass.xp"] = increments.get("battlepass.xp", 0) + grant
+    return query
+
+def calculate_battlepass_level(xp: int) -> tuple[int, int, int]:
+    bp_settings = get_battlepass_settings()
+    xp_per_level = max(1, int(bp_settings.get("xp_per_level", 150)))
+    max_level = max(1, int(bp_settings.get("max_level", 100)))
+    max_total_xp = xp_per_level * max_level
+
+    xp = min(max(0, int(xp)), max_total_xp)
+    level = min(max_level, xp // xp_per_level)
+
+    if level >= max_level:
+        return level, xp_per_level, 0
+
+    in_level_xp = xp % xp_per_level
+    return level, in_level_xp, xp_per_level - in_level_xp
+
+def get_battlepass_rewards_for_level(level: int) -> List[Dict[str, Any]]:
+    bp_settings = get_battlepass_settings()
+    reward_table = bp_settings.get("reward_table", {})
+
+    milestones = reward_table.get("milestones", {})
+    if str(level) in milestones:
+        return milestones.get(str(level), [])
+
+    filler = reward_table.get("filler", {})
+    if isinstance(filler.get("rewards"), list):
+        return filler.get("rewards", [])
+
+    base = int(filler.get("starcandies_base", filler.get("even_starcandies_base", 50)))
+    step = int(filler.get("starcandies_step_per_10_levels", filler.get("even_starcandies_step_per_10_levels", 10)))
+    cap = int(filler.get("starcandies_cap", filler.get("even_starcandies_cap", 120)))
+    amount = min(cap, base + ((max(1, level) - 1) // 10) * step)
+    return [{"type": "starcandies", "amount": amount}]
+
+def format_battlepass_reward(reward: Dict[str, Any]) -> str:
+    reward_type = reward.get("type", "unknown")
+    amount = reward.get("amount", 1)
+
+    if reward_type == "starcandies":
+        return f"🍬 Starcandies x{amount}"
+    if reward_type == "potion":
+        potion_key = reward.get("key", "potions.speed_i")
+        potion_name = potion_key.split(".", 1)[1].replace("_", " ").upper() if "." in potion_key else potion_key.upper()
+        return f"🧪 {potion_name} x{amount}"
+    if reward_type == "free_rare":
+        return "🌸 Free Rare"
+    if reward_type == "free_epic":
+        return "💎 Free Epic"
+    if reward_type == "free_legend":
+        return "👑 Free Legend"
+    if reward_type == "mg2_click_plus_2":
+        return "🎯 MG2 +2 Click (one-time)"
+    if reward_type == "mg3_click_plus_2":
+        return "🎯 MG3 +2 Click (one-time)"
+
+    return f"{reward_type} x{amount}"
 
 def truncate_string(text: str, length: int = 18) -> str:
     return text[:length - 3] + "..." if len(text) > length else text
@@ -586,11 +575,11 @@ def update_quest_progress(user: Dict[str, Any], completed_quests: Union[str, Lis
 
                         query["$inc"][reward[1]] += random.randint(reward[2][0], reward[2][1]) if isinstance(reward[2], list) else reward[2]
                         query["$inc"]["exp"] += 10
-
-                        if quest_type.lower() == "daily":
-                            query = add_battlepass_xp(user, get_battlepass_xp_for_action("daily_quest"), query=query)
-                        elif quest_type.lower() == "weekly":
-                            query = add_battlepass_xp(user, get_battlepass_xp_for_action("weekly_quest"), query=query)
+                        query = add_battlepass_xp(
+                            user,
+                            get_battlepass_xp_for_action(f"{quest_type}_quest"),
+                            query=query
+                        )
 
     return query
 

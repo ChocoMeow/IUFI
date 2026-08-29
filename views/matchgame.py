@@ -164,6 +164,11 @@ class MatchGame(discord.ui.View):
                 f"{prefix}.click_left": self.click_left
             }
 
+        update_data = func.add_battlepass_xp(
+            user,
+            func.get_battlepass_xp_for_action(f"mg{self._level}"),
+            query=update_data
+        )
         await func.update_user(self.author.id, update_data)
 
         func.logger.info(
