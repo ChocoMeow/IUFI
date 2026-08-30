@@ -14,46 +14,10 @@ from views import (
     QuizView,
     ResetAttemptView,
     QUIZ_SETTINGS,
+    BattlepassView,
 )
 from views.emoji_quiz import EmojiQuizView, EmojiResetAttemptView, EMOJI_QUIZ_SETTINGS
 from views.pvp import ChallengeView, get_pvp_settings, PvPMatch
-
-class BattlepassRewardsView(discord.ui.View):
-    def __init__(self, author: discord.abc.User, pages: list[discord.Embed], timeout: float = 120):
-        super().__init__(timeout=timeout)
-        self.author = author
-        self.pages = pages
-        self.current_page = 0
-        self.message = None
-        self._update_buttons()
-
-    def _update_buttons(self):
-        self.previous_button.disabled = self.current_page == 0
-        self.next_button.disabled = self.current_page >= len(self.pages) - 1
-
-    async def interaction_check(self, interaction: discord.Interaction) -> bool:
-        if interaction.user != self.author:
-            await interaction.response.send_message("Only the player who opened this Battle Pass can change pages.", ephemeral=True)
-            return False
-        return True
-
-    async def on_timeout(self):
-        for child in self.children:
-            child.disabled = True
-        if self.message:
-            await self.message.edit(view=self)
-
-    @discord.ui.button(label="Previous", style=discord.ButtonStyle.secondary)
-    async def previous_button(self, interaction: discord.Interaction, button: discord.ui.Button):
-        self.current_page -= 1
-        self._update_buttons()
-        await interaction.response.edit_message(embed=self.pages[self.current_page], view=self)
-
-    @discord.ui.button(label="Next", style=discord.ButtonStyle.primary)
-    async def next_button(self, interaction: discord.Interaction, button: discord.ui.Button):
-        self.current_page += 1
-        self._update_buttons()
-        await interaction.response.edit_message(embed=self.pages[self.current_page], view=self)
 
 class Gameplay(commands.Cog):
     def __init__(self, bot: commands.Bot) -> None:
@@ -154,7 +118,7 @@ class Gameplay(commands.Cog):
         if (retry := user.get("cooldown", {}).setdefault("match_game", 0)) > time.time():
             return await interaction.response.send_message(f"{interaction.user.mention} your game is <t:{round(retry)}:R>", ephemeral=True)
 
-        view = MatchGame(interaction.user, level)
+        view = MatchGame(interaction.user, level, user=user)
         actived_potions = func.get_potions(user.get("actived_potions", {}), func.settings.POTIONS_BASE)
 
         query = func.update_quest_progress(user, f"PLAY_MATCH_GAME_LVL_{level}", query={"$set": {"cooldown.match_game": time.time() + (view._data.get("cooldown", 0) * (1 - actived_potions.get("speed", 0)))}})
@@ -251,72 +215,14 @@ class Gameplay(commands.Cog):
             return await interaction.response.send_message("Battle Pass is currently disabled.")
 
         user = await func.get_user(interaction.user.id)
-        state, sync_query = func.with_battlepass_state_synced(user)
+        _, sync_query = func.with_battlepass_state_synced(user)
         if sync_query:
             await func.update_user(interaction.user.id, sync_query)
+            user = await func.get_user(interaction.user.id)
 
-        bp_settings = func.get_battlepass_settings()
-        max_level = max(1, int(bp_settings.get("max_level", 100)))
-        xp_per_level = max(1, int(bp_settings.get("xp_per_level", 150)))
-        price = int(bp_settings.get("shop_price_candies", 0))
-
-        level, in_level_xp, xp_to_next = func.calculate_battlepass_level(state.get("xp", 0))
-        progress_pct = 100 if level >= max_level else int((in_level_xp / xp_per_level) * 100)
-
-        def build_progress_bar(current: int, total: int, size: int = 20) -> str:
-            if total <= 0:
-                return "█" * size
-            ratio = max(0.0, min(1.0, current / total))
-            filled = int(size * ratio)
-            return "█" * filled + "░" * (size - filled)
-
-        progress_bar = build_progress_bar(in_level_xp if level < max_level else xp_per_level, xp_per_level)
-        status = "Active" if state.get("is_active") else "Inactive"
-
-        summary = discord.Embed(title=f"🎫 {interaction.user.display_name}'s Battle Pass", color=discord.Color.random())
-        summary.description = (
-            f"Season: `{state.get('season_id')}`\n"
-            f"Status: **{status}**\n"
-            f"Price: `🍬 {price}`\n"
-            f"```\n"
-            f"Level:       {level}/{max_level}\n"
-            f"Progress:    {progress_bar} {progress_pct}%\n"
-            f"XP in Level: {in_level_xp if level < max_level else xp_per_level}/{xp_per_level}\n"
-            f"XP to Next:  {xp_to_next if level < max_level else 0}\n"
-            f"```"
-        )
-
-        if not state.get("is_active"):
-            summary.description += "\nBuy Battle Pass from the shop to start earning Battle Pass XP."
-
-        await interaction.response.send_message(embed=summary)
-
-        lines = []
-        for reward_level in range(1, max_level + 1):
-            rewards = func.get_battlepass_rewards_for_level(reward_level)
-            reward_text = ", ".join(func.format_battlepass_reward(item) for item in rewards) if rewards else "No reward"
-
-            if reward_level <= level:
-                marker = "✅"
-            elif reward_level == level + 1:
-                marker = "👉"
-            else:
-                marker = "⬜"
-
-            lines.append(f"{marker} L{reward_level:>3}: {reward_text}")
-
-        page_size = 15
-        pages = []
-        for start in range(0, len(lines), page_size):
-            page = lines[start:start + page_size]
-            pages.append(discord.Embed(
-                title=f"Battle Pass Rewards ({start + 1}-{min(start + page_size, len(lines))})",
-                description="```\n" + "\n".join(page) + "\n```",
-                color=discord.Color.random()
-            ))
-
-        rewards_view = BattlepassRewardsView(interaction.user, pages)
-        rewards_view.message = await interaction.followup.send(embed=pages[0], view=rewards_view)
+        view = BattlepassView(interaction.user, user)
+        await interaction.response.send_message(embed=view.current_embed(), view=view)
+        view.message = await interaction.original_response()
 
     @app_commands.command(name="emojiquiz", description="Guess IU song or drama by emoji(s).")
     @app_commands.describe(category="Restrict questions to 'song' or 'drama'")

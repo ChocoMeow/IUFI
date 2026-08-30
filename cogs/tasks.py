@@ -2,7 +2,7 @@ import discord, asyncio, iufi, time, random
 import functions as func
 
 from discord.ext import commands, tasks
-from views import DropView
+from views import DropView, BattlepassXPDropView
 
 class Tasks(commands.Cog):
     def __init__(self, bot: commands.Bot):
@@ -11,11 +11,13 @@ class Tasks(commands.Cog):
         self.warned_users = set()
 
         self.drop_card.start()
+        self.drop_battlepass_xp.start()
         self.cache_clear.start()
         self.reminder.start()
 
     def cog_unload(self):
         self.drop_card.cancel()
+        self.drop_battlepass_xp.cancel()
         self.cache_clear.cancel()
         self.reminder.cancel()
     
@@ -168,6 +170,30 @@ class Tasks(commands.Cog):
 
         except Exception as e:
             func.logger.error("An exception occurred in the drop card task.", exc_info=e)
+
+    @tasks.loop(minutes=5.0)
+    async def drop_battlepass_xp(self) -> None:
+        await self.bot.wait_until_ready()
+
+        try:
+            if not func.battlepass_enabled():
+                return
+
+            if random.randint(1, 6) == 1:
+                channel = self.bot.get_channel(random.choice(func.settings.GAME_CHANNEL_IDS))
+                if channel:
+                    xp_amount = func.pick_battlepass_drop_xp()
+                    view = BattlepassXPDropView(xp_amount)
+                    view.message = await channel.send(
+                        content=f"**Hurry up! This claim ends in: <t:{round(time.time()) + 70}:R>**",
+                        embed=view.build_embed(),
+                        view=view
+                    )
+                    func.logger.info(
+                        f"A Battle Pass XP drop ({xp_amount}) has been posted in {channel.name}({channel.id})"
+                    )
+        except Exception as e:
+            func.logger.error("An exception occurred in the Battle Pass XP drop task.", exc_info=e)
 
     @tasks.loop(minutes=60.0)
     async def cache_clear(self):

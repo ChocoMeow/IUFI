@@ -72,6 +72,7 @@ class Settings:
         self.MATCH_GAME_SETTINGS: Dict[str, Dict[str, Any]] = {}
         self.MUSIC_GAME_SETTINGS: Dict[str, Any] = {}
         self.ADMIN_IDS: List[int] = []
+        self.TESTER_IDS: List[int] = []
         self.BUG_REPORT_CHANNEL_ID: int = 0
         self.OPUS_PATH: str = ""
         self.LOGGING: Dict[Union[str, Dict[str, Union[str, bool]]]] = {}
@@ -113,6 +114,7 @@ class Settings:
         self.MATCH_GAME_SETTINGS = settings.get("MATCH_GAME_SETTINGS")
         self.MUSIC_GAME_SETTINGS = settings.get("MUSIC_GAME_SETTINGS")
         self.ADMIN_IDS = settings.get("ADMIN_IDS")
+        self.TESTER_IDS = settings.get("TESTER_IDS") or []
         self.BUG_REPORT_CHANNEL_ID = settings.get("BUG_REPORT_CHANNEL_ID")
         self.OPUS_PATH = settings.get("OPUS_PATH")
         self.LOGGING = settings.get("LOGGING", {})
@@ -323,6 +325,11 @@ def get_battlepass_state(user: Dict[str, Any]) -> Dict[str, Any]:
         "mg3_click_plus_2": bool(claimed_one_time.get("mg3_click_plus_2", base_one_time["mg3_click_plus_2"]))
     }
 
+    claimed_rewards = merged_state.get("claimed_rewards", [])
+    if not isinstance(claimed_rewards, list):
+        claimed_rewards = []
+    merged_state["claimed_rewards"] = claimed_rewards
+
     if merged_state.get("season_id") != default_state["season_id"]:
         return copy.deepcopy(default_state)
 
@@ -369,16 +376,28 @@ def add_battlepass_xp(user: Dict[str, Any], amount: int, *, query: Dict[str, Any
     max_level = max(1, int(bp_settings.get("max_level", 100)))
     max_total_xp = xp_per_level * max_level
 
-    pending_inc = int(query.get("$inc", {}).get("battlepass.xp", 0))
-    current_xp = max(0, int(state.get("xp", 0))) + pending_inc
+    full_set = query.get("$set", {}).get("battlepass")
+    if isinstance(full_set, dict):
+        current_xp = max(0, int(full_set.get("xp", 0)))
+    else:
+        pending_inc = int(query.get("$inc", {}).get("battlepass.xp", 0))
+        current_xp = max(0, int(state.get("xp", 0))) + pending_inc
     available_room = max_total_xp - current_xp
     if available_room <= 0:
         return query
 
     grant = min(amount, available_room)
-    increments = query.setdefault("$inc", {})
-    increments["battlepass.xp"] = increments.get("battlepass.xp", 0) + grant
-    return query
+    old_level, _, _ = calculate_battlepass_level(current_xp)
+    new_xp = current_xp + grant
+    new_level, _, _ = calculate_battlepass_level(new_xp)
+
+    if isinstance(full_set, dict):
+        full_set["xp"] = new_xp
+    else:
+        increments = query.setdefault("$inc", {})
+        increments["battlepass.xp"] = increments.get("battlepass.xp", 0) + grant
+
+    return _grant_reached_battlepass_levels(state, old_level, new_level, query)
 
 def calculate_battlepass_level(xp: int) -> tuple[int, int, int]:
     bp_settings = get_battlepass_settings()
@@ -401,11 +420,11 @@ def get_battlepass_rewards_for_level(level: int) -> List[Dict[str, Any]]:
 
     milestones = reward_table.get("milestones", {})
     if str(level) in milestones:
-        return milestones.get(str(level), [])
+        return _normalize_battlepass_rewards(milestones.get(str(level), []))
 
     filler = reward_table.get("filler", {})
     if isinstance(filler.get("rewards"), list):
-        return filler.get("rewards", [])
+        return _normalize_battlepass_rewards(filler.get("rewards", []))
 
     base = int(filler.get("starcandies_base", filler.get("even_starcandies_base", 50)))
     step = int(filler.get("starcandies_step_per_10_levels", filler.get("even_starcandies_step_per_10_levels", 10)))
@@ -423,18 +442,148 @@ def format_battlepass_reward(reward: Dict[str, Any]) -> str:
         potion_key = reward.get("key", "potions.speed_i")
         potion_name = potion_key.split(".", 1)[1].replace("_", " ").upper() if "." in potion_key else potion_key.upper()
         return f"🧪 {potion_name} x{amount}"
+    if reward_type == "roll":
+        tier = str(reward.get("key") or reward.get("tier") or "rare").lower()
+        emoji = (settings.TIERS_BASE.get(tier) or ["🌸"])[0]
+        label = {"rare": "Rare Roll", "epic": "Epic Roll", "legendary": "Legend Roll"}.get(tier, f"{tier.title()} Roll")
+        return f"{emoji} {label} x{amount}"
     if reward_type == "free_rare":
-        return "🌸 Free Rare"
+        return "🌸 Rare Roll x1"
     if reward_type == "free_epic":
-        return "💎 Free Epic"
+        return "💎 Epic Roll x1"
     if reward_type == "free_legend":
-        return "👑 Free Legend"
+        return "👑 Legend Roll x1"
     if reward_type == "mg2_click_plus_2":
         return "🎯 MG2 +2 Click (one-time)"
     if reward_type == "mg3_click_plus_2":
         return "🎯 MG3 +2 Click (one-time)"
 
     return f"{reward_type} x{amount}"
+
+def _normalize_battlepass_rewards(raw: Any) -> List[Dict[str, Any]]:
+    if isinstance(raw, list):
+        return [item for item in raw if isinstance(item, dict)]
+    if isinstance(raw, dict):
+        return [raw]
+    return []
+
+def _battlepass_full_set(query: Dict[str, Any]) -> Dict[str, Any] | None:
+    full_set = query.get("$set", {}).get("battlepass")
+    return full_set if isinstance(full_set, dict) else None
+
+def apply_battlepass_reward(reward: Dict[str, Any], query: Dict[str, Any] = None) -> Dict[str, Any]:
+    if query is None:
+        query = {}
+
+    reward_type = reward.get("type", "unknown")
+    try:
+        amount = int(reward.get("amount", 1) or 1)
+    except Exception:
+        amount = 1
+
+    def _inc(path: str, value: int) -> None:
+        increments = query.setdefault("$inc", {})
+        increments[path] = increments.get(path, 0) + value
+
+    if reward_type == "starcandies":
+        _inc("candies", amount)
+        return query
+
+    if reward_type == "potion":
+        _inc(str(reward.get("key") or "potions.speed_i"), amount)
+        return query
+
+    if reward_type == "roll":
+        tier = str(reward.get("key") or reward.get("tier") or "rare").lower()
+        _inc(f"roll.{tier}", amount)
+        return query
+
+    if reward_type == "free_rare":
+        _inc("roll.rare", amount)
+        return query
+    if reward_type == "free_epic":
+        _inc("roll.epic", amount)
+        return query
+    if reward_type == "free_legend":
+        _inc("roll.legendary", amount)
+        return query
+
+    if reward_type in ("mg2_click_plus_2", "mg3_click_plus_2"):
+        full_set = _battlepass_full_set(query)
+        if full_set is not None:
+            full_set.setdefault("claimed_one_time", {})[reward_type] = True
+        else:
+            query.setdefault("$set", {})[f"battlepass.claimed_one_time.{reward_type}"] = True
+
+    return query
+
+def _pending_claimed_reward_levels(state: Dict[str, Any], query: Dict[str, Any]) -> List[int]:
+    full_set = _battlepass_full_set(query)
+    if full_set is not None:
+        claimed = full_set.get("claimed_rewards", [])
+    else:
+        claimed = list(state.get("claimed_rewards") or [])
+        pending = query.get("$push", {}).get("battlepass.claimed_rewards")
+        if isinstance(pending, dict) and "$each" in pending:
+            claimed.extend(pending["$each"])
+        elif pending is not None:
+            claimed.append(pending)
+
+    levels: List[int] = []
+    for item in claimed:
+        try:
+            levels.append(int(item))
+        except Exception:
+            continue
+    return levels
+
+def _grant_reached_battlepass_levels(
+    state: Dict[str, Any],
+    old_level: int,
+    new_level: int,
+    query: Dict[str, Any]
+) -> Dict[str, Any]:
+    claimed = set(_pending_claimed_reward_levels(state, query))
+    newly_claimed: List[int] = []
+
+    for level in range(max(1, old_level + 1), new_level + 1):
+        if level in claimed:
+            continue
+        for reward in get_battlepass_rewards_for_level(level):
+            apply_battlepass_reward(reward, query)
+        newly_claimed.append(level)
+        claimed.add(level)
+
+    if not newly_claimed:
+        return query
+
+    full_set = _battlepass_full_set(query)
+    if full_set is not None:
+        full_set.setdefault("claimed_rewards", []).extend(newly_claimed)
+        return query
+
+    push = query.setdefault("$push", {})
+    existing = push.get("battlepass.claimed_rewards")
+    if isinstance(existing, dict) and "$each" in existing:
+        existing["$each"].extend(newly_claimed)
+    elif existing is not None:
+        push["battlepass.claimed_rewards"] = {"$each": [existing, *newly_claimed]}
+    else:
+        push["battlepass.claimed_rewards"] = {"$each": newly_claimed}
+
+    return query
+
+def pick_battlepass_drop_xp() -> int:
+    amounts = get_battlepass_settings().get("drop", {}).get("xp_amounts", [10, 25, 50])
+    choices = []
+    for amount in amounts:
+        try:
+            value = int(amount)
+        except Exception:
+            continue
+        if value > 0:
+            choices.append(value)
+    return random.choice(choices) if choices else random.choice([10, 25, 50])
 
 def truncate_string(text: str, length: int = 18) -> str:
     return text[:length - 3] + "..." if len(text) > length else text
@@ -501,6 +650,9 @@ def _pick_new_quests(quest_type: str, quests_base: Dict[str, Any], items: int) -
 
 def is_admin_interaction(interaction: discord.Interaction) -> bool:
     return interaction.user.id in settings.ADMIN_IDS
+
+def is_tester_interaction(interaction: discord.Interaction) -> bool:
+    return interaction.user.id in (settings.TESTER_IDS or [])
 
 def in_market_channel(interaction: discord.Interaction) -> bool:
     return interaction.channel_id == settings.MARKET_CHANNEL

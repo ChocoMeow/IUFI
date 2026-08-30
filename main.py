@@ -108,6 +108,7 @@ class IUFI(commands.Bot):
             "s": "shop",
             "eq": "emojiquiz",
             "bp": "battlepass",
+            "bpass": "battlepass",
             "pvptest": "pvp_test",
             "pvp_auto": "pvp_test",
             "mypity": "pity",

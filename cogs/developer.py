@@ -1,12 +1,13 @@
 import iufi
 import psutil
 import asyncio
+import time
 import discord
 import functions as func
 
 from discord import app_commands
 from discord.ext import commands
-from views import DebugView, ConfirmView
+from views import DebugView, ConfirmView, BattlepassXPDropView
 
 def formatBytes(bytes: int, unit: bool = False):
     if bytes <= 1_000_000_000:
@@ -219,6 +220,77 @@ class DevGroup(app_commands.Group):
         embed.color = discord.Color.green()
         await view.message.edit(embed=embed, view=None)
 
+class TestGroup(app_commands.Group):
+    def __init__(self):
+        super().__init__(name="test", description="Personal Battle Pass testing commands.")
+
+    async def interaction_check(self, interaction: discord.Interaction) -> bool:
+        if not func.is_tester_interaction(interaction):
+            raise app_commands.CheckFailure("You do not have permission to use this command.")
+        return True
+
+    @app_commands.command(name="resetcd", description="Reset your quiz, roll, match game, and daily cooldowns.")
+    async def resetcd(self, interaction: discord.Interaction):
+        await func.update_user(interaction.user.id, {
+            "$set": {
+                "cooldown.roll": 0,
+                "cooldown.quiz_game": 0,
+                "cooldown.match_game": 0,
+                "cooldown.daily": 0,
+            }
+        })
+        await interaction.response.send_message("Reset quiz, roll, match game, and daily cooldowns.", ephemeral=True)
+
+    @app_commands.command(name="bpxp", description="Grant yourself Battle Pass XP for testing.")
+    @app_commands.describe(amount="Battle Pass XP to grant")
+    async def bpxp(self, interaction: discord.Interaction, amount: int):
+        if amount <= 0:
+            return await interaction.response.send_message("Amount must be greater than 0.", ephemeral=True)
+
+        user = await func.get_user(interaction.user.id)
+        state = func.get_battlepass_state(user)
+        if not func.battlepass_enabled():
+            return await interaction.response.send_message("Battle Pass is currently disabled.", ephemeral=True)
+        if not state.get("is_active"):
+            return await interaction.response.send_message("Buy and activate the Battle Pass first.", ephemeral=True)
+
+        old_xp = int(state.get("xp", 0))
+        old_level, _, _ = func.calculate_battlepass_level(old_xp)
+        query = func.add_battlepass_xp(user, amount)
+        await func.update_user(interaction.user.id, query)
+
+        user = await func.get_user(interaction.user.id)
+        new_state = func.get_battlepass_state(user)
+        new_xp = int(new_state.get("xp", 0))
+        new_level, _, _ = func.calculate_battlepass_level(new_xp)
+        granted = new_xp - old_xp
+        claimed = query.get("$push", {}).get("battlepass.claimed_rewards", {})
+        levels = claimed.get("$each", []) if isinstance(claimed, dict) else []
+
+        extra = f"\nReached level(s): {', '.join(str(level) for level in levels)}" if levels else ""
+        await interaction.response.send_message(
+            f"Granted `{granted}` Battle Pass XP (`{old_xp}` → `{new_xp}`).\n"
+            f"Level `{old_level}` → `{new_level}`.{extra}",
+            ephemeral=True
+        )
+
+    @app_commands.command(name="xpdrop", description="Spawn a Battle Pass XP drop in this channel.")
+    async def xpdrop(self, interaction: discord.Interaction):
+        if not func.battlepass_enabled():
+            return await interaction.response.send_message("Battle Pass is currently disabled.", ephemeral=True)
+
+        xp_amount = func.pick_battlepass_drop_xp()
+        view = BattlepassXPDropView(xp_amount)
+        await interaction.response.send_message(
+            content=f"**Hurry up! This claim ends in: <t:{round(time.time()) + 70}:R>**",
+            embed=view.build_embed(),
+            view=view
+        )
+        view.message = await interaction.original_response()
+        func.logger.info(
+            f"Tester {interaction.user.name}({interaction.user.id}) spawned a Battle Pass XP drop ({xp_amount})"
+        )
+
 class Developer(commands.Cog):
     def __init__(self, bot: commands.Bot) -> None:
         self.bot = bot
@@ -226,7 +298,9 @@ class Developer(commands.Cog):
         self.invisible = True
 
         self.dev_group = DevGroup()
+        self.test_group = TestGroup()
         self.bot.tree.add_command(self.dev_group)
+        self.bot.tree.add_command(self.test_group)
 
         self.ctx_menu = discord.app_commands.ContextMenu(
             name="find similar",
@@ -236,6 +310,7 @@ class Developer(commands.Cog):
 
     async def cog_unload(self) -> None:
         self.bot.tree.remove_command(self.dev_group.name)
+        self.bot.tree.remove_command(self.test_group.name)
         self.bot.tree.remove_command(self.ctx_menu.name, type=self.ctx_menu.type)
 
     @app_commands.command(name="debug", description="[Owner only] Executes developer-only debugging actions.")

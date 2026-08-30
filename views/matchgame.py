@@ -83,7 +83,7 @@ class GuessButton(discord.ui.Button):
         self.disabled = False
 
 class MatchGame(discord.ui.View):
-    def __init__(self, author: discord.Member, level: str = "1", timeout: float = None):
+    def __init__(self, author: discord.Member, level: str = "1", timeout: float = None, user: dict[str, Any] | None = None):
         super().__init__(timeout=timeout)
 
         self.author: discord.Member = author
@@ -91,6 +91,12 @@ class MatchGame(discord.ui.View):
         self._data: dict[str, Any] = func.settings.MATCH_GAME_SETTINGS.get(level)
         self._cards: int = self._data.get("cards")
         self._max_click: int = self._data.get("max_clicks")
+        if user:
+            claimed_one_time = func.get_battlepass_state(user).get("claimed_one_time", {})
+            if self._level == "2" and claimed_one_time.get("mg2_click_plus_2"):
+                self._max_click += 2
+            elif self._level == "3" and claimed_one_time.get("mg3_click_plus_2"):
+                self._max_click += 2
         self._start_time: float = time.time()
         self._ended_time: float = None
 
@@ -164,11 +170,14 @@ class MatchGame(discord.ui.View):
                 f"{prefix}.click_left": self.click_left
             }
 
-        update_data = func.add_battlepass_xp(
-            user,
-            func.get_battlepass_xp_for_action(f"mg{self._level}"),
-            query=update_data
-        )
+        # Battle Pass XP requires actually matching cards (pairs): MG1 >= 2 cards, MG2 >= 4, MG3 >= 6.
+        min_pairs = {"1": 1, "2": 2, "3": 3}.get(str(self._level), 1)
+        if matched_raw >= min_pairs:
+            update_data = func.add_battlepass_xp(
+                user,
+                func.get_battlepass_xp_for_action(f"mg{self._level}"),
+                query=update_data
+            )
         await func.update_user(self.author.id, update_data)
 
         func.logger.info(

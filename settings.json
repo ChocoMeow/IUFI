@@ -15,6 +15,7 @@
     "GAME_CHANNEL_IDS": [1155772660979093555, 1155772719909044224, 1155772738858913792, 1155772756730859580],
     "ADMIN_IDS": [605776164744724512, 705783356767338648, 1223531350972174337],
     "BUG_REPORT_CHANNEL_ID": 1384723383131967622,
+    "TESTER_IDS": [],
     "PERFECT_CROWN_TREASURY_CARDS": {
         "mystic": [],
         "legendary": [],
@@ -32,7 +33,8 @@
         "roll": {
             "rare": 0,
             "epic": 0,
-            "legendary": 0
+            "legendary": 0,
+            "mystic": 0
         },
         "pity": {
             "rare": 0,
@@ -73,7 +75,18 @@
             "perfect_crown": {},
             "perfect_crown_count": 0
         },
-        "event_team": null
+        "event_team": null,
+        "battlepass": {
+            "season_id": "2026_s3",
+            "is_active": false,
+            "is_purchased": false,
+            "xp": 0,
+            "claimed_rewards": [],
+            "claimed_one_time": {
+                "mg2_click_plus_2": false,
+                "mg3_click_plus_2": false
+            }
+        }
     },
     "PITY_SETTINGS": {
         "rare": {
@@ -107,7 +120,7 @@
         "claim": ["🎮", 180],
         "daily": ["📅", 82800],
         "match_game": ["🃏", 0],
-        "quiz_game": ["💯", 600]
+        "quiz_game": ["💯", 10]
     },
     "DAILY_QUESTS": {
         "ROLL": {
@@ -217,7 +230,7 @@
         "PLAY_QUIZ_GAME": {
             "title": "Play quiz 50 times",
             "amount": 50,
-            "rewards": [["🍀", "potions.luck_iii", [1, 2]]],
+            "rewards": [["🍀", "potions.luck_ii", [1, 2]]],
             "type": "QUIZ"
         },
         "PLAY_MUSIC_QUIZ_GAME": {
@@ -253,7 +266,7 @@
         "UPGRADE_CARD": {
             "title": "Upgrade any 10 card",
             "amount": 10,
-            "rewards": [["⚡", "potions.speed_ii", [1, 2]]],
+            "rewards": [["⚡", "potions.speed_i", [1, 2]]],
             "type": "UPGRADE"
         },
         "USE_ANY_POTION": {
@@ -289,19 +302,19 @@
         "CONVERT_ANY_CARD": {
             "title": "Convert 100 cards of any tier",
             "amount": 100,
-            "rewards": [["🍀", "potions.luck_ii", [1, 2]]],
+            "rewards": [["🍀", "potions.luck_i", [1, 2]]],
             "type": "CONVERT"
         },
         "TRADE_ANY_CARD": {
             "title": "Trade 50 cards of any tier",
             "amount": 50,
-            "rewards": [["⚡", "potions.speed_iii", [1, 2]]],
+            "rewards": [["⚡", "potions.speed_ii", [1, 2]]],
             "type": "TRADE"
         },
         "BUY_ITEM": {
             "title": "Buy 10 items from the shop",
             "amount": 10,
-            "rewards": [["🍀", "potions.luck_ii", [2, 3]]],
+            "rewards": [["🍀", "potions.luck_iii", [2, 3]]],
             "type": "SHOP"
         }
     },
@@ -549,6 +562,121 @@
     "PVP_REWARDS_ENABLED": false,
     "GIVE_REWARD_CARD": true,
     "MONTHLY_LEADERBOARD_ROLE": 1201455425820827708,
+    "BATTLEPASS_SETTINGS": {
+        "enabled": true,
+        "season_id": "2026_s3",
+        "max_level": 100,
+        "xp_per_level": 200,
+        "shop_price_candies": 3000,
+        "xp_per_action": {
+            "roll": 1,
+            "quiz": 5,
+            "mg1": 10,
+            "mg2": 15,
+            "mg3": 25,
+            "daily_quest": 40,
+            "weekly_quest": 180
+        },
+        "drop": {
+            "xp_amounts": [10, 25, 50]
+        },
+        "reward_table": {
+            "filler": {
+                "starcandies_base": 100,
+                "starcandies_step_per_10_levels": 5,
+                "starcandies_cap": 130
+            },
+            "milestones": {
+                "1": [
+                    {"type": "starcandies", "amount": 100},
+                    {"type": "potion", "key": "potions.speed_i", "amount": 1},
+                    {"type": "potion", "key": "potions.luck_i", "amount": 2}
+                ],
+                "2": [{"type": "roll", "key": "rare", "amount": 1}],
+                "6": [{"type": "roll", "key": "rare", "amount": 1}],
+                "7": [{"type": "roll", "key": "epic", "amount": 1}],
+                "8": [{"type": "roll", "key": "rare", "amount": 1}],
+                "10": [{"type": "roll", "key": "legendary", "amount": 1}],
+                "12": [{"type": "roll", "key": "rare", "amount": 1}],
+                "13": [{"type": "roll", "key": "epic", "amount": 1}],
+                "16": [{"type": "roll", "key": "rare", "amount": 1}],
+                "18": [{"type": "roll", "key": "rare", "amount": 1}],
+                "20": [
+                    {"type": "roll", "key": "legendary", "amount": 1},
+                    {"type": "mg2_click_plus_2", "amount": 1}
+                ],
+                "21": [{"type": "roll", "key": "epic", "amount": 1}],
+                "22": [{"type": "roll", "key": "rare", "amount": 1}],
+                "25": [
+                    {"type": "starcandies", "amount": 110},
+                    {"type": "potion", "key": "potions.speed_i", "amount": 2},
+                    {"type": "potion", "key": "potions.luck_i", "amount": 2}
+                ],
+                "26": [{"type": "roll", "key": "rare", "amount": 1}],
+                "27": [{"type": "roll", "key": "epic", "amount": 1}],
+                "28": [{"type": "roll", "key": "rare", "amount": 1}],
+                "30": [{"type": "roll", "key": "legendary", "amount": 1}],
+                "32": [{"type": "roll", "key": "rare", "amount": 1}],
+                "33": [{"type": "roll", "key": "epic", "amount": 1}],
+                "36": [{"type": "roll", "key": "rare", "amount": 1}],
+                "38": [{"type": "roll", "key": "rare", "amount": 1}],
+                "40": [{"type": "roll", "key": "legendary", "amount": 1}],
+                "41": [{"type": "roll", "key": "epic", "amount": 1}],
+                "42": [{"type": "roll", "key": "rare", "amount": 1}],
+                "46": [{"type": "roll", "key": "rare", "amount": 1}],
+                "47": [{"type": "roll", "key": "epic", "amount": 1}],
+                "48": [{"type": "roll", "key": "rare", "amount": 1}],
+                "50": [
+                    {"type": "roll", "key": "legendary", "amount": 1},
+                    {"type": "potion", "key": "potions.speed_ii", "amount": 2},
+                    {"type": "potion", "key": "potions.luck_ii", "amount": 2}
+                ],
+                "52": [{"type": "roll", "key": "rare", "amount": 1}],
+                "53": [{"type": "roll", "key": "epic", "amount": 1}],
+                "56": [{"type": "roll", "key": "rare", "amount": 1}],
+                "58": [{"type": "roll", "key": "rare", "amount": 1}],
+                "60": [
+                    {"type": "roll", "key": "legendary", "amount": 1},
+                    {"type": "mg3_click_plus_2", "amount": 1}
+                ],
+                "61": [{"type": "roll", "key": "epic", "amount": 1}],
+                "62": [{"type": "roll", "key": "rare", "amount": 1}],
+                "66": [{"type": "roll", "key": "rare", "amount": 1}],
+                "67": [{"type": "roll", "key": "epic", "amount": 1}],
+                "68": [{"type": "roll", "key": "rare", "amount": 1}],
+                "70": [{"type": "roll", "key": "legendary", "amount": 1}],
+                "72": [{"type": "roll", "key": "rare", "amount": 1}],
+                "73": [{"type": "roll", "key": "epic", "amount": 1}],
+                "75": [
+                    {"type": "starcandies", "amount": 130},
+                    {"type": "potion", "key": "potions.speed_iii", "amount": 1},
+                    {"type": "potion", "key": "potions.luck_iii", "amount": 1}
+                ],
+                "76": [{"type": "roll", "key": "rare", "amount": 1}],
+                "78": [{"type": "roll", "key": "rare", "amount": 1}],
+                "80": [{"type": "roll", "key": "legendary", "amount": 1}],
+                "81": [{"type": "roll", "key": "epic", "amount": 1}],
+                "82": [{"type": "roll", "key": "rare", "amount": 1}],
+                "86": [{"type": "roll", "key": "rare", "amount": 1}],
+                "87": [{"type": "roll", "key": "epic", "amount": 1}],
+                "88": [{"type": "roll", "key": "rare", "amount": 1}],
+                "90": [
+                    {"type": "roll", "key": "legendary", "amount": 1},
+                    {"type": "potion", "key": "potions.speed_iii", "amount": 2},
+                    {"type": "potion", "key": "potions.luck_iii", "amount": 2}
+                ],
+                "92": [{"type": "roll", "key": "rare", "amount": 1}],
+                "93": [{"type": "roll", "key": "epic", "amount": 1}],
+                "96": [{"type": "roll", "key": "rare", "amount": 1}],
+                "98": [{"type": "roll", "key": "rare", "amount": 1}],
+                "99": [{"type": "roll", "key": "epic", "amount": 1}],
+                "100": [
+                    {"type": "roll", "key": "legendary", "amount": 1},
+                    {"type": "roll", "key": "mystic", "amount": 1}
+                ]
+            }
+        }
+    },
     "REWARD_CARD_PROBABILITIES": {
         "MUSIC_QUIZ": {
             "10": {"common": 0.98, "rare": 0.02},

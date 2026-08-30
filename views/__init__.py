@@ -16,6 +16,7 @@ from .collection import CollectionView
 from .help import HelpView
 from .debugs import DebugView
 from .drop import DropView
+from .battlepass import BattlepassView, BattlepassXPDropView
 from .musiclearderboard import MusicLeaderboardView
 from .wishlist import WishListView
 from .multi_id_modal import MultiIDModal
