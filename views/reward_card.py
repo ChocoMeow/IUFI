@@ -3,6 +3,7 @@ from typing import Dict, Optional
 from discord.ext import commands
 
 import functions as func
+import events
 from iufi import CardPool, Card
 
 
@@ -205,7 +206,7 @@ class RewardCardView(discord.ui.View):
             actived_potions = func.get_potions(user.get("actived_potions", {}), func.settings.POTIONS_BASE)
             query = func.update_quest_progress(user, ["COLLECT_ANY_CARD", f"COLLECT_{card._tier.upper()}_CARD"], query={
                 "$push": {"cards": card.id},
-                "$set": {"cooldown.claim": time.time() + (func.settings.COOLDOWN_BASE["claim"][1] * (1 - actived_potions.get("speed", 0)))},
+                "$set": {"cooldown.claim": events.cooldown_expiry(func.settings.COOLDOWN_BASE["claim"][1], potion_speed=actived_potions.get("speed", 0))},
                 "$inc": {"exp": 10}
             })
             await func.update_user(interaction.user.id, query)

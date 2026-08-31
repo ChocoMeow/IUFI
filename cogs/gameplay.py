@@ -1,5 +1,6 @@
 import discord, iufi, time, asyncio
 import functions as func
+import events
 import random
 import io, os
 from PIL import Image, ImageFilter
@@ -47,7 +48,7 @@ class Gameplay(commands.Cog):
             # Calculate soft pity boosts for rate increases
             soft_pity_boosts = func.calculate_soft_pity_boost(user)
 
-            query["$set"] = {"cooldown.roll": time.time() + (func.settings.COOLDOWN_BASE["roll"][1] * (1 - actived_potions.get("speed", 0)))}
+            query["$set"] = {"cooldown.roll": events.cooldown_expiry(func.settings.COOLDOWN_BASE["roll"][1], potion_speed=actived_potions.get("speed", 0))}
 
         else:
             # Purchased roll - don't affect pity
@@ -121,7 +122,7 @@ class Gameplay(commands.Cog):
         view = MatchGame(interaction.user, level, user=user)
         actived_potions = func.get_potions(user.get("actived_potions", {}), func.settings.POTIONS_BASE)
 
-        query = func.update_quest_progress(user, f"PLAY_MATCH_GAME_LVL_{level}", query={"$set": {"cooldown.match_game": time.time() + (view._data.get("cooldown", 0) * (1 - actived_potions.get("speed", 0)))}})
+        query = func.update_quest_progress(user, f"PLAY_MATCH_GAME_LVL_{level}", query={"$set": {"cooldown.match_game": events.cooldown_expiry(view._data.get("cooldown", 0), potion_speed=actived_potions.get("speed", 0))}})
         await func.update_user(interaction.user.id, query)
 
         embed, file = await view.build()
@@ -160,7 +161,7 @@ class Gameplay(commands.Cog):
             return await interaction.response.send_message("There are no questions for you right now! Please try again later.")
 
         # Update the user's cooldown time
-        query = func.update_quest_progress(user, "PLAY_QUIZ_GAME", query={"$set": {"cooldown.quiz_game": time.time() + func.settings.COOLDOWN_BASE["quiz_game"][1]}})
+        query = func.update_quest_progress(user, "PLAY_QUIZ_GAME", query={"$set": {"cooldown.quiz_game": events.cooldown_expiry(func.settings.COOLDOWN_BASE["quiz_game"][1])}})
         await func.update_user(interaction.user.id, query)
 
         # Create the quiz view and send the initial message
@@ -282,7 +283,7 @@ class Gameplay(commands.Cog):
         query = func.update_quest_progress(
             user,
             "PLAY_QUIZ_GAME",
-            query={"$set": {"cooldown.quiz_game": time.time() + quiz_cooldown}},
+            query={"$set": {"cooldown.quiz_game": events.cooldown_expiry(quiz_cooldown)}},
         )
         await func.update_user(interaction.user.id, query)
 

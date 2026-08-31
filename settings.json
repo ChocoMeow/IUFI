@@ -562,6 +562,42 @@
     "PVP_REWARDS_ENABLED": false,
     "GIVE_REWARD_CARD": true,
     "MONTHLY_LEADERBOARD_ROLE": 1201455425820827708,
+    "EVENT_SETTINGS": {
+        "enabled": false,
+        "name": "Event",
+        "cooldown_reduction_percent": 0,
+        "convert_candy_multiplier": 1.0,
+        "shop_sale_percent": 0
+    },
+    "BATTLEPASS_MILESTONES": {
+        "enabled": true,
+        "duration_days": 14,
+        "milestones": [
+            {
+                "total_levels": 100,
+                "cooldown_reduction_percent": 10,
+                "shop_sale_percent": 10
+            },
+            {
+                "total_levels": 250,
+                "battlepass_xp_percent": 25
+            },
+            {
+                "total_levels": 500,
+                "cooldown_reduction_percent": 20,
+                "shop_sale_percent": 25
+            },
+            {
+                "total_levels": 750,
+                "battlepass_xp_percent": 50
+            },
+            {
+                "total_levels": 1000,
+                "convert_candy_multiplier": 2.0,
+                "cooldown_reduction_percent": 30
+            }
+        ]
+    },
     "BATTLEPASS_SETTINGS": {
         "enabled": true,
         "season_id": "2026_s3",

@@ -80,6 +80,8 @@ class Settings:
         self.GIVE_REWARD_CARD: bool = False
         self.MONTHLY_LEADERBOARD_ROLE: int = 0
         self.BATTLEPASS_SETTINGS: Dict[str, Any] = {}
+        self.EVENT_SETTINGS: Dict[str, Any] = {}
+        self.BATTLEPASS_MILESTONES: Dict[str, Any] = {}
         # Newly added defaults so callers can reference them directly without getattr
         self.PVP_SETTINGS: Dict[str, Any] = {}
         self.REWARD_CARD_PROBABILITIES: Dict[str, Any] = {}
@@ -122,6 +124,8 @@ class Settings:
         self.GIVE_REWARD_CARD = settings.get("GIVE_REWARD_CARD", True)
         self.MONTHLY_LEADERBOARD_ROLE = settings.get("MONTHLY_LEADERBOARD_ROLE", 0)
         self.BATTLEPASS_SETTINGS = settings.get("BATTLEPASS_SETTINGS", {})
+        self.EVENT_SETTINGS = settings.get("EVENT_SETTINGS", {})
+        self.BATTLEPASS_MILESTONES = settings.get("BATTLEPASS_MILESTONES", {})
         self.PVP_SETTINGS = settings.get("PVP_SETTINGS", {})
         self.REWARD_CARD_PROBABILITIES = settings.get("REWARD_CARD_PROBABILITIES", {})
         self.PERFECT_CROWN_TREASURY_CARDS = settings.get("PERFECT_CROWN_TREASURY_CARDS", {})
@@ -139,6 +143,7 @@ USERS_DB: AsyncIOMotorCollection = None
 CARDS_DB: AsyncIOMotorCollection = None
 QUESTIONS_DB: AsyncIOMotorCollection = None
 MUSIC_DB: AsyncIOMotorCollection = None
+STATE_DB: AsyncIOMotorCollection = None
 
 USERS_BUFFER: Dict[int, Dict[str, Any]] = {}
 
@@ -367,6 +372,15 @@ def add_battlepass_xp(user: Dict[str, Any], amount: int, *, query: Dict[str, Any
     if amount <= 0:
         return query
 
+    import events
+    scaled = int(round(amount * events.battlepass_xp_multiplier()))
+    if scaled < amount and events.battlepass_xp_multiplier() >= 1:
+        scaled = amount
+    amount = scaled
+
+    if amount <= 0:
+        return query
+
     state, query = with_battlepass_state_synced(user, query)
     if not state.get("is_active", False):
         return query
@@ -396,6 +410,10 @@ def add_battlepass_xp(user: Dict[str, Any], amount: int, *, query: Dict[str, Any
     else:
         increments = query.setdefault("$inc", {})
         increments["battlepass.xp"] = increments.get("battlepass.xp", 0) + grant
+
+    levels_gained = max(0, new_level - old_level)
+    if levels_gained:
+        query["_bp_levels_gained"] = int(query.get("_bp_levels_gained", 0) or 0) + levels_gained
 
     return _grant_reached_battlepass_levels(state, old_level, new_level, query)
 
@@ -765,6 +783,8 @@ def get_user_card_limit(user: Dict[str, Any]) -> int:
 
 async def update_user(user_id: int, data: dict) -> None:
     user = await get_user(user_id)
+    data = dict(data or {})
+    levels_gained = int(data.pop("_bp_levels_gained", 0) or 0)
     data.setdefault('$set', {})['last_active_time'] = time.time()
 
     # Auto-augment monthly counters for common stats so callers don't need to update monthly fields everywhere.
@@ -806,6 +826,8 @@ async def update_user(user_id: int, data: dict) -> None:
 
     # Proceed with the original in-memory merging logic
     for mode, action in data.items():
+        if not str(mode).startswith("$") or not isinstance(action, dict):
+            continue
         for key, value in action.items():
             cursors = key.split('.')
 
@@ -872,7 +894,14 @@ async def update_user(user_id: int, data: dict) -> None:
             else:
                 raise ValueError(f"Invalid mode: {mode}")
 
+    for op in ("$inc", "$push", "$pull", "$unset"):
+        if op in data and not data[op]:
+            data.pop(op)
+
     await USERS_DB.update_one({"_id": user_id}, data)
+    if levels_gained:
+        import events
+        await events.add_community_levels(levels_gained)
 
 async def update_card(card_id: List[str] | str, data: dict, insert: bool = False) -> None:
     if insert:

@@ -184,7 +184,6 @@ class IUFI(commands.Bot):
                 continue
             if param.kind in (inspect.Parameter.VAR_POSITIONAL, inspect.Parameter.VAR_KEYWORD):
                 continue
-
             if not positional:
                 continue
 
@@ -221,6 +220,7 @@ class IUFI(commands.Bot):
 
         interaction = _MessageInteraction(message)
         interaction.legacy_args = positional
+
         missing = [
             param_name
             for param_name, param in signature.parameters.items()
@@ -293,6 +293,7 @@ class IUFI(commands.Bot):
         func.USERS_DB = func.MONGO_DB[db_name]["users"]
         func.QUESTIONS_DB = func.MONGO_DB[db_name]["questions"]
         func.MUSIC_DB = func.MONGO_DB[db_name]["musics"]
+        func.STATE_DB = func.MONGO_DB[db_name]["bot_state"]
 
     async def setup_hook(self) -> None:
         func.logger.info("Startup: connecting to database...")
@@ -307,6 +308,10 @@ class IUFI(commands.Bot):
         await iufi.QuestionPool.fetch_data()
         func.logger.info("Startup: loading music question pool...")
         await iufi.MusicPool.fetch_data()
+
+        func.logger.info("Startup: loading community Battle Pass milestones...")
+        import events
+        await events.load_community_state()
 
         try:
             if not discord.opus.is_loaded():

@@ -1,5 +1,6 @@
 import discord, time, asyncio
 import functions as func
+import events
 
 from iufi import CardPool, Card
 
@@ -43,7 +44,7 @@ class RollButton(discord.ui.Button):
             actived_potions = func.get_potions(user.get("actived_potions", {}), func.settings.POTIONS_BASE)
             query = func.update_quest_progress(user, ["COLLECT_ANY_CARD", f"COLLECT_{self.card._tier.upper()}_CARD"], query={
                 "$push": {"cards": self.card.id},
-                "$set": {"cooldown.claim": time.time() + (func.settings.COOLDOWN_BASE["claim"][1] * (1 - actived_potions.get("speed", 0)))},
+                "$set": {"cooldown.claim": events.cooldown_expiry(func.settings.COOLDOWN_BASE["claim"][1], potion_speed=actived_potions.get("speed", 0))},
                 "$inc": {"exp": 10}
             })
             await func.update_user(interaction.user.id, query)

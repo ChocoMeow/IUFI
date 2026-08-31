@@ -1,5 +1,6 @@
 import discord, asyncio
 import functions as func
+import events
 
 from random import choice
 from typing import Any
@@ -134,6 +135,10 @@ class BattlepassView(discord.ui.View):
         )
         if not state.get("is_active"):
             summary.description += "\nBuy Battle Pass from the shop to start earning Battle Pass XP."
+
+        community = events.community_progress_text()
+        if community:
+            summary.description += "\n\n" + community
         self.overview_embed = summary
 
         lines = []
@@ -176,6 +181,9 @@ class BattlepassView(discord.ui.View):
             "Battle Pass XP is only earned with an **active** Battle Pass.\n\n"
             + "\n".join(f"• {line}" for line in source_lines)
         )
+        xp_mult = events.battlepass_xp_multiplier()
+        if xp_mult > 1:
+            xp_embed.description += f"\n\nCommunity XP buff: **x{xp_mult:g}** on all Battle Pass XP."
         self.xp_embed = xp_embed
 
     def current_embed(self) -> discord.Embed:

@@ -1,5 +1,6 @@
 import discord, iufi, time, copy
 import functions as func
+import events
 
 from discord import app_commands
 from discord.ext import commands
@@ -306,7 +307,7 @@ class Profile(commands.Cog):
         reward = {reward_key: reward_amount}
 
         await func.update_user(interaction.user.id, {
-            "$set": {"claimed": claimed, "cooldown.daily": current_time + func.settings.COOLDOWN_BASE["daily"][1]},
+            "$set": {"claimed": claimed, "cooldown.daily": events.cooldown_expiry(func.settings.COOLDOWN_BASE["daily"][1], apply_reduction=False)},
             "$inc": reward
         })
 

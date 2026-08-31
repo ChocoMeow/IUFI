@@ -291,6 +291,19 @@ class TestGroup(app_commands.Group):
             f"Tester {interaction.user.name}({interaction.user.id}) spawned a Battle Pass XP drop ({xp_amount})"
         )
 
+    @app_commands.command(name="bplevels", description="Add community Battle Pass levels to test global milestones.")
+    @app_commands.describe(amount="Community levels to add")
+    async def bplevels(self, interaction: discord.Interaction, amount: int):
+        if amount <= 0:
+            return await interaction.response.send_message("Amount must be greater than 0.", ephemeral=True)
+
+        import events
+        await events.add_community_levels(amount)
+        await interaction.response.send_message(
+            f"Added `{amount}` community Battle Pass levels.\n{events.community_progress_text()}",
+            ephemeral=True
+        )
+
 class Developer(commands.Cog):
     def __init__(self, bot: commands.Bot) -> None:
         self.bot = bot

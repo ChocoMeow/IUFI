@@ -1,5 +1,6 @@
 import discord, asyncio, iufi, time, random
 import functions as func
+import events
 
 from discord.ext import commands, tasks
 from views import DropView, BattlepassXPDropView
@@ -74,7 +75,7 @@ class Tasks(commands.Cog):
                 converted_cards.append(card)
 
         card_ids = [card.id for card in converted_cards]
-        candies = sum([card.cost for card in converted_cards])
+        candies = events.convert_candies(sum(card.cost for card in converted_cards))
             
         for card in converted_cards:
             iufi.CardPool.add_available_card(card)

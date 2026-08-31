@@ -1,5 +1,6 @@
 import discord, iufi, time
 import functions as func
+import events
 
 from discord import app_commands
 from discord.ext import commands
@@ -99,13 +100,15 @@ class Card(commands.Cog):
         async def on_ids(modal_interaction: discord.Interaction, card_ids: list[str]):
             converted_cards: list[iufi.Card] = []
 
-            candies = 0
+            raw_candies = 0
             for card_id in card_ids:
                 card = iufi.CardPool.get_card(card_id)
                 if card and card.owner_id == modal_interaction.user.id:
-                    candies += card.cost
+                    raw_candies += card.cost
                     iufi.CardPool.add_available_card(card)
                     converted_cards.append(card)
+
+            candies = events.convert_candies(raw_candies)
 
             user = await func.get_user(modal_interaction.user.id)
             query = func.update_quest_progress(user, "CONVERT_ANY_CARD", progress=len(converted_cards), query={
@@ -137,8 +140,9 @@ class Card(commands.Cog):
         if not (card := iufi.CardPool.get_card(user["cards"][-1])):
             return
 
+        candies = events.convert_candies(card.cost)
         embed = discord.Embed(color=discord.Color.random())
-        embed.description = f"```🆔 {card} \n🍬 + {card.cost}```"
+        embed.description = f"```🆔 {card} \n🍬 + {candies}```"
         message: discord.Message = None
 
         if card.tier[1] not in ["common", "rare"] or card.tag:
@@ -162,12 +166,12 @@ class Card(commands.Cog):
 
         query = func.update_quest_progress(user, "CONVERT_ANY_CARD", query={
             "$pull": {"cards": card.id},
-            "$inc": {"candies": card.cost}
+            "$inc": {"candies": candies}
         })
         await func.update_user(interaction.user.id, query)
         await func.update_card(card.id, {"$set": {"owner_id": None, "tag": None, "frame": None, "last_trade_time": 0}})
 
-        func.logger.info(f"User {interaction.user.name}({interaction.user.id}) converted 1 card(s): [{card.id}]. Gained {card.cost} candies.")
+        func.logger.info(f"User {interaction.user.name}({interaction.user.id}) converted 1 card(s): [{card.id}]. Gained {candies} candies.")
 
         embed.title = "✨ Converted"
         await message.edit(embed=embed, view=None) if message else await interaction.followup.send(embed=embed)
@@ -187,7 +191,7 @@ class Card(commands.Cog):
                 converted_cards.append(card)
 
         card_ids = [card.id for card in converted_cards]
-        candies = sum([card.cost for card in converted_cards])
+        candies = events.convert_candies(sum(card.cost for card in converted_cards))
 
         embed = discord.Embed(title="✨ Confirm to convert?", color=discord.Color.random())
         embed.description = f"```🆔 {', '.join([f'{card}' for card in converted_cards])} \n🍬 + {candies}```"
@@ -244,7 +248,7 @@ class Card(commands.Cog):
                             converted_cards.append(card)
 
             card_ids = [card.id for card in converted_cards]
-            candies = sum([card.cost for card in converted_cards])
+            candies = events.convert_candies(sum(card.cost for card in converted_cards))
 
             embed = discord.Embed(title="✨ Confirm to convert?", color=discord.Color.random())
             embed.description = f"```🆔 {', '.join([f'{card}' for card in converted_cards])} \n🍬 + {candies}```"
