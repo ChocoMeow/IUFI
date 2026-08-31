@@ -120,7 +120,7 @@
         "claim": ["🎮", 180],
         "daily": ["📅", 82800],
         "match_game": ["🃏", 0],
-        "quiz_game": ["💯", 10]
+        "quiz_game": ["💯", 600]
     },
     "DAILY_QUESTS": {
         "ROLL": {
