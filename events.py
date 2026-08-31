@@ -11,14 +11,18 @@ overwrites earlier cooldown). Unrelated tracks stay active until overwritten.
 """
 from __future__ import annotations
 
+import json
+import os
 import time
 from typing import Any
 
 from pymongo import ReturnDocument
+from pymongo.errors import PyMongoError
 
 import functions as func
 
 _STATE_ID = "battlepass_milestones"
+_STATE_FILE = os.path.join(func.ROOT_DIR, "bot_state.json")
 _community_state: dict[str, Any] = {
     "total_levels": 0,
     "season_id": "",
@@ -247,30 +251,70 @@ def community_progress_text() -> str:
     return "\n".join(lines)
 
 
+def _disable_state_db(error: Exception) -> None:
+    """Stop using MongoDB for milestone state and persist to a local file instead."""
+    func.STATE_DB = None
+    func.logger.warning(
+        f"Cannot use the MongoDB [bot_state] collection ({error}). "
+        f"Community Battle Pass milestones will be stored in {_STATE_FILE} instead."
+    )
+
+
+def _read_state_file() -> dict[str, Any]:
+    try:
+        with open(_STATE_FILE, "r", encoding="utf-8") as file:
+            doc = json.load(file)
+    except FileNotFoundError:
+        return {}
+    except (OSError, json.JSONDecodeError) as error:
+        func.logger.warning(f"Unable to read {_STATE_FILE}: {error}")
+        return {}
+    return doc if isinstance(doc, dict) else {}
+
+
+def _write_state_file(doc: dict[str, Any]) -> None:
+    try:
+        with open(_STATE_FILE, "w", encoding="utf-8") as file:
+            json.dump(doc, file, indent=4)
+    except OSError as error:
+        func.logger.warning(f"Unable to write {_STATE_FILE}: {error}")
+
+
+async def _read_state() -> dict[str, Any]:
+    if func.STATE_DB is not None:
+        try:
+            doc = await func.STATE_DB.find_one({"_id": _STATE_ID})
+            return doc if isinstance(doc, dict) else {}
+        except PyMongoError as error:
+            _disable_state_db(error)
+    return _read_state_file()
+
+
+async def _write_state(fields: dict[str, Any]) -> None:
+    if func.STATE_DB is not None:
+        try:
+            await func.STATE_DB.update_one({"_id": _STATE_ID}, {"$set": fields}, upsert=True)
+            return
+        except PyMongoError as error:
+            _disable_state_db(error)
+    _write_state_file({**_read_state_file(), **fields, "_id": _STATE_ID})
+
+
 async def load_community_state() -> None:
     """Load or seed the global milestone document. Call once after Mongo connects."""
     global _community_state
 
-    if func.STATE_DB is None:
-        return
-
     season_id = str(func.get_battlepass_settings().get("season_id", "default"))
-    doc = await func.STATE_DB.find_one({"_id": _STATE_ID})
-    if not isinstance(doc, dict) or doc.get("season_id") != season_id:
-        total = await _sum_user_battlepass_levels(season_id)
-        doc = {
-            "_id": _STATE_ID,
-            "season_id": season_id,
-            "total_levels": total,
-            "unlocked": {},
-        }
-        await func.STATE_DB.update_one({"_id": _STATE_ID}, {"$set": doc}, upsert=True)
+    doc = await _read_state()
+    total = await _sum_user_battlepass_levels(season_id)
+
+    if doc.get("season_id") != season_id:
+        doc = {"season_id": season_id, "total_levels": total, "unlocked": {}}
+        await _write_state(doc)
         func.logger.info(f"Community Battle Pass milestones reset/seeded for season {season_id} at {total} total levels.")
-    else:
-        total = await _sum_user_battlepass_levels(season_id)
-        if total != int(doc.get("total_levels", 0) or 0):
-            doc["total_levels"] = total
-            await func.STATE_DB.update_one({"_id": _STATE_ID}, {"$set": {"total_levels": total}})
+    elif total != int(doc.get("total_levels", 0) or 0):
+        doc["total_levels"] = total
+        await _write_state({"total_levels": total})
 
     _community_state = {
         "total_levels": int(doc.get("total_levels", 0) or 0),
@@ -283,31 +327,41 @@ async def load_community_state() -> None:
 async def add_community_levels(delta: int) -> None:
     if delta <= 0 or not _milestones_enabled():
         return
-    if func.STATE_DB is None:
-        _community_state["total_levels"] = community_total_levels() + int(delta)
-        return
 
-    doc = await func.STATE_DB.find_one_and_update(
-        {"_id": _STATE_ID},
-        {
-            "$inc": {"total_levels": int(delta)},
-            "$setOnInsert": {
-                "season_id": str(func.get_battlepass_settings().get("season_id", "default")),
-                "unlocked": {},
-            },
-        },
-        upsert=True,
-        return_document=ReturnDocument.AFTER,
-    )
-    if isinstance(doc, dict):
-        _community_state["total_levels"] = int(doc.get("total_levels", 0) or 0)
-        if doc.get("unlocked") is not None:
-            _community_state["unlocked"] = dict(doc.get("unlocked") or {})
+    if func.STATE_DB is not None:
+        try:
+            doc = await func.STATE_DB.find_one_and_update(
+                {"_id": _STATE_ID},
+                {
+                    "$inc": {"total_levels": int(delta)},
+                    "$setOnInsert": {
+                        "season_id": str(func.get_battlepass_settings().get("season_id", "default")),
+                        "unlocked": {},
+                    },
+                },
+                upsert=True,
+                return_document=ReturnDocument.AFTER,
+            )
+        except PyMongoError as error:
+            _disable_state_db(error)
+        else:
+            if isinstance(doc, dict):
+                _community_state["total_levels"] = int(doc.get("total_levels", 0) or 0)
+                if doc.get("unlocked") is not None:
+                    _community_state["unlocked"] = dict(doc.get("unlocked") or {})
+            await _unlock_reached_milestones()
+            return
+
+    _community_state["total_levels"] = community_total_levels() + int(delta)
+    await _write_state({
+        "season_id": _community_state.get("season_id") or str(func.get_battlepass_settings().get("season_id", "default")),
+        "total_levels": _community_state["total_levels"],
+    })
     await _unlock_reached_milestones()
 
 
 async def _unlock_reached_milestones() -> None:
-    if not _milestones_enabled() or func.STATE_DB is None:
+    if not _milestones_enabled():
         return
 
     total = community_total_levels()
@@ -327,11 +381,7 @@ async def _unlock_reached_milestones() -> None:
         return
 
     _community_state["unlocked"] = unlocked
-    await func.STATE_DB.update_one(
-        {"_id": _STATE_ID},
-        {"$set": {"unlocked": unlocked, "season_id": _community_state.get("season_id")}},
-        upsert=True,
-    )
+    await _write_state({"unlocked": unlocked, "season_id": _community_state.get("season_id")})
     func.logger.info(
         f"Community Battle Pass milestone(s) unlocked at {total} total levels: {newly}"
     )
