@@ -6,6 +6,9 @@ from discord.ext import commands
 from motor.motor_asyncio import AsyncIOMotorClient
 from logging.handlers import TimedRotatingFileHandler
 
+# Seconds a rejected prefix command's notice stays before it deletes itself.
+LEGACY_NOTICE_LIFETIME = 8
+
 class _MessageResponse:
     def __init__(self, interaction):
         self.interaction = interaction
@@ -16,6 +19,7 @@ class _MessageResponse:
 
     async def send_message(self, *args, **kwargs):
         kwargs.pop("ephemeral", None)
+        kwargs.pop("wait", None)
         self._message = await self.interaction.channel.send(*args, **kwargs)
         return self._message
 
@@ -35,11 +39,19 @@ class _MessageResponse:
         await callback(self.interaction, card_ids)
 
 class _MessageInteraction:
-    def __init__(self, message):
+    def __init__(self, message, client=None):
         self.user = message.author
         self.guild = message.guild
         self.channel = message.channel
+        self.channel_id = message.channel.id
+        self.guild_id = message.guild.id if message.guild else None
         self.message = message
+        # App command checks such as `app_commands.checks.cooldown` read these.
+        self.created_at = message.created_at
+        self.id = message.id
+        self.client = client
+        self.command = None
+        self.extras = {}
         self.response = _MessageResponse(self)
         self.followup = self.response
 
@@ -50,6 +62,11 @@ class IUFI(commands.Bot):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.tree.on_error = self.on_app_command_error
+        self.tree.interaction_check = self.tree_interaction_check
+
+    async def tree_interaction_check(self, interaction: discord.Interaction) -> bool:
+        func.ensure_command_channel(interaction)
+        return True
 
     async def on_message(self, message: discord.Message, /) -> None:
         if message.author.bot or not message.guild:
@@ -92,13 +109,86 @@ class IUFI(commands.Bot):
         if not parts:
             return
 
-        lookup = {}
+        lookup = self.build_legacy_lookup()
+
+        matched_command = None
+        matched_args = []
+        normalized_parts = [part.lower() for part in parts]
+
+        for key, command in sorted(lookup.items(), key=lambda kv: len(kv[0].split()), reverse=True):
+            key_parts = key.split()
+            if normalized_parts[:len(key_parts)] == key_parts:
+                matched_command = command
+                matched_args = parts[len(key_parts):]
+                break
+
+        if matched_command is None:
+            base_name = parts[0].lower()
+            if base_name.startswith("q") and len(base_name) > 1:
+                base_name = base_name[1:]
+            matched_command = lookup.get(base_name)
+            matched_args = parts[1:]
+
+        if matched_command is None:
+            return
+
+        await self.invoke_legacy_command(message, matched_command, matched_args)
+
+    def build_legacy_lookup(self) -> dict[str, app_commands.Command]:
+        """Maps legacy message command text (e.g. `roll`, `r`, `leaderboard quiz`, `l q`) to slash commands."""
+        lookup: dict[str, app_commands.Command] = {}
+        subcommands: dict[str, app_commands.Command] = {}
+
         for command in self.tree.walk_commands():
             if isinstance(command, app_commands.Group):
                 continue
-            qualified = command.qualified_name.lower()
-            lookup[qualified] = command
-            lookup[command.name.lower()] = command
+            lookup[command.qualified_name.lower()] = command
+            if command.parent is None:
+                lookup[command.name.lower()] = command
+            else:
+                subcommands.setdefault(command.name.lower(), command)
+
+        # Top level commands own the short form, so `qquiz` stays the quiz game
+        # instead of whichever cog happened to load last.
+        for name, command in subcommands.items():
+            lookup.setdefault(name, command)
+
+        # Short forms for grouped commands, e.g. `ql q` -> `/leaderboard quiz`.
+        group_aliases = {
+            "leaderboard": ["l", "lb"],
+        }
+        group_default_subcommands = {
+            "leaderboard": "exp",
+        }
+        subcommand_aliases = {
+            "leaderboard": {
+                "e": "exp",
+                "c": "candies",
+                "mg": "matchgame",
+                "q": "quiz",
+                "m": "music",
+                "bp": "battlepass",
+            },
+        }
+        for group_name, aliases in group_aliases.items():
+            group_keys = [group_name, *aliases]
+            sub_aliases = subcommand_aliases.get(group_name, {})
+
+            for key, command in list(lookup.items()):
+                key_parts = key.split()
+                if len(key_parts) != 2 or key_parts[0] != group_name:
+                    continue
+
+                sub_name = key_parts[1]
+                sub_keys = [sub_name, *(alias for alias, target in sub_aliases.items() if target == sub_name)]
+                for group_key in group_keys:
+                    for sub_key in sub_keys:
+                        lookup[f"{group_key} {sub_key}"] = command
+
+            default_sub = group_default_subcommands.get(group_name)
+            if default_sub and (default_command := lookup.get(f"{group_name} {default_sub}")):
+                for group_key in group_keys:
+                    lookup.setdefault(group_key, default_command)
 
         legacy_aliases = {
             "r": "roll",
@@ -153,27 +243,46 @@ class IUFI(commands.Bot):
             if command_name in lookup:
                 lookup[alias] = lookup[command_name]
 
-        matched_command = None
-        matched_args = []
-        normalized_parts = [part.lower() for part in parts]
+        return lookup
 
-        for key, command in sorted(lookup.items(), key=lambda kv: len(kv[0].split()), reverse=True):
-            key_parts = key.split()
-            if normalized_parts[:len(key_parts)] == key_parts:
-                matched_command = command
-                matched_args = parts[len(key_parts):]
-                break
+    async def legacy_command_allowed(self, interaction: _MessageInteraction, command: app_commands.Command) -> tuple[bool, str | None]:
+        """Run a message invocation through the command's own checks.
 
-        if matched_command is None:
-            base_name = parts[0].lower()
-            if base_name.startswith("q") and len(base_name) > 1:
-                base_name = base_name[1:]
-            matched_command = lookup.get(base_name)
-            matched_args = parts[1:]
+        Returns whether it may run and the reply to post. Message replies cannot be
+        ephemeral, so callers auto-delete these instead.
+        """
+        groups = []
+        parent = command.parent
+        while parent is not None:
+            groups.append(parent)
+            parent = parent.parent
 
-        if matched_command is None:
-            return
+        denied = "You do not have permission to use this command."
+        try:
+            for group in reversed(groups):
+                if not await discord.utils.maybe_coroutine(group.interaction_check, interaction):
+                    return False, denied
 
+            for check in getattr(command, "checks", []):
+                if not await discord.utils.maybe_coroutine(check, interaction):
+                    return False, denied
+
+        except app_commands.CommandOnCooldown as error:
+            seconds = max(1, round(error.retry_after))
+            return False, f"{interaction.user.mention} you're on cooldown. Try again in {seconds}s."
+
+        except app_commands.AppCommandError as error:
+            return False, str(error) or denied
+
+        except Exception as error:
+            func.logger.warning(
+                f"Denied legacy invocation of `{command.qualified_name}` because its permission check failed to run: {error}"
+            )
+            return False, denied
+
+        return True, None
+
+    async def invoke_legacy_command(self, message: discord.Message, matched_command: app_commands.Command, matched_args: list[str]) -> None:
         callback = matched_command.callback
         signature = inspect.signature(callback)
         kwargs = {}
@@ -218,8 +327,21 @@ class IUFI(commands.Bot):
 
             kwargs[param_name] = value
 
-        interaction = _MessageInteraction(message)
+        interaction = _MessageInteraction(message, client=self)
         interaction.legacy_args = positional
+        interaction.command = matched_command
+
+        try:
+            func.ensure_command_channel(interaction)
+        except app_commands.CheckFailure:
+            # Prefix replies are public; stay silent instead of cluttering the channel.
+            return
+
+        allowed, denial = await self.legacy_command_allowed(interaction, matched_command)
+        if not allowed:
+            if denial is None:
+                return
+            return await interaction.response.send_message(denial, delete_after=LEGACY_NOTICE_LIFETIME)
 
         missing = [
             param_name
@@ -248,8 +370,11 @@ class IUFI(commands.Bot):
         if isinstance(error, app_commands.CommandOnCooldown):
             message = str(error)
 
-        elif isinstance(error, (app_commands.MissingPermissions, app_commands.CheckFailure)):
+        elif isinstance(error, app_commands.MissingPermissions):
             message = "You do not have permission to use this command."
+
+        elif isinstance(error, app_commands.CheckFailure):
+            message = str(error) or "You do not have permission to use this command."
 
         elif issubclass(error.__class__, iufi.IUFIException):
             message = str(error)

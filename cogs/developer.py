@@ -251,8 +251,6 @@ class TestGroup(app_commands.Group):
         state = func.get_battlepass_state(user)
         if not func.battlepass_enabled():
             return await interaction.response.send_message("Battle Pass is currently disabled.", ephemeral=True)
-        if not state.get("is_active"):
-            return await interaction.response.send_message("Buy and activate the Battle Pass first.", ephemeral=True)
 
         old_xp = int(state.get("xp", 0))
         old_level, _, _ = func.calculate_battlepass_level(old_xp)

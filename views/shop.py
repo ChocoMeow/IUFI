@@ -80,7 +80,7 @@ class Dropdown(discord.ui.Select):
                     await func.update_user(interaction.user.id, query)
 
                     embed = discord.Embed(title="🛒 Shop Purchase", color=discord.Color.random())
-                    embed.description = f"```🎫 Battle Pass\n🍬 - {price}```"
+                    embed.description = f"```🎫 Battle Pass\n🍬 - {price}```\nYou now earn **full** Battle Pass XP."
                     return await interaction.response.send_message(embed=embed)
 
                 modal = QuantityModal()

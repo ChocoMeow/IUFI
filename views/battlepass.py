@@ -61,11 +61,6 @@ class BattlepassXPDropView(discord.ui.View):
 
             user = await func.get_user(interaction.user.id)
             state = func.get_battlepass_state(user)
-            if not state.get("is_active"):
-                return await interaction.followup.send(
-                    "You need an active Battle Pass to claim this drop. Buy it from the shop first.",
-                    ephemeral=True
-                )
 
             query = func.add_battlepass_xp(user, self.xp_amount)
             granted = int(query.get("$inc", {}).get("battlepass.xp", 0) or 0)
@@ -119,7 +114,9 @@ class BattlepassView(discord.ui.View):
         level, in_level_xp, xp_to_next = func.calculate_battlepass_level(state.get("xp", 0))
         progress_pct = 100 if level >= max_level else int((in_level_xp / xp_per_level) * 100)
         progress_bar = _build_progress_bar(in_level_xp if level < max_level else xp_per_level, xp_per_level)
-        status = "Active" if state.get("is_active") else "Inactive"
+        purchased = func.has_purchased_battlepass(state)
+        free_percent = int(bp_settings.get("free_xp_percent", 50) or 50)
+        status = "Purchased (full XP)" if purchased else f"Free ({free_percent}% XP)"
 
         summary = discord.Embed(title=f"🎫 {self.author.display_name}'s Battle Pass", color=discord.Color.random())
         summary.description = (
@@ -133,8 +130,11 @@ class BattlepassView(discord.ui.View):
             f"XP to Next:  {xp_to_next if level < max_level else 0}\n"
             f"```"
         )
-        if not state.get("is_active"):
-            summary.description += "\nBuy Battle Pass from the shop to start earning Battle Pass XP."
+        if not purchased:
+            summary.description += (
+                f"\nEveryone earns Battle Pass XP and rewards. "
+                f"Buy the pass from the shop for **full XP** instead of `{free_percent}%`."
+            )
 
         community = events.community_progress_text()
         if community:
@@ -176,9 +176,11 @@ class BattlepassView(discord.ui.View):
         drop_text = "/".join(str(amount) for amount in drop_amounts)
         source_lines.append(f"Random world drop (claim while the pass is enabled): `{drop_text} XP`")
 
+        free_percent = int(bp_settings.get("free_xp_percent", 50) or 50)
         xp_embed = discord.Embed(title="Battle Pass XP Sources", color=discord.Color.gold())
         xp_embed.description = (
-            "Battle Pass XP is only earned with an **active** Battle Pass.\n\n"
+            f"Everyone can earn Battle Pass XP and rewards. "
+            f"Without a purchased pass, XP is `{free_percent}%` of the amounts below.\n\n"
             + "\n".join(f"• {line}" for line in source_lines)
         )
         xp_mult = events.battlepass_xp_multiplier()

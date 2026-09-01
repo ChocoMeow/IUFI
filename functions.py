@@ -357,6 +357,29 @@ def get_battlepass_xp_for_action(action: str) -> int:
     except Exception:
         return 0
 
+def has_purchased_battlepass(state: Dict[str, Any] | None) -> bool:
+    if not isinstance(state, dict):
+        return False
+    return bool(state.get("is_purchased") or state.get("is_active"))
+
+def _apply_battlepass_xp_modifiers(amount: int, state: Dict[str, Any]) -> int:
+    import events
+    scaled = int(round(amount * events.battlepass_xp_multiplier()))
+    if scaled < amount and events.battlepass_xp_multiplier() >= 1:
+        scaled = amount
+    amount = scaled
+
+    if has_purchased_battlepass(state):
+        return max(0, amount)
+
+    try:
+        free_percent = float(get_battlepass_settings().get("free_xp_percent", 50))
+    except (TypeError, ValueError):
+        free_percent = 50.0
+    free_percent = max(0.0, min(100.0, free_percent))
+    # Round half up so a 1 XP roll still grants 1 at 50%.
+    return max(0, int((amount * free_percent + 50) // 100))
+
 def add_battlepass_xp(user: Dict[str, Any], amount: int, *, query: Dict[str, Any] = None) -> Dict[str, Any]:
     if query is None:
         query = {}
@@ -372,17 +395,10 @@ def add_battlepass_xp(user: Dict[str, Any], amount: int, *, query: Dict[str, Any
     if amount <= 0:
         return query
 
-    import events
-    scaled = int(round(amount * events.battlepass_xp_multiplier()))
-    if scaled < amount and events.battlepass_xp_multiplier() >= 1:
-        scaled = amount
-    amount = scaled
+    state, query = with_battlepass_state_synced(user, query)
+    amount = _apply_battlepass_xp_modifiers(amount, state)
 
     if amount <= 0:
-        return query
-
-    state, query = with_battlepass_state_synced(user, query)
-    if not state.get("is_active", False):
         return query
 
     bp_settings = get_battlepass_settings()
@@ -666,6 +682,16 @@ def _pick_new_quests(quest_type: str, quests_base: Dict[str, Any], items: int) -
     other_candidates = [quest_name for quest_name in candidates if quest_name != guaranteed_quest]
     return [guaranteed_quest] + random.sample(other_candidates, k=sample_size - 1)
 
+TRADE_COMMAND_NAMES = {
+    "trade",
+    "tradeeveryone",
+    "tradelast",
+    "tradeeveryonelast",
+    "tradepotion",
+    "tradepotioneveryone",
+}
+CHANNEL_UNRESTRICTED_ROOT_COMMANDS = {"dev", "debug", "test"}
+
 def is_admin_interaction(interaction: discord.Interaction) -> bool:
     return interaction.user.id in settings.ADMIN_IDS
 
@@ -677,6 +703,53 @@ def in_market_channel(interaction: discord.Interaction) -> bool:
 
 def in_music_channel(interaction: discord.Interaction) -> bool:
     return interaction.channel_id == settings.MUSIC_TEXT_CHANNEL
+
+def _is_channel_unrestricted_command(command: Any) -> bool:
+    if command is None:
+        return False
+
+    current = command
+    while current is not None:
+        if getattr(current, "name", None) in CHANNEL_UNRESTRICTED_ROOT_COMMANDS:
+            return True
+        current = getattr(current, "parent", None)
+    return False
+
+def ensure_command_channel(interaction: discord.Interaction) -> None:
+    """Raise if this player command is not allowed in the current channel."""
+    command = getattr(interaction, "command", None)
+    if _is_channel_unrestricted_command(command):
+        return
+
+    channel_id = interaction.channel_id
+    ignore_ids = set(settings.IGNORE_CHANNEL_IDS or [])
+    game_ids = set(settings.GAME_CHANNEL_IDS or [])
+    is_trade = getattr(command, "name", None) in TRADE_COMMAND_NAMES
+
+    if channel_id == settings.GALLERY_CHANNEL:
+        raise discord.app_commands.CheckFailure(
+            "The gallery is for sharing collections only. Use a game channel for commands."
+        )
+
+    if channel_id in ignore_ids:
+        raise discord.app_commands.CheckFailure("Commands are not allowed in this channel.")
+
+    if channel_id == settings.MARKET_CHANNEL:
+        if is_trade:
+            return
+        raise discord.app_commands.CheckFailure(
+            "Only trade commands can be used in the market. Use a game channel for other commands."
+        )
+
+    if channel_id in game_ids:
+        return
+
+    if is_trade:
+        raise discord.app_commands.CheckFailure(
+            "Trade commands can only be used in game channels or the market."
+        )
+
+    raise discord.app_commands.CheckFailure("This command can only be used in a game channel.")
 
 async def get_user(user_id: int, *, insert: bool = True) -> Dict[str, Any]:
     user = USERS_BUFFER.get(user_id)

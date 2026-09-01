@@ -604,6 +604,7 @@
         "max_level": 100,
         "xp_per_level": 200,
         "shop_price_candies": 3000,
+        "free_xp_percent": 50,
         "xp_per_action": {
             "roll": 1,
             "quiz": 5,
