@@ -148,7 +148,10 @@ class EmojiQuizView(discord.ui.View):
         else:
             state["average_time"] = avg_time
 
-        await func.update_user(self.author.id, {"$set": {"game_state.emoji_quiz": state}})
+        query = {"$set": {"game_state.emoji_quiz": state}}
+        if total_points > 0:
+            query = func.add_battlepass_xp(user, func.get_battlepass_xp_for_action("quiz"), query=query)
+        await func.update_user(self.author.id, query)
 
         embed = discord.Embed(title="Emoji Quiz Result", color=discord.Color.random())
         embed.description = f"```{summary}```\n**Total points:** {total_points}\n**Correct:** {self._results.count(True)} | **Wrong:** {self._results.count(False)} | **Timeout:** {self._results.count(None)}\n**Avg Answer Time:** {func.convert_seconds(avg_time)}"

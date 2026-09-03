@@ -8,7 +8,7 @@ from typing import Any
 
 XP_ACTION_LABELS = {
     "roll": "Normal roll (not a purchased tier roll)",
-    "quiz": "Quiz that gains points",
+    "quiz": "Quiz or emoji quiz that gains points",
     "mg1": "Match Game level 1 (match at least 2 cards)",
     "mg2": "Match Game level 2 (match at least 4 cards)",
     "mg3": "Match Game level 3 (match at least 6 cards)",
