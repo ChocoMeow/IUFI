@@ -81,6 +81,7 @@ class Settings:
         self.MONTHLY_LEADERBOARD_ROLE: int = 0
         self.BATTLEPASS_SETTINGS: Dict[str, Any] = {}
         self.EVENT_SETTINGS: Dict[str, Any] = {}
+        self.TEASER_SETTINGS: Dict[str, Any] = {}
         self.BATTLEPASS_MILESTONES: Dict[str, Any] = {}
         # Newly added defaults so callers can reference them directly without getattr
         self.PVP_SETTINGS: Dict[str, Any] = {}
@@ -125,6 +126,7 @@ class Settings:
         self.MONTHLY_LEADERBOARD_ROLE = settings.get("MONTHLY_LEADERBOARD_ROLE", 0)
         self.BATTLEPASS_SETTINGS = settings.get("BATTLEPASS_SETTINGS", {})
         self.EVENT_SETTINGS = settings.get("EVENT_SETTINGS", {})
+        self.TEASER_SETTINGS = settings.get("TEASER_SETTINGS", {})
         self.BATTLEPASS_MILESTONES = settings.get("BATTLEPASS_MILESTONES", {})
         self.PVP_SETTINGS = settings.get("PVP_SETTINGS", {})
         self.REWARD_CARD_PROBABILITIES = settings.get("REWARD_CARD_PROBABILITIES", {})

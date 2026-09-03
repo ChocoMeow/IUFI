@@ -90,6 +90,9 @@ class BattlepassXPDropView(discord.ui.View):
             )
 
 
+REWARDS_PAGE_SIZE = 10
+
+
 class BattlepassView(discord.ui.View):
     def __init__(self, author: discord.abc.User, user: dict[str, Any], timeout: float = 120):
         super().__init__(timeout=timeout)
@@ -97,6 +100,7 @@ class BattlepassView(discord.ui.View):
         self.mode = "overview"
         self.pages: list[discord.Embed] = []
         self.current_page = 0
+        self.rewards_page = 0
         self.message: discord.Message | None = None
         self.overview_embed: discord.Embed | None = None
         self.xp_embed: discord.Embed | None = None
@@ -142,29 +146,39 @@ class BattlepassView(discord.ui.View):
         self.overview_embed = summary
 
         lines = []
+        next_unclaimed = next(
+            (reward_level for reward_level in range(1, max_level + 1) if reward_level not in claimed),
+            max_level,
+        )
         for reward_level in range(1, max_level + 1):
             rewards = func.get_battlepass_rewards_for_level(reward_level)
             reward_text = ", ".join(func.format_battlepass_reward(item) for item in rewards) if rewards else "No reward"
 
             if reward_level in claimed:
                 marker = "✅"
-            elif reward_level == level + 1:
+            elif reward_level == next_unclaimed:
                 marker = "👉"
             else:
                 marker = "⬜"
 
             lines.append(f"{marker} L{reward_level:>3}: {reward_text}")
 
-        page_size = 15
+        page_size = REWARDS_PAGE_SIZE
         pages = []
-        for start in range(0, len(lines), page_size):
+        total_pages = max(1, -(-len(lines) // page_size))
+        for index, start in enumerate(range(0, len(lines), page_size)):
             page = lines[start:start + page_size]
-            pages.append(discord.Embed(
-                title=f"Battle Pass Rewards ({start + 1}-{min(start + page_size, len(lines))})",
+            embed = discord.Embed(
+                title=f"Battle Pass Rewards (L{start + 1}-L{min(start + page_size, len(lines))})",
                 description="```\n" + "\n".join(page) + "\n```",
                 color=discord.Color.random()
-            ))
+            )
+            embed.set_footer(text=f"Page {index + 1}/{total_pages} • Next reward: L{next_unclaimed}")
+            pages.append(embed)
         self.pages = pages or [discord.Embed(title="Battle Pass Rewards", description="No rewards configured.", color=discord.Color.random())]
+
+        self.rewards_page = min(max(next_unclaimed - 1, 0) // page_size, len(self.pages) - 1)
+        self.current_page = self.rewards_page
 
         xp_map = bp_settings.get("xp_per_action", {})
         source_lines = []
@@ -197,10 +211,19 @@ class BattlepassView(discord.ui.View):
 
     def _update_buttons(self):
         self.overview_button.disabled = self.mode == "overview"
+        self.rewards_button.disabled = self.mode == "rewards"
         self.xp_button.disabled = self.mode == "xp"
-        self.previous_button.disabled = self.mode != "rewards"
-        last_page = self.mode == "rewards" and self.current_page >= len(self.pages) - 1
-        self.next_button.disabled = last_page
+
+        in_rewards = self.mode == "rewards"
+        for button in (self.previous_button, self.next_button):
+            if in_rewards and button not in self.children:
+                self.add_item(button)
+            elif not in_rewards and button in self.children:
+                self.remove_item(button)
+
+        if in_rewards:
+            self.previous_button.disabled = self.current_page <= 0
+            self.next_button.disabled = self.current_page >= len(self.pages) - 1
 
     async def interaction_check(self, interaction: discord.Interaction) -> bool:
         if interaction.user != self.author:
@@ -220,6 +243,13 @@ class BattlepassView(discord.ui.View):
         self._update_buttons()
         await interaction.response.edit_message(embed=self.current_embed(), view=self)
 
+    @discord.ui.button(label="Rewards", style=discord.ButtonStyle.primary)
+    async def rewards_button(self, interaction: discord.Interaction, button: discord.ui.Button):
+        self.mode = "rewards"
+        self.current_page = min(self.rewards_page, len(self.pages) - 1)
+        self._update_buttons()
+        await interaction.response.edit_message(embed=self.current_embed(), view=self)
+
     @discord.ui.button(label="XP Sources", style=discord.ButtonStyle.secondary)
     async def xp_button(self, interaction: discord.Interaction, button: discord.ui.Button):
         self.mode = "xp"
@@ -228,19 +258,14 @@ class BattlepassView(discord.ui.View):
 
     @discord.ui.button(label="Previous", style=discord.ButtonStyle.secondary)
     async def previous_button(self, interaction: discord.Interaction, button: discord.ui.Button):
-        if self.mode == "rewards" and self.current_page > 0:
+        if self.current_page > 0:
             self.current_page -= 1
-        else:
-            self.mode = "overview"
         self._update_buttons()
         await interaction.response.edit_message(embed=self.current_embed(), view=self)
 
-    @discord.ui.button(label="Next", style=discord.ButtonStyle.primary)
+    @discord.ui.button(label="Next", style=discord.ButtonStyle.secondary)
     async def next_button(self, interaction: discord.Interaction, button: discord.ui.Button):
-        if self.mode != "rewards":
-            self.mode = "rewards"
-            self.current_page = 0
-        elif self.current_page < len(self.pages) - 1:
+        if self.current_page < len(self.pages) - 1:
             self.current_page += 1
         self._update_buttons()
         await interaction.response.edit_message(embed=self.current_embed(), view=self)

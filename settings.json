@@ -569,6 +569,20 @@
         "convert_candy_multiplier": 1.0,
         "shop_sale_percent": 0
     },
+    "TEASER_SETTINGS": {
+        "enabled": true,
+        "interval_minutes": 5,
+        "chance": 6,
+        "delete_after_seconds": 10,
+        "messages": [
+            "Hey, wanna know a little secret? <:IUwink3:708068705380073513>",
+            "What if IU made an appearance for her debut?",
+            "I think something special is coming soon..",
+            "I heard someone's gonna wander around IUFI in a few weeks <:IUcantlaugh:780678942700077076>",
+            "Now opening the sh— Wait.. it's not time yet..",
+            "<:IUthink3:986530893101412362> i wonder if this is a good idea.."
+        ]
+    },
     "BATTLEPASS_MILESTONES": {
         "enabled": true,
         "duration_days": 14,

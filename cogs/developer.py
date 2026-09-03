@@ -2,6 +2,7 @@ import iufi
 import psutil
 import asyncio
 import time
+import random
 import discord
 import functions as func
 
@@ -225,7 +226,7 @@ class TestGroup(app_commands.Group):
         super().__init__(name="test", description="Personal Battle Pass testing commands.")
 
     async def interaction_check(self, interaction: discord.Interaction) -> bool:
-        if not func.is_tester_interaction(interaction):
+        if not (func.is_tester_interaction(interaction) or func.is_admin_interaction(interaction)):
             raise app_commands.CheckFailure("You do not have permission to use this command.")
         return True
 
@@ -288,6 +289,28 @@ class TestGroup(app_commands.Group):
         func.logger.info(
             f"Tester {interaction.user.name}({interaction.user.id}) spawned a Battle Pass XP drop ({xp_amount})"
         )
+
+    @app_commands.command(name="teaser", description="Post a random event teaser in this channel, then delete it.")
+    async def teaser(self, interaction: discord.Interaction):
+        teaser = func.settings.TEASER_SETTINGS or {}
+        messages = [msg for msg in teaser.get("messages", []) if isinstance(msg, str) and msg.strip()]
+        if not messages:
+            return await interaction.response.send_message("No teaser messages are configured.", ephemeral=True)
+
+        content = random.choice(messages)
+        delete_after = max(int(teaser.get("delete_after_seconds", 10) or 10), 0)
+        await interaction.response.send_message("Posted a teaser in this channel.", ephemeral=True)
+        message = await interaction.channel.send(content)
+        func.logger.info(
+            f"Tester {interaction.user.name}({interaction.user.id}) spawned a teaser in "
+            f"{getattr(interaction.channel, 'name', 'unknown')}({interaction.channel_id})"
+        )
+        if delete_after:
+            await asyncio.sleep(delete_after)
+            try:
+                await message.delete()
+            except discord.HTTPException:
+                pass
 
     @app_commands.command(name="bplevels", description="Add community Battle Pass levels to test global milestones.")
     @app_commands.describe(amount="Community levels to add")

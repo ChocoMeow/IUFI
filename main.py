@@ -282,11 +282,43 @@ class IUFI(commands.Bot):
 
         return True, None
 
+    def resolve_legacy_member(self, message: discord.Message, value: str) -> discord.Member | None:
+        """Resolves a message argument (mention, raw id, username or nickname) to a member."""
+        raw = value.strip()
+        if not raw or not message.guild:
+            return None
+
+        # Role and channel mentions are never a member.
+        if raw.startswith("<@&") or raw.startswith("<#"):
+            return None
+
+        identifier = raw[2:-1].lstrip("!") if raw.startswith("<@") and raw.endswith(">") else raw
+        if identifier.isdigit():
+            member_id = int(identifier)
+            mentioned = discord.utils.get(message.mentions, id=member_id)
+            return message.guild.get_member(member_id) or (mentioned if isinstance(mentioned, discord.Member) else None)
+
+        # Plain text such as `@Someone` is not a real mention, so match it by name.
+        name = raw.lstrip("@").lower()
+        if not name:
+            return None
+
+        def matches(member: discord.Member) -> bool:
+            candidates = {member.name.lower(), member.display_name.lower()}
+            if member.global_name:
+                candidates.add(member.global_name.lower())
+            if member.nick:
+                candidates.add(member.nick.lower())
+            return name in candidates
+
+        return discord.utils.find(matches, message.guild.members)
+
     async def invoke_legacy_command(self, message: discord.Message, matched_command: app_commands.Command, matched_args: list[str]) -> None:
         callback = matched_command.callback
         signature = inspect.signature(callback)
         kwargs = {}
         positional = list(matched_args)
+        unresolved_member: tuple[str, str] | None = None
 
         for param_name, param in signature.parameters.items():
             if param_name in {"self", "interaction", "ctx"}:
@@ -299,17 +331,13 @@ class IUFI(commands.Bot):
             value = positional.pop(0)
 
             if param_name == "member" or param_name == "opponent":
-                resolved = None
-                if value.startswith("<@") and value.endswith(">"):
-                    user_id = value[2:-1].replace("!", "")
-                    resolved = message.guild.get_member(int(user_id))
-                else:
-                    name = value.lower()
-                    resolved = discord.utils.find(
-                        lambda member: member.name.lower() == name or member.display_name.lower() == name,
-                        message.guild.members,
-                    )
-                kwargs[param_name] = resolved or message.author
+                # Never fall back to the author: that silently retargets the command
+                # at the player who ran it (e.g. "You are not able to trade with yourself").
+                resolved = self.resolve_legacy_member(message, value)
+                if resolved is None:
+                    unresolved_member = (param_name, value)
+                    break
+                kwargs[param_name] = resolved
                 continue
 
             if param.annotation is int:
@@ -342,6 +370,15 @@ class IUFI(commands.Bot):
             if denial is None:
                 return
             return await interaction.response.send_message(denial, delete_after=LEGACY_NOTICE_LIFETIME)
+
+        if unresolved_member:
+            param_name, value = unresolved_member
+            return await interaction.response.send_message(
+                f"Could not find the {param_name} `{value}`. Mention them (pick the name from Discord's autocomplete) "
+                f"or use their exact username.",
+                allowed_mentions=discord.AllowedMentions.none(),
+                delete_after=LEGACY_NOTICE_LIFETIME,
+            )
 
         missing = [
             param_name
