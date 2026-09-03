@@ -152,16 +152,17 @@ class MatchGame(discord.ui.View):
         update_data: dict[str, Any] = {}
         user = await func.get_user(self.author.id)
 
-        best_state = user.get("game_state", {}).get("match_game", {}).get(self._level, {
-            "finished_time": 0,
-            "matched": 0,
-            "click_left": 0
-        })
+        best_state = user.get("game_state", {}).get("match_game", {}).get(self._level)
+        if not isinstance(best_state, dict):
+            best_state = {}
+        best_matched = int(best_state.get("matched") or 0)
+        best_time = float(best_state.get("finished_time") or 0)
+        best_clicks = int(best_state.get("click_left") or 0)
 
         prefix = f"game_state.match_game.{self._level}"
-        if matched_raw > best_state["matched"] or (
-                matched_raw == best_state["matched"] and (
-                    self.used_time < best_state["finished_time"] or self.click_left > best_state["click_left"]
+        if matched_raw > best_matched or (
+                matched_raw == best_matched and (
+                    self.used_time < best_time or self.click_left > best_clicks
                 )
         ):
             update_data["$set"] = {
