@@ -359,6 +359,21 @@ def get_battlepass_xp_for_action(action: str) -> int:
     except Exception:
         return 0
 
+def scale_battlepass_action_xp(action: str, scored: int, maximum: int) -> int:
+    """Grant a share of an action's configured XP. A full score always hits the max."""
+    try:
+        scored = int(scored)
+        maximum = int(maximum)
+    except (TypeError, ValueError):
+        return 0
+    if scored <= 0 or maximum <= 0:
+        return 0
+    max_xp = get_battlepass_xp_for_action(action)
+    if max_xp <= 0:
+        return 0
+    scored = min(scored, maximum)
+    return max(1, round(max_xp * scored / maximum))
+
 def has_purchased_battlepass(state: Dict[str, Any] | None) -> bool:
     if not isinstance(state, dict):
         return False
@@ -658,6 +673,8 @@ def _pick_new_quests(quest_type: str, quests_base: Dict[str, Any], items: int) -
     quests_by_type: Dict[str, List[str]] = {}
 
     for quest_name, quest_details in quests_base.items():
+        if quest_details.get("retired"):
+            continue
         quest_group = quest_details["type"]
         quests_by_type.setdefault(quest_group, []).append(quest_name)
 
@@ -798,6 +815,8 @@ def update_quest_progress(user: Dict[str, Any], completed_quests: Union[str, Lis
 
         # Update the progress for each quest
         for quest_name in completed_quests:
+            if quest_name not in QUESTS_BASE:
+                continue
             if quest_name in user_quest["progresses"]:
                 if user_quest["progresses"][quest_name] < QUESTS_BASE[quest_name]["amount"]:
                     quest_progress = user_quest["progresses"][quest_name]

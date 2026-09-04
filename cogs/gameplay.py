@@ -122,7 +122,7 @@ class Gameplay(commands.Cog):
         view = MatchGame(interaction.user, level, user=user)
         actived_potions = func.get_potions(user.get("actived_potions", {}), func.settings.POTIONS_BASE)
 
-        query = func.update_quest_progress(user, f"PLAY_MATCH_GAME_LVL_{level}", query={"$set": {"cooldown.match_game": events.cooldown_expiry(view._data.get("cooldown", 0), potion_speed=actived_potions.get("speed", 0))}})
+        query = func.update_quest_progress(user, [f"PLAY_MATCH_GAME_LVL_{level}", "PLAY_MATCH_GAME"], query={"$set": {"cooldown.match_game": events.cooldown_expiry(view._data.get("cooldown", 0), potion_speed=actived_potions.get("speed", 0))}})
         await func.update_user(interaction.user.id, query)
 
         embed, file = await view.build()

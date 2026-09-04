@@ -220,8 +220,10 @@ class QuizView(discord.ui.View):
         state["average_time"] = round(((total_average_time * state["average_time"]) + average_time) / (total_average_time + 1), 1) if state["average_time"] else average_time
         query["$set"] = {"game_state.quiz_game": state}
 
-        if state["points"] > old_points:
-            query = func.add_battlepass_xp(user, func.get_battlepass_xp_for_action("quiz"), query=query)
+        correct = self._results.count(True)
+        quiz_xp = func.scale_battlepass_action_xp("quiz", correct, len(self.questions) or 5)
+        if quiz_xp:
+            query = func.add_battlepass_xp(user, quiz_xp, query=query)
 
         embed = discord.Embed(title="Quiz Result", color=discord.Color.random())
         embed.description = f"```{summary}```" \

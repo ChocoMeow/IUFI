@@ -141,23 +141,32 @@
             "rewards": [["⚡", "potions.speed_i", [1, 1]]],
             "type": "MUSIC_QUIZ"
         },
+        "PLAY_MATCH_GAME": {
+            "title": "Play any match game 4 times",
+            "amount": 4,
+            "rewards": [["⚡", "potions.speed_i", [1, 2]]],
+            "type": "MATCH_GAME"
+        },
         "PLAY_MATCH_GAME_LVL_1": {
             "title": "Play level 1 match game 5 times",
             "amount": 5,
             "rewards": [["⚡", "potions.speed_i", [1, 1]]],
-            "type": "MATCH_GAME"
+            "type": "MATCH_GAME",
+            "retired": true
         },
         "PLAY_MATCH_GAME_LVL_2": {
             "title": "Play level 2 match game 4 times",
             "amount": 4,
             "rewards": [["⚡", "potions.speed_i", [1, 2]]],
-            "type": "MATCH_GAME"
+            "type": "MATCH_GAME",
+            "retired": true
         },
         "PLAY_MATCH_GAME_LVL_3": {
             "title": "Play level 3 match game 2 times",
             "amount": 2,
             "rewards": [["⚡", "potions.speed_ii", [1, 1]]],
-            "type": "MATCH_GAME"
+            "type": "MATCH_GAME",
+            "retired": true
         },
         "FRAME_CONFIG": {
             "title": "Add frame to 1 card",
@@ -239,23 +248,32 @@
             "rewards": [["🍀", "potions.luck_ii", [1, 2]]],
             "type": "MUSIC_QUIZ"
         },
+        "PLAY_MATCH_GAME": {
+            "title": "Play any match game 30 times",
+            "amount": 30,
+            "rewards": [["⚡", "potions.speed_ii", [2, 3]]],
+            "type": "MATCH_GAME"
+        },
         "PLAY_MATCH_GAME_LVL_1": {
             "title": "Play level 1 match game 50 times",
             "amount": 50,
             "rewards": [["🍀", "potions.luck_ii", [1, 2]]],
-            "type": "MATCH_GAME"
+            "type": "MATCH_GAME",
+            "retired": true
         },
         "PLAY_MATCH_GAME_LVL_2": {
             "title": "Play level 2 match game 40 times",
             "amount": 40,
             "rewards": [["⚡", "potions.speed_ii", [2, 3]]],
-            "type": "MATCH_GAME"
+            "type": "MATCH_GAME",
+            "retired": true
         },
         "PLAY_MATCH_GAME_LVL_3": {
             "title": "Play level 3 match game 20 times",
             "amount": 20,
             "rewards": [["⚡", "potions.speed_iii", [1, 2]]],
-            "type": "MATCH_GAME"
+            "type": "MATCH_GAME",
+            "retired": true
         },
         "FRAME_CONFIG": {
             "title": "Add frame to 10 card",
@@ -571,8 +589,8 @@
     },
     "TEASER_SETTINGS": {
         "enabled": true,
-        "interval_minutes": 5,
-        "chance": 6,
+        "interval_minutes": 6,
+        "chance": 3,
         "delete_after_seconds": 10,
         "messages": [
             "Hey, wanna know a little secret? <:IUwink3:708068705380073513>",

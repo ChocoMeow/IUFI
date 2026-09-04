@@ -8,10 +8,10 @@ from typing import Any
 
 XP_ACTION_LABELS = {
     "roll": "Normal roll (not a purchased tier roll)",
-    "quiz": "Quiz or emoji quiz that gains points",
-    "mg1": "Match Game level 1 (match at least 2 cards)",
-    "mg2": "Match Game level 2 (match at least 4 cards)",
-    "mg3": "Match Game level 3 (match at least 6 cards)",
+    "quiz": "Quiz or emoji quiz: 1 XP per correct (5 XP for all 5)",
+    "mg1": "Match Game 1: up to 10 XP (3/3 pairs)",
+    "mg2": "Match Game 2: up to 15 XP (6/6 pairs)",
+    "mg3": "Match Game 3: up to 25 XP (10/10 pairs)",
     "daily_quest": "Completing a daily quest",
     "weekly_quest": "Completing a weekly quest",
 }

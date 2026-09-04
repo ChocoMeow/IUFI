@@ -171,14 +171,11 @@ class MatchGame(discord.ui.View):
                 f"{prefix}.click_left": self.click_left
             }
 
-        # Battle Pass XP requires actually matching cards (pairs): MG1 >= 2 cards, MG2 >= 4, MG3 >= 6.
-        min_pairs = {"1": 1, "2": 2, "3": 3}.get(str(self._level), 1)
-        if matched_raw >= min_pairs:
-            update_data = func.add_battlepass_xp(
-                user,
-                func.get_battlepass_xp_for_action(f"mg{self._level}"),
-                query=update_data
-            )
+        # Battle Pass XP scales with pairs matched. A full board hits the configured max for that level.
+        max_pairs = int(self._data.get("cards") or 0)
+        bp_xp = func.scale_battlepass_action_xp(f"mg{self._level}", matched_raw, max_pairs)
+        if bp_xp:
+            update_data = func.add_battlepass_xp(user, bp_xp, query=update_data)
         await func.update_user(self.author.id, update_data)
 
         func.logger.info(
