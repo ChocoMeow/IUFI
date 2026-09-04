@@ -450,6 +450,30 @@ def add_battlepass_xp(user: Dict[str, Any], amount: int, *, query: Dict[str, Any
 
     return _grant_reached_battlepass_levels(state, old_level, new_level, query)
 
+def get_battlepass_xp_change(user: Dict[str, Any], query: Dict[str, Any] | None = None) -> tuple[int, int]:
+    """XP before and after a query built with `add_battlepass_xp`. User doc is not mutated."""
+    old_xp = max(0, int(get_battlepass_state(user).get("xp", 0) or 0))
+    if not query:
+        return old_xp, old_xp
+
+    full_set = query.get("$set", {}).get("battlepass")
+    if isinstance(full_set, dict) and full_set.get("xp") is not None:
+        try:
+            return old_xp, max(0, int(full_set["xp"]))
+        except (TypeError, ValueError):
+            return old_xp, old_xp
+
+    try:
+        gained = int((query.get("$inc") or {}).get("battlepass.xp", 0) or 0)
+    except (TypeError, ValueError):
+        gained = 0
+    return old_xp, old_xp + max(0, gained)
+
+def format_battlepass_xp_change(old_xp: int, new_xp: int) -> str:
+    gained = new_xp - old_xp
+    sign = "+" if gained >= 0 else ""
+    return f"🎫 Battle Pass XP: `{old_xp}` → `{new_xp}` (`{sign}{gained}`)"
+
 def calculate_battlepass_level(xp: int) -> tuple[int, int, int]:
     bp_settings = get_battlepass_settings()
     xp_per_level = max(1, int(bp_settings.get("xp_per_level", 150)))

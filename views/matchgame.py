@@ -176,6 +176,9 @@ class MatchGame(discord.ui.View):
         bp_xp = func.scale_battlepass_action_xp(f"mg{self._level}", matched_raw, max_pairs)
         if bp_xp:
             update_data = func.add_battlepass_xp(user, bp_xp, query=update_data)
+        if func.battlepass_enabled():
+            old_xp, new_xp = func.get_battlepass_xp_change(user, update_data)
+            embed.description += "\n" + func.format_battlepass_xp_change(old_xp, new_xp)
         await func.update_user(self.author.id, update_data)
 
         func.logger.info(

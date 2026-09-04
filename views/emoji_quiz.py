@@ -156,6 +156,9 @@ class EmojiQuizView(discord.ui.View):
 
         embed = discord.Embed(title="Emoji Quiz Result", color=discord.Color.random())
         embed.description = f"```{summary}```\n**Total points:** {total_points}\n**Correct:** {self._results.count(True)} | **Wrong:** {self._results.count(False)} | **Timeout:** {self._results.count(None)}\n**Avg Answer Time:** {func.convert_seconds(avg_time)}"
+        if func.battlepass_enabled():
+            old_xp, new_xp = func.get_battlepass_xp_change(user, query)
+            embed.description += "\n" + func.format_battlepass_xp_change(old_xp, new_xp)
 
         try:
             await self.response.edit(content=None, embed=embed, view=None)

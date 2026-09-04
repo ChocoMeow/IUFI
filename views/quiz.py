@@ -231,6 +231,10 @@ class QuizView(discord.ui.View):
                             f"{'🕘 Avg Time:':<12} {func.convert_seconds(average_time)} {'🔺' if average_time < state['average_time'] else '🔻'}\n" \
                             f"{'🔥 Points:':<12} {state['points']} ({'+' if total_points >= 0 else '-'}{abs(total_points)})```"
 
+        if func.battlepass_enabled():
+            old_xp, new_xp = func.get_battlepass_xp_change(user, query)
+            embed.description += "\n" + func.format_battlepass_xp_change(old_xp, new_xp)
+
         # Feature flag: Use reward card system or traditional rewards
         use_reward_card = func.settings.GIVE_REWARD_CARD
 
