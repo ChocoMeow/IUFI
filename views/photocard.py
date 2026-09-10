@@ -106,7 +106,25 @@ class SortDropdown(discord.ui.Select):
 
     async def callback(self, interaction: discord.Interaction) -> None:
         sel_sorter: SorterInterface = self._sorters[int(self.values[0])]
-        self.view.cards = sel_sorter.sort(self.view.cards.copy())
+        self.view.all_cards = sel_sorter.sort(self.view.all_cards.copy())
+        self.view.apply_filter()
+        await self.view.update_embed(interaction)
+
+class FilterDropdown(discord.ui.Select):
+    def __init__(self):
+        super().__init__(
+            placeholder="Filter photocards...",
+            min_values=1,
+            max_values=1,
+            options=[
+                discord.SelectOption(label="All Cards", value="all", emoji="📚"),
+                discord.SelectOption(label="Locked Cards Only", value="locked", emoji="🔒"),
+            ],
+        )
+
+    async def callback(self, interaction: discord.Interaction) -> None:
+        self.view.active_filter = self.values[0]
+        self.view.apply_filter()
         await self.view.update_embed(interaction)
 
 class PhotoCardView(discord.ui.View):
@@ -115,25 +133,41 @@ class PhotoCardView(discord.ui.View):
 
         self.author: discord.Member = author
         self.user: dict[str, Any] = user
-        self.cards: dict[str, Card | None] = {}
+        self.all_cards: dict[str, Card | None] = {}
         for card_id in user.get("cards", []):
             if card := CardPool.get_card(card_id):
-                self.cards[card_id] = card
+                self.all_cards[card_id] = card
 
-        self.page: int = ceil(len(self.cards) / 8)
+        self.cards = self.all_cards.copy()
+        self.active_filter = "all"
+        self.page: int = max(1, ceil(len(self.cards) / 8))
         self.current_page: int = 1
 
         self._dropdown_view: SortDropdown = SortDropdown()
         self.add_item(self._dropdown_view)
+        self.add_item(FilterDropdown())
 
         self.toggle_cards_view: bool = False
         self.message: discord.Message = None
         self.cooldown = commands.CooldownMapping.from_cooldown(1.0, 8.0, key)
 
+    def apply_filter(self) -> None:
+        if self.active_filter == "locked":
+            self.cards = {
+                card_id: card for card_id, card in self.all_cards.items()
+                if card and card.locked
+            }
+        else:
+            self.cards = self.all_cards.copy()
+
+        self.page = max(1, ceil(len(self.cards) / 8))
+        self.current_page = min(self.current_page, self.page)
+
     async def build_embed(self) -> Tuple[discord.Embed, discord.File]:
         offset = self.current_page * 8
         card_ids, cards = list(self.cards.keys())[(offset-8):offset], []
-        desc = f"\n**📙 Collection size: `{len(self.cards)}/{func.get_user_card_limit(self.user)}`**\n```"
+        filter_text = " | Filter: **🔒 Locked only**" if self.active_filter == "locked" else ""
+        desc = f"\n**📙 Collection size: `{len(self.cards)}/{func.get_user_card_limit(self.user)}`**{filter_text}\n```"
 
         for card_id in card_ids:
             card = self.cards.get(card_id)
@@ -141,12 +175,15 @@ class PhotoCardView(discord.ui.View):
             if self.toggle_cards_view:
                 cards.append(card)
             
-            desc += f"{card.display_id} {card.display_tag} {card.display_frame} {card.display_stars} {card.tier[0]}\n" if card else f"🆔 {card_id.zfill(5)} {'-' * 20}"
+            desc += f"{card.display_id} {card.display_tag} {card.display_frame} {card.display_stars} {card.tier[0]} {'🔒' if card.locked else ''}\n" if card else f"🆔 {card_id.zfill(5)} {'-' * 20}"
+
+        if not card_ids:
+            desc += "No locked photocards found.\n"
             
         embed = discord.Embed(title=f"📖 {self.author.display_name}'s Photocards", description=desc + "```", color=discord.Color.random())
         embed.set_footer(text="Pages: {}/{}".format(self.current_page, self.page))
 
-        if self.toggle_cards_view:
+        if self.toggle_cards_view and cards:
             image_bytes, image_format = await gen_cards_view(cards, 4)
             embed.set_image(url=f"attachment://image.{image_format}")
             return embed, discord.File(image_bytes, filename=f"image.{image_format}")

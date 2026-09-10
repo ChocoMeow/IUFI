@@ -306,10 +306,12 @@ class Profile(commands.Cog):
         reward_amount = base_amount * cycle_multiplier
         reward = {reward_key: reward_amount}
 
-        await func.update_user(interaction.user.id, {
+        query = func.add_battlepass_xp(user, 40, query={
             "$set": {"claimed": claimed, "cooldown.daily": events.cooldown_expiry(func.settings.COOLDOWN_BASE["daily"][1], apply_reduction=False)},
             "$inc": reward
-        })
+        }, apply_modifiers=False)
+        old_bp_xp, new_bp_xp = func.get_battlepass_xp_change(user, query)
+        await func.update_user(interaction.user.id, query)
 
         func.logger.info(
             f"User {interaction.user.name}({interaction.user.id}) claimed their daily reward. "
@@ -321,10 +323,9 @@ class Profile(commands.Cog):
         if cycle_multiplier > 1:
             streak_status += f" | Multiplier: **x{cycle_multiplier}**"
 
-        embed.description = (
-            f"Daily reward claimed! + {reward_emoji} {reward_amount}\n"
-            f"{streak_status}"
-        )
+        embed.description = f"Daily reward claimed! + {reward_emoji} {reward_amount}\n{streak_status}"
+        if func.battlepass_enabled():
+            embed.description += f"\n{func.format_battlepass_xp_change(old_bp_xp, new_bp_xp)}"
         embed.set_thumbnail(url=interaction.user.display_avatar.url)
 
         value = "```"

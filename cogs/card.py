@@ -100,13 +100,19 @@ class Card(commands.Cog):
         async def on_ids(modal_interaction: discord.Interaction, card_ids: list[str]):
             converted_cards: list[iufi.Card] = []
 
-            raw_candies = 0
             for card_id in card_ids:
                 card = iufi.CardPool.get_card(card_id)
                 if card and card.owner_id == modal_interaction.user.id:
-                    raw_candies += card.cost
-                    iufi.CardPool.add_available_card(card)
+                    if card.locked:
+                        return await modal_interaction.response.send_message(f"🔒 Card `{card.id}` is locked and cannot be converted.", ephemeral=True)
                     converted_cards.append(card)
+
+            if not converted_cards:
+                return await modal_interaction.response.send_message("No owned cards were found. Please enter a valid card ID!")
+
+            raw_candies = sum(card.cost for card in converted_cards)
+            for card in converted_cards:
+                iufi.CardPool.add_available_card(card)
 
             candies = events.convert_candies(raw_candies)
 
@@ -116,7 +122,7 @@ class Card(commands.Cog):
                 "$inc": {"candies": candies}
             })
             await func.update_user(modal_interaction.user.id, query)
-            await func.update_card(converted_ids, {"$set": {"owner_id": None, "tag": None, "frame": None, "last_trade_time": 0}})
+            await func.update_card(converted_ids, {"$set": {"owner_id": None, "tag": None, "frame": None, "last_trade_time": 0, "locked": False}})
 
             func.logger.info(
                 f"User {modal_interaction.user.name}({modal_interaction.user.id}) converted {len(converted_cards)} card(s): ["
@@ -130,6 +136,36 @@ class Card(commands.Cog):
         modal = MultiIDModal(title="Convert Cards", label="Card IDs", callback=on_ids)
         await interaction.response.send_modal(modal)
 
+    @app_commands.command(name="lock", description="Locks a photocard against trading, conversion, and upgrade consumption.")
+    @app_commands.describe(card_id="The card ID or tag")
+    async def lock(self, interaction: discord.Interaction, card_id: str):
+        card = iufi.CardPool.get_card(card_id)
+        if not card:
+            return await interaction.response.send_message("The card was not found. Please try again.")
+        if card.owner_id != interaction.user.id:
+            return await interaction.response.send_message("You are not the owner of this card.")
+        if card.locked:
+            return await interaction.response.send_message(f"🔒 Card `{card.id}` is already locked.", ephemeral=True)
+
+        card.locked = True
+        await func.update_card(card.id, {"$set": {"locked": True}})
+        await interaction.response.send_message(f"🔒 Card `{card.id}` has been locked.")
+
+    @app_commands.command(name="unlock", description="Unlocks a photocard.")
+    @app_commands.describe(card_id="The card ID or tag")
+    async def unlock(self, interaction: discord.Interaction, card_id: str):
+        card = iufi.CardPool.get_card(card_id)
+        if not card:
+            return await interaction.response.send_message("The card was not found. Please try again.")
+        if card.owner_id != interaction.user.id:
+            return await interaction.response.send_message("You are not the owner of this card.")
+        if not card.locked:
+            return await interaction.response.send_message(f"🔓 Card `{card.id}` is already unlocked.", ephemeral=True)
+
+        card.locked = False
+        await func.update_card(card.id, {"$set": {"locked": False}})
+        await interaction.response.send_message(f"🔓 Card `{card.id}` has been unlocked.")
+
     @app_commands.command(name="convertlast", description="Converts the last photocard of your collection.")
     async def convertlast(self, interaction: discord.Interaction):
         user = await func.get_user(interaction.user.id)
@@ -139,6 +175,8 @@ class Card(commands.Cog):
 
         if not (card := iufi.CardPool.get_card(user["cards"][-1])):
             return
+        if card.locked:
+            return await interaction.response.send_message(f"🔒 Card `{card.id}` is locked and cannot be converted.", ephemeral=True)
 
         candies = events.convert_candies(card.cost)
         embed = discord.Embed(color=discord.Color.random())
@@ -158,7 +196,7 @@ class Card(commands.Cog):
         else:
             await interaction.response.defer()
 
-        if card.owner_id != interaction.user.id:
+        if card.owner_id != interaction.user.id or card.locked:
             content = "Your cards cannot be converted because there has been a change in your inventory."
             return await (message.edit(content=content, embed=None, view=None) if message else interaction.followup.send(content=content))
 
@@ -169,7 +207,7 @@ class Card(commands.Cog):
             "$inc": {"candies": candies}
         })
         await func.update_user(interaction.user.id, query)
-        await func.update_card(card.id, {"$set": {"owner_id": None, "tag": None, "frame": None, "last_trade_time": 0}})
+        await func.update_card(card.id, {"$set": {"owner_id": None, "tag": None, "frame": None, "last_trade_time": 0, "locked": False}})
 
         func.logger.info(f"User {interaction.user.name}({interaction.user.id}) converted 1 card(s): [{card.id}]. Gained {candies} candies.")
 
@@ -187,8 +225,11 @@ class Card(commands.Cog):
 
         for card_id in user["cards"]:
             card = iufi.CardPool.get_card(card_id)
-            if card:
+            if card and not card.locked:
                 converted_cards.append(card)
+
+        if not converted_cards:
+            return await interaction.response.send_message("You have no unlocked photocards to convert.", ephemeral=True)
 
         card_ids = [card.id for card in converted_cards]
         candies = events.convert_candies(sum(card.cost for card in converted_cards))
@@ -202,7 +243,7 @@ class Card(commands.Cog):
         await view.wait()
 
         if view.is_confirm:
-            if user["cards"] != card_ids:
+            if any(card.owner_id != interaction.user.id or card.locked for card in converted_cards):
                 return await interaction.followup.send(content="Your cards cannot be converted because there has been a change in your inventory.", ephemeral=True)
 
             for card in converted_cards:
@@ -213,7 +254,7 @@ class Card(commands.Cog):
                 "$inc": {"candies": candies}
             })
             await func.update_user(interaction.user.id, query)
-            await func.update_card(card_ids, {"$set": {"owner_id": None, "tag": None, "frame": None, "last_trade_time": 0}})
+            await func.update_card(card_ids, {"$set": {"owner_id": None, "tag": None, "frame": None, "last_trade_time": 0, "locked": False}})
 
             func.logger.info(
                 f"User {interaction.user.name}({interaction.user.id}) converted {len(converted_cards)} card(s): ["
@@ -236,7 +277,7 @@ class Card(commands.Cog):
             converted_cards: list[iufi.Card] = []
             for card_id in user["cards"]:
                 card = iufi.CardPool.get_card(card_id)
-                if card:
+                if card and not card.locked:
                     if len_categories == 1 and "notag" in category_list and not card.tag:
                         converted_cards.append(card)
 
@@ -246,6 +287,9 @@ class Card(commands.Cog):
                                 converted_cards.append(card)
                         else:
                             converted_cards.append(card)
+
+            if not converted_cards:
+                return await modal_interaction.response.send_message("No unlocked cards match those categories.", ephemeral=True)
 
             card_ids = [card.id for card in converted_cards]
             candies = events.convert_candies(sum(card.cost for card in converted_cards))
@@ -259,7 +303,7 @@ class Card(commands.Cog):
             await view.wait()
 
             if view.is_confirm:
-                if not all(elem in user["cards"] for elem in card_ids):
+                if any(card.owner_id != modal_interaction.user.id or card.locked for card in converted_cards):
                     return await modal_interaction.followup.send(content="Your cards cannot be converted because there has been a change in your inventory.", ephemeral=True)
 
                 for card in converted_cards:
@@ -270,7 +314,7 @@ class Card(commands.Cog):
                     "$inc": {"candies": candies}
                 })
                 await func.update_user(modal_interaction.user.id, query)
-                await func.update_card(card_ids, {"$set": {"owner_id": None, "tag": None, "frame": None, "last_trade_time": 0}})
+                await func.update_card(card_ids, {"$set": {"owner_id": None, "tag": None, "frame": None, "last_trade_time": 0, "locked": False}})
 
                 func.logger.info(
                     f"User {modal_interaction.user.name}({modal_interaction.user.id}) converted {len(converted_cards)} card(s): ["
@@ -377,6 +421,9 @@ class Card(commands.Cog):
                 if card.owner_id != modal_interaction.user.id:
                     return await modal_interaction.response.send_message(f"You are not the owner of this `{card_id}` card.")
 
+                if card.locked:
+                    return await modal_interaction.response.send_message(f"🔒 Card `{card.id}` is locked and cannot be traded.", ephemeral=True)
+
                 if time.time() - card.last_trade_time < func.settings.LAST_TRADE_TIMER:
                     return await modal_interaction.response.send_message(f"Oopsie! You need to wait a little longer~ You can trade this `{card_id}` card again <t:{int(card.last_trade_time + func.settings.LAST_TRADE_TIMER)}:R>")
 
@@ -423,6 +470,9 @@ class Card(commands.Cog):
 
                 if card.owner_id != modal_interaction.user.id:
                     return await modal_interaction.response.send_message(f"You are not the owner of this `{card_id}` card.")
+
+                if card.locked:
+                    return await modal_interaction.response.send_message(f"🔒 Card `{card.id}` is locked and cannot be traded.", ephemeral=True)
 
                 if time.time() - card.last_trade_time < func.settings.LAST_TRADE_TIMER:
                     return await modal_interaction.response.send_message(f"Oopsie! You need to wait a little longer~ You can trade this `{card_id}` card again <t:{int(card.last_trade_time + func.settings.LAST_TRADE_TIMER)}:R>")
@@ -477,6 +527,9 @@ class Card(commands.Cog):
         if card.owner_id != interaction.user.id:
             return await interaction.response.send_message("You are not the owner of this card.")
 
+        if card.locked:
+            return await interaction.response.send_message(f"🔒 Card `{card.id}` is locked and cannot be traded.", ephemeral=True)
+
         if time.time() - card.last_trade_time < func.settings.LAST_TRADE_TIMER:
             return await interaction.response.send_message(f"Oopsie! You need to wait a little longer~ You can trade this card again <t:{int(card.last_trade_time + func.settings.LAST_TRADE_TIMER)}:R>")
 
@@ -512,6 +565,9 @@ class Card(commands.Cog):
 
         if card.owner_id != interaction.user.id:
             return await interaction.response.send_message("You are not the owner of this card.")
+
+        if card.locked:
+            return await interaction.response.send_message(f"🔒 Card `{card.id}` is locked and cannot be traded.", ephemeral=True)
 
         if time.time() - card.last_trade_time < func.settings.LAST_TRADE_TIMER:
             return await interaction.response.send_message(f"Oopsie! You need to wait a little longer~ You can trade this card again <t:{int(card.last_trade_time + func.settings.LAST_TRADE_TIMER)}:R>")
@@ -627,7 +683,7 @@ class Card(commands.Cog):
             converted_cards: list[iufi.Card] = []
             for card_id in card_ids:
                 card = iufi.CardPool.get_card(card_id)
-                if card and upgrade_card.id != card.id and card.owner_id == modal_interaction.user.id and card.tier[1] == upgrade_card.tier[1]:
+                if card and not card.locked and upgrade_card.id != card.id and card.owner_id == modal_interaction.user.id and card.tier[1] == upgrade_card.tier[1]:
                     converted_cards.append(card)
 
             converted_cards = converted_cards[:(10 - upgrade_card.stars)]
@@ -644,7 +700,7 @@ class Card(commands.Cog):
                 query={"$pull": {"cards": {"$in": (converted_ids := [card.id for card in converted_cards])}}}
             )
             await func.update_user(modal_interaction.user.id, query)
-            await func.update_card(converted_ids, {"$set": {"owner_id": None, "tag": None, "frame": None, "last_trade_time": 0}})
+            await func.update_card(converted_ids, {"$set": {"owner_id": None, "tag": None, "frame": None, "last_trade_time": 0, "locked": False}})
             upgraded_stars = upgrade_card.stars + len(converted_cards)
 
             func.logger.info(

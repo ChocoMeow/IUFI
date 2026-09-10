@@ -112,6 +112,7 @@ class CardPool:
                         "tag": None,
                         "frame": None,
                         "last_trade_time": 0,
+                        "locked": False,
                     }
                     missing_docs.append(card_data.copy())
 
@@ -126,7 +127,7 @@ class CardPool:
                 card_kwargs = {
                     key: value
                     for key, value in card_data.items()
-                    if key in {"owner_id", "stars", "tag", "frame", "last_trade_time"}
+                    if key in {"owner_id", "stars", "tag", "frame", "last_trade_time", "locked"}
                 }
                 cls.add_card(_id=card_id, tier=category, **card_kwargs)
                 processed += 1

@@ -69,6 +69,10 @@ class TradeView(discord.ui.View):
             if any(card.owner_id != self.seller.id for card in self.cards):
                 await self.on_timeout()
                 return await interaction.followup.send(f"This card is ineligible for trading because its owner has already converted it!", ephemeral=True)
+
+            if any(card.locked for card in self.cards):
+                await self.on_timeout()
+                return await interaction.followup.send("This trade is no longer available because one or more cards were locked.", ephemeral=True)
             
             _buyer = await func.get_user(buyer.id)
             if _buyer["candies"] < self.candies:
@@ -91,7 +95,7 @@ class TradeView(discord.ui.View):
             # Buyer
             buyer_query = func.update_quest_progress(_buyer, "TRADE_ANY_CARD", progress=len(self.cards), query={"$push": {"cards": {"$each": card_ids}}, "$inc": {"candies": -self.candies}})
             await func.update_user(buyer.id, buyer_query)
-            await func.update_card(card_ids, {"$set": {"owner_id": buyer.id, "last_trade_time": last_trade_time}})
+            await func.update_card(card_ids, {"$set": {"owner_id": buyer.id, "last_trade_time": last_trade_time, "locked": False}})
             
             func.logger.info(
                 f"User {buyer.name}({buyer.id}) traded a card from "

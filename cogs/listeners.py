@@ -25,7 +25,7 @@ class Listeners(commands.Cog):
         await func.update_user(member.id, {
             "$pull": {"cards": {"$in": (card_ids := [card.id for card in converted_cards])}}
         })
-        await func.update_card(card_ids, {"$set": {"owner_id": None, "tag": None, "frame": None}})
+        await func.update_card(card_ids, {"$set": {"owner_id": None, "tag": None, "frame": None, "locked": False}})
         
         func.logger.info(f"User {member.name}({member.id}) has been banned from {guild.name}({guild.id}). All their cards will be returned to the card pool.")
 

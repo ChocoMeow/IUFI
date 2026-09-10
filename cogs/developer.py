@@ -89,7 +89,7 @@ class DevGroup(app_commands.Group):
 
         card.change_owner(member.id)
         iufi.CardPool.remove_available_card(card)
-        await func.update_card(card_id, {"$set": {"owner_id": member.id}})
+        await func.update_card(card_id, {"$set": {"owner_id": member.id, "locked": False}})
         await func.update_user(member.id, {"$push": {"cards": card_id}})
 
         await interaction.response.send_message(f"Card {card_id} has been given to {member.display_name}.")
@@ -106,7 +106,7 @@ class DevGroup(app_commands.Group):
 
         card.change_owner(None)
         iufi.CardPool.add_available_card(card)
-        await func.update_card(card_id, {"$set": {"owner_id": None, "tag": None, "frame": None, "last_trade_time": 0}})
+        await func.update_card(card_id, {"$set": {"owner_id": None, "tag": None, "frame": None, "last_trade_time": 0, "locked": False}})
         await func.update_user(card.owner_id, {"$pull": {"cards": card.id}})
 
         await interaction.response.send_message(f"Card {card_id} has been removed from user.")
@@ -206,7 +206,7 @@ class DevGroup(app_commands.Group):
 
         # Update the cards in the database to remove owner, tag, etc.
         if card_ids:
-            await func.update_card(card_ids, {"$set": {"owner_id": None, "tag": None, "frame": None, "last_trade_time": 0}})
+            await func.update_card(card_ids, {"$set": {"owner_id": None, "tag": None, "frame": None, "last_trade_time": 0, "locked": False}})
 
         # Delete the user from the database
         await func.USERS_DB.delete_one({"_id": target_user.id})

@@ -73,7 +73,7 @@ class Tasks(commands.Cog):
         converted_cards: list[iufi.Card] = []
         for card_id in user["cards"]:
             card = iufi.CardPool.get_card(card_id)
-            if card:
+            if card and not card.locked:
                 converted_cards.append(card)
 
         card_ids = [card.id for card in converted_cards]
@@ -86,7 +86,7 @@ class Tasks(commands.Cog):
             "$pull": {"cards": {"$in": card_ids}},
             "$inc": {"candies": candies}
         })
-        await func.update_card(card_ids, {"$set": {"owner_id": None, "tag": None, "frame": None, "last_trade_time": 0}})
+        await func.update_card(card_ids, {"$set": {"owner_id": None, "tag": None, "frame": None, "last_trade_time": 0, "locked": False}})
 
         func.logger.info(
             f"User ({user_id}) has been inactive for over {func.settings.RESET_CARD_DAY} days, resulting in the clearing of their inventory. "

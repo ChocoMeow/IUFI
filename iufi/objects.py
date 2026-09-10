@@ -132,6 +132,7 @@ class Card(CardObject):
         "_emoji",
         "is_gif",
         "last_trade_time",
+        "locked",
         "_lock"
     )
 
@@ -146,7 +147,8 @@ class Card(CardObject):
         stars: int = None,
         tag: str = None,
         frame: str = None,
-        last_trade_time: float = None
+        last_trade_time: float = None,
+        locked: bool = False,
     ):  
         self.id: str = id
         self._tier: str = tier
@@ -158,6 +160,7 @@ class Card(CardObject):
         self.tag: str = tag
         self.is_gif: bool = False
         self.last_trade_time = last_trade_time or 0
+        self.locked: bool = bool(locked)
 
         self._emoji: str = func.settings.TIERS_BASE.get(self._tier)[0]
         self._lock: asyncio.Lock = asyncio.Lock()
@@ -225,6 +228,7 @@ class Card(CardObject):
     def change_owner(self, owner_id: int | None = None) -> None:
         if self.owner_id != owner_id:
             self.owner_id = owner_id
+            self.locked = False
 
             if owner_id is None:
                 if self.stars > 5:

@@ -633,7 +633,7 @@ class PvPMatch:
                         })
                         await func.update_user(match_winner.id, winner_query)
 
-                        await func.update_card(self.card.id, {"$set": {"owner_id": match_winner.id, "last_trade_time": last_trade_time}})
+                        await func.update_card(self.card.id, {"$set": {"owner_id": match_winner.id, "last_trade_time": last_trade_time, "locked": False}})
 
                         func.logger.info(f"PvP reward: User {match_winner.name}({match_winner.id}) took card {self.card.id} from {loser.name}({loser.id})")
 
