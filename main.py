@@ -208,6 +208,8 @@ class IUFI(commands.Bot):
             "cl": "convertlast",
             "ca": "convertall",
             "cm": "convertmass",
+            "lk": "lock",
+            "ul": "unlock",
             "st": "settag",
             "stl": "settaglast",
             "rt": "removetag",

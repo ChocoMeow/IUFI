@@ -397,7 +397,13 @@ def _apply_battlepass_xp_modifiers(amount: int, state: Dict[str, Any]) -> int:
     # Round half up so a 1 XP roll still grants 1 at 50%.
     return max(0, int((amount * free_percent + 50) // 100))
 
-def add_battlepass_xp(user: Dict[str, Any], amount: int, *, query: Dict[str, Any] = None) -> Dict[str, Any]:
+def add_battlepass_xp(
+    user: Dict[str, Any],
+    amount: int,
+    *,
+    query: Dict[str, Any] = None,
+    apply_modifiers: bool = True,
+) -> Dict[str, Any]:
     if query is None:
         query = {}
 
@@ -413,7 +419,8 @@ def add_battlepass_xp(user: Dict[str, Any], amount: int, *, query: Dict[str, Any
         return query
 
     state, query = with_battlepass_state_synced(user, query)
-    amount = _apply_battlepass_xp_modifiers(amount, state)
+    if apply_modifiers:
+        amount = _apply_battlepass_xp_modifiers(amount, state)
 
     if amount <= 0:
         return query

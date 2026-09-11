@@ -136,35 +136,51 @@ class Card(commands.Cog):
         modal = MultiIDModal(title="Convert Cards", label="Card IDs", callback=on_ids)
         await interaction.response.send_modal(modal)
 
-    @app_commands.command(name="lock", description="Locks a photocard against trading, conversion, and upgrade consumption.")
-    @app_commands.describe(card_id="The card ID or tag")
-    async def lock(self, interaction: discord.Interaction, card_id: str):
-        card = iufi.CardPool.get_card(card_id)
-        if not card:
-            return await interaction.response.send_message("The card was not found. Please try again.")
-        if card.owner_id != interaction.user.id:
-            return await interaction.response.send_message("You are not the owner of this card.")
-        if card.locked:
-            return await interaction.response.send_message(f"🔒 Card `{card.id}` is already locked.", ephemeral=True)
+    async def _set_card_lock_state(self, interaction: discord.Interaction, card_ids: list[str], locked: bool) -> None:
+        cards: list[iufi.Card] = []
+        for card_id in card_ids:
+            card = iufi.CardPool.get_card(card_id)
+            if not card:
+                continue
+            if card.owner_id != interaction.user.id:
+                return await interaction.response.send_message(f"You are not the owner of this `{card_id}` card.")
+            if card not in cards:
+                cards.append(card)
 
-        card.locked = True
-        await func.update_card(card.id, {"$set": {"locked": True}})
-        await interaction.response.send_message(f"🔒 Card `{card.id}` has been locked.")
+        if not cards:
+            return await interaction.response.send_message("No cards were found. Please enter a valid card ID!")
 
-    @app_commands.command(name="unlock", description="Unlocks a photocard.")
-    @app_commands.describe(card_id="The card ID or tag")
-    async def unlock(self, interaction: discord.Interaction, card_id: str):
-        card = iufi.CardPool.get_card(card_id)
-        if not card:
-            return await interaction.response.send_message("The card was not found. Please try again.")
-        if card.owner_id != interaction.user.id:
-            return await interaction.response.send_message("You are not the owner of this card.")
-        if not card.locked:
-            return await interaction.response.send_message(f"🔓 Card `{card.id}` is already unlocked.", ephemeral=True)
+        changed_cards = [card for card in cards if card.locked != locked]
+        if not changed_cards:
+            state = "locked" if locked else "unlocked"
+            return await interaction.response.send_message(f"All specified cards are already {state}.", ephemeral=True)
 
-        card.locked = False
-        await func.update_card(card.id, {"$set": {"locked": False}})
-        await interaction.response.send_message(f"🔓 Card `{card.id}` has been unlocked.")
+        changed_ids = [card.id for card in changed_cards]
+        await func.update_card(changed_ids, {"$set": {"locked": locked}})
+        for card in changed_cards:
+            card.locked = locked
+
+        action = "locked" if locked else "unlocked"
+        emoji = "🔒" if locked else "🔓"
+        await interaction.response.send_message(
+            f"{emoji} {len(changed_cards)} card(s) {action}: `{', '.join(changed_ids)}`"
+        )
+
+    @app_commands.command(name="lock", description="Locks photocards against trading, conversion, and upgrade consumption.")
+    async def lock(self, interaction: discord.Interaction):
+        async def on_ids(modal_interaction: discord.Interaction, card_ids: list[str]):
+            await self._set_card_lock_state(modal_interaction, card_ids, True)
+
+        modal = MultiIDModal(title="Lock Cards", label="Card IDs", callback=on_ids)
+        await interaction.response.send_modal(modal)
+
+    @app_commands.command(name="unlock", description="Unlocks photocards.")
+    async def unlock(self, interaction: discord.Interaction):
+        async def on_ids(modal_interaction: discord.Interaction, card_ids: list[str]):
+            await self._set_card_lock_state(modal_interaction, card_ids, False)
+
+        modal = MultiIDModal(title="Unlock Cards", label="Card IDs", callback=on_ids)
+        await interaction.response.send_modal(modal)
 
     @app_commands.command(name="convertlast", description="Converts the last photocard of your collection.")
     async def convertlast(self, interaction: discord.Interaction):
