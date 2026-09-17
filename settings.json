@@ -717,7 +717,7 @@
                 "type": "battlepass_xp",
                 "key": "battlepass.xp",
                 "pack_qty": 2000,
-                "stock": 3,
+                "stock": 10,
                 "per_appearance": 1,
                 "per_person": null,
                 "price_min": 500,
