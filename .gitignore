@@ -1,6 +1,7 @@
 .env
 questions.json
 bot_state.json
+debut_event.json
 /images
 /newImages
 /musicTracks

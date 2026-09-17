@@ -1,6 +1,7 @@
 import discord, iufi, time, asyncio
 import functions as func
 import events
+import debut
 import random
 import io, os
 from PIL import Image, ImageFilter
@@ -209,6 +210,24 @@ class Gameplay(commands.Cog):
         view = ShopView(interaction.user)
         await interaction.response.send_message(embed=await view.build_embed(), view=view)
         view.message = await interaction.original_response()
+
+    @app_commands.command(name="merchant", description="Shows remaining wandering merchant stock for the debut event.")
+    async def merchant(self, interaction: discord.Interaction):
+        await debut.load_state()
+        embed = discord.Embed(
+            title="🚚 Wandering Merchant Stock",
+            color=discord.Color.gold(),
+        )
+        if debut.is_active():
+            status = "The debut event is live."
+        elif debut.event_start() and debut.now_kst() < debut.event_start():
+            status = f"Opens <t:{round(debut.event_start().timestamp())}:F>."
+        elif debut.event_end():
+            status = "The debut event has ended."
+        else:
+            status = "The wandering merchant is not configured."
+        embed.description = f"{status}\n{debut.format_event_stock()}"
+        await interaction.response.send_message(embed=embed)
 
     @app_commands.command(name="battlepass", description="Shows your Battle Pass status, progress, and reward outline.")
     async def battlepass(self, interaction: discord.Interaction):

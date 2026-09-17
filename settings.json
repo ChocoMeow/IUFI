@@ -13,7 +13,7 @@
     "ALLOWED_CATEGORY_IDS": [987352501172989993, 1144810748158165043, 1143358482494533662],
     "IGNORE_CHANNEL_IDS": [1004494130874953769, 987354694236131418],
     "GAME_CHANNEL_IDS": [1155772660979093555, 1155772719909044224, 1155772738858913792, 1155772756730859580],
-    "ADMIN_IDS": [605776164744724512, 705783356767338648, 1223531350972174337],
+    "ADMIN_IDS": [605776164744724512, 705783356767338648, 1223531350972174337, 236400388847173632],
     "BUG_REPORT_CHANNEL_ID": 1384723383131967622,
     "TESTER_IDS": [],
     "PERFECT_CROWN_TREASURY_CARDS": {
@@ -34,7 +34,8 @@
             "rare": 0,
             "epic": 0,
             "legendary": 0,
-            "mystic": 0
+            "mystic": 0,
+            "celestial": 0
         },
         "pity": {
             "rare": 0,
@@ -368,7 +369,10 @@
         "pumpkin": ["🎃", 60, false],
         "ocean": ["🌊", 70, true],
         "tangerines": ["🍊", 40, true],
-        "wlgyt": ["💐", 70, true]
+        "wlgyt": ["💐", 70, true],
+        "9thgen": ["💭", 70, true],
+        "cloud9": ["😶‍🌫️", 70, true],
+        "planet": ["🌑", 70, true]
     },
     "POTIONS_BASE": {
         "speed": {
@@ -587,8 +591,168 @@
         "convert_candy_multiplier": 1.0,
         "shop_sale_percent": 0
     },
+    "DEBUT_EVENT_SETTINGS": {
+        "event_id": "2026_debut",
+        "timezone": "Asia/Seoul",
+        "start": "2026-09-18T00:00:00",
+        "end": "2026-09-21T00:00:00",
+        "xp_drop_chance": 3,
+        "xp_drop_chance_default": 6,
+        "merchant": {
+            "interval_minutes": 20,
+            "chance": 4,
+            "min_gap_hours": 2,
+            "duration_min_seconds": 120,
+            "duration_max_seconds": 300
+        },
+        "items": [
+            {
+                "id": "celestial_roll",
+                "name": "Celestial Roll x1",
+                "emoji": "💫",
+                "type": "roll",
+                "key": "celestial",
+                "pack_qty": 1,
+                "stock": 5,
+                "per_appearance": 1,
+                "per_person": 1,
+                "price_min": 20000,
+                "price_max": 30000
+            },
+            {
+                "id": "mystic_roll",
+                "name": "Mystic Roll x1",
+                "emoji": "🦄",
+                "type": "roll",
+                "key": "mystic",
+                "pack_qty": 1,
+                "stock": 8,
+                "per_appearance": 1,
+                "per_person": 1,
+                "price_min": 7000,
+                "price_max": 10000
+            },
+            {
+                "id": "inventory_slots",
+                "name": "Inventory Slots x5",
+                "emoji": "📦",
+                "type": "slots",
+                "key": "extra_props.extra_card_slots",
+                "pack_qty": 5,
+                "stock": 10,
+                "per_appearance": 1,
+                "per_person": 1,
+                "price_min": 250,
+                "price_max": 250
+            },
+            {
+                "id": "legendary_roll",
+                "name": "Legend Rolls x5",
+                "emoji": "👑",
+                "type": "roll",
+                "key": "legendary",
+                "pack_qty": 5,
+                "stock": 10,
+                "per_appearance": 1,
+                "per_person": 3,
+                "price_min": 200,
+                "price_max": 350
+            },
+            {
+                "id": "epic_roll",
+                "name": "Epic Rolls x10",
+                "emoji": "💎",
+                "type": "roll",
+                "key": "epic",
+                "pack_qty": 10,
+                "stock": 10,
+                "per_appearance": 1,
+                "per_person": 3,
+                "price_min": 200,
+                "price_max": 300
+            },
+            {
+                "id": "rare_roll",
+                "name": "Rare Rolls x25",
+                "emoji": "🌸",
+                "type": "roll",
+                "key": "rare",
+                "pack_qty": 25,
+                "stock": 10,
+                "per_appearance": 1,
+                "per_person": 3,
+                "price_min": 50,
+                "price_max": 150
+            },
+            {
+                "id": "luck_iii",
+                "name": "Luck Potion III",
+                "emoji": "🍀",
+                "type": "potion",
+                "key": "potions.luck_iii",
+                "pack_qty": 1,
+                "stock": null,
+                "per_appearance": 5,
+                "per_person": 30,
+                "price_min": 50,
+                "price_max": 50
+            },
+            {
+                "id": "speed_iii",
+                "name": "Speed Potion III",
+                "emoji": "⚡",
+                "type": "potion",
+                "key": "potions.speed_iii",
+                "pack_qty": 1,
+                "stock": null,
+                "per_appearance": 5,
+                "per_person": 30,
+                "price_min": 50,
+                "price_max": 50
+            },
+            {
+                "id": "bp_xp_2000",
+                "name": "Battle Pass XP 2000",
+                "emoji": "🎫",
+                "type": "battlepass_xp",
+                "key": "battlepass.xp",
+                "pack_qty": 2000,
+                "stock": 3,
+                "per_appearance": 1,
+                "per_person": null,
+                "price_min": 500,
+                "price_max": 500
+            },
+            {
+                "id": "bp_xp_1000",
+                "name": "Battle Pass XP 1000",
+                "emoji": "🎫",
+                "type": "battlepass_xp",
+                "key": "battlepass.xp",
+                "pack_qty": 1000,
+                "stock": null,
+                "per_appearance": 1,
+                "per_person": null,
+                "price_min": 250,
+                "price_max": 250
+            },
+            {
+                "id": "bp_xp_500",
+                "name": "Battle Pass XP 500",
+                "emoji": "🎫",
+                "type": "battlepass_xp",
+                "key": "battlepass.xp",
+                "pack_qty": 500,
+                "stock": null,
+                "per_appearance": 1,
+                "per_person": null,
+                "price_min": 125,
+                "price_max": 125
+            }
+        ]
+    },
     "TEASER_SETTINGS": {
-        "enabled": true,
+        "enabled": false,
         "interval_minutes": 6,
         "chance": 3,
         "delete_after_seconds": 10,

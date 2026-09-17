@@ -477,6 +477,10 @@ class IUFI(commands.Bot):
         import events
         await events.load_community_state()
 
+        func.logger.info("Startup: loading debut event state...")
+        import debut
+        await debut.load_state()
+
         try:
             if not discord.opus.is_loaded():
                 opus_library = ctypes.util.find_library('opus')

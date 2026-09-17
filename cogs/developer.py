@@ -9,6 +9,8 @@ import functions as func
 from discord import app_commands
 from discord.ext import commands
 from views import DebugView, ConfirmView, BattlepassXPDropView
+from views.merchant import spawn_merchant
+import debut
 
 def formatBytes(bytes: int, unit: bool = False):
     if bytes <= 1_000_000_000:
@@ -272,6 +274,28 @@ class TestGroup(app_commands.Group):
             f"Level `{old_level}` → `{new_level}`.{extra}",
             ephemeral=True
         )
+
+    @app_commands.command(name="merchant", description="Spawn the wandering merchant truck in this channel.")
+    async def merchant(self, interaction: discord.Interaction):
+        await debut.load_state()
+        if debut.is_shop_open():
+            return await interaction.response.send_message(
+                "A wandering merchant is already in a channel.",
+                ephemeral=True,
+            )
+
+        await interaction.response.defer(ephemeral=True)
+        message = await spawn_merchant(interaction.channel, record_appearance=False)
+        if not message:
+            return await interaction.followup.send(
+                "The truck has no stock left to sell.",
+                ephemeral=True,
+            )
+        func.logger.info(
+            f"Tester {interaction.user.name}({interaction.user.id}) spawned a wandering merchant in "
+            f"{getattr(interaction.channel, 'name', 'unknown')}({interaction.channel_id})"
+        )
+        await interaction.followup.send("Spawned the wandering merchant in this channel.", ephemeral=True)
 
     @app_commands.command(name="xpdrop", description="Spawn a Battle Pass XP drop in this channel.")
     async def xpdrop(self, interaction: discord.Interaction):
