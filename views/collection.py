@@ -2,6 +2,8 @@
 import discord, iufi, time
 import functions as func
 
+from .hd import HDBtn
+
 class CaptionModal(discord.ui.Modal):
     def __init__(self, view: discord.ui.View) -> None:
         super().__init__(title="Add Caption")
@@ -33,18 +35,6 @@ class EditBtn(discord.ui.Button):
     
     async def callback(self, interaction: discord.Interaction) -> None:
         await interaction.response.send_modal(EditModal(self.view))
-
-class HDBtn(discord.ui.Button):
-    def __init__(self) -> None:
-        super().__init__(emoji="⚡", label="HD Image")
-        self.view: CollectionView
-    
-    async def callback(self, interaction: discord.Interaction) -> None:
-        if self.view.is_gif():
-            return await interaction.response.send_message("Some cards in your current collection do not support HD.", ephemeral=True)
-        
-        await interaction.response.defer()
-        await self.view.send_msg(1)
 
 class GalleryBtn(discord.ui.Button):
     def __init__(self) -> None:
@@ -147,7 +137,7 @@ class CollectionView(discord.ui.View):
         if self.is_author:
             self.add_item(EditBtn())
             self.add_item(GalleryBtn())
-        self.add_item(HDBtn())
+        self.add_item(HDBtn(gif_message="Some cards in your current collection do not support HD."))
 
         if len(self.collections) > 1:
             self.add_item(CollectionDropdown(list(self.collections.keys())))
@@ -194,4 +184,8 @@ class CollectionView(discord.ui.View):
             self.message = await self.interaction.original_response()
     
     def is_gif(self) -> bool:
-        return any(card.is_gif for card in self.cards)
+        return any(card.is_gif for card in self.cards if card)
+
+    async def apply_hd(self, interaction: discord.Interaction) -> None:
+        await interaction.response.defer()
+        await self.send_msg(1)

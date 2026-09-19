@@ -26,15 +26,22 @@ class Potion(commands.Cog):
         
         user = await func.get_user(interaction.user.id)
 
-        actived_potions = func.get_potions(user.get("actived_potions", {}), func.settings.POTIONS_BASE)
-        if potion_name in actived_potions:
-            return await interaction.response.send_message("Wait for the current potion's effect to end before using another potion from the same category.")
-    
         if user.get("potions", {}).get(f"{potion_name}_{level}", 0) <= 0:
             return await interaction.response.send_message("You don't have this potion.")
 
+        actived_potions = func.get_potions(user.get("actived_potions", {}), func.settings.POTIONS_BASE, details=True)
+        active = actived_potions.get(potion_name)
+        extending = False
+        if active:
+            if active["level"] != level:
+                return await interaction.response.send_message(
+                    f"You already have a `{potion_name.title()} {active['level'].upper()}` potion active. "
+                    "You can only add time with the same type and level."
+                )
+            extending = True
+
         data: dict[str, dict[str, float]] = {"$set": {}, "$inc": {}}
-        if potion_name == "speed":
+        if potion_name == "speed" and not extending:
             time_reduce = func.settings.POTIONS_BASE.get("speed").get("levels").get(level)
             for cooldown in user.get("cooldown", []):
                 if cooldown in ["daily", "match_game"] or not func.settings.COOLDOWN_BASE.get(cooldown):
@@ -42,14 +49,19 @@ class Potion(commands.Cog):
                 
                 data["$set"][f"cooldown.{cooldown}"] = user.get("cooldown").get(cooldown, time.time()) - (func.settings.COOLDOWN_BASE.get(cooldown)[1] * time_reduce)
 
+        duration = potion_data.get("expiration")
+        expire = (active["expiration"] if extending else time.time()) + duration
         data["$inc"][f"potions.{potion_name}_{level}"] = -1
-        data["$set"][f"actived_potions.{potion_name}_{level}"] = (expire := time.time() + potion_data.get("expiration"))
+        data["$set"][f"actived_potions.{potion_name}_{level}"] = expire
         data = func.update_quest_progress(user, "USE_ANY_POTION", query=data)
         await func.update_user(interaction.user.id, data)
 
-        func.logger.info(f"User {interaction.user.name}({interaction.user.id}) used a {potion_name}({level}) potion, which will expire in {expire}.")
+        action = "extended" if extending else "used"
+        func.logger.info(f"User {interaction.user.name}({interaction.user.id}) {action} a {potion_name}({level}) potion, which will expire in {expire}.")
 
-        await interaction.response.send_message(f"You have used a {potion_name} potion. It will expire in <t:{round(expire)}:R>")
+        await interaction.response.send_message(
+            f"You have {'extended' if extending else 'used'} a {potion_name} potion. It will expire in <t:{round(expire)}:R>"
+        )
 
 async def setup(bot: commands.Bot) -> None:
     await bot.add_cog(Potion(bot))

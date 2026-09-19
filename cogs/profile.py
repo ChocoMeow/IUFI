@@ -427,7 +427,7 @@ class Profile(commands.Cog):
         embed.set_thumbnail(url=interaction.user.display_avatar.url)
         await interaction.response.send_message(embed=embed)
 
-    @app_commands.command(name="wishlist", description="Manage your wishlist. You'll get a DM when a wishlisted card is traded or rolled.")
+    @app_commands.command(name="wishlist", description="Manage your wishlist. Wish cards roll more often, and you'll get a DM when one appears.")
     async def wishlist(self, interaction: discord.Interaction):
         user = await func.get_user(interaction.user.id)
         view = WishListView(interaction, user)
