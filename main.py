@@ -398,10 +398,14 @@ class IUFI(commands.Bot):
             )
 
         binding = getattr(matched_command, "binding", None)
-        if binding is None:
-            await callback(interaction, **kwargs)
-        else:
-            await callback(binding, interaction, **kwargs)
+        try:
+            if binding is None:
+                await callback(interaction, **kwargs)
+            else:
+                await callback(binding, interaction, **kwargs)
+        except Exception as exception:
+            # Message invocations bypass the tree, so its error handler never runs for them.
+            await self.on_app_command_error(interaction, exception)
 
     async def on_app_command_error(self, interaction: discord.Interaction, exception: app_commands.AppCommandError, /) -> None:
         error = getattr(exception, 'original', exception)

@@ -13,6 +13,7 @@ from .shop import ShopView
 from .trade import TradeView, PotionTradeView
 from .confirm import ConfirmView
 from .collection import CollectionView
+from .cardinfo import CardInfoView
 from .help import HelpView
 from .debugs import DebugView
 from .drop import DropView

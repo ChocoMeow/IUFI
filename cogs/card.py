@@ -10,6 +10,7 @@ from views import (
     TradeView,
     PotionTradeView,
     MultiIDModal,
+    CardInfoView,
 )
 
 class Card(commands.Cog):
@@ -45,29 +46,10 @@ class Card(commands.Cog):
             if not cards:
                 return await modal_interaction.response.send_message("The card was not found. Please try again.")
 
-            if len(cards) > 1:
-                desc = "```"
-                for card in cards:
-                    member = modal_interaction.guild.get_member(card.owner_id)
-                    desc += f"{card.display_id} {card.display_tag} {card.display_frame} {card.display_stars} {card.tier[0]} 👤 {member.display_name if member else 'None':5}\n"
-                desc += "```"
-
-                image_bytes, image_format = await iufi.gen_cards_view(cards, 4, hide_image_if_no_owner=True)
-
-            else:
-                card = cards[0]
-                desc = f"```{card.display_id}\n" \
-                       f"{card.display_tag}\n" \
-                       f"{card.display_frame}\n" \
-                       f"{card.tier[0]} {card.tier[1].capitalize()}\n" \
-                       f"{card.display_stars}```\n" \
-                       "**Owned by: **" + (f"<@{card.owner_id}>" if card.owner_id else "None")
-
-                image_bytes, image_format = await card.image_bytes(True), card.format
-
-            embed = discord.Embed(title=f"ℹ️ Card Info", description=desc, color=0x949fb8)
-            embed.set_image(url=f"attachment://image.{image_format}")
-            await modal_interaction.response.send_message(file=discord.File(image_bytes, filename=f"image.{image_format}"), embed=embed)
+            view = CardInfoView(modal_interaction.user, cards, modal_interaction.guild)
+            embed, file = await view.render()
+            await modal_interaction.response.send_message(file=file, embed=embed, view=view)
+            view.message = await modal_interaction.original_response()
 
         modal = MultiIDModal(title="Card Info", label="Card IDs (up to 8)", callback=on_ids)
         await interaction.response.send_modal(modal)
@@ -84,16 +66,10 @@ class Card(commands.Cog):
         if not card:
             return await interaction.response.send_message("Card not found! Please try again.")
 
-        embed = discord.Embed(title=f"ℹ️ Card Info", color=0x949fb8)
-        embed.description = f"```{card.display_id}\n" \
-                            f"{card.display_tag}\n" \
-                            f"{card.display_frame}\n" \
-                            f"{card.tier[0]} {card.tier[1].capitalize()}\n" \
-                            f"{card.display_stars}```\n" \
-                            "**Owned by: **" + (f"<@{card.owner_id}>" if card.owner_id else "None")
-
-        embed.set_image(url=f"attachment://image.{card.format}")
-        await interaction.response.send_message(file=discord.File(await card.image_bytes(True), filename=f"image.{card.format}"), embed=embed)
+        view = CardInfoView(interaction.user, [card], interaction.guild)
+        embed, file = await view.render()
+        await interaction.response.send_message(file=file, embed=embed, view=view)
+        view.message = await interaction.original_response()
 
     @app_commands.command(name="convert", description="Converts photocard(s) into starcandies. Cards can be identified by ID or given tag.")
     async def convert(self, interaction: discord.Interaction):

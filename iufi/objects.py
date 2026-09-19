@@ -32,9 +32,9 @@ SIZE_RATE = 0.2
 FRAME_SIZE_INCREMENT = (0.005, 0.003)
 
 QUIZ_LEVEL_BASE: dict[str, tuple[int, tuple[int, int, hex]]] = {
-    "easy": (10, (1, 1, 0x7CD74B)),
-    "medium": (20, (3, 2, 0xF9E853)),
-    "hard": (30, (5, 3, 0xD75C4B))
+    "easy": (40, (1, 1, 0x7CD74B)),
+    "medium": (47, (3, 2, 0xF9E853)),
+    "hard": (55, (5, 3, 0xD75C4B))
 }
 
 YTDL_FORMAT_OPTIONS: Dict[str, str] = {
@@ -258,8 +258,8 @@ class Card(CardObject):
 
             asyncio.create_task(func.update_card(self.id, {"$set": {"stars": stars}}))
 
-    async def image_bytes(self, hide_image_if_no_owner: bool = False) -> BytesIO:
-        image = await self.image(hide_image_if_no_owner=hide_image_if_no_owner)
+    async def image_bytes(self, hide_image_if_no_owner: bool = False, *, size_rate: float = SIZE_RATE) -> BytesIO:
+        image = await self.image(size_rate=size_rate, hide_image_if_no_owner=hide_image_if_no_owner)
         image_bytes = BytesIO()
 
         if self.is_gif:

@@ -9,7 +9,7 @@ from iufi import (
     QUIZ_LEVEL_BASE
 )
 
-from typing import Any
+from typing import Any, Dict, Optional
 
 QUESTION_RESPONSE_BASE: dict[str, dict[str, list]] = {
     True: {
@@ -68,6 +68,86 @@ QUIZ_SETTINGS: dict[str, int] = {
         "highest_points": 0
     }
 }
+
+
+def _highest_numeric_threshold(config: Dict[str, Any], score: int) -> Optional[Dict[str, Any]]:
+    """Return the map for the highest integer key that `score` has reached."""
+    selected = None
+    thresholds: list[tuple[int, Dict[str, Any]]] = []
+    for key, value in (config or {}).items():
+        if not str(key).isdigit() or not isinstance(value, dict):
+            continue
+        thresholds.append((int(key), value))
+    for threshold, value in sorted(thresholds):
+        if score >= threshold:
+            selected = value
+    return selected
+
+
+def _apply_prob_bonus(base: Dict[str, Any], bonus: Optional[Dict[str, Any]]) -> Dict[str, float]:
+    merged: Dict[str, float] = {k: float(v) for k, v in (base or {}).items()}
+    if bonus:
+        for key, value in bonus.items():
+            merged[key] = merged.get(key, 0.0) + float(value)
+    return {k: max(0.0, v) for k, v in merged.items()}
+
+
+def _parse_tier_unlock_rule(rule: Any) -> tuple[int, int]:
+    if isinstance(rule, dict):
+        return int(rule.get("points", 0) or 0), int(rule.get("min_correct", 1) or 1)
+    return int(rule or 0), 1
+
+
+def _apply_tier_unlocks(
+    probs: Dict[str, float],
+    unlocks: Dict[str, Any],
+    monthly_points: int,
+    correct: int,
+) -> Dict[str, float]:
+    if not unlocks:
+        return probs
+    locked = set()
+    for tier, rule in unlocks.items():
+        min_points, min_correct = _parse_tier_unlock_rule(rule)
+        if monthly_points < min_points or correct < min_correct:
+            locked.add(str(tier))
+    return {k: v for k, v in probs.items() if k not in locked}
+
+
+def select_normal_quiz_reward_probs(
+    config: Dict[str, Any],
+    correct: int,
+    monthly_points: float,
+) -> Optional[Dict[str, float]]:
+    """Pick reward odds from this-quiz correct count, with a small monthly-points bump.
+
+    Expected settings shape:
+      NORMAL_QUIZ.BY_CORRECT["1".."5"], optional MONTHLY_BONUS, optional TIER_UNLOCKS.
+
+    If BY_CORRECT is missing, fall back to the old monthly-points-only table.
+    """
+    if correct <= 0:
+        return None
+
+    config = config or {}
+    points = int(monthly_points)
+    by_correct = config.get("BY_CORRECT")
+    if isinstance(by_correct, dict) and by_correct:
+        selected = by_correct.get(str(correct))
+        if not isinstance(selected, dict):
+            eligible = [
+                (int(key), value)
+                for key, value in by_correct.items()
+                if str(key).isdigit() and isinstance(value, dict) and int(key) <= correct
+            ]
+            selected = max(eligible, key=lambda item: item[0])[1] if eligible else None
+        if not selected:
+            return None
+        bonus = _highest_numeric_threshold(config.get("MONTHLY_BONUS") or {}, points)
+        merged = _apply_prob_bonus(selected, bonus)
+        return _apply_tier_unlocks(merged, config.get("TIER_UNLOCKS") or {}, points, correct)
+
+    return _highest_numeric_threshold(config, points)
 
 class AnswerModal(discord.ui.Modal):
     def __init__(self, question: Question, *args, **kwargs) -> None:
@@ -291,32 +371,18 @@ class QuizView(discord.ui.View):
 
         await self.response.edit(content="This quiz has expired.", embed=embed, view=None)
         
-        # Feature flag: Give reward card based on points
-        if use_reward_card and state['points'] > 0:
+        # Feature flag: Give reward card based on this-quiz correct answers.
+        if use_reward_card and correct > 0:
             try:
                 from .reward_card import RewardCardView
-                
-                # Determine probabilities based on points
-                probs_config = func.settings.REWARD_CARD_PROBABILITIES or {}
-                probs_config = probs_config.get("NORMAL_QUIZ", {})
-                # Find the appropriate tier based on current points.
-                # If the score is below the first configured threshold, fall back to the lowest tier
-                # so a positive-score quiz still produces a reward card.
-                current_points = state['points']
-                selected_probs = None
-                thresholds = sorted((int(threshold_str), threshold_str) for threshold_str in probs_config.keys())
-                for threshold, threshold_str in thresholds:
-                    if current_points >= threshold:
-                        selected_probs = probs_config[threshold_str]
 
-                if selected_probs is None and current_points > 0 and thresholds:
-                    selected_probs = probs_config[thresholds[0][1]]
-                
+                probs_config = (func.settings.REWARD_CARD_PROBABILITIES or {}).get("NORMAL_QUIZ", {})
+                selected_probs = select_normal_quiz_reward_probs(probs_config, correct, state["points"])
+
                 if selected_probs:
-                    # Create and send reward card view
                     reward_view = RewardCardView(None, self.author, selected_probs, initial_cost=10, cost_currency_field="candies", timeout=120)
                     await reward_view._roll_card()
-                    
+
                     reward_embed = reward_view.build_embed()
                     file = None
                     if reward_view.current_card:
@@ -327,8 +393,11 @@ class QuizView(discord.ui.View):
                             reward_embed.set_image(url=f"attachment://{filename}")
                         except Exception:
                             file = None
-                    
-                    reward_content = f"**{self.author.mention} This reward ends <t:{reward_view.expires_at}:R>**\n🎁 Card reward for reaching {current_points} points!"
+
+                    reward_content = (
+                        f"**{self.author.mention} This reward ends <t:{reward_view.expires_at}:R>**\n"
+                        f"🎁 Card reward for {correct}/{len(self.questions)} correct!"
+                    )
                     reward_msg = await self.response.channel.send(
                         content=reward_content,
                         embed=reward_embed,
@@ -337,10 +406,9 @@ class QuizView(discord.ui.View):
                     )
                     reward_view.message = reward_msg
             except Exception:
-                # Fail silently but log
                 try:
                     func.logger.exception("Failed to present normal quiz reward card view")
-                except:
+                except Exception:
                     pass
         
         self.stop()

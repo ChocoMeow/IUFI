@@ -63,6 +63,7 @@ class Settings:
         self.USER_BASE: Dict[str, Any] = {}
         self.COOLDOWN_BASE: Dict[str, tuple[str, int]] = {}
         self.PITY_SETTINGS: Dict[str, Dict[str, Any]] = {}
+        self.WISHLIST_ROLL_WEIGHTS: Dict[str, float] = {}
         self.DAILY_QUESTS: Dict[str, Union[str, int]] = {}
         self.WEEKLY_QUESTS: Dict[str, Union[str, int]] = {}
         self.TIERS_BASE: Dict[str, List[str, int]] = {}
@@ -109,6 +110,7 @@ class Settings:
         self.USER_BASE = settings.get("USER_BASE")
         self.COOLDOWN_BASE = settings.get("COOLDOWN_BASE")
         self.PITY_SETTINGS = settings.get("PITY_SETTINGS", {})
+        self.WISHLIST_ROLL_WEIGHTS = settings.get("WISHLIST_ROLL_WEIGHTS", {})
         self.DAILY_QUESTS = {k: v for k, v in settings.get("DAILY_QUESTS").items()}
         self.WEEKLY_QUESTS = {k: v for k, v in settings.get("WEEKLY_QUESTS").items()}
         self.TIERS_BASE = settings.get("TIERS_BASE")

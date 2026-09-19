@@ -269,7 +269,27 @@ class CardPool:
         return cards
     
     @classmethod
-    def roll(cls, amount: int = 3, *, included: List[str] = None, avoid: List[str] = None, luck_rates: float = None, soft_pity_boosts: dict = None) -> List[Card]:
+    def _sample_available_cards(cls, cat: str, amt: int, wishlist_ids: set[str] | None) -> List[Card]:
+        pool = cls._available_cards[cat]
+        boost = func.settings.WISHLIST_ROLL_WEIGHTS.get(cat, 1.0)
+
+        if not wishlist_ids or boost <= 1.0:
+            return sample(pool, k=amt)
+
+        if not any(card.id in wishlist_ids for card in pool):
+            return sample(pool, k=amt)
+
+        remaining = list(pool)
+        picked: List[Card] = []
+        for _ in range(amt):
+            weights = [boost if card.id in wishlist_ids else 1.0 for card in remaining]
+            chosen = choices(remaining, weights=weights, k=1)[0]
+            picked.append(chosen)
+            remaining.remove(chosen)
+        return picked
+
+    @classmethod
+    def roll(cls, amount: int = 3, *, included: List[str] = None, avoid: List[str] = None, luck_rates: float = None, soft_pity_boosts: dict = None, wishlist: List[str] = None) -> List[Card]:
         results = included if included else []
 
         drop_rates = DROP_RATES.copy()
@@ -294,10 +314,11 @@ class CardPool:
             drop_rates = {k: v for k, v in drop_rates.items() if k not in avoid}
 
         results.extend(choices(list(drop_rates.keys()), weights=drop_rates.values(), k=amount - len(results)))
+        wishlist_ids = set(wishlist) if wishlist else None
         cards = [
             card
             for cat, amt in Counter(results).items()
-            for card in sample(cls._available_cards[cat], k=amt)
+            for card in cls._sample_available_cards(cat, amt, wishlist_ids)
         ]
         shuffle(cards)
         return cards
