@@ -82,14 +82,14 @@ class Gameplay(commands.Cog):
                 included=[roll_tier] if roll_tier else None,
                 luck_rates=actived_potions.get("luck", None),
                 soft_pity_boosts=soft_pity_boosts,
-                wishlist=user.get("wishlist") or None
+                boosted_cards=user.get("wishlist_boosts") or None
             )
         else:
             # Guaranteed roll or purchased roll - no soft pity
             cards = iufi.CardPool.roll(
                 included=[roll_tier] if roll_tier else None,
                 luck_rates=None if roll_tier else actived_potions.get("luck", None),
-                wishlist=user.get("wishlist") or None
+                boosted_cards=user.get("wishlist_boosts") or None
             )
 
         # Update pity based on rolled cards (only for normal rolls)

@@ -86,8 +86,70 @@ class RemoveDropDown(discord.ui.Select):
 
     async def callback(self, interaction: discord.Interaction):
         await func.update_user(interaction.user.id, {
-            "$pull": {"wishlist": {"$in": self.values}}
+            "$pull": {
+                "wishlist": {"$in": self.values},
+                "wishlist_boosts": {"$in": self.values}
+            }
         })
+        await self.view.update_data()
+
+class BoostDropDown(discord.ui.Select):
+    def __init__(self, cards: List[iufi.Card], boosts: List[str]):
+        self.view: WishListView
+
+        super().__init__(
+            placeholder="Select a card to boost its roll chance.",
+            min_values=1, max_values=1,
+            options=self._generate_options(cards, boosts)
+        )
+
+    @staticmethod
+    def _generate_options(cards: List[iufi.Card], boosts: List[str]) -> List[discord.SelectOption]:
+        return [
+            discord.SelectOption(
+                value=card.id,
+                label=f"{'⚡ ' if card.id in boosts else ''}{card.display_id}",
+                description=f"{card.tier[1].capitalize()}" + (" (boosted)" if card.id in boosts else ""),
+                emoji=card.tier[0]
+            ) for card in cards
+        ]
+
+    async def callback(self, interaction: discord.Interaction):
+        card = iufi.CardPool.get_card(self.values[0])
+        if not card:
+            return await interaction.response.send_message("This card no longer exists.", ephemeral=True)
+
+        tier = card.tier[1]
+        boosts = [card_id for card_id in self.view.boosts if card_id != card.id]
+
+        if card.id in self.view.boosts:
+            message = f"`{card.display_id}` is no longer boosted."
+
+        elif card.owner_id:
+            return await interaction.response.send_message(
+                f"`{card.display_id}` is already owned, so you cannot put a boost on it.",
+                ephemeral=True
+            )
+
+        else:
+            # Only one boosted card per tier, so the previous pick is dropped.
+            replaced = None
+            for boosted_id in boosts:
+                boosted_card = iufi.CardPool.get_card(boosted_id)
+                if boosted_card and boosted_card.tier[1] == tier:
+                    replaced = boosted_card
+                    break
+
+            if replaced:
+                boosts.remove(replaced.id)
+
+            boosts.append(card.id)
+            message = f"`{card.display_id}` is now your boosted `{tier}` wish card."
+            if replaced:
+                message += f" It replaced `{replaced.display_id}`."
+
+        await func.update_user(interaction.user.id, {"$set": {"wishlist_boosts": boosts}})
+        await interaction.response.send_message(message, ephemeral=True)
         await self.view.update_data()
 
 class WishListView(discord.ui.View):
@@ -96,12 +158,16 @@ class WishListView(discord.ui.View):
 
         self.interaction: discord.Interaction = interaction
         self.wishlist = user.get("wishlist", [])
+        self.boosts = user.get("wishlist_boosts", [])
         self.cards = iufi.CardPool.search_valid_cards(self.wishlist)
         self.select_dropdown = None
+        self.boost_dropdown = None
 
         if self.wishlist:
             self.select_dropdown = RemoveDropDown(self.cards)
+            self.boost_dropdown = BoostDropDown(self.cards, self.boosts)
             self.add_item(self.select_dropdown)
+            self.add_item(self.boost_dropdown)
 
         self.page: int = ceil(len(self.cards) / 13)
         self.current_page: int = 1
@@ -114,10 +180,11 @@ class WishListView(discord.ui.View):
         if not cards:
             desc = "Your wishlist is currently empty."
         else:
-            desc = f"Here are the cards in your wishlist: [{len(self.cards)}/25]\n```"
+            desc = f"Here are the cards in your wishlist: [{len(self.cards)}/25]\n" \
+                   "⚡ marks the boosted card of a tier. You can boost one card per tier.\n```"
             for card in cards:
                 member = self.interaction.guild.get_member(card.owner_id)
-                desc += f"{card.display_id} {card.display_frame} {card.display_stars} {card.tier[0]} 👤 {member.display_name if member else 'None':5}\n"
+                desc += f"{'⚡' if card.id in self.boosts else '  '} {card.display_id} {card.display_frame} {card.display_stars} {card.tier[0]} 👤 {member.display_name if member else 'None':5}\n"
             desc += "```"
 
         embed = discord.Embed(title="Your Wishlist", description=desc, color=discord.Color.random())
@@ -130,6 +197,7 @@ class WishListView(discord.ui.View):
     async def update_data(self) -> None:
         user = await func.get_user(self.interaction.user.id)
         self.wishlist = user.get("wishlist", [])
+        self.boosts = user.get("wishlist_boosts", [])
         self.cards = iufi.CardPool.search_valid_cards(self.wishlist)
         self.page: int = ceil(len(self.cards) / 13)
         self.current_page: int = 1
@@ -137,12 +205,20 @@ class WishListView(discord.ui.View):
         if self.select_dropdown:
             self.select_dropdown.options = self.select_dropdown._generate_options(self.cards)
             self.select_dropdown.max_values = len(self.cards)
-        else:
+        elif self.cards:
             self.select_dropdown = RemoveDropDown(self.cards)
             self.add_item(self.select_dropdown)
+
+        if self.boost_dropdown:
+            self.boost_dropdown.options = self.boost_dropdown._generate_options(self.cards, self.boosts)
+        elif self.cards:
+            self.boost_dropdown = BoostDropDown(self.cards, self.boosts)
+            self.add_item(self.boost_dropdown)
         
         if not self.cards:
             self.remove_item(self.select_dropdown)
+            self.remove_item(self.boost_dropdown)
+            self.select_dropdown = self.boost_dropdown = None
 
         await self.message.edit(embed=self.build_embed(), view=self)
 
@@ -175,6 +251,6 @@ class WishListView(discord.ui.View):
 
     @discord.ui.button(label="Clear All", style=discord.ButtonStyle.red)
     async def clear(self, interaction: discord.Interaction, button: discord.ui.Button):
-        await func.update_user(interaction.user.id, {"$unset": {"wishlist": []}})
+        await func.update_user(interaction.user.id, {"$unset": {"wishlist": [], "wishlist_boosts": []}})
         await interaction.response.send_message("You have successfully removed all cards from your wishlist.", ephemeral=True)
         await self.update_data()
