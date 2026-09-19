@@ -1046,9 +1046,18 @@ async def check_wishlist(message: discord.Message, card_ids: List[str]) -> None:
     if user_docs:
         await USERS_DB.update_many(
             {"wishlist": {"$in": card_ids}},
-            {"$pull": {"wishlist": {"$in": card_ids}}}
+            {"$pull": {
+                "wishlist": {"$in": card_ids},
+                "wishlist_boosts": {"$in": card_ids}
+            }}
         )
         for user_doc in user_docs:
+            buffered = USERS_BUFFER.get(user_doc["_id"])
+            if buffered:
+                for field in ("wishlist", "wishlist_boosts"):
+                    if buffered.get(field):
+                        buffered[field] = [card_id for card_id in buffered[field] if card_id not in card_ids]
+
             try:
                 user = message.guild.get_member(user_doc["_id"])
                 if user:
