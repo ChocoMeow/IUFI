@@ -790,7 +790,7 @@
             {
                 "total_levels": 500,
                 "cooldown_reduction_percent": 20,
-                "shop_sale_percent": 25
+                "shop_sale_percent": 20
             },
             {
                 "total_levels": 750,
@@ -798,7 +798,7 @@
             },
             {
                 "total_levels": 1000,
-                "convert_candy_multiplier": 2.0,
+                "convert_candy_multiplier": 1.5,
                 "cooldown_reduction_percent": 30
             }
         ]
