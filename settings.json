@@ -93,9 +93,9 @@
         "common": 15.0,
         "rare": 12.0,
         "epic": 10.0,
-        "legendary": 8.0,
-        "mystic": 6.0,
-        "celestial": 4.0
+        "legendary": 6.0,
+        "mystic": 3.0,
+        "celestial": 2.0
     },
     "PITY_SETTINGS": {
         "rare": {
