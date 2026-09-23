@@ -9,6 +9,71 @@ from logging.handlers import TimedRotatingFileHandler
 # Seconds a rejected prefix command's notice stays before it deletes itself.
 LEGACY_NOTICE_LIFETIME = 8
 
+LEGACY_ALIASES = {
+    "r": "roll",
+    "mg": "game",
+    "q": "quiz",
+    "cd": "cooldown",
+    "s": "shop",
+    "eq": "emojiquiz",
+    "bp": "battlepass",
+    "bpass": "battlepass",
+    "pvptest": "pvp_test",
+    "pvp_auto": "pvp_test",
+    "mypity": "pity",
+    "i": "cardinfo",
+    "il": "cardinfolast",
+    "c": "convert",
+    "cl": "convertlast",
+    "ca": "convertall",
+    "cm": "convertmass",
+    "lk": "lock",
+    "ll": "locklast",
+    "ul": "unlock",
+    "st": "settag",
+    "stl": "settaglast",
+    "rt": "removetag",
+    "t": "trade",
+    "te": "tradeeveryone",
+    "tl": "tradelast",
+    "tel": "tradeeveryonelast",
+    "tp": "tradepotion",
+    "tpe": "tradepotioneveryone",
+    "u": "upgrade",
+    "sf": "setframe",
+    "sfl": "setframelast",
+    "rf": "removeframe",
+    "up": "usepotion",
+    "p": "profile",
+    "sb": "setbio",
+    "m": "main",
+    "ml": "mainlast",
+    "cc": "createcollection",
+    "sc": "setcollection",
+    "scl": "setcollectionlast",
+    "rc": "removecollection",
+    "f": "showcollection",
+    "d": "daily",
+    "v": "view",
+    "in": "inventory",
+    "qu": "quests",
+    "wl": "wishlist",
+    "tr": "togglereminder",
+    "h": "help",
+}
+
+# Message commands supply these values after the regular slash-command arguments.
+LEGACY_TRAILING_ARGUMENTS = {
+    "cardinfo": "<card_ids...>",
+    "convert": "<card_ids...>",
+    "convertmass": "<categories...>",
+    "lock": "<card_ids...>",
+    "trade": "<card_ids...>",
+    "tradeeveryone": "<card_ids...>",
+    "unlock": "<card_ids...>",
+    "upgrade": "<card_ids...>",
+}
+
 class _MessageResponse:
     def __init__(self, interaction):
         self.interaction = interaction
@@ -190,62 +255,50 @@ class IUFI(commands.Bot):
                 for group_key in group_keys:
                     lookup.setdefault(group_key, default_command)
 
-        legacy_aliases = {
-            "r": "roll",
-            "mg": "game",
-            "q": "quiz",
-            "cd": "cooldown",
-            "s": "shop",
-            "eq": "emojiquiz",
-            "bp": "battlepass",
-            "bpass": "battlepass",
-            "pvptest": "pvp_test",
-            "pvp_auto": "pvp_test",
-            "mypity": "pity",
-            "i": "cardinfo",
-            "il": "cardinfolast",
-            "c": "convert",
-            "cl": "convertlast",
-            "ca": "convertall",
-            "cm": "convertmass",
-            "lk": "lock",
-            "ul": "unlock",
-            "st": "settag",
-            "stl": "settaglast",
-            "rt": "removetag",
-            "t": "trade",
-            "te": "tradeeveryone",
-            "tl": "tradelast",
-            "tel": "tradeeveryonelast",
-            "tp": "tradepotion",
-            "tpe": "tradepotioneveryone",
-            "u": "upgrade",
-            "sf": "setframe",
-            "sfl": "setframelast",
-            "rf": "removeframe",
-            "up": "usepotion",
-            "p": "profile",
-            "sb": "setbio",
-            "m": "main",
-            "ml": "mainlast",
-            "cc": "createcollection",
-            "sc": "setcollection",
-            "scl": "setcollectionlast",
-            "rc": "removecollection",
-            "f": "showcollection",
-            "d": "daily",
-            "v": "view",
-            "in": "inventory",
-            "qu": "quests",
-            "wl": "wishlist",
-            "tr": "togglereminder",
-            "h": "help",
-        }
-        for alias, command_name in legacy_aliases.items():
+        for alias, command_name in LEGACY_ALIASES.items():
             if command_name in lookup:
                 lookup[alias] = lookup[command_name]
 
         return lookup
+
+    def resolve_legacy_help_command(self, query: str) -> app_commands.Command | None:
+        """Resolve canonical names and compact legacy aliases for help."""
+        normalized = query.strip().lower().lstrip("/")
+        lookup = self.build_legacy_lookup()
+        if command := lookup.get(normalized):
+            return command
+
+        for prefix in (func.settings.BOT_PREFIX or ["q", "Q"]):
+            if normalized.startswith(prefix.lower()) and len(normalized) > len(prefix):
+                normalized = normalized[len(prefix):]
+                break
+        return lookup.get(normalized)
+
+    def legacy_aliases_for(self, command: app_commands.Command) -> list[str]:
+        return [
+            alias for alias, command_name in LEGACY_ALIASES.items()
+            if command_name == command.qualified_name.lower()
+        ]
+
+    def format_legacy_usage(self, command: app_commands.Command) -> str:
+        """Build compact-prefix usage from a slash callback's signature."""
+        prefix = (func.settings.BOT_PREFIX or ["q"])[0]
+        parts = [f"{prefix}{command.qualified_name}"]
+        signature = inspect.signature(command.callback)
+        for param_name, param in signature.parameters.items():
+            if param_name in {"self", "interaction", "ctx"}:
+                continue
+            if param.kind in (inspect.Parameter.VAR_POSITIONAL, inspect.Parameter.VAR_KEYWORD):
+                continue
+            if param.default is inspect.Parameter.empty:
+                parts.append(f"<{param_name}>")
+            else:
+                parts.append(f"[{param_name}]")
+
+        trailing = LEGACY_TRAILING_ARGUMENTS.get(command.qualified_name.lower())
+        if trailing:
+            parts.append(trailing)
+        return " ".join(parts)
 
     async def legacy_command_allowed(self, interaction: _MessageInteraction, command: app_commands.Command) -> tuple[bool, str | None]:
         """Run a message invocation through the command's own checks.
@@ -391,10 +444,10 @@ class IUFI(commands.Bot):
             and param_name not in kwargs
         ]
         if missing:
-            command_name = matched_command.qualified_name
             missing_names = ", ".join(missing)
             return await interaction.response.send_message(
-                f"Missing required argument(s): `{missing_names}`. Usage: `q{command_name} ...`"
+                f"Missing required argument(s): `{missing_names}`. "
+                f"Usage: `{self.format_legacy_usage(matched_command)}`"
             )
 
         binding = getattr(matched_command, "binding", None)
@@ -480,10 +533,6 @@ class IUFI(commands.Bot):
         func.logger.info("Startup: loading community Battle Pass milestones...")
         import events
         await events.load_community_state()
-
-        func.logger.info("Startup: loading debut event state...")
-        import debut
-        await debut.load_state()
 
         try:
             if not discord.opus.is_loaded():

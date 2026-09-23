@@ -82,8 +82,6 @@ class Settings:
         self.MONTHLY_LEADERBOARD_ROLE: int = 0
         self.BATTLEPASS_SETTINGS: Dict[str, Any] = {}
         self.EVENT_SETTINGS: Dict[str, Any] = {}
-        self.DEBUT_EVENT_SETTINGS: Dict[str, Any] = {}
-        self.TEASER_SETTINGS: Dict[str, Any] = {}
         self.BATTLEPASS_MILESTONES: Dict[str, Any] = {}
         # Newly added defaults so callers can reference them directly without getattr
         self.PVP_SETTINGS: Dict[str, Any] = {}
@@ -129,8 +127,6 @@ class Settings:
         self.MONTHLY_LEADERBOARD_ROLE = settings.get("MONTHLY_LEADERBOARD_ROLE", 0)
         self.BATTLEPASS_SETTINGS = settings.get("BATTLEPASS_SETTINGS", {})
         self.EVENT_SETTINGS = settings.get("EVENT_SETTINGS", {})
-        self.DEBUT_EVENT_SETTINGS = settings.get("DEBUT_EVENT_SETTINGS", {})
-        self.TEASER_SETTINGS = settings.get("TEASER_SETTINGS", {})
         self.BATTLEPASS_MILESTONES = settings.get("BATTLEPASS_MILESTONES", {})
         self.PVP_SETTINGS = settings.get("PVP_SETTINGS", {})
         self.REWARD_CARD_PROBABILITIES = settings.get("REWARD_CARD_PROBABILITIES", {})
@@ -156,12 +152,14 @@ USERS_BUFFER: Dict[int, Dict[str, Any]] = {}
 QUESTS_SETTINGS: Dict[str, Dict[str, int]] = {
     "daily": {
         "update_time": 86_400,
-        "items": 3
+        "items": 3,
+        "reroll_cost": 50,
     },
     "weekly": {
         "update_time": 86_400 * 7,
-        "items": 2
-    }
+        "items": 2,
+        "reroll_cost": 100,
+    },
 }
 
 def open_json(path: str) -> dict:
@@ -736,6 +734,94 @@ def _pick_new_quests(quest_type: str, quests_base: Dict[str, Any], items: int) -
     other_candidates = [quest_name for quest_name in candidates if quest_name != guaranteed_quest]
     return [guaranteed_quest] + random.sample(other_candidates, k=sample_size - 1)
 
+def _quest_pool_for_type(quest_type: str) -> Dict[str, Any]:
+    if quest_type == "daily":
+        return settings.DAILY_QUESTS
+    if quest_type == "weekly":
+        return settings.WEEKLY_QUESTS
+    return {}
+
+def _is_quest_complete(quest: Dict[str, Any] | None, progress: int) -> bool:
+    return bool(quest) and progress >= quest.get("amount", 0)
+
+def _pick_replacement_quest(
+    quest_type: str,
+    quests_base: Dict[str, Any],
+    current_progresses: Dict[str, Any],
+    quest_name: str,
+) -> str | None:
+    remaining = [name for name in current_progresses if name != quest_name]
+    remaining_types = {
+        quests_base[name]["type"]
+        for name in remaining
+        if name in quests_base
+    }
+    exclude = set(current_progresses.keys())
+
+    unused_type_candidates: List[str] = []
+    any_candidates: List[str] = []
+    for name, details in quests_base.items():
+        if details.get("retired") or name in exclude:
+            continue
+        any_candidates.append(name)
+        if details.get("type") not in remaining_types:
+            unused_type_candidates.append(name)
+
+    candidates = unused_type_candidates or any_candidates
+    if not candidates:
+        return None
+
+    if quest_type == "weekly" and _quest_has_level_iii_potion_reward(quests_base.get(quest_name, {})):
+        level_iii = [
+            name for name in candidates
+            if _quest_has_level_iii_potion_reward(quests_base.get(name, {}))
+        ]
+        if level_iii:
+            candidates = level_iii
+
+    return random.choice(candidates)
+
+def build_quest_reroll_query(
+    user: Dict[str, Any],
+    quest_type: str,
+    quest_name: str,
+) -> tuple[Dict[str, Any] | None, str | None]:
+    """Replace one active quest and charge candies. Keeps `next_update` unchanged."""
+    quest_type = quest_type.lower()
+    quest_settings = QUESTS_SETTINGS.get(quest_type)
+    if not quest_settings:
+        return None, "Unknown quest type."
+
+    quests_base = _quest_pool_for_type(quest_type)
+    if not quests_base:
+        return None, "No quests are configured for that type."
+
+    user_quest = user.get("quests", {}).get(quest_type, {})
+    current_progresses = dict(user_quest.get("progresses") or {})
+    if quest_name not in current_progresses:
+        return None, "That quest is not currently active."
+
+    current_quest = quests_base.get(quest_name)
+    if _is_quest_complete(current_quest, current_progresses[quest_name]):
+        return None, "That quest is already completed and cannot be rerolled."
+
+    cost = int(quest_settings.get("reroll_cost", 0))
+    candies = int(user.get("candies", 0))
+    if candies < cost:
+        return None, f"You need 🍬 {cost} to reroll a {quest_type} quest. You have 🍬 {candies}."
+
+    replacement = _pick_replacement_quest(quest_type, quests_base, current_progresses, quest_name)
+    if not replacement:
+        return None, "Could not find a replacement quest. Please try again later."
+
+    new_progresses = {name: progress for name, progress in current_progresses.items() if name != quest_name}
+    new_progresses[replacement] = 0
+
+    return {
+        "$set": {f"quests.{quest_type}.progresses": new_progresses},
+        "$inc": {"candies": -cost},
+    }, None
+
 TRADE_COMMAND_NAMES = {
     "trade",
     "tradeeveryone",
@@ -1040,6 +1126,29 @@ async def update_card(card_id: List[str] | str, data: dict, insert: bool = False
         return await CARDS_DB.update_many({"_id": {"$in": card_id}}, data)
 
     await CARDS_DB.update_one({"_id": card_id}, data)
+
+async def build_wishlist_claim_notice(
+    interaction: discord.Interaction,
+    card_id: str,
+) -> str | None:
+    """Build a short claim-time note listing who wishlisted the claimed card."""
+    user_docs = await USERS_DB.find(
+        {
+            "_id": {"$ne": interaction.user.id},
+            "wishlist": card_id,
+        },
+        {"_id": 1},
+    ).to_list()
+    if not user_docs:
+        return None
+
+    holders: list[str] = []
+    leftover = max(0, len(user_docs) - 10)
+    for user_doc in user_docs[:10]:
+        holders.append(f"<@{user_doc['_id']}>")
+
+    extra = f", and {leftover} more" if leftover else ""
+    return f"⚠️ **Wishlisted by:** {', '.join(holders)}{extra}"
 
 async def check_wishlist(message: discord.Message, card_ids: List[str]) -> None:
     user_docs = await USERS_DB.find({"wishlist": {"$in": card_ids}}).to_list()

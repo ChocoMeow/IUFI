@@ -100,7 +100,7 @@ class SortDropdown(discord.ui.Select):
         
         super().__init__(
             placeholder="Select a sorter for clearer photocards...",
-            min_values=1, max_values=1
+            min_values=1, max_values=1, row=0
         )
         self.options = [discord.SelectOption(label=sorter.name, value=index, description=sorter.description, emoji=sorter.emoji) for index, sorter in enumerate(self._sorters)]
 
@@ -110,28 +110,77 @@ class SortDropdown(discord.ui.Select):
         self.view.apply_filter()
         await self.view.update_embed(interaction)
 
-class FilterDropdown(discord.ui.Select):
+class TierFilterDropdown(discord.ui.Select):
     def __init__(self):
+        options = [discord.SelectOption(label="All Rarities", value="all", emoji="📚")]
+        options.extend(
+            discord.SelectOption(label=tier.title(), value=tier, emoji=data[0])
+            for tier, data in func.settings.TIERS_BASE.items()
+        )
         super().__init__(
-            placeholder="Filter photocards...",
+            placeholder="Filter by rarity...",
             min_values=1,
             max_values=1,
-            options=[
-                discord.SelectOption(label="All Cards", value="all", emoji="📚"),
-                discord.SelectOption(label="Locked Cards Only", value="locked", emoji="🔒"),
-            ],
+            options=options,
+            row=1,
         )
 
     async def callback(self, interaction: discord.Interaction) -> None:
-        self.view.active_filter = self.values[0]
+        self.view.tier_filter = self.values[0]
+        self.view.apply_filter()
+        await self.view.update_embed(interaction)
+
+class TagFilterDropdown(discord.ui.Select):
+    def __init__(self):
+        super().__init__(
+            placeholder="Filter by tag...",
+            min_values=1,
+            max_values=1,
+            options=[
+                discord.SelectOption(label="All Tag States", value="all", emoji="📚"),
+                discord.SelectOption(label="Tagged Cards Only", value="tagged", emoji="🏷️"),
+                discord.SelectOption(label="Untagged Cards Only", value="untagged", emoji="🚫"),
+            ],
+            row=2,
+        )
+
+    async def callback(self, interaction: discord.Interaction) -> None:
+        self.view.tag_filter = self.values[0]
+        self.view.apply_filter()
+        await self.view.update_embed(interaction)
+
+class LockFilterDropdown(discord.ui.Select):
+    def __init__(self):
+        super().__init__(
+            placeholder="Filter by lock state...",
+            min_values=1,
+            max_values=1,
+            options=[
+                discord.SelectOption(label="All Lock States", value="all", emoji="📚"),
+                discord.SelectOption(label="Locked Cards Only", value="locked", emoji="🔒"),
+                discord.SelectOption(label="Unlocked Cards Only", value="unlocked", emoji="🔓"),
+            ],
+            row=3,
+        )
+
+    async def callback(self, interaction: discord.Interaction) -> None:
+        self.view.lock_filter = self.values[0]
         self.view.apply_filter()
         await self.view.update_embed(interaction)
 
 class PhotoCardView(discord.ui.View):
-    def __init__(self, author: discord.Member, user: dict[str, Any], *, timeout: float | None = 100):
+    def __init__(
+        self,
+        author: discord.Member,
+        user: dict[str, Any],
+        member: discord.Member = None,
+        *,
+        timeout: float | None = 100,
+    ):
         super().__init__(timeout=timeout)
 
         self.author: discord.Member = author
+        self.member: discord.Member = member or author
         self.user: dict[str, Any] = user
         self.all_cards: dict[str, Card | None] = {}
         for card_id in user.get("cards", []):
@@ -139,34 +188,49 @@ class PhotoCardView(discord.ui.View):
                 self.all_cards[card_id] = card
 
         self.cards = self.all_cards.copy()
-        self.active_filter = "all"
+        self.tier_filter = "all"
+        self.tag_filter = "all"
+        self.lock_filter = "all"
         self.page: int = max(1, ceil(len(self.cards) / 8))
         self.current_page: int = 1
 
         self._dropdown_view: SortDropdown = SortDropdown()
         self.add_item(self._dropdown_view)
-        self.add_item(FilterDropdown())
+        self.add_item(TierFilterDropdown())
+        self.add_item(TagFilterDropdown())
+        self.add_item(LockFilterDropdown())
 
         self.toggle_cards_view: bool = False
         self.message: discord.Message = None
         self.cooldown = commands.CooldownMapping.from_cooldown(1.0, 8.0, key)
 
     def apply_filter(self) -> None:
-        if self.active_filter == "locked":
-            self.cards = {
-                card_id: card for card_id, card in self.all_cards.items()
-                if card and card.locked
-            }
-        else:
-            self.cards = self.all_cards.copy()
+        self.cards = {
+            card_id: card
+            for card_id, card in self.all_cards.items()
+            if card
+            and (self.tier_filter == "all" or card._tier == self.tier_filter)
+            and (self.tag_filter == "all" or (card.tag is not None) == (self.tag_filter == "tagged"))
+            and (self.lock_filter == "all" or card.locked == (self.lock_filter == "locked"))
+        }
 
         self.page = max(1, ceil(len(self.cards) / 8))
         self.current_page = min(self.current_page, self.page)
 
-    async def build_embed(self) -> Tuple[discord.Embed, discord.File]:
+    def current_page_card_ids(self) -> list[str]:
         offset = self.current_page * 8
-        card_ids, cards = list(self.cards.keys())[(offset-8):offset], []
-        filter_text = " | Filter: **🔒 Locked only**" if self.active_filter == "locked" else ""
+        return list(self.cards.keys())[(offset - 8):offset]
+
+    async def build_embed(self) -> Tuple[discord.Embed, discord.File]:
+        card_ids, cards = self.current_page_card_ids(), []
+        active_filters = []
+        if self.tier_filter != "all":
+            active_filters.append(f"{func.settings.TIERS_BASE[self.tier_filter][0]} {self.tier_filter.title()}")
+        if self.tag_filter != "all":
+            active_filters.append("🏷️ Tagged" if self.tag_filter == "tagged" else "🚫 Untagged")
+        if self.lock_filter != "all":
+            active_filters.append("🔒 Locked" if self.lock_filter == "locked" else "🔓 Unlocked")
+        filter_text = f" | Filters: **{' + '.join(active_filters)}**" if active_filters else ""
         desc = f"\n**📙 Collection size: `{len(self.cards)}/{func.get_user_card_limit(self.user)}`**{filter_text}\n```"
 
         for card_id in card_ids:
@@ -178,9 +242,9 @@ class PhotoCardView(discord.ui.View):
             desc += f"{card.display_id} {card.display_tag} {card.display_frame} {card.display_stars} {card.tier[0]} {'🔒' if card.locked else ''}\n" if card else f"🆔 {card_id.zfill(5)} {'-' * 20}"
 
         if not card_ids:
-            desc += "No locked photocards found.\n"
+            desc += "No photocards match these filters.\n"
             
-        embed = discord.Embed(title=f"📖 {self.author.display_name}'s Photocards", description=desc + "```", color=discord.Color.random())
+        embed = discord.Embed(title=f"📖 {self.member.display_name}'s Photocards", description=desc + "```", color=discord.Color.random())
         embed.set_footer(text="Pages: {}/{}".format(self.current_page, self.page))
 
         if self.toggle_cards_view and cards:
@@ -188,7 +252,7 @@ class PhotoCardView(discord.ui.View):
             embed.set_image(url=f"attachment://image.{image_format}")
             return embed, discord.File(image_bytes, filename=f"image.{image_format}")
         else:
-            embed.set_thumbnail(url=self.author.display_avatar.url)
+            embed.set_thumbnail(url=self.member.display_avatar.url)
             
         return embed, None
 
@@ -217,36 +281,28 @@ class PhotoCardView(discord.ui.View):
         embed, file = await self.build_embed()
         await self.message.edit(embed=embed, attachments=[file] if file else [], view=self)
             
-    @discord.ui.button(label='<<', style=discord.ButtonStyle.grey)
-    async def fast_back_button(self, interaction: discord.Interaction, button: discord.ui.Button):
-        if self.current_page != 1:
-            self.current_page = 1
-            return await self.update_embed(interaction)
-        await interaction.response.defer()
-    
-    @discord.ui.button(label='Back', style=discord.ButtonStyle.blurple)
+    @discord.ui.button(label='Back', style=discord.ButtonStyle.blurple, row=4)
     async def back_button(self, interaction: discord.Interaction, button: discord.ui.Button):
         if self.current_page > 1:
             self.current_page -= 1
             return await self.update_embed(interaction)
         await interaction.response.defer()
     
-    @discord.ui.button(label='Next', style=discord.ButtonStyle.blurple)
+    @discord.ui.button(label='Next', style=discord.ButtonStyle.blurple, row=4)
     async def next_button(self, interaction: discord.Interaction, button: discord.ui.Button):
         if self.current_page < self.page:
             self.current_page += 1
             return await self.update_embed(interaction)
         await interaction.response.defer()
 
-    @discord.ui.button(label='>>', style=discord.ButtonStyle.grey)
-    async def fast_next_button(self, interaction: discord.Interaction, button: discord.ui.Button):
-        if self.current_page != self.page:
-            self.current_page = self.page
-            return await self.update_embed(interaction)
-        await interaction.response.defer()
-    
-    @discord.ui.button(emoji='👁️', style=discord.ButtonStyle.green)
+    @discord.ui.button(emoji='👁️', style=discord.ButtonStyle.green, row=4)
     async def view_all(self, interaction: discord.Interaction, button: discord.ui.Button):
         self.toggle_cards_view = not self.toggle_cards_view
         button.style = discord.ButtonStyle.red if self.toggle_cards_view else discord.ButtonStyle.green
         await self.update_embed(interaction)
+
+    @discord.ui.button(label='Copy IDs', emoji='📋', style=discord.ButtonStyle.grey, row=4)
+    async def copy_ids(self, interaction: discord.Interaction, button: discord.ui.Button):
+        card_ids = self.current_page_card_ids()
+        content = " ".join(card_ids) if card_ids else "No photocards on this page."
+        await interaction.response.send_message(f"```{content}```", ephemeral=True)

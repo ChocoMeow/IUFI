@@ -53,7 +53,14 @@ class RollButton(discord.ui.Button):
             func.logger.info(f"User {interaction.user.name}({interaction.user.id}) has successfully claimed the card: [{self.card.id}].")
 
             await self.view.message.edit(view=self.view)
-            await interaction.followup.send(f"{interaction.user.mention} has claimed ` {self.custom_id} | {self.card.display_id} | {self.card.tier[0]} | {self.card.display_stars} `")
+            claim_line = (
+                f"{interaction.user.mention} has claimed "
+                f"` {self.custom_id} | {self.card.display_id} | {self.card.tier[0]} | {self.card.display_stars} `"
+            )
+            wishlist_notice = await func.build_wishlist_claim_notice(interaction, self.card.id)
+            if wishlist_notice:
+                claim_line = f"{claim_line}\n{wishlist_notice}"
+            await interaction.followup.send(claim_line)
         
 class RollView(discord.ui.View):
     def __init__(self, author: discord.Member, cards: list[Card], *, timeout: float | None = None):

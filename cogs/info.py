@@ -313,9 +313,26 @@ class Info(commands.Cog):
     @app_commands.describe(command="A specific command name to get help for")
     async def help(self, interaction: discord.Interaction, command: str = None):
         if command:
-            found = discord.utils.get(self.bot.tree.walk_commands(), qualified_name=command)
+            resolver = getattr(self.bot, "resolve_legacy_help_command", None)
+            found = resolver(command) if resolver else discord.utils.get(self.bot.tree.walk_commands(), qualified_name=command)
             if found:
-                embed = discord.Embed(title=f"/{found.qualified_name}", description=found.description or "No description provided.", color=discord.Color.random())
+                formatter = getattr(self.bot, "format_legacy_usage", None)
+                aliases_for = getattr(self.bot, "legacy_aliases_for", None)
+                usage = formatter(found) if formatter else f"/{found.qualified_name}"
+                aliases = aliases_for(found) if aliases_for else []
+
+                embed = discord.Embed(title="Command Help", color=discord.Color.random())
+                embed.add_field(name="Correct Usage:", value=f"```{usage}```", inline=False)
+                embed.add_field(
+                    name="Aliases:",
+                    value=", ".join(f"`{(func.settings.BOT_PREFIX or ['q'])[0]}{alias}`" for alias in aliases) or "None",
+                    inline=False,
+                )
+                embed.add_field(
+                    name="Description:",
+                    value=found.description or "No description provided.",
+                    inline=False,
+                )
                 return await interaction.response.send_message(embed=embed)
 
         view = HelpView(self.bot, interaction.user)

@@ -158,6 +158,17 @@ class Card(commands.Cog):
         modal = MultiIDModal(title="Unlock Cards", label="Card IDs", callback=on_ids)
         await interaction.response.send_modal(modal)
 
+    @app_commands.command(name="locklast", description="Locks the last photocard in your collection.")
+    async def locklast(self, interaction: discord.Interaction):
+        user = await func.get_user(interaction.user.id)
+        if not user["cards"]:
+            return await interaction.response.send_message(
+                f"**{interaction.user.mention} you have no photocards.**",
+                ephemeral=True,
+            )
+
+        await self._set_card_lock_state(interaction, [user["cards"][-1]], True)
+
     @app_commands.command(name="convertlast", description="Converts the last photocard of your collection.")
     async def convertlast(self, interaction: discord.Interaction):
         user = await func.get_user(interaction.user.id)

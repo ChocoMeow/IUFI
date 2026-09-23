@@ -2,15 +2,12 @@ import iufi
 import psutil
 import asyncio
 import time
-import random
 import discord
 import functions as func
 
 from discord import app_commands
 from discord.ext import commands
-from views import DebugView, ConfirmView, BattlepassXPDropView
-from views.merchant import spawn_merchant
-import debut
+from views import DebugView, ConfirmView, BattlepassXPDropView, RollView
 
 def formatBytes(bytes: int, unit: bool = False):
     if bytes <= 1_000_000_000:
@@ -244,6 +241,37 @@ class TestGroup(app_commands.Group):
         })
         await interaction.response.send_message("Reset quiz, roll, match game, and daily cooldowns.", ephemeral=True)
 
+    @app_commands.command(name="wishroll", description="Force a specific unowned card roll to test wishlist notices.")
+    @app_commands.describe(card_id="The unowned card ID to roll")
+    async def wishroll(self, interaction: discord.Interaction, card_id: str):
+        card = iufi.CardPool.get_card(card_id)
+        if not card:
+            return await interaction.response.send_message("Card not found.", ephemeral=True)
+        if card.owner_id:
+            return await interaction.response.send_message(
+                f"Card `{card.id}` is already owned. Choose an unowned card.",
+                ephemeral=True,
+            )
+
+        image_bytes, image_format = await iufi.gen_cards_view([card])
+        view = RollView(interaction.user, [card])
+        await interaction.response.send_message(
+            content=(
+                f"**{interaction.user.mention} This is your forced wishlist test roll!** "
+                f"(Ends: <t:{round(time.time()) + 71}:R>)"
+            ),
+            file=discord.File(image_bytes, filename=f"image.{image_format}"),
+            view=view,
+        )
+        view.message = await interaction.original_response()
+
+        func.logger.info(
+            f"Tester {interaction.user.name}({interaction.user.id}) forced wishlist test roll "
+            f"for [{card.id}]."
+        )
+        await view.timeout_count()
+        await func.check_wishlist(view.message, [card.id])
+
     @app_commands.command(name="bpxp", description="Grant yourself Battle Pass XP for testing.")
     @app_commands.describe(amount="Battle Pass XP to grant")
     async def bpxp(self, interaction: discord.Interaction, amount: int):
@@ -275,28 +303,6 @@ class TestGroup(app_commands.Group):
             ephemeral=True
         )
 
-    @app_commands.command(name="merchant", description="Spawn the wandering merchant truck in this channel.")
-    async def merchant(self, interaction: discord.Interaction):
-        await debut.load_state()
-        if debut.is_shop_open():
-            return await interaction.response.send_message(
-                "A wandering merchant is already in a channel.",
-                ephemeral=True,
-            )
-
-        await interaction.response.defer(ephemeral=True)
-        message = await spawn_merchant(interaction.channel, record_appearance=False)
-        if not message:
-            return await interaction.followup.send(
-                "The truck has no stock left to sell.",
-                ephemeral=True,
-            )
-        func.logger.info(
-            f"Tester {interaction.user.name}({interaction.user.id}) spawned a wandering merchant in "
-            f"{getattr(interaction.channel, 'name', 'unknown')}({interaction.channel_id})"
-        )
-        await interaction.followup.send("Spawned the wandering merchant in this channel.", ephemeral=True)
-
     @app_commands.command(name="xpdrop", description="Spawn a Battle Pass XP drop in this channel.")
     async def xpdrop(self, interaction: discord.Interaction):
         if not func.battlepass_enabled():
@@ -313,28 +319,6 @@ class TestGroup(app_commands.Group):
         func.logger.info(
             f"Tester {interaction.user.name}({interaction.user.id}) spawned a Battle Pass XP drop ({xp_amount})"
         )
-
-    @app_commands.command(name="teaser", description="Post a random event teaser in this channel, then delete it.")
-    async def teaser(self, interaction: discord.Interaction):
-        teaser = func.settings.TEASER_SETTINGS or {}
-        messages = [msg for msg in teaser.get("messages", []) if isinstance(msg, str) and msg.strip()]
-        if not messages:
-            return await interaction.response.send_message("No teaser messages are configured.", ephemeral=True)
-
-        content = random.choice(messages)
-        delete_after = max(int(teaser.get("delete_after_seconds", 10) or 10), 0)
-        await interaction.response.send_message("Posted a teaser in this channel.", ephemeral=True)
-        message = await interaction.channel.send(content)
-        func.logger.info(
-            f"Tester {interaction.user.name}({interaction.user.id}) spawned a teaser in "
-            f"{getattr(interaction.channel, 'name', 'unknown')}({interaction.channel_id})"
-        )
-        if delete_after:
-            await asyncio.sleep(delete_after)
-            try:
-                await message.delete()
-            except discord.HTTPException:
-                pass
 
     @app_commands.command(name="bplevels", description="Add community Battle Pass levels to test global milestones.")
     @app_commands.describe(amount="Community levels to add")

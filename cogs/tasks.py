@@ -1,11 +1,9 @@
 import discord, asyncio, iufi, time, random
 import functions as func
 import events
-import debut
 
 from discord.ext import commands, tasks
 from views import DropView, BattlepassXPDropView
-from views.merchant import spawn_merchant
 
 class Tasks(commands.Cog):
     def __init__(self, bot: commands.Bot):
@@ -15,22 +13,14 @@ class Tasks(commands.Cog):
 
         self.drop_card.start()
         self.drop_battlepass_xp.start()
-        self.drop_teaser.start()
-        self.drop_merchant.start()
         self.cache_clear.start()
         self.reminder.start()
 
     def cog_unload(self):
         self.drop_card.cancel()
         self.drop_battlepass_xp.cancel()
-        self.drop_teaser.cancel()
-        self.drop_merchant.cancel()
         self.cache_clear.cancel()
         self.reminder.cancel()
-        try:
-            self.bot.loop.create_task(debut.close_active_shop())
-        except Exception:
-            pass
     
     async def schedule_message(self, user: discord.User, wait_time: int, message: str) -> None:
         await asyncio.sleep(wait_time)
@@ -190,7 +180,7 @@ class Tasks(commands.Cog):
             if not func.battlepass_enabled():
                 return
 
-            if random.randint(1, debut.xp_drop_denominator()) == 1:
+            if random.randint(1, 6) == 1:
                 channel = self.bot.get_channel(random.choice(func.settings.GAME_CHANNEL_IDS))
                 if channel:
                     xp_amount = func.pick_battlepass_drop_xp()
@@ -205,98 +195,6 @@ class Tasks(commands.Cog):
                     )
         except Exception as e:
             func.logger.error("An exception occurred in the Battle Pass XP drop task.", exc_info=e)
-
-    async def _delete_message_later(self, message: discord.Message, delay: int) -> None:
-        await asyncio.sleep(delay)
-        try:
-            await message.delete()
-        except discord.HTTPException as e:
-            func.logger.warning(
-                "Failed to delete teaser message in %s(%s): %s",
-                getattr(message.channel, "name", "unknown"),
-                message.channel.id,
-                e,
-            )
-
-    @tasks.loop(minutes=5.0)
-    async def drop_teaser(self) -> None:
-        try:
-            teaser = func.settings.TEASER_SETTINGS or {}
-            if not teaser.get("enabled", False):
-                return
-
-            messages = [msg for msg in teaser.get("messages", []) if isinstance(msg, str) and msg.strip()]
-            if not messages:
-                return
-
-            chance = max(int(teaser.get("chance", 6) or 6), 1)
-            if random.randint(1, chance) != 1:
-                return
-
-            channel_ids = func.settings.GAME_CHANNEL_IDS or []
-            if not channel_ids:
-                return
-
-            channel = self.bot.get_channel(random.choice(channel_ids))
-            if not channel:
-                return
-
-            content = random.choice(messages)
-            message = await channel.send(content)
-            func.logger.info(
-                "A teaser message has been posted in %s(%s)",
-                getattr(channel, "name", "unknown"),
-                channel.id,
-            )
-
-            delete_after = max(int(teaser.get("delete_after_seconds", 10) or 10), 0)
-            if delete_after:
-                self.bot.loop.create_task(self._delete_message_later(message, delete_after))
-        except Exception as e:
-            func.logger.error("An exception occurred in the teaser drop task.", exc_info=e)
-
-    @drop_teaser.before_loop
-    async def before_drop_teaser(self) -> None:
-        await self.bot.wait_until_ready()
-        teaser = func.settings.TEASER_SETTINGS or {}
-        minutes = float(teaser.get("interval_minutes", 5) or 5)
-        self.drop_teaser.change_interval(minutes=max(minutes, 1.0))
-
-    @tasks.loop(minutes=20.0)
-    async def drop_merchant(self) -> None:
-        await self.bot.wait_until_ready()
-        try:
-            await debut.mark_check()
-            if not debut.is_active():
-                return
-            if not debut.should_appear():
-                return
-
-            channel_ids = func.settings.GAME_CHANNEL_IDS or []
-            if not channel_ids:
-                return
-            channel = self.bot.get_channel(random.choice(channel_ids))
-            if not channel:
-                return
-
-            await spawn_merchant(channel)
-        except Exception as e:
-            func.logger.error("An exception occurred in the wandering merchant task.", exc_info=e)
-
-    @drop_merchant.before_loop
-    async def before_drop_merchant(self) -> None:
-        await self.bot.wait_until_ready()
-        await debut.load_state()
-        delay = debut.seconds_until_next_tick()
-        minutes = float(debut.interval_minutes())
-        self.drop_merchant.change_interval(minutes=max(minutes, 1.0))
-        if delay > 0:
-            func.logger.info(
-                "Debut merchant scheduler waiting %.0fs until the next %s-minute KST tick.",
-                delay,
-                int(minutes),
-            )
-            await asyncio.sleep(delay)
 
     @tasks.loop(minutes=60.0)
     async def cache_clear(self):

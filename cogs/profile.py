@@ -1,4 +1,4 @@
-import discord, iufi, time, copy
+import discord, iufi, time
 import functions as func
 import events
 
@@ -7,11 +7,10 @@ from discord.ext import commands
 from views import (
     CollectionView,
     PhotoCardView,
-    WishListView
+    WishListView,
+    QuestsView,
 )
 from typing import (
-    Dict,
-    Any,
     Optional,
 )
 
@@ -341,15 +340,20 @@ class Profile(commands.Cog):
         embed.add_field(name="Streak Rewards", value=value + "```")
         await interaction.response.send_message(embed=embed)
 
-    @app_commands.command(name="view", description="View your photocard collection.")
+    @app_commands.command(name="view", description="View your or another member's photocard collection.")
+    @app_commands.describe(member="The member to view (defaults to yourself)")
     @app_commands.checks.cooldown(1, 5, key=lambda i: i.user.id)
-    async def view(self, interaction: discord.Interaction):
-        user = await func.get_user(interaction.user.id)
+    async def view(self, interaction: discord.Interaction, member: discord.Member = None):
+        member = member or interaction.user
+        user = await func.get_user(member.id)
 
         if not user["cards"]:
-            return await interaction.response.send_message(f"**{interaction.user.mention} you have no photocards.**", ephemeral=True)
+            return await interaction.response.send_message(
+                f"**{member.display_name} has no photocards.**",
+                ephemeral=True,
+            )
 
-        view = PhotoCardView(interaction.user, user)
+        view = PhotoCardView(interaction.user, user, member)
         embed, _ = await view.build_embed()
         await interaction.response.send_message(embed=embed, view=view)
         view.message = await interaction.original_response()
@@ -381,51 +385,15 @@ class Profile(commands.Cog):
     async def quests(self, interaction: discord.Interaction):
         user = await func.get_user(interaction.user.id)
 
-        embed = discord.Embed(color=discord.Color.random())
+        # Refresh quest sets if their timers have expired before showing the menu.
         query = func.update_quest_progress(user, "", progress=0, query={})
         if query:
             await func.update_user(interaction.user.id, query)
+            user = await func.get_user(interaction.user.id)
 
-        def format_quest_reward(reward: list[Any]) -> str:
-            emoji, reward_key, reward_amount = reward
-            if isinstance(reward_key, str) and reward_key.startswith("potions."):
-                potion_suffix = reward_key.split(".", 1)[1]
-                potion_level = potion_suffix.split("_")[-1]
-                level_map = {"i": "1", "ii": "2", "iii": "3"}
-                level_text = level_map.get(potion_level.lower(), potion_level.upper())
-
-                if isinstance(reward_amount, list):
-                    min_qty, max_qty = reward_amount
-                    qty_text = f"x{min_qty}" if min_qty == max_qty else f"x{min_qty}~{max_qty}"
-                else:
-                    qty_text = f"x{reward_amount}"
-                return f"{emoji} Lvl {level_text} {qty_text}"
-
-            if isinstance(reward_amount, list):
-                return f"{emoji} {reward_amount[0]} ~ {reward_amount[1]}"
-            return f"{emoji} {reward_amount}"
-        
-        for quest_type in func.settings.USER_BASE["quests"].keys():    
-            user_quest: Dict[str, Any] = user.copy().get("quests", {}).get(quest_type, copy.deepcopy(func.settings.USER_BASE["quests"][quest_type]))
-
-            QUESTS_BASE: Dict[str, Any] = getattr(func.settings, f"{quest_type.upper()}_QUESTS", None)
-            if not QUESTS_BASE:
-                continue
-
-            reset_time = round(user_quest.get("next_update", 0))
-            details = ""
-            for quest_name, progress in user_quest.get("progresses", {}).items():
-                quest = QUESTS_BASE.get(quest_name)
-                if quest:
-                    progress_percentage = (progress / quest['amount']) * 100
-                    progress_bar = generate_progress_bar(15, progress_percentage)
-                    details += f"{'✅' if progress >= quest['amount'] else '❌'} {quest['title']}\n"
-                    details += f"```ansi\n➢ Reward: " + " | ".join(format_quest_reward(r) for r in quest["rewards"]) + f"\n➢ {progress_bar} {int(progress_percentage)}% ({progress}/{quest['amount']})```\n"
-            
-            embed.add_field(name=f"{quest_type.title()} Quests", value=f"Resets at <t:{reset_time}:t> (<t:{reset_time}:R>)\n\n{details}", inline=False)
-
-        embed.set_thumbnail(url=interaction.user.display_avatar.url)
-        await interaction.response.send_message(embed=embed)
+        view = QuestsView(interaction.user, user)
+        await interaction.response.send_message(embed=view.build_embed(), view=view)
+        view.message = await interaction.original_response()
 
     @app_commands.command(name="wishlist", description="Manage your wishlist. Boost one card per tier to roll it more often, and get a DM when one appears.")
     async def wishlist(self, interaction: discord.Interaction):

@@ -1,7 +1,6 @@
 import discord, iufi, time, asyncio
 import functions as func
 import events
-import debut
 import random
 import io, os
 from PIL import Image, ImageFilter
@@ -93,9 +92,15 @@ class Gameplay(commands.Cog):
                 boosted_cards=user.get("wishlist_boosts") or None
             )
 
-        # Update pity based on rolled cards (only for normal rolls)
-        if not tier:
-            pity_query = func.update_pity_from_cards(user, cards)
+        # Normal rolls increment and reset pity. Purchased rolls never increment, and only
+        # reset from the two unpurchased cards (the paid guaranteed card is ignored).
+        pity_query = func.update_pity_from_cards(
+            user,
+            cards,
+            increment=not bool(tier),
+            ignore_guaranteed_tier=tier,
+        )
+        if pity_query.get("$set") or pity_query.get("$inc"):
             await func.update_user(interaction.user.id, pity_query)
 
         image_bytes, image_format = await iufi.gen_cards_view(cards)
@@ -212,24 +217,6 @@ class Gameplay(commands.Cog):
         view = ShopView(interaction.user)
         await interaction.response.send_message(embed=await view.build_embed(), view=view)
         view.message = await interaction.original_response()
-
-    @app_commands.command(name="merchant", description="Shows remaining wandering merchant stock for the debut event.")
-    async def merchant(self, interaction: discord.Interaction):
-        await debut.load_state()
-        embed = discord.Embed(
-            title="🚚 Wandering Merchant Stock",
-            color=discord.Color.gold(),
-        )
-        if debut.is_active():
-            status = "The debut event is live."
-        elif debut.event_start() and debut.now_kst() < debut.event_start():
-            status = f"Opens <t:{round(debut.event_start().timestamp())}:F>."
-        elif debut.event_end():
-            status = "The debut event has ended."
-        else:
-            status = "The wandering merchant is not configured."
-        embed.description = f"{status}\n{debut.format_event_stock()}"
-        await interaction.response.send_message(embed=embed)
 
     @app_commands.command(name="battlepass", description="Shows your Battle Pass status, progress, and reward outline.")
     async def battlepass(self, interaction: discord.Interaction):
@@ -407,7 +394,7 @@ class Gameplay(commands.Cog):
             pity_info.append(f"{bar} {phase}\n")
 
         embed.description = "\n".join(pity_info)
-        embed.set_footer(text="Soft pity: Increased rates | Hard pity: Guaranteed! | Normal rolls only.")
+        embed.set_footer(text="Soft pity: Increased rates | Hard pity: Guaranteed! | Paid rolls never increment pity.")
         embed.set_thumbnail(url=member.display_avatar.url)
         await interaction.response.send_message(embed=embed)
 
