@@ -1234,22 +1234,42 @@ def check_pity_guarantee(user: Dict[str, Any]) -> str | None:
 
     return guaranteed_tier
 
-def update_pity_from_cards(user: Dict[str, Any], cards: List[Any]) -> Dict[str, Any]:
+def _card_tier_name(card: Any) -> str | None:
+    if hasattr(card, "tier") and isinstance(card.tier, tuple) and len(card.tier) > 1:
+        return card.tier[1]
+    return None
+
+def update_pity_from_cards(
+    user: Dict[str, Any],
+    cards: List[Any],
+    *,
+    increment: bool = True,
+    ignore_guaranteed_tier: str | None = None,
+) -> Dict[str, Any]:
     """
     After rolling, check the cards received and update pity accordingly.
     - If user got a high tier card:
       - Reset that tier's pity and all lower tiers to 0
-      - Increment all higher tiers by 1
-    - If user only got common cards, increment all pity counters by 1
+      - Increment all higher tiers by 1 (normal rolls only)
+    - If user only got common cards, increment all pity counters by 1 (normal rolls only)
+    Purchased rolls never increment pity. They also ignore the one guaranteed paid card, so
+    pity only resets from the other two unpurchased slots.
     Returns: query with pity updates
     """
     # Define tier hierarchy (lowest to highest)
     tier_hierarchy = ["rare", "epic", "legendary", "mystic", "celestial"]
 
+    cards_for_pity = list(cards)
+    if ignore_guaranteed_tier:
+        for index, card in enumerate(cards_for_pity):
+            if _card_tier_name(card) == ignore_guaranteed_tier:
+                cards_for_pity.pop(index)
+                break
+
     # Get the highest tier from the rolled cards
     highest_tier_rolled = None
-    for card in cards:
-        card_tier = card.tier[1] if hasattr(card, 'tier') and isinstance(card.tier, tuple) else None
+    for card in cards_for_pity:
+        card_tier = _card_tier_name(card)
         if card_tier and card_tier in tier_hierarchy:
             if highest_tier_rolled is None:
                 highest_tier_rolled = card_tier
@@ -1270,12 +1290,12 @@ def update_pity_from_cards(user: Dict[str, Any], cards: List[Any]) -> Dict[str, 
             tier_to_reset = tier_hierarchy[i]
             query["$set"][f"pity.{tier_to_reset}"] = 0
 
-        # Increment all higher tiers by 1
-        query["$inc"] = {}
-        for i in range(tier_index + 1, len(tier_hierarchy)):
-            tier_to_increment = tier_hierarchy[i]
-            query["$inc"][f"pity.{tier_to_increment}"] = 1
-    else:
+        if increment:
+            query["$inc"] = {}
+            for i in range(tier_index + 1, len(tier_hierarchy)):
+                tier_to_increment = tier_hierarchy[i]
+                query["$inc"][f"pity.{tier_to_increment}"] = 1
+    elif increment:
         # User only got common cards - increment all pity counters
         query["$inc"] = {}
         for tier in tier_hierarchy:
