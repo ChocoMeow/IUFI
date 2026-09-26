@@ -207,7 +207,14 @@ class MatchGame(discord.ui.View):
                         probs = max(eligible, key=lambda item: item[0])[1]
 
                 if probs:
-                    reward_view = RewardCardView(None, self.author, probs, initial_cost=10, cost_currency_field="candies", timeout=120)
+                    # Level 3 with a perfect 10/10 board can roll mystic once.
+                    # Every reroll moves that mystic weight onto legendary.
+                    absorb_on_reroll = ("mystic", "legendary") if (str(self._level) == "3" and matched_raw == 10) else None
+                    reward_view = RewardCardView(
+                        None, self.author, probs,
+                        initial_cost=10, cost_currency_field="candies", timeout=120,
+                        absorb_on_reroll=absorb_on_reroll
+                    )
                     await reward_view._roll_card()
 
                     reward_embed = reward_view.build_embed()

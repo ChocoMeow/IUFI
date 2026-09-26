@@ -805,7 +805,7 @@
                 "7": {"common": 0.05, "rare": 0.35, "epic": 0.45, "legendary": 0.15},
                 "8": {"common": 0.00, "rare": 0.45, "epic": 0.35, "legendary": 0.20},
                 "9": {"common": 0.00, "rare": 0.25, "epic": 0.45, "legendary": 0.30},
-                "10": {"common": 0.00, "rare": 0.20, "epic": 0.40, "legendary": 0.35, "mystic": 0.05}
+                "10": {"common": 0.00, "rare": 0.20, "epic": 0.40, "legendary": 0.37, "mystic": 0.03}
             }
         },
         "EMOJI_QUIZ": {

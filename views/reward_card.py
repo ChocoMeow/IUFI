@@ -22,6 +22,9 @@ class RewardCardView(discord.ui.View):
         cost_currency_field: which user field represents currency (default: "candies")
         timeout: view expiry in seconds (default: 120)
         cost_multiplier: how much the reroll cost multiplies after each reroll (default: 2.0)
+        absorb_on_reroll: optional (source_tier, dest_tier). The first roll keeps the
+            given probabilities. Every reroll moves source_tier's weight onto dest_tier
+            (source becomes 0%) and keeps that table for later rerolls.
     """
 
     def __init__(
@@ -34,17 +37,20 @@ class RewardCardView(discord.ui.View):
         cost_currency_field: str = "candies",
         timeout: float = 120,
         cost_multiplier: float = 2.0,
+        absorb_on_reroll: Optional[tuple[str, str]] = None,
     ) -> None:
         super().__init__(timeout=timeout)
 
         self.ctx = ctx
         self.author = author
-        self._raw_probs = probabilities or {}
+        self._raw_probs = dict(probabilities or {})
         self._weights = self._normalize_probs(self._raw_probs)
         self.initial_cost = max(0, int(initial_cost))
         self.current_cost = self.initial_cost
         self.cost_currency_field = cost_currency_field
         self.cost_multiplier = float(cost_multiplier)
+        self.absorb_on_reroll = absorb_on_reroll
+        self._reroll_absorbed = False
         self.timeout_seconds = timeout
         # expiry unix timestamp (rounded int) used for Discord-friendly timestamps
         self.expires_at: int = round(time.time() + self.timeout_seconds)
@@ -53,9 +59,6 @@ class RewardCardView(discord.ui.View):
         self.message: discord.Message | None = None
         self.current_card: Card | None = None
         self.rerolls: int = 0
-
-        # prepare buttons
-        # Claim and Reroll added as UI items
 
     def _normalize_probs(self, probs: Dict[str, float]) -> Dict[str, float]:
         if not probs:
@@ -84,16 +87,37 @@ class RewardCardView(discord.ui.View):
         weights = list(self._weights.values())
         return random.choices(tiers, weights=weights, k=1)[0]
 
+    def _excluded_tiers(self) -> set[str]:
+        if self._reroll_absorbed and self.absorb_on_reroll:
+            return {self.absorb_on_reroll[0]}
+        return set()
+
+    def _absorb_reroll_tier(self) -> None:
+        """Move the source tier's weight onto the destination tier for rerolls."""
+        if self._reroll_absorbed or not self.absorb_on_reroll:
+            return
+        source, dest = self.absorb_on_reroll
+        raw = {k: float(v) for k, v in self._raw_probs.items()}
+        moved = raw.get(source, 0.0)
+        if moved > 0:
+            raw[source] = 0.0
+            raw[dest] = raw.get(dest, 0.0) + moved
+        self._raw_probs = raw
+        self._weights = self._normalize_probs(raw)
+        self._reroll_absorbed = True
+
     def _pick_card_from_tier(self, tier: str) -> Card | None:
         # pick a random available card for the tier
         try:
             pool = CardPool
             avail = pool._available_cards.get(tier, [])
             if not avail:
-                # fallback: find any available card
-                for cards in pool._available_cards.values():
-                    if cards:
-                        return random.choice(cards)
+                # fallback: find any available card, skipping a tier removed from rerolls
+                skip = self._excluded_tiers()
+                for tier_name, cards in pool._available_cards.items():
+                    if tier_name in skip or not cards:
+                        continue
+                    return random.choice(cards)
                 return None
 
             return random.choice(avail)
@@ -105,9 +129,9 @@ class RewardCardView(discord.ui.View):
         card = None
         if tier:
             card = self._pick_card_from_tier(tier)
-        # final fallback
-        if not card:
-            # try CardPool.roll to obtain a category first
+        # final fallback. Skip it once a tier has been removed from rerolls,
+        # because CardPool.roll uses the global drop table and could still hit it.
+        if not card and not self._excluded_tiers():
             try:
                 cards = CardPool.roll(1)
                 card = cards[0] if cards else None
@@ -123,10 +147,9 @@ class RewardCardView(discord.ui.View):
         if self.current_card:
             card = self.current_card
             embed.description = f"{card.tier[0]} **{card._tier.capitalize()}** | {card.display_id} | {card.display_stars}"
-            embed.set_footer(text=f"Reroll cost: {self.current_cost} {self.cost_currency_field}")
         else:
             embed.description = "No card available to display."
-            embed.set_footer(text=f"Reroll cost: {self.current_cost} {self.cost_currency_field}")
+        embed.set_footer(text=f"Reroll cost: {self.current_cost} {self.cost_currency_field}")
 
         return embed
 
@@ -247,9 +270,10 @@ class RewardCardView(discord.ui.View):
             # deduct cost
             await func.update_user(interaction.user.id, {"$inc": {self.cost_currency_field: -old_cost}})
 
-            # roll a new card
+            # roll a new card. Absorption applies from the first reroll onward.
             await interaction.response.defer()
             old_card = self.current_card
+            self._absorb_reroll_tier()
             new_card = await self._roll_card()
 
             # if we failed to obtain a new_card, restore currency and inform

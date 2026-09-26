@@ -1,4 +1,4 @@
-import discord, os, iufi, logging, ctypes, ctypes.util, shlex, inspect
+import discord, os, iufi, logging, ctypes, ctypes.util, shlex, inspect, asyncio
 import functions as func
 
 from discord import app_commands
@@ -337,7 +337,7 @@ class IUFI(commands.Bot):
 
         return True, None
 
-    def resolve_legacy_member(self, message: discord.Message, value: str) -> discord.Member | None:
+    async def resolve_legacy_member(self, message: discord.Message, value: str) -> discord.Member | None:
         """Resolves a message argument (mention, raw id, username or nickname) to a member."""
         raw = value.strip()
         if not raw or not message.guild:
@@ -351,7 +351,15 @@ class IUFI(commands.Bot):
         if identifier.isdigit():
             member_id = int(identifier)
             mentioned = discord.utils.get(message.mentions, id=member_id)
-            return message.guild.get_member(member_id) or (mentioned if isinstance(mentioned, discord.Member) else None)
+            member = message.guild.get_member(member_id) or (mentioned if isinstance(mentioned, discord.Member) else None)
+            if member:
+                return member
+
+            # Guilds are not chunked at startup, so uncached ids need an API lookup.
+            try:
+                return await message.guild.fetch_member(member_id)
+            except (discord.NotFound, discord.Forbidden, discord.HTTPException):
+                return None
 
         # Plain text such as `@Someone` is not a real mention, so match it by name.
         name = raw.lstrip("@").lower()
@@ -366,7 +374,15 @@ class IUFI(commands.Bot):
                 candidates.add(member.nick.lower())
             return name in candidates
 
-        return discord.utils.find(matches, message.guild.members)
+        if member := discord.utils.find(matches, message.guild.members):
+            return member
+
+        try:
+            queried = await message.guild.query_members(query=raw.lstrip("@"), limit=10)
+        except (discord.HTTPException, asyncio.TimeoutError):
+            return None
+
+        return discord.utils.find(matches, queried)
 
     async def invoke_legacy_command(self, message: discord.Message, matched_command: app_commands.Command, matched_args: list[str]) -> None:
         callback = matched_command.callback
@@ -388,7 +404,7 @@ class IUFI(commands.Bot):
             if param_name == "member" or param_name == "opponent":
                 # Never fall back to the author: that silently retargets the command
                 # at the player who ran it (e.g. "You are not able to trade with yourself").
-                resolved = self.resolve_legacy_member(message, value)
+                resolved = await self.resolve_legacy_member(message, value)
                 if resolved is None:
                     unresolved_member = (param_name, value)
                     break
