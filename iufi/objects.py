@@ -563,10 +563,15 @@ class Track():
 
         self.data["average_time"] = ((self.data["average_time"] * self.total) + time_used) / (self.total + 1) if self.total > 0 else time_used
 
-        current_best_time = self.data["best_record"]["time"]
+        best_record = self.data.get("best_record")
+        if not isinstance(best_record, dict):
+            best_record = {}
+            self.data["best_record"] = best_record
+
+        current_best_time = best_record.get("time")
         if result and (not current_best_time or current_best_time > time_used):
-            self.data["best_record"]["member"] = member.id
-            self.data["best_record"]["time"] = time_used
+            best_record["member"] = member.id
+            best_record["time"] = time_used
 
         key = "correct" if result else "wrong"
         self.data[key] = self.data.get(key, 0) + 1
@@ -634,9 +639,9 @@ class Track():
         return 100 - self.correct_rate
 
     @property
-    def best_record(self) -> tuple[int, float]:
-        br = self.data["best_record"]
-        return br["member"], br["time"]
+    def best_record(self) -> tuple[int | None, float]:
+        br = self.data.get("best_record") or {}
+        return br.get("member"), br.get("time") or 0
 
     @property
     def answers(self) -> List[str]:

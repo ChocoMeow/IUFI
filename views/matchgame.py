@@ -12,6 +12,65 @@ from random import shuffle
 from typing import Any
 from collections import Counter
 
+
+async def present_match_game_reward(
+    channel: discord.abc.Messageable,
+    author: discord.Member,
+    level: str,
+    matched: int,
+) -> str | None:
+    """Send the same reward card a finished match game would. Returns an error, or None on success."""
+    if matched <= 0:
+        return "No reward card is given for 0 matches."
+
+    from .reward_card import RewardCardView
+
+    probs_config = func.settings.REWARD_CARD_PROBABILITIES or {}
+    level_probs = probs_config.get("MATCH_GAME", {}).get(str(level), {})
+
+    probs = level_probs.get(str(matched))
+    if not probs and level_probs:
+        eligible = [(int(k), v) for k, v in level_probs.items() if str(k).isdigit() and int(k) <= matched]
+        if eligible:
+            probs = max(eligible, key=lambda item: item[0])[1]
+
+    if not probs:
+        return f"No reward probabilities are configured for level {level} with {matched} matches."
+
+    # Level 3 with a perfect 10/10 board can roll mystic once.
+    # Every reroll moves that mystic weight onto legendary.
+    absorb_on_reroll = ("mystic", "legendary") if (str(level) == "3" and matched == 10) else None
+    reward_view = RewardCardView(
+        None, author, probs,
+        initial_cost=10, cost_currency_field="candies", timeout=120,
+        absorb_on_reroll=absorb_on_reroll
+    )
+    await reward_view._roll_card()
+
+    reward_embed = reward_view.build_embed()
+    file = None
+    if reward_view.current_card:
+        try:
+            img_bytes = await reward_view.current_card.image_bytes()
+            filename = f"{reward_view.current_card.id}.webp"
+            file = discord.File(img_bytes, filename=filename)
+            reward_embed.set_image(url=f"attachment://{filename}")
+        except Exception:
+            file = None
+
+    reward_content = (
+        f"**{author.mention} This reward ends <t:{reward_view.expires_at}:R>**\n"
+        f"🎁 Card reward for matching {matched} pair{'s' if matched != 1 else ''} on level {level}!"
+    )
+    reward_msg = await channel.send(
+        content=reward_content,
+        embed=reward_embed,
+        file=file,
+        view=reward_view
+    )
+    reward_view.message = reward_msg
+    return None
+
 class GuessButton(discord.ui.Button):
     def __init__(self, card: Card, *args, **kwargs) -> None:
         self.view: MatchGame
@@ -194,51 +253,7 @@ class MatchGame(discord.ui.View):
         # Present probability-based reward card for match game performance.
         if matched_raw > 0:
             try:
-                from .reward_card import RewardCardView
-
-                probs_config = func.settings.REWARD_CARD_PROBABILITIES or {}
-                level_probs = probs_config.get("MATCH_GAME", {}).get(str(self._level), {})
-
-                probs = level_probs.get(str(matched_raw))
-                if not probs and level_probs:
-                    # Fallback to the highest configured threshold <= matched pairs.
-                    eligible = [(int(k), v) for k, v in level_probs.items() if str(k).isdigit() and int(k) <= matched_raw]
-                    if eligible:
-                        probs = max(eligible, key=lambda item: item[0])[1]
-
-                if probs:
-                    # Level 3 with a perfect 10/10 board can roll mystic once.
-                    # Every reroll moves that mystic weight onto legendary.
-                    absorb_on_reroll = ("mystic", "legendary") if (str(self._level) == "3" and matched_raw == 10) else None
-                    reward_view = RewardCardView(
-                        None, self.author, probs,
-                        initial_cost=10, cost_currency_field="candies", timeout=120,
-                        absorb_on_reroll=absorb_on_reroll
-                    )
-                    await reward_view._roll_card()
-
-                    reward_embed = reward_view.build_embed()
-                    file = None
-                    if reward_view.current_card:
-                        try:
-                            img_bytes = await reward_view.current_card.image_bytes()
-                            filename = f"{reward_view.current_card.id}.webp"
-                            file = discord.File(img_bytes, filename=filename)
-                            reward_embed.set_image(url=f"attachment://{filename}")
-                        except Exception:
-                            file = None
-
-                    reward_content = (
-                        f"**{self.author.mention} This reward ends <t:{reward_view.expires_at}:R>**\n"
-                        f"🎁 Card reward for matching {matched_raw} pair{'s' if matched_raw != 1 else ''} on level {self._level}!"
-                    )
-                    reward_msg = await self.response.channel.send(
-                        content=reward_content,
-                        embed=reward_embed,
-                        file=file,
-                        view=reward_view
-                    )
-                    reward_view.message = reward_msg
+                await present_match_game_reward(self.response.channel, self.author, self._level, matched_raw)
             except Exception:
                 try:
                     func.logger.exception("Failed to present match game reward card view")

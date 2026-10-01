@@ -222,7 +222,7 @@ class DevGroup(app_commands.Group):
 
 class TestGroup(app_commands.Group):
     def __init__(self):
-        super().__init__(name="test", description="Personal Battle Pass testing commands.")
+        super().__init__(name="test", description="Personal testing commands.")
 
     async def interaction_check(self, interaction: discord.Interaction) -> bool:
         if not (func.is_tester_interaction(interaction) or func.is_admin_interaction(interaction)):
@@ -318,6 +318,44 @@ class TestGroup(app_commands.Group):
         view.message = await interaction.original_response()
         func.logger.info(
             f"Tester {interaction.user.name}({interaction.user.id}) spawned a Battle Pass XP drop ({xp_amount})"
+        )
+
+    @app_commands.command(name="mgreward", description="Spawn a match game reward card without playing the board.")
+    @app_commands.describe(level="Match game level", matched="How many pairs were matched")
+    @app_commands.choices(level=[
+        app_commands.Choice(name="Level 1", value="1"),
+        app_commands.Choice(name="Level 2", value="2"),
+        app_commands.Choice(name="Level 3", value="3"),
+    ])
+    async def mgreward(self, interaction: discord.Interaction, level: app_commands.Choice[str], matched: int):
+        from views.matchgame import present_match_game_reward
+
+        # Slash commands pass a Choice; the legacy `q` prefix passes a plain string.
+        level_id = str(getattr(level, "value", level)).strip()
+        settings = func.settings.MATCH_GAME_SETTINGS.get(level_id)
+        if settings is None:
+            return await interaction.response.send_message(
+                f"Level must be one of: {', '.join(func.settings.MATCH_GAME_SETTINGS.keys())}.",
+                ephemeral=True,
+            )
+        max_pairs = int(settings.get("cards") or 0)
+        if matched < 1 or (max_pairs and matched > max_pairs):
+            return await interaction.response.send_message(
+                f"Level {level_id} matches 1 to {max_pairs} pairs.",
+                ephemeral=True,
+            )
+
+        await interaction.response.send_message(
+            f"Spawning a level {level_id} reward for {matched} matched pair{'s' if matched != 1 else ''}. "
+            "This does not save a score or grant Battle Pass XP.",
+            ephemeral=True,
+        )
+        error = await present_match_game_reward(interaction.channel, interaction.user, level_id, matched)
+        if error:
+            await interaction.followup.send(error, ephemeral=True)
+        func.logger.info(
+            f"Tester {interaction.user.name}({interaction.user.id}) spawned a match game reward "
+            f"(level {level_id}, matched {matched})"
         )
 
     @app_commands.command(name="bplevels", description="Add community Battle Pass levels to test global milestones.")

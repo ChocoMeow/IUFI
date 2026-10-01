@@ -9,6 +9,54 @@ from logging.handlers import TimedRotatingFileHandler
 # Seconds a rejected prefix command's notice stays before it deletes itself.
 LEGACY_NOTICE_LIFETIME = 8
 
+# Linux ECONNRESET. discord.py 2.7 retries this on macOS (54) and Windows (10054) only.
+_LINUX_CONNRESET = 104
+
+
+def _connection_errno(exc: BaseException) -> int | None:
+    number = getattr(exc, "errno", None)
+    if isinstance(number, int):
+        return number
+    cause = exc.__cause__
+    if cause is not None:
+        number = getattr(cause, "errno", None)
+        if isinstance(number, int):
+            return number
+    return None
+
+
+def _install_linux_connreset_retry() -> None:
+    """Retry Discord HTTP calls that die with Linux errno 104.
+
+    A stale keep-alive socket surfaces as ClientOSError while a roll image is
+    uploading. discord.py already retries that reset on macOS and Windows.
+    On Linux it raises immediately, after the roll cooldown and pity are saved.
+    """
+    original_request = discord.http.HTTPClient.request
+
+    async def request(self, route, **kwargs):
+        for tries in range(5):
+            if tries:
+                for attachment in kwargs.get("files") or ():
+                    attachment.reset(seek=True)
+            try:
+                return await original_request(self, route, **dict(kwargs))
+            except OSError as exc:
+                if tries >= 4 or _connection_errno(exc) != _LINUX_CONNRESET:
+                    raise
+                func.logger.warning(
+                    "Discord reset the HTTP connection (errno 104). Retrying %s %s (%s/4).",
+                    route.method,
+                    route.path,
+                    tries + 1,
+                )
+                await asyncio.sleep(1 + tries * 2)
+
+    discord.http.HTTPClient.request = request
+
+
+_install_linux_connreset_retry()
+
 LEGACY_ALIASES = {
     "r": "roll",
     "mg": "game",
