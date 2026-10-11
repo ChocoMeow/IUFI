@@ -129,7 +129,8 @@
         "claim": ["🎮", 180],
         "daily": ["📅", 82800],
         "match_game": ["🃏", 0],
-        "quiz_game": ["💯", 600]
+        "quiz_game": ["💯", 600],
+        "trick_or_treat": ["🎃", 600]
     },
     "DAILY_QUESTS": {
         "ROLL": {
@@ -597,7 +598,10 @@
         "name": "Event",
         "cooldown_reduction_percent": 0,
         "convert_candy_multiplier": 1.0,
-        "shop_sale_percent": 0
+        "shop_sale_percent": 0,
+        "trick_or_treat": true,
+        "currency_name": "Pumpkins",
+        "currency_emoji": "🎃"
     },
     "BATTLEPASS_MILESTONES": {
         "enabled": true,
