@@ -51,6 +51,7 @@ class Halloween(commands.Cog):
             "cooldown_increase": {"func": self.on_cooldown_increase, "weight": 0.5},
             "pumpkins_loss": {"func": self.on_pumpkin_loss, "weight": 0.5},
             "last_card_loss": {"func": self.on_last_card_loss, "weight": 0.05},
+            "mystic_fake": {"func": self.on_fake_mystic, "weight": 0.01},
             "celestial_fake": {"func": self.on_fake_celestial, "weight": 0.01},
         }
         self.treats: dict[str, dict[str, Any]] = {
@@ -204,10 +205,20 @@ class Halloween(commands.Cog):
             f"{interaction.user.mention} your `{cooldown.replace('_', ' ').upper()}` cooldown has been reset by the spirits of Halloween! 🎃"
         )
 
-    async def on_fake_celestial(self, interaction: discord.Interaction, query: dict[str, Any], user: dict[str, Any]) -> None:
-        await interaction.response.send_message(f"{interaction.user.mention} you got a Mystic card! 🦄", delete_after=3)
+    async def _fake_drop(self, interaction: discord.Interaction, tier: str) -> None:
+        emoji = (func.settings.TIERS_BASE.get(tier) or ["✨"])[0]
+        await interaction.response.send_message(
+            f"{interaction.user.mention} you got a {tier.capitalize()} card! {emoji}",
+            delete_after=3,
+        )
         await asyncio.sleep(3)
         await interaction.followup.send(f"{interaction.user.mention} Just kidding! You got nothing! 🎃")
+
+    async def on_fake_mystic(self, interaction: discord.Interaction, query: dict[str, Any], user: dict[str, Any]) -> None:
+        await self._fake_drop(interaction, "mystic")
+
+    async def on_fake_celestial(self, interaction: discord.Interaction, query: dict[str, Any], user: dict[str, Any]) -> None:
+        await self._fake_drop(interaction, "celestial")
 
     def _card_to_take(self, user: dict[str, Any], user_id: int) -> iufi.Card | None:
         for card_id in reversed(user.get("cards") or []):
