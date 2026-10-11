@@ -71,7 +71,7 @@ class Dropdown(discord.ui.Select):
 
                     price = events.shop_price(item[2], item[1])
                     if user.get("candies", 0) < price:
-                        return await interaction.response.send_message(f"You don't have enough candies! You need `{price - user.get('candies', 0)}` more candies.", ephemeral=True)
+                        return await interaction.response.send_message(f"You don't have enough {func.currency_name()}! You need `{price - user.get('candies', 0)}` more {func.currency_name()}.", ephemeral=True)
 
                     query = func.update_quest_progress(user, "BUY_ITEM", progress=1, query={
                         "$inc": {"candies": -price},
@@ -80,7 +80,7 @@ class Dropdown(discord.ui.Select):
                     await func.update_user(interaction.user.id, query)
 
                     embed = discord.Embed(title="🛒 Shop Purchase", color=discord.Color.random())
-                    embed.description = f"```🎫 Battle Pass\n🍬 - {price}```\nYou now earn **full** Battle Pass XP."
+                    embed.description = f"```🎫 Battle Pass\n{func.currency_emoji()} - {price}```\nYou now earn **full** Battle Pass XP."
                     return await interaction.response.send_message(embed=embed)
 
                 modal = QuantityModal()
@@ -103,7 +103,7 @@ class Dropdown(discord.ui.Select):
 
                         if user["candies"] < total_price:
                             needed = total_price - user["candies"]
-                            return await interaction.followup.send(f"You don't have enough candies! You need `{needed}` more candies (price goes up as you purchase more slots).", ephemeral=True)
+                            return await interaction.followup.send(f"You don't have enough {func.currency_name()}! You need `{needed}` more {func.currency_name()} (price goes up as you purchase more slots).", ephemeral=True)
 
                         # apply update: decrement candies, increment extra_card_slots by qty, increment slot_purchases by qty
                         query = func.update_quest_progress(user, "BUY_ITEM", progress=modal.quantity, query={
@@ -115,14 +115,14 @@ class Dropdown(discord.ui.Select):
                         func.logger.info(f"User {interaction.user.name}({interaction.user.id}) purchased {modal.quantity} extra slot(s) for {total_price} candies.")
 
                         embed = discord.Embed(title="🛒 Shop Purchase", color=discord.Color.random())
-                        embed.description = f"```{item[0]} + {modal.quantity} slot{'s' if modal.quantity > 1 else ''}\n🍬 - {total_price}```"
+                        embed.description = f"```{item[0]} + {modal.quantity} slot{'s' if modal.quantity > 1 else ''}\n{func.currency_emoji()} - {total_price}```"
 
                         return await interaction.followup.send(content="", embed=embed)
 
                     # default behavior for other items
                     price = modal.quantity * events.shop_price(item[2], item[1])
                     if user["candies"] < price:
-                        return await interaction.followup.send(f"You don't have enough candies! You only have `{user['candies']}` candies", ephemeral=True)
+                        return await interaction.followup.send(f"You don't have enough {func.currency_name()}! You only have `{user['candies']}` {func.currency_name()}", ephemeral=True)
                     
                     query = func.update_quest_progress(user, "BUY_ITEM", progress=modal.quantity, query={
                         "$inc": {"candies": -price, item[1]: modal.quantity}
@@ -132,7 +132,7 @@ class Dropdown(discord.ui.Select):
                     func.logger.info(f"User {interaction.user.name}({interaction.user.id}) purchased {modal.quantity} {selected_item.lower()} for {price} candies.")
 
                     embed = discord.Embed(title="🛒 Shop Purchase", color=discord.Color.random())
-                    embed.description = f"```{item[0]} + {modal.quantity}\n🍬 - {price}```"
+                    embed.description = f"```{item[0]} + {modal.quantity}\n{func.currency_emoji()} - {price}```"
 
                     return await interaction.followup.send(content="", embed=embed)
 
@@ -156,7 +156,7 @@ class ShopView(discord.ui.View):
         user = await func.get_user(self.author.id)
 
         embed = discord.Embed(title="🛒 IUFI Shop", color=discord.Color.random())
-        embed.description = f"🍬 Starcandies: `{user.get('candies', 0)}`\n"
+        embed.description = f"{func.currency_emoji()} {func.currency_name('Starcandies')}: `{user.get('candies', 0)}`\n"
         sale_pct = int(round(events.shop_sale_fraction() * 100))
         if events.is_active() and sale_pct > 0:
             embed.description += f"🎉 **{events.name()}** / community sale: `{sale_pct}%` off shop items"
@@ -173,13 +173,13 @@ class ShopView(discord.ui.View):
                 prev_purchases = user.get("extra_props", {}).get("slot_purchases", 0)
                 next_price = events.shop_price(item[2] + prev_purchases * 10, item[1])
                 display_price = f"{next_price} (per slot)"
-                embed.description += f"{item[0]} {(item[1].split('.')[1].title() + ' ' + item[1].split('.')[0].title()).upper():<20} {display_price:>10} 🍬\n"
+                embed.description += f"{item[0]} {(item[1].split('.')[1].title() + ' ' + item[1].split('.')[0].title()).upper():<20} {display_price:>10} {func.currency_emoji()}\n"
             elif item[1] == "battlepass.pass":
                 state = func.get_battlepass_state(user)
-                status = "OWNED" if state.get("is_active") or state.get("is_purchased") else f"{events.shop_price(item[2], item[1])} 🍬"
+                status = "OWNED" if state.get("is_active") or state.get("is_purchased") else f"{events.shop_price(item[2], item[1])} {func.currency_emoji()}"
                 embed.description += f"{item[0]} {'BATTLE PASS':<20} {status:>10}\n"
             else:
-                embed.description += f"{item[0]} {(item[1].split('.')[1].title() + ' ' + item[1].split('.')[0].title()).upper():<20} {events.shop_price(item[2], item[1]):>3} 🍬\n"
+                embed.description += f"{item[0]} {(item[1].split('.')[1].title() + ' ' + item[1].split('.')[0].title()).upper():<20} {events.shop_price(item[2], item[1]):>3} {func.currency_emoji()}\n"
         embed.description += "```"
         
         embed.set_thumbnail(url=self.author.display_avatar.url)

@@ -60,6 +60,11 @@ class RewardCardView(discord.ui.View):
         self.current_card: Card | None = None
         self.rerolls: int = 0
 
+    def _currency_label(self) -> str:
+        if self.cost_currency_field == "candies":
+            return func.currency_name()
+        return self.cost_currency_field
+
     def _normalize_probs(self, probs: Dict[str, float]) -> Dict[str, float]:
         if not probs:
             return {}
@@ -149,7 +154,7 @@ class RewardCardView(discord.ui.View):
             embed.description = f"{card.tier[0]} **{card._tier.capitalize()}** | {card.display_id} | {card.display_stars}"
         else:
             embed.description = "No card available to display."
-        embed.set_footer(text=f"Reroll cost: {self.current_cost} {self.cost_currency_field}")
+        embed.set_footer(text=f"Reroll cost: {self.current_cost} {self._currency_label()}")
 
         return embed
 
@@ -259,7 +264,7 @@ class RewardCardView(discord.ui.View):
             user = await func.get_user(interaction.user.id)
             amount = user.get(self.cost_currency_field, 0)
             if amount < self.current_cost:
-                return await interaction.response.send_message(f"You do not have enough {self.cost_currency_field} to reroll! (Need {self.current_cost})", ephemeral=True)
+                return await interaction.response.send_message(f"You do not have enough {self._currency_label()} to reroll! (Need {self.current_cost})", ephemeral=True)
 
             old_cost = self.current_cost
             # Log reroll attempt and deduct cost
@@ -319,7 +324,7 @@ class RewardCardView(discord.ui.View):
                 except:
                     pass
 
-            await interaction.followup.send(f"Rerolled to a new card. Next reroll cost: {self.current_cost} {self.cost_currency_field}", ephemeral=True)
+            await interaction.followup.send(f"Rerolled to a new card. Next reroll cost: {self.current_cost} {self._currency_label()}", ephemeral=True)
 
 
 # End of file

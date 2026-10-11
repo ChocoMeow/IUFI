@@ -44,7 +44,7 @@ class Potion(commands.Cog):
         if potion_name == "speed" and not extending:
             time_reduce = func.settings.POTIONS_BASE.get("speed").get("levels").get(level)
             for cooldown in user.get("cooldown", []):
-                if cooldown in ["daily", "match_game"] or not func.settings.COOLDOWN_BASE.get(cooldown):
+                if cooldown in ["daily", "match_game", "trick_or_treat"] or not func.settings.COOLDOWN_BASE.get(cooldown):
                     continue
                 
                 data["$set"][f"cooldown.{cooldown}"] = user.get("cooldown").get(cooldown, time.time()) - (func.settings.COOLDOWN_BASE.get(cooldown)[1] * time_reduce)

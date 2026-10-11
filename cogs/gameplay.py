@@ -152,7 +152,7 @@ class Gameplay(commands.Cog):
         if (retry := user.get("cooldown", {}).setdefault("quiz_game", 0)) > time.time():
             price = max(5, int(QUIZ_SETTINGS['reset_price'] * ((retry - time.time()) / func.settings.COOLDOWN_BASE["quiz_game"][1])))
             view = ResetAttemptView(interaction, user, price)
-            content = f"{interaction.user.mention} your quiz is <t:{round(retry)}:R>. If you\u2019d like to bypass this cooldown, you can do so by paying `🍬 {price}` candies."
+            content = f"{interaction.user.mention} your quiz is <t:{round(retry)}:R>. If you’d like to bypass this cooldown, you can do so by paying `{func.currency_emoji()} {price}` {func.currency_name()}."
             if interaction.response.is_done():
                 view.response = await interaction.followup.send(content, view=view)
             else:
@@ -198,7 +198,10 @@ class Gameplay(commands.Cog):
 
         cooldown: dict[str, float] = user.get("cooldown", {})
         embed = discord.Embed(title=f"⏰ {interaction.user.display_name}'s Cooldowns", color=0x59b0c0)
-        embed.description = "```" + "".join(f"{emoji} {name.split('_')[0].title():<5}: {func.cal_retry_time(cooldown.get(name, 0), 'Ready')}\n" for name, (emoji, cd) in func.settings.COOLDOWN_BASE.items())
+        def cooldown_label(name: str) -> str:
+            return "Tot" if name == "trick_or_treat" else name.split("_")[0].title()
+
+        embed.description = "```" + "".join(f"{emoji} {cooldown_label(name):<5}: {func.cal_retry_time(cooldown.get(name, 0), 'Ready')}\n" for name, (emoji, cd) in func.settings.COOLDOWN_BASE.items())
 
         embed.description += f"🔔 Reminder: {'On' if user.get('reminder', False) else 'Off'}\n\n" \
                              f"Potion Time Left:\n"
@@ -242,7 +245,7 @@ class Gameplay(commands.Cog):
             quiz_cd = func.settings.COOLDOWN_BASE["quiz_game"][1]
             price = max(5, int(EMOJI_QUIZ_SETTINGS['reset_price'] * ((retry - time.time()) / max(1, quiz_cd))))
             view = EmojiResetAttemptView(interaction, user, price)
-            content = f"{interaction.user.mention} your emoji quiz is <t:{round(retry)}:R>. If you\u2019d like to bypass this cooldown, you can do so by paying `🍬 {price}` candies."
+            content = f"{interaction.user.mention} your emoji quiz is <t:{round(retry)}:R>. If you’d like to bypass this cooldown, you can do so by paying `{func.currency_emoji()} {price}` {func.currency_name()}."
             if interaction.response.is_done():
                 view.response = await interaction.followup.send(content, view=view)
             else:

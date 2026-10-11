@@ -133,7 +133,7 @@ class Tasks(commands.Cog):
                 message=f"Hi {', '.join(f'<@{user_id}>' for user_id in users_to_warn)},\n\n"
                         f"We've noticed you've been inactive for over {func.settings.RESET_CARD_DAY - 1} days. This is your final reminder: "
                         "your cards will be converted tomorrow if you remain inactive. Don't worry—once converted, "
-                        "you can still recover your candies later. We hope to see you back in the game soon!"
+                        f"you can still recover your {func.currency_name()} later. We hope to see you back in the game soon!"
                 )
             for chunk in chunks:
                 await channel.send(chunk, allowed_mentions=discord.AllowedMentions().none())
@@ -142,7 +142,7 @@ class Tasks(commands.Cog):
             chunks = func.text_in_chunks(
                 message=f"Hi {', '.join(f'<@{user_id}>' for user_id in users_cleared)},\n\n"
                         "We hope you're doing well! Since we didn't see you back in the game after our last reminder, "
-                        "your cards have now been converted. The good news is that you can still recover your candies!"
+                        f"your cards have now been converted. The good news is that you can still recover your {func.currency_name()}!"
                         f" `{converted_cards}` cards have been returned to the pool."
                 )
             for chunk in chunks:
@@ -242,7 +242,11 @@ class Tasks(commands.Cog):
                 cd: dict[str, float] = doc["cooldown"]
                 for name, (emoji, _) in func.settings.COOLDOWN_BASE.items():
                     if name != "claim":
-                        await self.check_and_schedule(user, current_time, cd.get(name, 0), f"{emoji} Your {name.split('_')[0]} is ready! Join <#{random.choice(func.settings.GAME_CHANNEL_IDS)}> and roll now.")        
+                        if name == "trick_or_treat":
+                            ready = "🎃 Your trick or treat is ready!"
+                        else:
+                            ready = f"{emoji} Your {name.split('_')[0]} is ready! Join <#{random.choice(func.settings.GAME_CHANNEL_IDS)}> and roll now."
+                        await self.check_and_schedule(user, current_time, cd.get(name, 0), ready)        
                         notification_count += 1
 
             func.logger.info(f"Notifications sent to {notification_count} users regarding game readiness.")

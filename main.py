@@ -66,6 +66,8 @@ LEGACY_ALIASES = {
     "eq": "emojiquiz",
     "bp": "battlepass",
     "bpass": "battlepass",
+    "tot": "trickortreat",
+    "totl": "trickortreatleaderboard",
     "pvptest": "pvp_test",
     "pvp_auto": "pvp_test",
     "mypity": "pity",

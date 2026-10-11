@@ -126,7 +126,7 @@ class BattlepassView(discord.ui.View):
         summary.description = (
             f"Season: `{state.get('season_id')}`\n"
             f"Status: **{status}**\n"
-            f"Price: `🍬 {price}`\n"
+            f"Price: `{func.currency_emoji()} {price}`\n"
             f"```\n"
             f"Level:       {level}/{max_level}\n"
             f"Progress:    {progress_bar} {progress_pct}%\n"

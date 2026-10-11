@@ -365,7 +365,7 @@ class EmojiResetAttemptView(discord.ui.View):
     @discord.ui.button(label="Buy", emoji="🛍️", style=discord.ButtonStyle.green)
     async def buy(self, interaction: discord.Interaction, button: discord.ui.Button) -> None:
         if self.data.get("candies") < self.price:
-            await interaction.response.send_message("You do not have enough candies to initiate the reset!", ephemeral=True)
+            await interaction.response.send_message(f"You do not have enough {func.currency_name()} to initiate the reset!", ephemeral=True)
             return await self.on_timeout()
 
         await func.update_user(self.author.id, {

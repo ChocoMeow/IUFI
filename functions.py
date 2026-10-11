@@ -301,6 +301,19 @@ def get_battlepass_settings() -> Dict[str, Any]:
 def battlepass_enabled() -> bool:
     return bool(get_battlepass_settings().get("enabled", False))
 
+def currency_emoji() -> str:
+    """Player-facing currency emoji. Falls back to 🍬 when the event override is unset."""
+    emoji = (settings.EVENT_SETTINGS or {}).get("currency_emoji")
+    return str(emoji) if emoji else "🍬"
+
+def currency_name(default: str = "candies") -> str:
+    """Player-facing currency name. `default` is used once the event override is removed."""
+    name = (settings.EVENT_SETTINGS or {}).get("currency_name")
+    return str(name) if name else default
+
+def trick_or_treat_enabled() -> bool:
+    return bool((settings.EVENT_SETTINGS or {}).get("trick_or_treat", False))
+
 def get_battlepass_default_state() -> Dict[str, Any]:
     bp_settings = get_battlepass_settings()
     return {
@@ -521,7 +534,7 @@ def format_battlepass_reward(reward: Dict[str, Any]) -> str:
     amount = reward.get("amount", 1)
 
     if reward_type == "starcandies":
-        return f"🍬 Starcandies x{amount}"
+        return f"{currency_emoji()} {currency_name('Starcandies')} x{amount}"
     if reward_type == "potion":
         potion_key = reward.get("key", "potions.speed_i")
         potion_name = potion_key.split(".", 1)[1].replace("_", " ").upper() if "." in potion_key else potion_key.upper()
@@ -808,7 +821,7 @@ def build_quest_reroll_query(
     cost = int(quest_settings.get("reroll_cost", 0))
     candies = int(user.get("candies", 0))
     if candies < cost:
-        return None, f"You need 🍬 {cost} to reroll a {quest_type} quest. You have 🍬 {candies}."
+        return None, f"You need {currency_emoji()} {cost} to reroll a {quest_type} quest. You have {currency_emoji()} {candies}."
 
     replacement = _pick_replacement_quest(quest_type, quests_base, current_progresses, quest_name)
     if not replacement:

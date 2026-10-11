@@ -37,7 +37,7 @@ class QuestRerollSelect(discord.ui.Select):
     def __init__(self, quest_type: str, options: list[discord.SelectOption], cost: int, *, disabled: bool = False):
         self.quest_type = quest_type
         super().__init__(
-            placeholder=f"Reroll a {quest_type} quest ({cost}🍬)",
+            placeholder=f"Reroll a {quest_type} quest ({cost}{func.currency_emoji()})",
             min_values=1,
             max_values=1,
             options=options,
@@ -134,7 +134,7 @@ class QuestsView(discord.ui.View):
             reroll_cost = func.QUESTS_SETTINGS.get(quest_type, {}).get("reroll_cost")
             footer = f"Resets at <t:{reset_time}:t> (<t:{reset_time}:R>)"
             if reroll_cost is not None:
-                footer += f"\nReroll one quest: 🍬 {reroll_cost}"
+                footer += f"\nReroll one quest: {func.currency_emoji()} {reroll_cost}"
 
             embed.add_field(
                 name=f"{quest_type.title()} Quests",
@@ -143,7 +143,7 @@ class QuestsView(discord.ui.View):
             )
 
         embed.set_thumbnail(url=self.author.display_avatar.url)
-        embed.set_footer(text=f"Your candies: {self.user.get('candies', 0)}")
+        embed.set_footer(text=f"Your {func.currency_name()}: {self.user.get('candies', 0)}")
         return embed
 
     async def reroll_quest(self, interaction: discord.Interaction, quest_type: str, quest_name: str) -> None:
@@ -166,7 +166,7 @@ class QuestsView(discord.ui.View):
             old_title = (quests_base.get(quest_name) or {}).get("title", quest_name)
             await interaction.response.edit_message(embed=self.build_embed(), view=self)
             await interaction.followup.send(
-                f"Rerolled **{old_title}** for 🍬 {cost}.",
+                f"Rerolled **{old_title}** for {func.currency_emoji()} {cost}.",
                 ephemeral=True,
             )
             func.logger.info(

@@ -36,7 +36,7 @@ class TradeView(discord.ui.View):
         embed = discord.Embed(title="⤵️ Trade", color=discord.Color.random())
         embed.description = f"```Seller: {self.seller.display_name}\n" \
                f"Buyer: {self.buyer.display_name if self.buyer else 'Anyone'}\n" \
-               f"Candies: 🍬 {self.candies}\n\n"
+               f"{func.currency_name('Candies')}: {func.currency_emoji()} {self.candies}\n\n"
 
         if len(self.cards) > 1:
             for card in self.cards:
@@ -76,7 +76,7 @@ class TradeView(discord.ui.View):
             
             _buyer = await func.get_user(buyer.id)
             if _buyer["candies"] < self.candies:
-                return await interaction.followup.send(f"You don't have enough candies! You only have `{_buyer['candies']}` candies", ephemeral=True)
+                return await interaction.followup.send(f"You don't have enough {func.currency_name()}! You only have `{_buyer['candies']}` {func.currency_name()}", ephemeral=True)
 
             if (len(_buyer["cards"]) + len(self.cards)) > func.get_user_card_limit(_buyer):
                 return await interaction.followup.send(f"**Your inventory is full.**", ephemeral=True)
@@ -105,7 +105,7 @@ class TradeView(discord.ui.View):
             )
 
             embed = discord.Embed(title="✅ Traded", color=discord.Color.random())
-            embed.description = f"```{', '.join(card.display_id for card in self.cards)}\n🍬 - {self.candies}```"
+            embed.description = f"```{', '.join(card.display_id for card in self.cards)}\n{func.currency_emoji()} - {self.candies}```"
 
             await self.on_timeout()
             await interaction.followup.send(content=f"{self.seller.mention}, {buyer.mention} has made a trade with you for the card(s)!", embed=embed)
@@ -160,7 +160,7 @@ class PotionTradeView(discord.ui.View):
             "```"
             f"Seller: {self.seller.display_name}\n"
             f"Buyer: {self.buyer.display_name if self.buyer else 'Anyone'}\n"
-            f"Price: 🍬 {self.candies}\n\n"
+            f"Price: {func.currency_emoji()} {self.candies}\n\n"
             f"Potion: {emoji} {potion_type.title()} Lvl {level_text} x{self.potion_amount}"
             "```"
         )
@@ -191,7 +191,7 @@ class PotionTradeView(discord.ui.View):
             buyer_user = await func.get_user(buyer.id)
             if buyer_user.get("candies", 0) < self.candies:
                 return await interaction.followup.send(
-                    f"You don't have enough candies! You only have `{buyer_user.get('candies', 0)}` candies",
+                    f"You don't have enough {func.currency_name()}! You only have `{buyer_user.get('candies', 0)}` {func.currency_name()}",
                     ephemeral=True
                 )
 
@@ -226,7 +226,7 @@ class PotionTradeView(discord.ui.View):
             embed.description = (
                 "```"
                 f"{emoji} {potion_type.title()} Lvl {level_text} x{self.potion_amount}\n"
-                f"🍬 - {self.candies}"
+                f"{func.currency_emoji()} - {self.candies}"
                 "```"
             )
 

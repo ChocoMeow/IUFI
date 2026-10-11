@@ -13,6 +13,102 @@ def highlight_text(text: str, need: bool = True) -> str:
         return text + "\n"
     return "\u001b[0;1;35m" + text + " \u001b[0m\n"
 
+BATTLEPASS_LEADERBOARD_PAGE_SIZE = 10
+BATTLEPASS_LEADERBOARD_MAX_PAGES = 3
+
+class BattlepassLeaderboardView(discord.ui.View):
+    def __init__(
+        self,
+        author: discord.abc.User,
+        users: list[dict],
+        names: dict[int, str],
+        *,
+        rank: int,
+        user_xp: int,
+        season_id: str,
+        max_level: int,
+        icon_url: str | None,
+    ) -> None:
+        super().__init__(timeout=60)
+        self.author = author
+        self.users = users
+        self.names = names
+        self.rank = rank
+        self.user_xp = user_xp
+        self.season_id = season_id
+        self.max_level = max_level
+        self.icon_url = icon_url
+        self.page = 1
+        self.total_pages = min(
+            BATTLEPASS_LEADERBOARD_MAX_PAGES,
+            max(1, (len(users) + BATTLEPASS_LEADERBOARD_PAGE_SIZE - 1) // BATTLEPASS_LEADERBOARD_PAGE_SIZE),
+        ) if users else 1
+        self.message: discord.Message | None = None
+        self._sync_buttons()
+
+    def _sync_buttons(self) -> None:
+        self.back_button.disabled = self.page <= 1
+        self.next_button.disabled = self.page >= self.total_pages
+
+    def build_embed(self) -> discord.Embed:
+        start = (self.page - 1) * BATTLEPASS_LEADERBOARD_PAGE_SIZE
+        chunk = self.users[start:start + BATTLEPASS_LEADERBOARD_PAGE_SIZE]
+        embed = discord.Embed(title="🎫   Battle Pass Leaderboard", color=discord.Color.random())
+        embed.description = f"**Season `{self.season_id}`**\n**Your current position is `{self.rank}`**\n"
+
+        description = ""
+        for offset, top_user in enumerate(chunk):
+            xp = max(0, int(top_user.get("battlepass", {}).get("xp", 0) or 0))
+            level, _, _ = func.calculate_battlepass_level(xp)
+            place = start + offset
+            medal = LEADERBOARD_EMOJIS[place if place <= 2 else 3]
+            name = self.names.get(top_user["_id"], "Unknown user")
+            description += f"{medal} {func.truncate_string(name):<18} Lv{level:>3}/{self.max_level:<3} {xp:>6} XP\n"
+
+        last_shown = start + len(chunk)
+        if description and self.rank > last_shown:
+            level, _, _ = func.calculate_battlepass_level(self.user_xp)
+            description += ("┇\n" if self.rank > last_shown + 1 else "")
+            description += f"{LEADERBOARD_EMOJIS[3]} {func.truncate_string(self.author.display_name):<18} Lv{level:>3}/{self.max_level:<3} {self.user_xp:>6} XP\n"
+
+        if not description:
+            description = "The leaderboard is currently empty."
+
+        embed.description += f"```\n{description}```"
+        if self.total_pages > 1:
+            embed.set_footer(text=f"Page {self.page}/{self.total_pages}")
+        if self.icon_url:
+            embed.set_thumbnail(url=self.icon_url)
+        return embed
+
+    async def on_timeout(self) -> None:
+        for child in self.children:
+            child.disabled = True
+        if self.message:
+            try:
+                await self.message.edit(view=self)
+            except discord.HTTPException:
+                pass
+
+    async def interaction_check(self, interaction: discord.Interaction) -> bool:
+        return interaction.user.id == self.author.id
+
+    @discord.ui.button(label="Back", style=discord.ButtonStyle.blurple)
+    async def back_button(self, interaction: discord.Interaction, button: discord.ui.Button):
+        if self.page <= 1:
+            return await interaction.response.defer()
+        self.page -= 1
+        self._sync_buttons()
+        await interaction.response.edit_message(embed=self.build_embed(), view=self)
+
+    @discord.ui.button(label="Next", style=discord.ButtonStyle.blurple)
+    async def next_button(self, interaction: discord.Interaction, button: discord.ui.Button):
+        if self.page >= self.total_pages:
+            return await interaction.response.defer()
+        self.page += 1
+        self._sync_buttons()
+        await interaction.response.edit_message(embed=self.build_embed(), view=self)
+
 class LeaderboardGroup(app_commands.Group):
     def __init__(self, bot: commands.Bot):
         super().__init__(name="leaderboard", description="Shows the IUFI leaderboards.")
@@ -115,15 +211,15 @@ class LeaderboardGroup(app_commands.Group):
         rank = await func.USERS_DB.count_documents({'candies': {'$gt': user.get('candies', 0)}}) + 1
         names = await self.display_names(interaction, [top_user["_id"] for top_user in users])
 
-        embed = discord.Embed(title="🏆   Starcandies Leaderboard", color=discord.Color.random())
+        embed = discord.Embed(title=f"🏆   {func.currency_name('Starcandies')} Leaderboard", color=discord.Color.random())
         embed.description = f"**Your current position is `{rank}`**\n"
 
         description = ""
         for index, top_user in enumerate(users):
-            description += f"{LEADERBOARD_EMOJIS[index if index <= 2 else 3]} " + highlight_text(f"{func.truncate_string(names[top_user['_id']]):<18} {top_user.get('candies', 0):>5} 🍬", top_user["_id"] == interaction.user.id)
+            description += f"{LEADERBOARD_EMOJIS[index if index <= 2 else 3]} " + highlight_text(f"{func.truncate_string(names[top_user['_id']]):<18} {top_user.get('candies', 0):>5} {func.currency_emoji()}", top_user["_id"] == interaction.user.id)
 
         if rank > len(users):
-            description += ("┇\n" if rank > len(users) + 1 else "") + f"{LEADERBOARD_EMOJIS[3]} " + highlight_text(f"{func.truncate_string(interaction.user.display_name):<18} {user.get('candies', 0):>5} 🍬")
+            description += ("┇\n" if rank > len(users) + 1 else "") + f"{LEADERBOARD_EMOJIS[3]} " + highlight_text(f"{func.truncate_string(interaction.user.display_name):<18} {user.get('candies', 0):>5} {func.currency_emoji()}")
 
         if not description:
             description = "The leaderboard is currently empty."
@@ -147,30 +243,30 @@ class LeaderboardGroup(app_commands.Group):
         state = func.get_battlepass_state(user)
         user_xp = max(0, int(state.get("xp", 0) or 0))
 
-        users = await func.USERS_DB.find(season_filter).sort("battlepass.xp", -1).limit(10).to_list(10)
+        limit = BATTLEPASS_LEADERBOARD_PAGE_SIZE * BATTLEPASS_LEADERBOARD_MAX_PAGES
+        users = await func.USERS_DB.find(season_filter).sort("battlepass.xp", -1).limit(limit).to_list(limit)
         rank = await func.USERS_DB.count_documents({**season_filter, "battlepass.xp": {"$gt": user_xp}}) + 1
         names = await self.display_names(interaction, [top_user["_id"] for top_user in users])
+        icon = interaction.guild.icon if interaction.guild else None
 
-        embed = discord.Embed(title="🎫   Battle Pass Leaderboard", color=discord.Color.random())
-        embed.description = f"**Season `{season_id}`**\n**Your current position is `{rank}`**\n"
-
-        description = ""
-        for index, top_user in enumerate(users):
-            xp = max(0, int(top_user.get("battlepass", {}).get("xp", 0) or 0))
-            level, _, _ = func.calculate_battlepass_level(xp)
-            description += f"{LEADERBOARD_EMOJIS[index if index <= 2 else 3]} {func.truncate_string(names[top_user['_id']]):<18} Lv{level:>3}/{max_level:<3} {xp:>6} XP\n"
-
-        if description and rank > len(users):
-            level, _, _ = func.calculate_battlepass_level(user_xp)
-            description += ("┇\n" if rank > len(users) + 1 else "")
-            description += f"{LEADERBOARD_EMOJIS[3]} {func.truncate_string(interaction.user.display_name):<18} Lv{level:>3}/{max_level:<3} {user_xp:>6} XP\n"
-
-        if not description:
-            description = "The leaderboard is currently empty."
-
-        embed.description += f"```\n{description}```"
-        embed.set_thumbnail(url=icon.url if (icon := interaction.guild.icon) else None)
-        await interaction.followup.send(embed=embed)
+        view = BattlepassLeaderboardView(
+            interaction.user,
+            users,
+            names,
+            rank=rank,
+            user_xp=user_xp,
+            season_id=season_id,
+            max_level=max_level,
+            icon_url=icon.url if icon else None,
+        )
+        message = await interaction.followup.send(
+            embed=view.build_embed(),
+            view=view if view.total_pages > 1 else None,
+        )
+        if view.total_pages > 1:
+            view.message = message
+        else:
+            view.stop()
 
     @app_commands.command(name="matchgame", description="Shows the IUFI Matching Game leaderboard.")
     @app_commands.describe(level="The match game level")

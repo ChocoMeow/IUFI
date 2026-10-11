@@ -88,7 +88,7 @@ class Profile(commands.Cog):
             value=(
                 "```yaml\n"
                 f"Cards:       {card_count}/{card_limit}\n"
-                f"Candies:     {candies:,} 🍬\n"
+                f"{(func.currency_name('Candies') + ':'):<13}{candies:,} {func.currency_emoji()}\n"
                 f"Collections: {collections_count}/5\n"
                 f"Streak:      {streak}\n"
                 f"Streak Mult: x{streak_multiplier}\n"
@@ -298,9 +298,11 @@ class Profile(commands.Cog):
         day_in_cycle = ((claimed - 1) % 30) + 1
 
         if day_in_cycle % 5:
-            reward_emoji, reward_key, base_amount = "🍬", "candies", 5
+            reward_emoji, reward_key, base_amount = func.currency_emoji(), "candies", 5
         else:
             reward_emoji, reward_key, base_amount = WEEKLY_REWARDS[(day_in_cycle // 5) - 1]
+            if reward_key == "candies":
+                reward_emoji = func.currency_emoji()
 
         reward_amount = base_amount * cycle_multiplier
         reward = {reward_key: reward_amount}
@@ -336,7 +338,8 @@ class Profile(commands.Cog):
                 else:
                     value += "⬜"
                 progress_in_cycle -= 1
-            value += f"  {(reward[2] * cycle_multiplier):>4} {reward[0]} " + ("✅" if day_in_cycle >= ((index + 1) * 5) else "⬛") + "\n"
+            reward_emoji = func.currency_emoji() if reward[1] == "candies" else reward[0]
+            value += f"  {(reward[2] * cycle_multiplier):>4} {reward_emoji} " + ("✅" if day_in_cycle >= ((index + 1) * 5) else "⬛") + "\n"
         embed.add_field(name="Streak Rewards", value=value + "```")
         await interaction.response.send_message(embed=embed)
 
@@ -362,7 +365,8 @@ class Profile(commands.Cog):
     async def inventory(self, interaction: discord.Interaction):
         user = await func.get_user(interaction.user.id)
         embed = discord.Embed(title=f"🎒 {interaction.user.display_name}'s Inventory", color=0x5cb045)
-        embed.description = f"```{'🍬 Starcandies':<20} x{user['candies']}\n"
+        currency_label = f"{func.currency_emoji()} {func.currency_name('Starcandies')}"
+        embed.description = f"```{currency_label:<20} x{user['candies']}\n"
 
         for tier, count in user.get("roll").items():
             if count > 0 and tier in func.settings.TIERS_BASE.keys():

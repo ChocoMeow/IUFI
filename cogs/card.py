@@ -106,7 +106,7 @@ class Card(commands.Cog):
             )
 
             embed = discord.Embed(title="✨ Convert", color=discord.Color.random())
-            embed.description = f"```🆔 {', '.join([f'{card}' for card in converted_cards])} \n🍬 + {candies}```"
+            embed.description = f"```🆔 {', '.join([f'{card}' for card in converted_cards])} \n{func.currency_emoji()} + {candies}```"
             await modal_interaction.response.send_message(embed=embed)
 
         modal = MultiIDModal(title="Convert Cards", label="Card IDs", callback=on_ids)
@@ -183,7 +183,7 @@ class Card(commands.Cog):
 
         candies = events.convert_candies(card.cost)
         embed = discord.Embed(color=discord.Color.random())
-        embed.description = f"```🆔 {card} \n🍬 + {candies}```"
+        embed.description = f"```🆔 {card} \n{func.currency_emoji()} + {candies}```"
         message: discord.Message = None
 
         if card.tier[1] not in ["common", "rare"] or card.tag:
@@ -238,7 +238,7 @@ class Card(commands.Cog):
         candies = events.convert_candies(sum(card.cost for card in converted_cards))
 
         embed = discord.Embed(title="✨ Confirm to convert?", color=discord.Color.random())
-        embed.description = f"```🆔 {', '.join([f'{card}' for card in converted_cards])} \n🍬 + {candies}```"
+        embed.description = f"```🆔 {', '.join([f'{card}' for card in converted_cards])} \n{func.currency_emoji()} + {candies}```"
 
         view = ConfirmView(interaction.user)
         await interaction.response.send_message(embed=embed, view=view)
@@ -298,7 +298,7 @@ class Card(commands.Cog):
             candies = events.convert_candies(sum(card.cost for card in converted_cards))
 
             embed = discord.Embed(title="✨ Confirm to convert?", color=discord.Color.random())
-            embed.description = f"```🆔 {', '.join([f'{card}' for card in converted_cards])} \n🍬 + {candies}```"
+            embed.description = f"```🆔 {', '.join([f'{card}' for card in converted_cards])} \n{func.currency_emoji()} + {candies}```"
 
             view = ConfirmView(modal_interaction.user)
             await modal_interaction.response.send_message(embed=embed, view=view)

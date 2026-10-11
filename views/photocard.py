@@ -130,41 +130,32 @@ class TierFilterDropdown(discord.ui.Select):
         self.view.apply_filter()
         await self.view.update_embed(interaction)
 
-class TagFilterDropdown(discord.ui.Select):
+class TagLockFilterDropdown(discord.ui.Select):
+    """Tag and lock share one menu so the page buttons fit on the rows below."""
+
     def __init__(self):
         super().__init__(
-            placeholder="Filter by tag...",
+            placeholder="Filter by tag or lock...",
             min_values=1,
             max_values=1,
             options=[
-                discord.SelectOption(label="All Tag States", value="all", emoji="📚"),
-                discord.SelectOption(label="Tagged Cards Only", value="tagged", emoji="🏷️"),
-                discord.SelectOption(label="Untagged Cards Only", value="untagged", emoji="🚫"),
+                discord.SelectOption(label="All Tags & Locks", value="all:all", emoji="📚"),
+                discord.SelectOption(label="Tagged Cards Only", value="tagged:all", emoji="🏷️"),
+                discord.SelectOption(label="Untagged Cards Only", value="untagged:all", emoji="🚫"),
+                discord.SelectOption(label="Locked Cards Only", value="all:locked", emoji="🔒"),
+                discord.SelectOption(label="Unlocked Cards Only", value="all:unlocked", emoji="🔓"),
+                discord.SelectOption(label="Tagged & Locked", value="tagged:locked", emoji="🔒"),
+                discord.SelectOption(label="Tagged & Unlocked", value="tagged:unlocked", emoji="🏷️"),
+                discord.SelectOption(label="Untagged & Locked", value="untagged:locked", emoji="🚫"),
+                discord.SelectOption(label="Untagged & Unlocked", value="untagged:unlocked", emoji="🔓"),
             ],
             row=2,
         )
 
     async def callback(self, interaction: discord.Interaction) -> None:
-        self.view.tag_filter = self.values[0]
-        self.view.apply_filter()
-        await self.view.update_embed(interaction)
-
-class LockFilterDropdown(discord.ui.Select):
-    def __init__(self):
-        super().__init__(
-            placeholder="Filter by lock state...",
-            min_values=1,
-            max_values=1,
-            options=[
-                discord.SelectOption(label="All Lock States", value="all", emoji="📚"),
-                discord.SelectOption(label="Locked Cards Only", value="locked", emoji="🔒"),
-                discord.SelectOption(label="Unlocked Cards Only", value="unlocked", emoji="🔓"),
-            ],
-            row=3,
-        )
-
-    async def callback(self, interaction: discord.Interaction) -> None:
-        self.view.lock_filter = self.values[0]
+        tag, lock = self.values[0].split(":", 1)
+        self.view.tag_filter = tag
+        self.view.lock_filter = lock
         self.view.apply_filter()
         await self.view.update_embed(interaction)
 
@@ -197,8 +188,7 @@ class PhotoCardView(discord.ui.View):
         self._dropdown_view: SortDropdown = SortDropdown()
         self.add_item(self._dropdown_view)
         self.add_item(TierFilterDropdown())
-        self.add_item(TagFilterDropdown())
-        self.add_item(LockFilterDropdown())
+        self.add_item(TagLockFilterDropdown())
 
         self.toggle_cards_view: bool = False
         self.message: discord.Message = None
@@ -281,21 +271,35 @@ class PhotoCardView(discord.ui.View):
         embed, file = await self.build_embed()
         await self.message.edit(embed=embed, attachments=[file] if file else [], view=self)
             
-    @discord.ui.button(label='Back', style=discord.ButtonStyle.blurple, row=4)
+    @discord.ui.button(label='<<', style=discord.ButtonStyle.grey, row=3)
+    async def fast_back_button(self, interaction: discord.Interaction, button: discord.ui.Button):
+        if self.current_page != 1:
+            self.current_page = 1
+            return await self.update_embed(interaction)
+        await interaction.response.defer()
+
+    @discord.ui.button(label='Back', style=discord.ButtonStyle.blurple, row=3)
     async def back_button(self, interaction: discord.Interaction, button: discord.ui.Button):
         if self.current_page > 1:
             self.current_page -= 1
             return await self.update_embed(interaction)
         await interaction.response.defer()
-    
-    @discord.ui.button(label='Next', style=discord.ButtonStyle.blurple, row=4)
+
+    @discord.ui.button(label='Next', style=discord.ButtonStyle.blurple, row=3)
     async def next_button(self, interaction: discord.Interaction, button: discord.ui.Button):
         if self.current_page < self.page:
             self.current_page += 1
             return await self.update_embed(interaction)
         await interaction.response.defer()
 
-    @discord.ui.button(emoji='👁️', style=discord.ButtonStyle.green, row=4)
+    @discord.ui.button(label='>>', style=discord.ButtonStyle.grey, row=3)
+    async def fast_next_button(self, interaction: discord.Interaction, button: discord.ui.Button):
+        if self.current_page != self.page:
+            self.current_page = self.page
+            return await self.update_embed(interaction)
+        await interaction.response.defer()
+
+    @discord.ui.button(emoji='👁️', style=discord.ButtonStyle.green, row=3)
     async def view_all(self, interaction: discord.Interaction, button: discord.ui.Button):
         self.toggle_cards_view = not self.toggle_cards_view
         button.style = discord.ButtonStyle.red if self.toggle_cards_view else discord.ButtonStyle.green
@@ -304,5 +308,6 @@ class PhotoCardView(discord.ui.View):
     @discord.ui.button(label='Copy IDs', emoji='📋', style=discord.ButtonStyle.grey, row=4)
     async def copy_ids(self, interaction: discord.Interaction, button: discord.ui.Button):
         card_ids = self.current_page_card_ids()
-        content = " ".join(card_ids) if card_ids else "No photocards on this page."
-        await interaction.response.send_message(f"```{content}```", ephemeral=True)
+        if not card_ids:
+            return await interaction.response.send_message("No photocards on this page.", ephemeral=True)
+        await interaction.response.send_message(f"`{' '.join(card_ids)}`", ephemeral=True)
