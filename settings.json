@@ -600,6 +600,9 @@
         "convert_candy_multiplier": 1.0,
         "shop_sale_percent": 0,
         "trick_or_treat": true,
+        "trick_or_treat_ends_at": 1793458800,
+        "treat_store_opens_at": 1793458800,
+        "treat_store_closes_at": 1793718000,
         "currency_name": "Pumpkins",
         "currency_emoji": "🎃"
     },

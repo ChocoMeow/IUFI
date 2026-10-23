@@ -7,20 +7,267 @@ import discord
 import iufi
 import functions as func
 
+from collections import Counter
 from discord import app_commands
 from discord.ext import commands
+from views.shop import QuantityModal
 
 LEADERBOARD_EMOJIS: list[str] = ["🥇", "🥈", "🥉", "🏅"]
+EVENT_PATH = "game_state.halloween_event"
+TREATS_PATH = f"{EVENT_PATH}.treats"
+TREATS_SPENT_PATH = f"{EVENT_PATH}.treats_spent"
+TREATS_GRANTED_PATH = f"{EVENT_PATH}.treats_granted"
 MIN_PUMPKINS = 20
 MAX_PUMPKINS = 50
 CARD_LOSS_CANDIES = 50
 PROTECTED_TIERS = {"mystic", "celestial"}
+MAX_STORE_QUANTITY = 50
+
+STORE_ITEMS: dict[str, dict[str, Any]] = {
+    "halloween_bag_3": {"label": "Halloween Bag Lv.3", "emoji": "👜", "price": 10},
+    "halloween_bag_2": {"label": "Halloween Bag Lv.2", "emoji": "👜", "price": 7},
+    "halloween_bag_1": {"label": "Halloween Bag Lv.1", "emoji": "👜", "price": 5},
+    "potion_iii": {"label": "Potion III Bundle", "emoji": "🧪", "price": 5},
+    "potion_ii": {"label": "Potion II Bundle", "emoji": "🧪", "price": 3},
+    "potion_i": {"label": "Potion I Bundle", "emoji": "🧪", "price": 1},
+    "roll_legendary": {"label": "Legendary Roll", "tier": "legendary", "price": 5},
+    "roll_epic": {"label": "Epic Roll", "tier": "epic", "price": 3},
+    "roll_rare": {"label": "Rare Roll", "tier": "rare", "price": 1},
+    "inventory_slot": {"label": "Inventory Slot", "emoji": "📦", "price": 4},
+    "candy_bag": {"label": "Candy Bag (40-60)", "emoji": "🍬", "price": 1},
+}
 
 
 def highlight_text(text: str, need: bool = True) -> str:
     if not need:
         return text + "\n"
     return "\u001b[0;1;35m" + text + " \u001b[0m\n"
+
+
+def _as_int(value: Any) -> int:
+    try:
+        return int(value or 0)
+    except (TypeError, ValueError):
+        return 0
+
+
+def _event_state(user: dict[str, Any]) -> dict[str, Any]:
+    return (user.get("game_state") or {}).get("halloween_event") or {}
+
+
+def treats_of(user: dict[str, Any]) -> int:
+    """Treats earned from trick or treat. This is the leaderboard score and never goes down."""
+    return _as_int(_event_state(user).get("treats"))
+
+
+def treat_balance(user: dict[str, Any]) -> int:
+    state = _event_state(user)
+    return treats_of(user) + _as_int(state.get("treats_granted")) - _as_int(state.get("treats_spent"))
+
+
+def _event_time(key: str) -> float:
+    return float((func.settings.EVENT_SETTINGS or {}).get(key) or 0)
+
+
+def trick_or_treat_over() -> bool:
+    ends_at = _event_time("trick_or_treat_ends_at")
+    return bool(ends_at) and time.time() >= ends_at
+
+
+def treat_store_open() -> bool:
+    opens_at, closes_at = _event_time("treat_store_opens_at"), _event_time("treat_store_closes_at")
+    now = time.time()
+    return bool(opens_at) and opens_at <= now and (not closes_at or now < closes_at)
+
+
+def item_emoji(item: dict[str, Any]) -> str:
+    if tier := item.get("tier"):
+        return func.settings.TIERS_BASE.get(tier, ["🎲"])[0]
+    return item["emoji"]
+
+
+def item_label(item_id: str) -> str:
+    if item_id == "candy_bag":
+        return f"{func.currency_name('Starcandies').title()} Bag (40-60)"
+    return STORE_ITEMS[item_id]["label"]
+
+
+def _potion_bundle(rewards: Counter, level: str, amount: int) -> None:
+    rewards[f"potions.speed_{level}"] += amount
+    rewards[f"potions.luck_{level}"] += amount
+
+
+def open_store_item(item_id: str, rewards: Counter, lucky: Counter) -> None:
+    """Adds one unit of `item_id` to `rewards`. Bag bonus hits are also counted in `lucky`."""
+    if item_id.startswith("potion_"):
+        _potion_bundle(rewards, item_id.split("_", 1)[1], 1)
+    elif item_id.startswith("roll_"):
+        rewards[f"roll.{item_id.split('_', 1)[1]}"] += 1
+    elif item_id == "inventory_slot":
+        rewards["extra_props.extra_card_slots"] += 1
+        rewards["extra_props.slot_purchases"] += 1
+    elif item_id == "candy_bag":
+        rewards["candies"] += random.randint(40, 60)
+    elif item_id == "halloween_bag_1":
+        rewards["roll.rare"] += random.randint(3, 5)
+        _potion_bundle(rewards, "i", random.randint(1, 2))
+        if random.random() < 0.20:
+            amount = random.randint(1, 3)
+            rewards["roll.epic"] += amount
+            lucky["roll.epic"] += amount
+        if random.random() < 0.10:
+            amount = random.randint(1, 3)
+            rewards["roll.legendary"] += amount
+            lucky["roll.legendary"] += amount
+    elif item_id == "halloween_bag_2":
+        rewards["roll.epic"] += random.randint(2, 3)
+        _potion_bundle(rewards, "ii", random.randint(1, 2))
+        if random.random() < 0.03:
+            rewards["roll.mystic"] += 1
+            lucky["roll.mystic"] += 1
+    elif item_id == "halloween_bag_3":
+        rewards["roll.legendary"] += random.randint(2, 3)
+        _potion_bundle(rewards, "iii", random.randint(1, 2))
+        if random.random() < 0.05:
+            rewards["roll.mystic"] += 1
+            lucky["roll.mystic"] += 1
+        if random.random() < 0.03:
+            rewards["roll.celestial"] += 1
+            lucky["roll.celestial"] += 1
+
+
+def reward_label(key: str) -> str:
+    if key == "candies":
+        return f"{func.currency_emoji()} {func.currency_name('Starcandies').title()}"
+    if key == "extra_props.extra_card_slots":
+        return "📦 Inventory Slot"
+    if key.startswith("roll."):
+        tier = key.split(".", 1)[1]
+        return f"{func.settings.TIERS_BASE.get(tier, ['🎲'])[0]} {tier.title()} Roll"
+    if key.startswith("potions."):
+        potion, level = key.split(".", 1)[1].split("_", 1)
+        emoji = (func.settings.POTIONS_BASE.get(potion) or {}).get("emoji", "🧪")
+        return f"{emoji} {potion.title()} {level.upper()} Potion"
+    return key
+
+
+class TreatStoreDropdown(discord.ui.Select):
+    def __init__(self) -> None:
+        super().__init__(
+            placeholder="Select an item to buy...",
+            options=[
+                discord.SelectOption(
+                    label=f"{item_label(item_id)} - {item['price']} Treat{'s' if item['price'] != 1 else ''}",
+                    emoji=item_emoji(item),
+                    value=item_id,
+                )
+                for item_id, item in STORE_ITEMS.items()
+            ],
+        )
+
+    async def callback(self, interaction: discord.Interaction) -> None:
+        modal = QuantityModal()
+        await interaction.response.send_modal(modal)
+        await modal.wait()
+        if modal.quantity:
+            await self.view.purchase(interaction, self.values[0], modal.quantity)
+
+
+class TreatStoreView(discord.ui.View):
+    def __init__(self, cog: "Halloween", author: discord.Member, timeout: float | None = 120) -> None:
+        super().__init__(timeout=timeout)
+        self.cog = cog
+        self.author = author
+        self.message: discord.Message | None = None
+        self.add_item(TreatStoreDropdown())
+
+    async def interaction_check(self, interaction: discord.Interaction) -> bool:
+        return interaction.user == self.author
+
+    async def on_timeout(self) -> None:
+        for child in self.children:
+            child.disabled = True
+        if self.message:
+            try:
+                await self.message.edit(view=self)
+            except discord.HTTPException:
+                pass
+
+    async def build_embed(self) -> discord.Embed:
+        user = await func.get_user(self.author.id)
+        embed = discord.Embed(title="🎃 Halloween Treats Store", color=0xF97316)
+        closes_at = _event_time("treat_store_closes_at")
+        opens_at = _event_time("treat_store_opens_at")
+        if not treat_store_open():
+            embed.description = f"🔒 **Admin preview.** The store opens <t:{round(opens_at)}:F>.\n"
+        elif closes_at:
+            embed.description = f"Closes <t:{round(closes_at)}:R>\n"
+        else:
+            embed.description = ""
+        embed.description += f"🍬 Treats: `{treat_balance(user)}`\n```"
+        for item_id, item in STORE_ITEMS.items():
+            embed.description += f"{item_emoji(item)} {item_label(item_id).upper():<24} {item['price']:>3} 🍬\n"
+        embed.description += "```"
+        embed.add_field(
+            name="👜 Halloween Bags (opened on purchase)",
+            value=(
+                "**Lv.1**: 3-5 Rare Rolls, 1-2 Potion I Bundles, 20% for 1-3 Epic Rolls, 10% for 1-3 Legendary Rolls\n"
+                "**Lv.2**: 2-3 Epic Rolls, 1-2 Potion II Bundles, 3% for a Mystic Roll\n"
+                "**Lv.3**: 2-3 Legendary Rolls, 1-2 Potion III Bundles, 5% for a Mystic Roll, 3% for a Celestial Roll\n"
+                "A potion bundle is 1 Speed + 1 Luck potion of that level."
+            ),
+            inline=False,
+        )
+        embed.set_thumbnail(url=self.author.display_avatar.url)
+        return embed
+
+    async def purchase(self, interaction: discord.Interaction, item_id: str, quantity: int) -> None:
+        if quantity > MAX_STORE_QUANTITY:
+            return await interaction.followup.send(f"You can buy up to `{MAX_STORE_QUANTITY}` at a time.", ephemeral=True)
+
+        async with self.cog.lock_for(interaction.user.id):
+            if not self.cog.store_accessible(interaction):
+                return await interaction.followup.send("The Treats Store is closed.", ephemeral=True)
+
+            user = await func.get_user(interaction.user.id)
+            item = STORE_ITEMS[item_id]
+            cost = item["price"] * quantity
+            balance = treat_balance(user)
+            if balance < cost:
+                return await interaction.followup.send(
+                    f"You need `{cost}` treats but only have `{balance}`.", ephemeral=True
+                )
+
+            rewards, lucky = Counter(), Counter()
+            for _ in range(quantity):
+                open_store_item(item_id, rewards, lucky)
+
+            query = func.update_quest_progress(user, "BUY_ITEM", progress=quantity, query={
+                "$inc": {TREATS_SPENT_PATH: cost, **rewards}
+            })
+            await func.update_user(interaction.user.id, query)
+
+        func.logger.info(
+            f"User {interaction.user.name}({interaction.user.id}) bought {quantity}x {item_id} for {cost} treats: {dict(rewards)}"
+        )
+
+        embed = discord.Embed(title="🎃 Treats Store Purchase", color=0xF97316)
+        embed.description = f"```{item_emoji(item)} {item_label(item_id)} x{quantity}\n🍬 - {cost} Treats```\n**You received:**\n"
+        embed.description += "\n".join(
+            f"{reward_label(key)} x{amount}" for key, amount in rewards.items() if key != "extra_props.slot_purchases"
+        )
+        if lucky:
+            embed.description += "\n\n✨ **Lucky drops:** " + ", ".join(
+                f"{reward_label(key)} x{amount}" for key, amount in lucky.items()
+            )
+        embed.set_footer(text=f"Treats left: {balance - cost}")
+        await interaction.followup.send(embed=embed)
+
+        if self.message:
+            try:
+                await self.message.edit(embed=await self.build_embed(), view=self)
+            except discord.HTTPException:
+                pass
 
 
 def pumpkin_battlepass_xp(amount: int) -> int:
@@ -63,8 +310,32 @@ class Halloween(commands.Cog):
             "random_roll": {"func": self.on_random_roll, "weight": 0.1},
         }
 
+        self._locks: dict[int, asyncio.Lock] = {}
+
     def _closed(self) -> bool:
         return not func.trick_or_treat_enabled()
+
+    def lock_for(self, user_id: int) -> asyncio.Lock:
+        return self._locks.setdefault(user_id, asyncio.Lock())
+
+    def store_accessible(self, interaction: discord.Interaction) -> bool:
+        if self._closed():
+            return False
+        return treat_store_open() or func.is_admin_interaction(interaction)
+
+    @app_commands.command(name="treatstore", description="Spend your Halloween treats in the Treats Store.")
+    async def treatstore(self, interaction: discord.Interaction):
+        if not self.store_accessible(interaction):
+            opens_at = _event_time("treat_store_opens_at")
+            if not self._closed() and opens_at and time.time() < opens_at:
+                return await interaction.response.send_message(
+                    f"The Treats Store opens <t:{round(opens_at)}:R>. Keep collecting treats with `/trickortreat`! 🎃"
+                )
+            return await interaction.response.send_message("The Treats Store is closed.")
+
+        view = TreatStoreView(self, interaction.user)
+        await interaction.response.send_message(embed=await view.build_embed(), view=view)
+        view.message = await interaction.original_response()
 
     @app_commands.command(name="trickortreatleaderboard", description="Shows the trick or treat leaderboard.")
     async def trickortreatleaderboard(self, interaction: discord.Interaction):
@@ -72,16 +343,16 @@ class Halloween(commands.Cog):
             return await interaction.response.send_message("Trick or treat isn't running right now.")
 
         user = await func.get_user(interaction.user.id)
-        users = await func.USERS_DB.find().sort("game_state.halloween_event.treats", -1).limit(10).to_list(10)
-        treats = user.get("game_state", {}).get("halloween_event", {}).get("treats", 0)
-        rank = await func.USERS_DB.count_documents({"game_state.halloween_event.treats": {"$gt": treats}}) + 1
+        users = await func.USERS_DB.find({TREATS_PATH: {"$gt": 0}}).sort(TREATS_PATH, -1).limit(10).to_list(10)
+        treats = treats_of(user)
+        rank = await func.USERS_DB.count_documents({TREATS_PATH: {"$gt": treats}}) + 1
 
         embed = discord.Embed(title="🎃   Trick Or Treat Leaderboard", color=discord.Color.random())
         embed.description = f"**Your current position is `{rank}`**\n"
         description = ""
         rank_1_user = None
         for index, top_user in enumerate(users):
-            level = top_user.get("game_state", {}).get("halloween_event", {}).get("treats", 0)
+            level = treats_of(top_user)
             member = (interaction.guild.get_member(top_user["_id"]) if interaction.guild else None) or self.bot.get_user(top_user["_id"])
             name = member.display_name if member else str(top_user["_id"])
             if index == 0 and member:
@@ -110,6 +381,14 @@ class Halloween(commands.Cog):
     async def trickortreat(self, interaction: discord.Interaction):
         if self._closed():
             return await interaction.response.send_message("Trick or treat isn't running right now.")
+        if trick_or_treat_over():
+            message = "Trick or treat has ended! 🎃"
+            if treat_store_open():
+                message += " Spend your treats with `/treatstore`"
+                if closes_at := _event_time("treat_store_closes_at"):
+                    message += f" before it closes <t:{round(closes_at)}:R>"
+                message += "."
+            return await interaction.response.send_message(message)
 
         user = await func.get_user(interaction.user.id)
         retry = user.get("cooldown", {}).get("trick_or_treat", 0)
@@ -129,7 +408,7 @@ class Halloween(commands.Cog):
         func.logger.info(f"User {interaction.user.name}({interaction.user.id}) performed trick or treat action: {action_type}")
 
     async def on_treat(self, interaction: discord.Interaction, query: dict[str, Any], user: dict[str, Any]) -> None:
-        query["$inc"] = {"game_state.halloween_event.treats": 1}
+        query["$inc"] = {TREATS_PATH: 1}
         await interaction.response.send_message(f"{interaction.user.mention} you got a treat! 🍬 Beware of the tricks! 🎃")
 
     async def on_random_roll(self, interaction: discord.Interaction, query: dict[str, Any], user: dict[str, Any]) -> None:

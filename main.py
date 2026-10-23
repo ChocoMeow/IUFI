@@ -68,6 +68,7 @@ LEGACY_ALIASES = {
     "bpass": "battlepass",
     "tot": "trickortreat",
     "totl": "trickortreatleaderboard",
+    "ts": "treatstore",
     "pvptest": "pvp_test",
     "pvp_auto": "pvp_test",
     "mypity": "pity",
