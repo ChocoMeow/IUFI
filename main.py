@@ -66,9 +66,6 @@ LEGACY_ALIASES = {
     "eq": "emojiquiz",
     "bp": "battlepass",
     "bpass": "battlepass",
-    "tot": "trickortreat",
-    "totl": "trickortreatleaderboard",
-    "ts": "treatstore",
     "pvptest": "pvp_test",
     "pvp_auto": "pvp_test",
     "mypity": "pity",
@@ -653,8 +650,6 @@ if (LOG_FILE := LOG_SETTINGS.get("file", {})).get("enable", True):
 
 # Configure the Discord intents for the bot
 intents = discord.Intents.default()
-intents.members = True
-intents.message_content = True
 
 # Initialize the bot with specified parameters
 bot = IUFI(

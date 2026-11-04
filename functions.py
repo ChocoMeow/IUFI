@@ -311,9 +311,6 @@ def currency_name(default: str = "candies") -> str:
     name = (settings.EVENT_SETTINGS or {}).get("currency_name")
     return str(name) if name else default
 
-def trick_or_treat_enabled() -> bool:
-    return bool((settings.EVENT_SETTINGS or {}).get("trick_or_treat", False))
-
 def get_battlepass_default_state() -> Dict[str, Any]:
     bp_settings = get_battlepass_settings()
     return {

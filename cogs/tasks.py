@@ -242,10 +242,7 @@ class Tasks(commands.Cog):
                 cd: dict[str, float] = doc["cooldown"]
                 for name, (emoji, _) in func.settings.COOLDOWN_BASE.items():
                     if name != "claim":
-                        if name == "trick_or_treat":
-                            ready = "🎃 Your trick or treat is ready!"
-                        else:
-                            ready = f"{emoji} Your {name.split('_')[0]} is ready! Join <#{random.choice(func.settings.GAME_CHANNEL_IDS)}> and roll now."
+                        ready = f"{emoji} Your {name.split('_')[0]} is ready! Join <#{random.choice(func.settings.GAME_CHANNEL_IDS)}> and roll now."
                         await self.check_and_schedule(user, current_time, cd.get(name, 0), ready)        
                         notification_count += 1
 

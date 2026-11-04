@@ -198,10 +198,7 @@ class Gameplay(commands.Cog):
 
         cooldown: dict[str, float] = user.get("cooldown", {})
         embed = discord.Embed(title=f"⏰ {interaction.user.display_name}'s Cooldowns", color=0x59b0c0)
-        def cooldown_label(name: str) -> str:
-            return "Tot" if name == "trick_or_treat" else name.split("_")[0].title()
-
-        embed.description = "```" + "".join(f"{emoji} {cooldown_label(name):<5}: {func.cal_retry_time(cooldown.get(name, 0), 'Ready')}\n" for name, (emoji, cd) in func.settings.COOLDOWN_BASE.items())
+        embed.description = "```" + "".join(f"{emoji} {name.split('_')[0].title():<5}: {func.cal_retry_time(cooldown.get(name, 0), 'Ready')}\n" for name, (emoji, cd) in func.settings.COOLDOWN_BASE.items())
 
         embed.description += f"🔔 Reminder: {'On' if user.get('reminder', False) else 'Off'}\n\n" \
                              f"Potion Time Left:\n"
