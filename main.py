@@ -650,6 +650,7 @@ if (LOG_FILE := LOG_SETTINGS.get("file", {})).get("enable", True):
 
 # Configure the Discord intents for the bot
 intents = discord.Intents.default()
+intents.message_content = True
 
 # Initialize the bot with specified parameters
 bot = IUFI(
