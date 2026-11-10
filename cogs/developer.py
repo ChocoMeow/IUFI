@@ -83,8 +83,9 @@ class DevGroup(app_commands.Group):
         if not user_data:
             return await interaction.response.send_message("User not found.")
 
-        if len(user_data["cards"]) >= func.settings.MAX_CARDS:
-            return await interaction.response.send_message(f"{member.display_name} already has maximum cards.")
+        card_limit = func.get_user_card_limit(user_data)
+        if len(user_data["cards"]) >= card_limit:
+            return await interaction.response.send_message(f"{member.display_name} already has maximum cards ({card_limit}).")
 
         card.change_owner(member.id)
         iufi.CardPool.remove_available_card(card)
