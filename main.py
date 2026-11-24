@@ -88,6 +88,7 @@ LEGACY_ALIASES = {
     "tp": "tradepotion",
     "tpe": "tradepotioneveryone",
     "u": "upgrade",
+    "sac": "sacrifice",
     "sf": "setframe",
     "sfl": "setframelast",
     "rf": "removeframe",
@@ -108,6 +109,7 @@ LEGACY_ALIASES = {
     "wl": "wishlist",
     "tr": "togglereminder",
     "h": "help",
+    "xc": "xmascountdown",
 }
 
 # Message commands supply these values after the regular slash-command arguments.
@@ -120,6 +122,7 @@ LEGACY_TRAILING_ARGUMENTS = {
     "tradeeveryone": "<card_ids...>",
     "unlock": "<card_ids...>",
     "upgrade": "<card_ids...>",
+    "sacrifice": "<card_ids...>",
 }
 
 class _MessageResponse:

@@ -1,5 +1,6 @@
 import asyncio, time, discord, iufi
 import functions as func
+import events
 
 from discord import app_commands
 from discord.ext import commands
@@ -433,6 +434,41 @@ class Info(commands.Cog):
 
         view = HelpView(self.bot, interaction.user)
         await interaction.response.send_message(embed=view.build_embed(), view=view)
+
+    @app_commands.command(name="xmascountdown", description="Shows today's Xmas countdown buff, the 25-day schedule, and Holiday Stocking odds.")
+    async def xmascountdown(self, interaction: discord.Interaction):
+        xmas = events.get_xmas_settings()
+        if not xmas.get("enabled"):
+            return await interaction.response.send_message("The Xmas event is not running right now.", ephemeral=True)
+
+        day = events.xmas_countdown_day()
+        schedule = events.xmas_schedule_lines()
+        embed = discord.Embed(title=f"🎄 {xmas.get('name') or 'Xmas Event'}", color=discord.Color.red())
+        embed.description = events.xmas_status_text() or "The countdown is not running today."
+
+        if day is not None:
+            embed.add_field(name="Today", value=events.xmas_day_text(day, sep="\n"), inline=False)
+            if day < len(schedule):
+                embed.add_field(name="Tomorrow", value=events.xmas_day_text(day + 1, sep="\n"), inline=False)
+
+        embed.add_field(name="Countdown", value=f"`{events.xmas_days_left()}` days until Christmas", inline=False)
+
+        # Pack schedule lines into code-block fields under Discord's 1024-character field limit.
+        chunks: list[list[str]] = [[]]
+        for line in schedule:
+            if len("\n".join(chunks[-1] + [line])) > 950:
+                chunks.append([])
+            chunks[-1].append(line)
+        for index, chunk in enumerate(chunks):
+            embed.add_field(name="Schedule" if index == 0 else "\u200b", value="```\n" + "\n".join(chunk) + "```", inline=False)
+
+        stocking_state = "Open now on `/daily`." if events.xmas_stocking_active() else "Not open right now."
+        embed.add_field(
+            name="Holiday Stocking",
+            value=f"{stocking_state}\nLevel odds: {events.xmas_stocking_odds_text()}",
+            inline=False,
+        )
+        await interaction.response.send_message(embed=embed)
 
 async def setup(bot: commands.Bot) -> None:
     await bot.add_cog(Info(bot))

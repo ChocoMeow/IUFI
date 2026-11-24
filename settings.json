@@ -86,7 +86,8 @@
             "claimed_one_time": {
                 "mg2_click_plus_2": false,
                 "mg3_click_plus_2": false
-            }
+            },
+            "additional_wishlist_boost_slots": 0
         }
     },
     "WISHLIST_ROLL_WEIGHTS": {
@@ -96,6 +97,13 @@
         "legendary": 6.0,
         "mystic": 3.0,
         "celestial": 2.0
+    },
+    "SACRIFICE_SETTINGS": {
+        "ENABLED": true,
+        "SOURCE_TIER": "mystic",
+        "COST": 5,
+        "REWARD_ROLL_TIER": "celestial",
+        "REWARD_AMOUNT": 1
     },
     "PITY_SETTINGS": {
         "rare": {
@@ -599,6 +607,88 @@
         "convert_candy_multiplier": 1.0,
         "shop_sale_percent": 0
     },
+    "SHOP_ROLL_PRICES": {
+        "rare": 30,
+        "epic": 100,
+        "legendary": 250
+    },
+    "CONVERT_CAP": {
+        "enabled": true,
+        "percent_of_shop_price": 80,
+        "max_star": 10
+    },
+    "XMAS_EVENT": {
+        "enabled": true,
+        "name": "Merry & Happy: 25 Days of IUFI",
+        "timezone": "Asia/Seoul",
+        "countdown": {
+            "enabled": true,
+            "start_date": "2026-12-01",
+            "days": 25,
+            "force_day": null,
+            "schedule": {
+                "1": [{ "type": "roll_cooldown", "percent": 20 }],
+                "2": [{ "type": "convert_multiplier", "multiplier": 1.25 }],
+                "3": [{ "type": "shop_sale", "percent": 20 }],
+                "4": [{ "type": "drop_rate", "multiplier": 1.5 }],
+                "5": [{ "type": "santa_iu", "proc_percent": 15 }],
+                "6": [{ "type": "roll_cooldown", "percent": 25 }],
+                "7": [{ "type": "convert_multiplier", "multiplier": 1.5 }],
+                "8": [{ "type": "shop_sale", "percent": 20 }],
+                "9": [{ "type": "drop_rate", "multiplier": 2.0 }],
+                "10": [{ "type": "santa_iu", "proc_percent": 20 }],
+                "11": [{ "type": "roll_cooldown", "percent": 30 }],
+                "12": [{ "type": "convert_multiplier", "multiplier": 1.5 }],
+                "13": [{ "type": "shop_sale", "percent": 20 }],
+                "14": [{ "type": "drop_rate", "multiplier": 2.5 }],
+                "15": [{ "type": "santa_iu", "proc_percent": 25 }],
+                "16": [{ "type": "roll_cooldown", "percent": 35 }],
+                "17": [{ "type": "convert_multiplier", "multiplier": 2.0 }],
+                "18": [{ "type": "shop_sale", "percent": 25 }],
+                "19": [{ "type": "drop_rate", "multiplier": 3.0 }],
+                "20": [{ "type": "santa_iu", "proc_percent": 30 }],
+                "21": [{ "type": "roll_cooldown", "percent": 40 }],
+                "22": [{ "type": "convert_multiplier", "multiplier": 2.0 }],
+                "23": [{ "type": "shop_sale", "percent": 30 }],
+                "24": [{ "type": "drop_rate", "multiplier": 4.0 }],
+                "25": [{ "type": "santa_iu", "proc_percent": 50 }]
+            }
+        },
+        "stocking": {
+            "enabled": true,
+            "start_date": "2026-12-01",
+            "end_date": "2026-12-25",
+            "level_weights": { "1": 70, "2": 20, "3": 10 },
+            "levels": {
+                "1": {
+                    "candies": [20, 40],
+                    "rolls": { "rare": [3, 5] },
+                    "potion": { "level": "i", "count": [1, 2] },
+                    "chance_rolls": [
+                        { "tier": "epic", "chance_percent": 20, "amount": [1, 3] },
+                        { "tier": "legendary", "chance_percent": 10, "amount": [1, 3] }
+                    ]
+                },
+                "2": {
+                    "candies": [50, 80],
+                    "rolls": { "epic": [2, 3] },
+                    "potion": { "level": "ii", "count": [1, 2] },
+                    "chance_rolls": [
+                        { "tier": "mystic", "chance_percent": 3, "amount": [1, 1] }
+                    ]
+                },
+                "3": {
+                    "candies": [100, 150],
+                    "rolls": { "legendary": [2, 3] },
+                    "potion": { "level": "iii", "count": [1, 2] },
+                    "chance_rolls": [
+                        { "tier": "mystic", "chance_percent": 5, "amount": [1, 1] },
+                        { "tier": "celestial", "chance_percent": 3, "amount": [1, 1] }
+                    ]
+                }
+            }
+        }
+    },
     "BATTLEPASS_MILESTONES": {
         "enabled": true,
         "duration_days": 14,
@@ -610,7 +700,8 @@
             },
             {
                 "total_levels": 250,
-                "battlepass_xp_percent": 25
+                "battlepass_xp_percent": 25,
+                "quest_potion_multiplier": 2
             },
             {
                 "total_levels": 500,
@@ -619,18 +710,20 @@
             },
             {
                 "total_levels": 750,
-                "battlepass_xp_percent": 50
+                "battlepass_xp_percent": 50,
+                "quest_potion_multiplier": 3
             },
             {
                 "total_levels": 1000,
                 "convert_candy_multiplier": 1.5,
-                "cooldown_reduction_percent": 30
+                "cooldown_reduction_percent": 30,
+                "pity_count_multiplier": 2
             }
         ]
     },
     "BATTLEPASS_SETTINGS": {
         "enabled": true,
-        "season_id": "2026_s3",
+        "season_id": "2026_s4",
         "max_level": 100,
         "xp_per_level": 200,
         "shop_price_candies": 3000,
@@ -682,7 +775,10 @@
                 "26": [{"type": "roll", "key": "rare", "amount": 1}],
                 "27": [{"type": "roll", "key": "epic", "amount": 1}],
                 "28": [{"type": "roll", "key": "rare", "amount": 1}],
-                "30": [{"type": "roll", "key": "legendary", "amount": 1}],
+                "30": [
+                    {"type": "roll", "key": "legendary", "amount": 1},
+                    {"type": "additional_wishlist_boost_slot", "amount": 1}
+                ],
                 "32": [{"type": "roll", "key": "rare", "amount": 1}],
                 "33": [{"type": "roll", "key": "epic", "amount": 1}],
                 "36": [{"type": "roll", "key": "rare", "amount": 1}],
@@ -711,7 +807,10 @@
                 "66": [{"type": "roll", "key": "rare", "amount": 1}],
                 "67": [{"type": "roll", "key": "epic", "amount": 1}],
                 "68": [{"type": "roll", "key": "rare", "amount": 1}],
-                "70": [{"type": "roll", "key": "legendary", "amount": 1}],
+                "70": [
+                    {"type": "roll", "key": "legendary", "amount": 1},
+                    {"type": "additional_wishlist_boost_slot", "amount": 1}
+                ],
                 "72": [{"type": "roll", "key": "rare", "amount": 1}],
                 "73": [{"type": "roll", "key": "epic", "amount": 1}],
                 "75": [
@@ -805,7 +904,7 @@
                 "7": {"common": 0.05, "rare": 0.35, "epic": 0.45, "legendary": 0.15},
                 "8": {"common": 0.00, "rare": 0.45, "epic": 0.35, "legendary": 0.20},
                 "9": {"common": 0.00, "rare": 0.25, "epic": 0.45, "legendary": 0.30},
-                "10": {"common": 0.00, "rare": 0.20, "epic": 0.40, "legendary": 0.37, "mystic": 0.03}
+                "10": {"common": 0.00, "rare": 0.20, "epic": 0.40, "legendary": 0.35, "mystic": 0.05}
             }
         },
         "EMOJI_QUIZ": {

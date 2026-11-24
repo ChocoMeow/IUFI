@@ -82,11 +82,15 @@ class Settings:
         self.MONTHLY_LEADERBOARD_ROLE: int = 0
         self.BATTLEPASS_SETTINGS: Dict[str, Any] = {}
         self.EVENT_SETTINGS: Dict[str, Any] = {}
+        self.XMAS_EVENT: Dict[str, Any] = {}
+        self.SHOP_ROLL_PRICES: Dict[str, int] = {}
+        self.CONVERT_CAP: Dict[str, Any] = {}
         self.BATTLEPASS_MILESTONES: Dict[str, Any] = {}
         # Newly added defaults so callers can reference them directly without getattr
         self.PVP_SETTINGS: Dict[str, Any] = {}
         self.REWARD_CARD_PROBABILITIES: Dict[str, Any] = {}
         self.PERFECT_CROWN_TREASURY_CARDS: Dict[str, List[str]] = {}
+        self.SACRIFICE_SETTINGS: Dict[str, Any] = {}
 
     def load(self):
         settings = open_json("settings.json")
@@ -127,10 +131,21 @@ class Settings:
         self.MONTHLY_LEADERBOARD_ROLE = settings.get("MONTHLY_LEADERBOARD_ROLE", 0)
         self.BATTLEPASS_SETTINGS = settings.get("BATTLEPASS_SETTINGS", {})
         self.EVENT_SETTINGS = settings.get("EVENT_SETTINGS", {})
+        self.XMAS_EVENT = settings.get("XMAS_EVENT", {})
+        self.SHOP_ROLL_PRICES = settings.get("SHOP_ROLL_PRICES", {"rare": 30, "epic": 100, "legendary": 250})
+        self.CONVERT_CAP = settings.get("CONVERT_CAP", {})
         self.BATTLEPASS_MILESTONES = settings.get("BATTLEPASS_MILESTONES", {})
         self.PVP_SETTINGS = settings.get("PVP_SETTINGS", {})
         self.REWARD_CARD_PROBABILITIES = settings.get("REWARD_CARD_PROBABILITIES", {})
         self.PERFECT_CROWN_TREASURY_CARDS = settings.get("PERFECT_CROWN_TREASURY_CARDS", {})
+        self.SACRIFICE_SETTINGS = {
+            "ENABLED": True,
+            "SOURCE_TIER": "mystic",
+            "COST": 5,
+            "REWARD_ROLL_TIER": "celestial",
+            "REWARD_AMOUNT": 1,
+            **(settings.get("SACRIFICE_SETTINGS") or {}),
+        }
 
 
 # Runtime globals used across the bot
@@ -322,7 +337,8 @@ def get_battlepass_default_state() -> Dict[str, Any]:
         "claimed_one_time": {
             "mg2_click_plus_2": False,
             "mg3_click_plus_2": False
-        }
+        },
+        "additional_wishlist_boost_slots": 0,
     }
 
 def get_battlepass_state(user: Dict[str, Any]) -> Dict[str, Any]:
@@ -348,6 +364,13 @@ def get_battlepass_state(user: Dict[str, Any]) -> Dict[str, Any]:
     if not isinstance(claimed_rewards, list):
         claimed_rewards = []
     merged_state["claimed_rewards"] = claimed_rewards
+
+    try:
+        merged_state["additional_wishlist_boost_slots"] = max(
+            0, int(merged_state.get("additional_wishlist_boost_slots", 0) or 0)
+        )
+    except (TypeError, ValueError):
+        merged_state["additional_wishlist_boost_slots"] = 0
 
     if merged_state.get("season_id") != default_state["season_id"]:
         return copy.deepcopy(default_state)
@@ -551,6 +574,8 @@ def format_battlepass_reward(reward: Dict[str, Any]) -> str:
         return "🎯 MG2 +2 Click (one-time)"
     if reward_type == "mg3_click_plus_2":
         return "🎯 MG3 +2 Click (one-time)"
+    if reward_type == "additional_wishlist_boost_slot":
+        return f"⚡ +{amount} Wishlist Boost Slot / Tier"
 
     return f"{reward_type} x{amount}"
 
@@ -608,6 +633,20 @@ def apply_battlepass_reward(reward: Dict[str, Any], query: Dict[str, Any] = None
             full_set.setdefault("claimed_one_time", {})[reward_type] = True
         else:
             query.setdefault("$set", {})[f"battlepass.claimed_one_time.{reward_type}"] = True
+        return query
+
+    if reward_type == "additional_wishlist_boost_slot":
+        full_set = _battlepass_full_set(query)
+        if full_set is not None:
+            current = full_set.get("additional_wishlist_boost_slots", 0)
+            try:
+                current = int(current or 0)
+            except (TypeError, ValueError):
+                current = 0
+            full_set["additional_wishlist_boost_slots"] = max(0, current) + amount
+        else:
+            _inc("battlepass.additional_wishlist_boost_slots", amount)
+        return query
 
     return query
 
@@ -968,7 +1007,17 @@ def update_quest_progress(user: Dict[str, Any], completed_quests: Union[str, Lis
                         query.setdefault("$inc", {}).setdefault(reward[1], 0)
                         query["$inc"].setdefault("exp", 0)
 
-                        query["$inc"][reward[1]] += random.randint(reward[2][0], reward[2][1]) if isinstance(reward[2], list) else reward[2]
+                        reward_amount = (
+                            random.randint(reward[2][0], reward[2][1])
+                            if isinstance(reward[2], list)
+                            else reward[2]
+                        )
+                        if isinstance(reward[1], str) and reward[1].startswith("potions."):
+                            import events
+                            reward_amount = int(round(
+                                float(reward_amount) * events.quest_potion_multiplier()
+                            ))
+                        query["$inc"][reward[1]] += max(0, reward_amount)
                         query["$inc"]["exp"] += 10
                         query = add_battlepass_xp(
                             user,
@@ -1184,6 +1233,39 @@ async def check_wishlist(message: discord.Message, card_ids: List[str]) -> None:
             except Exception as _:
                 continue
 
+def get_additional_wishlist_boost_slots(user: Dict[str, Any]) -> int:
+    """Extra wishlist boost slots per tier from Battle Pass rewards (seasonal)."""
+    try:
+        return max(0, int(get_battlepass_state(user).get("additional_wishlist_boost_slots", 0) or 0))
+    except (TypeError, ValueError):
+        return 0
+
+def get_wishlist_boost_limit_per_tier(user: Dict[str, Any]) -> int:
+    """How many wishlist cards can be boosted in a single tier (base 1 + BP slots)."""
+    return 1 + get_additional_wishlist_boost_slots(user)
+
+def prune_wishlist_boosts(user: Dict[str, Any], boosts: List[str] | None = None) -> List[str]:
+    """Keep at most the per-tier boost limit, preserving earlier picks first."""
+    import iufi
+
+    raw = list(boosts if boosts is not None else user.get("wishlist_boosts") or [])
+    limit = get_wishlist_boost_limit_per_tier(user)
+    kept: List[str] = []
+    per_tier: Dict[str, int] = {}
+
+    for card_id in raw:
+        card = iufi.CardPool.get_card(card_id)
+        if not card:
+            continue
+        tier = card.tier[1]
+        used = per_tier.get(tier, 0)
+        if used >= limit:
+            continue
+        per_tier[tier] = used + 1
+        kept.append(card_id)
+
+    return kept
+
 def calculate_soft_pity_boost(user: Dict[str, Any]) -> Dict[str, float]:
     """
     Calculate the rate boost multipliers for each tier based on soft pity progress.
@@ -1289,6 +1371,10 @@ def update_pity_from_cards(
                     highest_tier_rolled = card_tier
 
     query = {}
+    pity_inc = 1
+    if increment:
+        import events
+        pity_inc = max(0, int(round(events.pity_count_multiplier())))
 
     if highest_tier_rolled and highest_tier_rolled != "common":
         # User got a rare+ card
@@ -1300,16 +1386,16 @@ def update_pity_from_cards(
             tier_to_reset = tier_hierarchy[i]
             query["$set"][f"pity.{tier_to_reset}"] = 0
 
-        if increment:
+        if increment and pity_inc:
             query["$inc"] = {}
             for i in range(tier_index + 1, len(tier_hierarchy)):
                 tier_to_increment = tier_hierarchy[i]
-                query["$inc"][f"pity.{tier_to_increment}"] = 1
-    elif increment:
+                query["$inc"][f"pity.{tier_to_increment}"] = pity_inc
+    elif increment and pity_inc:
         # User only got common cards - increment all pity counters
         query["$inc"] = {}
         for tier in tier_hierarchy:
-            query["$inc"][f"pity.{tier}"] = 1
+            query["$inc"][f"pity.{tier}"] = pity_inc
 
     return query
 

@@ -40,6 +40,7 @@ class Gameplay(commands.Cog):
         actived_potions = {} if tier else func.get_potions(user.get("actived_potions", {}), func.settings.POTIONS_BASE)
         query = {}
         guaranteed_tier = None
+        santa_reset = False
 
         if not tier:
             # Normal roll - check if pity guarantees a tier
@@ -48,7 +49,12 @@ class Gameplay(commands.Cog):
             # Calculate soft pity boosts for rate increases
             soft_pity_boosts = func.calculate_soft_pity_boost(user)
 
-            query["$set"] = {"cooldown.roll": events.cooldown_expiry(func.settings.COOLDOWN_BASE["roll"][1], potion_speed=actived_potions.get("speed", 0))}
+            query["$set"] = {"cooldown.roll": events.cooldown_expiry(func.settings.COOLDOWN_BASE["roll"][1], potion_speed=actived_potions.get("speed", 0), roll_buff=True)}
+
+            # Xmas Santa IU buff: a proc resets the roll cooldown in the same write as the roll.
+            if events.xmas_santa_proc():
+                query["$set"]["cooldown.roll"] = 0
+                santa_reset = True
 
         else:
             # Purchased roll - don't affect pity
@@ -107,6 +113,8 @@ class Gameplay(commands.Cog):
 
         view = RollView(interaction.user, cards)
         message_content = f"**{interaction.user.mention} This is your roll!** (Ends: <t:{round(time.time()) + 71}:R>)"
+        if santa_reset:
+            message_content += "\n🎅 Santa IU reset your roll cooldown!"
         file = discord.File(image_bytes, filename=f'image.{image_format}')
         if interaction.response.is_done():
             view.message = await interaction.followup.send(content=message_content, file=file, view=view)

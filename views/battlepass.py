@@ -122,6 +122,7 @@ class BattlepassView(discord.ui.View):
         free_percent = int(bp_settings.get("free_xp_percent", 50) or 50)
         status = "Purchased (full XP)" if purchased else f"Free ({free_percent}% XP)"
 
+        wishlist_slots = int(state.get("additional_wishlist_boost_slots", 0) or 0)
         summary = discord.Embed(title=f"🎫 {self.author.display_name}'s Battle Pass", color=discord.Color.random())
         summary.description = (
             f"Season: `{state.get('season_id')}`\n"
@@ -134,6 +135,10 @@ class BattlepassView(discord.ui.View):
             f"XP to Next:  {xp_to_next if level < max_level else 0}\n"
             f"```"
         )
+        if wishlist_slots:
+            summary.description += (
+                f"\nWishlist boost slots: `{1 + wishlist_slots}` boosted cards allowed per tier."
+            )
         if not purchased:
             summary.description += (
                 f"\nEveryone earns Battle Pass XP and rewards. "

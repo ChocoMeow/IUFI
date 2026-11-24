@@ -307,6 +307,17 @@ class Profile(commands.Cog):
         reward_amount = base_amount * cycle_multiplier
         reward = {reward_key: reward_amount}
 
+        # Xmas Holiday Stocking (Dec 1-25 KST): rolled on top of the streak reward.
+        stocking = events.open_xmas_stocking()
+        if stocking:
+            stocking_level, stocking_rewards, stocking_lucky = stocking
+            for key, amount in stocking_rewards.items():
+                reward[key] = reward.get(key, 0) + amount
+            func.logger.info(
+                f"User {interaction.user.name}({interaction.user.id}) opened a Holiday Stocking Lv.{stocking_level}: "
+                f"{dict(stocking_rewards)}"
+            )
+
         query = func.add_battlepass_xp(user, 40, query={
             "$set": {"claimed": claimed, "cooldown.daily": events.cooldown_expiry(func.settings.COOLDOWN_BASE["daily"][1], apply_reduction=False)},
             "$inc": reward
@@ -341,6 +352,14 @@ class Profile(commands.Cog):
             reward_emoji = func.currency_emoji() if reward[1] == "candies" else reward[0]
             value += f"  {(reward[2] * cycle_multiplier):>4} {reward_emoji} " + ("✅" if day_in_cycle >= ((index + 1) * 5) else "⬛") + "\n"
         embed.add_field(name="Streak Rewards", value=value + "```")
+        if stocking:
+            embed.add_field(
+                name=f"🎁 Holiday Stocking Lv.{stocking_level}",
+                value=events.describe_xmas_stocking(stocking_rewards, stocking_lucky) or "Nothing this time.",
+                inline=False,
+            )
+        if events.xmas_status_text():
+            embed.add_field(name="🎄 Today's Buff", value=events.xmas_status_text(), inline=False)
         await interaction.response.send_message(embed=embed)
 
     @app_commands.command(name="view", description="View your or another member's photocard collection.")
@@ -399,10 +418,11 @@ class Profile(commands.Cog):
         await interaction.response.send_message(embed=view.build_embed(), view=view)
         view.message = await interaction.original_response()
 
-    @app_commands.command(name="wishlist", description="Manage your wishlist. Boost one card per tier to roll it more often, and get a DM when one appears.")
+    @app_commands.command(name="wishlist", description="Manage your wishlist. Boost wish cards per tier to roll them more often, and get a DM when one appears.")
     async def wishlist(self, interaction: discord.Interaction):
         user = await func.get_user(interaction.user.id)
         view = WishListView(interaction, user)
+        await view.sync_boost_prune()
         await interaction.response.send_message(embed=view.build_embed(), view=view)
         view.message = await interaction.original_response()
 

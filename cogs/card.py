@@ -86,11 +86,10 @@ class Card(commands.Cog):
             if not converted_cards:
                 return await modal_interaction.response.send_message("No owned cards were found. Please enter a valid card ID!")
 
-            raw_candies = sum(card.cost for card in converted_cards)
             for card in converted_cards:
                 iufi.CardPool.add_available_card(card)
 
-            candies = events.convert_candies(raw_candies)
+            candies = events.card_convert_candies(converted_cards)
 
             user = await func.get_user(modal_interaction.user.id)
             query = func.update_quest_progress(user, "CONVERT_ANY_CARD", progress=len(converted_cards), query={
@@ -181,7 +180,7 @@ class Card(commands.Cog):
         if card.locked:
             return await interaction.response.send_message(f"🔒 Card `{card.id}` is locked and cannot be converted.", ephemeral=True)
 
-        candies = events.convert_candies(card.cost)
+        candies = events.card_convert_candies([card])
         embed = discord.Embed(color=discord.Color.random())
         embed.description = f"```🆔 {card} \n{func.currency_emoji()} + {candies}```"
         message: discord.Message = None
@@ -235,7 +234,7 @@ class Card(commands.Cog):
             return await interaction.response.send_message("You have no unlocked photocards to convert.", ephemeral=True)
 
         card_ids = [card.id for card in converted_cards]
-        candies = events.convert_candies(sum(card.cost for card in converted_cards))
+        candies = events.card_convert_candies(converted_cards)
 
         embed = discord.Embed(title="✨ Confirm to convert?", color=discord.Color.random())
         embed.description = f"```🆔 {', '.join([f'{card}' for card in converted_cards])} \n{func.currency_emoji()} + {candies}```"
@@ -295,7 +294,7 @@ class Card(commands.Cog):
                 return await modal_interaction.response.send_message("No unlocked cards match those categories.", ephemeral=True)
 
             card_ids = [card.id for card in converted_cards]
-            candies = events.convert_candies(sum(card.cost for card in converted_cards))
+            candies = events.card_convert_candies(converted_cards)
 
             embed = discord.Embed(title="✨ Confirm to convert?", color=discord.Color.random())
             embed.description = f"```🆔 {', '.join([f'{card}' for card in converted_cards])} \n{func.currency_emoji()} + {candies}```"
@@ -718,6 +717,93 @@ class Card(commands.Cog):
             upgrade_card.change_stars(upgraded_stars)
 
         modal = MultiIDModal(title="Upgrade Card", label="Card IDs to consume", callback=on_ids)
+        await interaction.response.send_modal(modal)
+
+    @app_commands.command(name="sacrifice", description="Sacrifice 5 mystic cards in exchange for a celestial roll.")
+    async def sacrifice(self, interaction: discord.Interaction) -> None:
+        config = func.settings.SACRIFICE_SETTINGS
+        if not config.get("ENABLED", True):
+            return await interaction.response.send_message("Sacrifice is currently disabled.", ephemeral=True)
+
+        source_tier: str = config["SOURCE_TIER"]
+        cost: int = int(config["COST"])
+        reward_tier: str = config["REWARD_ROLL_TIER"]
+        reward_amount: int = int(config["REWARD_AMOUNT"])
+        source_emoji = func.settings.TIERS_BASE[source_tier][0]
+        reward_emoji = func.settings.TIERS_BASE[reward_tier][0]
+
+        def validate(user_id: int, card_ids: list[str]) -> tuple[list[iufi.Card] | None, str | None]:
+            unique_ids = list(dict.fromkeys(card_ids))
+            if len(unique_ids) != cost:
+                return None, f"You must sacrifice exactly **{cost}** different {source_tier} cards (you provided {len(unique_ids)})."
+
+            cards: list[iufi.Card] = []
+            for card_id in unique_ids:
+                card = iufi.CardPool.get_card(card_id)
+                if not card or card.owner_id != user_id:
+                    return None, f"Card `{card_id}` was not found in your collection."
+                if card.tier[1] != source_tier:
+                    return None, f"Card `{card.id}` is not a {source_tier} card."
+                if card.locked:
+                    return None, f"🔒 Card `{card.id}` is locked and cannot be sacrificed."
+                cards.append(card)
+            return cards, None
+
+        async def on_ids(modal_interaction: discord.Interaction, card_ids: list[str]):
+            user_id = modal_interaction.user.id
+            cards, error = validate(user_id, card_ids)
+            if error:
+                return await modal_interaction.response.send_message(error, ephemeral=True)
+
+            embed = discord.Embed(title="🩸 Confirm sacrifice?", color=discord.Color.dark_red())
+            embed.description = (
+                f"```🆔 {', '.join(f'{card}' for card in cards)}\n"
+                f"{reward_emoji} + {reward_amount} {reward_tier.title()} Roll```"
+                f"**These cards will be permanently lost.**"
+            )
+
+            view = ConfirmView(modal_interaction.user, timeout=30)
+            await modal_interaction.response.send_message(embed=embed, view=view)
+            view.message = message = await modal_interaction.original_response()
+            await view.wait()
+
+            if not view.is_confirm:
+                return
+
+            # Ownership may have changed while the confirmation was open.
+            cards, error = validate(user_id, card_ids)
+            if error:
+                return await message.edit(content="Your cards cannot be sacrificed because there has been a change in your inventory.", embed=None, view=None)
+
+            for card in cards:
+                iufi.CardPool.add_available_card(card)
+
+            sacrificed_ids = [card.id for card in cards]
+            await func.update_user(user_id, {
+                "$pull": {"cards": {"$in": sacrificed_ids}},
+                "$inc": {f"roll.{reward_tier}": reward_amount},
+            })
+            await func.update_card(sacrificed_ids, {"$set": {"owner_id": None, "tag": None, "frame": None, "last_trade_time": 0, "locked": False}})
+
+            func.logger.info(
+                f"User {modal_interaction.user.name}({user_id}) sacrificed {len(cards)} {source_tier} card(s): [{', '.join(sacrificed_ids)}]. "
+                f"Gained {reward_amount} {reward_tier} roll(s)."
+            )
+
+            embed.title = "🩸 Sacrificed"
+            embed.color = discord.Color.random()
+            embed.description = (
+                f"```🆔 {', '.join(f'{card}' for card in cards)}\n"
+                f"{reward_emoji} + {reward_amount} {reward_tier.title()} Roll```"
+                f"Use `/roll {reward_tier}` to claim your roll."
+            )
+            await message.edit(embed=embed, view=None)
+
+        modal = MultiIDModal(
+            title=f"Sacrifice {cost} {source_tier.title()} Cards",
+            label=f"{cost} {source_tier} card IDs",
+            callback=on_ids,
+        )
         await interaction.response.send_modal(modal)
 
 async def setup(bot: commands.Bot) -> None:

@@ -75,7 +75,8 @@ class Tasks(commands.Cog):
                 converted_cards.append(card)
 
         card_ids = [card.id for card in converted_cards]
-        candies = events.convert_candies(sum(card.cost for card in converted_cards))
+        # System conversion for inactive players: no Xmas conversion boost.
+        candies = events.card_convert_candies(converted_cards, apply_holiday=False)
             
         for card in converted_cards:
             iufi.CardPool.add_available_card(card)
@@ -153,7 +154,7 @@ class Tasks(commands.Cog):
         await self.bot.wait_until_ready()
 
         try:
-            if random.randint(1, 6) == 1:
+            if events.drop_spawn_roll():
                 cards = iufi.CardPool.roll(amount=1)
                 channel = self.bot.get_channel(random.choice(func.settings.GAME_CHANNEL_IDS))
                 if channel:
@@ -180,7 +181,7 @@ class Tasks(commands.Cog):
             if not func.battlepass_enabled():
                 return
 
-            if random.randint(1, 6) == 1:
+            if events.drop_spawn_roll():
                 channel = self.bot.get_channel(random.choice(func.settings.GAME_CHANNEL_IDS))
                 if channel:
                     xp_amount = func.pick_battlepass_drop_xp()

@@ -4,9 +4,9 @@ import events
 
 def _build_shop_base() -> list[tuple[str, str, int]]:
     items = [
-        (func.settings.TIERS_BASE.get("rare")[0], "roll.rare", 30),
-        (func.settings.TIERS_BASE.get("epic")[0], "roll.epic", 100),
-        (func.settings.TIERS_BASE.get("legendary")[0], "roll.legendary", 250),
+        (func.settings.TIERS_BASE.get("rare")[0], "roll.rare", func.settings.SHOP_ROLL_PRICES["rare"]),
+        (func.settings.TIERS_BASE.get("epic")[0], "roll.epic", func.settings.SHOP_ROLL_PRICES["epic"]),
+        (func.settings.TIERS_BASE.get("legendary")[0], "roll.legendary", func.settings.SHOP_ROLL_PRICES["legendary"]),
         ("📦", "inventory.slots", 100),  # 1 extra card slot per purchase; base price is 100
     ]
     bp_settings = func.get_battlepass_settings()
@@ -165,6 +165,8 @@ class ShopView(discord.ui.View):
             embed.description += "\n"
         elif events.milestone_shop_sale_fraction() > 0:
             embed.description += f"🎉 Community milestone: `{int(round(events.milestone_shop_sale_fraction() * 100))}%` off shop items (excluding battlepass)\n"
+        if events.xmas_status_text():
+            embed.description += f"{events.xmas_status_text()}\n"
         embed.description += "```"
         
         for item in SHOP_BASE:

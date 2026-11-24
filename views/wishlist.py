@@ -121,6 +121,7 @@ class BoostDropDown(discord.ui.Select):
 
         tier = card.tier[1]
         boosts = [card_id for card_id in self.view.boosts if card_id != card.id]
+        limit = self.view.boost_limit_per_tier
 
         if card.id in self.view.boosts:
             message = f"`{card.display_id}` is no longer boosted."
@@ -132,21 +133,25 @@ class BoostDropDown(discord.ui.Select):
             )
 
         else:
-            # Only one boosted card per tier, so the previous pick is dropped.
-            replaced = None
+            # Keep at most `limit` boosted cards per tier; drop the oldest same-tier picks first.
+            replaced: list[iufi.Card] = []
+            same_tier: list[str] = []
             for boosted_id in boosts:
-                boosted_card = iufi.CardPool.get_card(boosted_id)
-                if boosted_card and boosted_card.tier[1] == tier:
-                    replaced = boosted_card
-                    break
-
-            if replaced:
-                boosts.remove(replaced.id)
+                boosted = iufi.CardPool.get_card(boosted_id)
+                if boosted and boosted.tier[1] == tier:
+                    same_tier.append(boosted_id)
+            while len(same_tier) >= limit:
+                oldest_id = same_tier.pop(0)
+                boosts.remove(oldest_id)
+                oldest = iufi.CardPool.get_card(oldest_id)
+                if oldest:
+                    replaced.append(oldest)
 
             boosts.append(card.id)
             message = f"`{card.display_id}` is now your boosted `{tier}` wish card."
             if replaced:
-                message += f" It replaced `{replaced.display_id}`."
+                replaced_ids = ", ".join(f"`{item.display_id}`" for item in replaced)
+                message += f" It replaced {replaced_ids}."
 
         await func.update_user(interaction.user.id, {"$set": {"wishlist_boosts": boosts}})
         await interaction.response.send_message(message, ephemeral=True)
@@ -157,11 +162,14 @@ class WishListView(discord.ui.View):
         super().__init__(timeout=timeout)
 
         self.interaction: discord.Interaction = interaction
+        self.user = user
+        self.boost_limit_per_tier = func.get_wishlist_boost_limit_per_tier(user)
         self.wishlist = user.get("wishlist", [])
-        self.boosts = user.get("wishlist_boosts", [])
+        self.boosts = func.prune_wishlist_boosts(user, user.get("wishlist_boosts", []))
         self.cards = iufi.CardPool.search_valid_cards(self.wishlist)
         self.select_dropdown = None
         self.boost_dropdown = None
+        self._pending_boost_prune = self.boosts != list(user.get("wishlist_boosts") or [])
 
         if self.wishlist:
             self.select_dropdown = RemoveDropDown(self.cards)
@@ -180,8 +188,10 @@ class WishListView(discord.ui.View):
         if not cards:
             desc = "Your wishlist is currently empty."
         else:
+            limit = self.boost_limit_per_tier
+            slot_text = "one card per tier" if limit == 1 else f"up to {limit} cards per tier"
             desc = f"Here are the cards in your wishlist: [{len(self.cards)}/25]\n" \
-                   "⚡ marks the boosted card of a tier. You can boost one card per tier.\n```"
+                   f"⚡ marks boosted cards. You can boost {slot_text}.\n```"
             for card in cards:
                 member = self.interaction.guild.get_member(card.owner_id)
                 desc += f"{'⚡' if card.id in self.boosts else '  '} {card.display_id} {card.display_frame} {card.display_stars} {card.tier[0]} 👤 {member.display_name if member else 'None':5}\n"
@@ -194,10 +204,23 @@ class WishListView(discord.ui.View):
             
         return embed
 
+    async def sync_boost_prune(self) -> None:
+        """Persist trimmed boosts when the seasonal slot limit dropped."""
+        if not self._pending_boost_prune:
+            return
+        await func.update_user(self.interaction.user.id, {"$set": {"wishlist_boosts": self.boosts}})
+        self._pending_boost_prune = False
+
     async def update_data(self) -> None:
         user = await func.get_user(self.interaction.user.id)
+        self.user = user
+        self.boost_limit_per_tier = func.get_wishlist_boost_limit_per_tier(user)
         self.wishlist = user.get("wishlist", [])
-        self.boosts = user.get("wishlist_boosts", [])
+        pruned = func.prune_wishlist_boosts(user, user.get("wishlist_boosts", []))
+        if pruned != list(user.get("wishlist_boosts") or []):
+            await func.update_user(self.interaction.user.id, {"$set": {"wishlist_boosts": pruned}})
+        self.boosts = pruned
+        self._pending_boost_prune = False
         self.cards = iufi.CardPool.search_valid_cards(self.wishlist)
         self.page: int = ceil(len(self.cards) / 13)
         self.current_page: int = 1
