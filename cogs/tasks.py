@@ -233,11 +233,15 @@ class Tasks(commands.Cog):
             ]}
 
             # Verifying and Dispatching Game Readiness Notification to Player
+            # Prefer cache, then HTTP fetch — does not require the members privileged intent.
             notification_count = 0
             async for doc in func.USERS_DB.find(query):
                 user = self.bot.get_user(doc["_id"])
                 if not user:
-                    continue
+                    try:
+                        user = await self.bot.fetch_user(doc["_id"])
+                    except (discord.NotFound, discord.HTTPException):
+                        continue
 
                 cd: dict[str, float] = doc["cooldown"]
                 for name, (emoji, _) in func.settings.COOLDOWN_BASE.items():
